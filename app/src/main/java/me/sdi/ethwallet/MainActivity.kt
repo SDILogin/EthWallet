@@ -7,15 +7,30 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -47,11 +62,17 @@ class MainActivity : ComponentActivity() {
                 if (numberOfWallets >= 0) {
                     if (numberOfWallets == 0) {
                         OnboardingScreen(
-                            modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .systemBarsPadding(),
                         )
                     } else {
                         WalletsScreen(
-                            modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .systemBarsPadding(),
                         )
                     }
                 }
@@ -62,15 +83,70 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun OnboardingScreen(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.padding(16.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "Welcome to EthWallet! Let's get started.",
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.headlineMedium,
-        )
+    Surface {
+        Column(
+            modifier =
+                modifier
+                    .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(Modifier.weight(1f))
+
+            Spacer(Modifier.height(16.dp))
+            Icon(
+                painter = painterResource(R.drawable.eth_logo_120w),
+                tint = Color.Unspecified,
+                contentDescription = null,
+                modifier = Modifier.width(100.dp),
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                text = "ETH Wallet",
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineLarge,
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Spacer(Modifier.weight(1f))
+
+            FilledTonalButton(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .widthIn(max = 320.dp),
+                shape = RoundedCornerShape(16.dp),
+                onClick = {
+                },
+            ) {
+                Text(
+                    text = "Create new wallet",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedButton(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .widthIn(max = 320.dp),
+                shape = RoundedCornerShape(16.dp),
+                onClick = {
+                },
+            ) {
+                Text(
+                    text = "Import existing wallet",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
     }
 }
 
