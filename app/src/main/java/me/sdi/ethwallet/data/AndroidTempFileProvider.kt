@@ -1,4 +1,4 @@
-package me.sdi.ethwallet.blockchain
+package me.sdi.ethwallet.data
 
 import android.content.Context
 import android.os.Build

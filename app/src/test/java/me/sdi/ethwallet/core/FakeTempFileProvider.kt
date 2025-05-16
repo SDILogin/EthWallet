@@ -1,5 +1,6 @@
-package me.sdi.ethwallet.blockchain
+package me.sdi.ethwallet.core
 
+import me.sdi.ethwallet.data.TempFileProvider
 import java.io.File
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.createTempDirectory

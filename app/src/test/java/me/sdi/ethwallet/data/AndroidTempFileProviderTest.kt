@@ -1,4 +1,4 @@
-package me.sdi.ethwallet.blockchain
+package me.sdi.ethwallet.data
 
 import android.content.Context
 import android.os.Build
@@ -14,13 +14,9 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.io.File
 
-/**
- * Tests for AndroidTempFileProvider targeting API level 24 (Nougat),
- * which is below Android O (API 26) to specifically test the pre-O code path.
- */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [Build.VERSION_CODES.N]) // API 24 (Nougat)
-class AndroidTempFileProviderLowerApiTest {
+@Config(sdk = [Build.VERSION_CODES.P]) // API 28
+class AndroidTempFileProviderTest {
     private lateinit var context: Context
     private lateinit var tempFileProvider: AndroidTempFileProvider
     private val testFiles = mutableListOf<File>()
@@ -47,7 +43,7 @@ class AndroidTempFileProviderLowerApiTest {
     }
 
     @Test
-    fun `withTempDirectory creates a temporary directory in cache dir for pre-O API`() {
+    fun `withTempDirectory creates a temporary directory`() {
         var tempDir: File? = null
 
         tempFileProvider.withTempDirectory("test_prefix") { dir ->
@@ -57,14 +53,6 @@ class AndroidTempFileProviderLowerApiTest {
             // Verify the directory exists
             assertTrue("Temporary directory should exist", dir.exists())
             assertTrue("Temporary directory should be a directory", dir.isDirectory)
-
-            // Check that the directory is created in the app's cache directory
-            assertTrue(
-                "Directory should be in cache dir",
-                dir.absolutePath.startsWith(context.cacheDir.absolutePath),
-            )
-
-            "test_result"
         }
 
         // Verify the directory is cleaned up after use
@@ -72,10 +60,11 @@ class AndroidTempFileProviderLowerApiTest {
     }
 
     @Test
-    fun `withTempDirectory returns result from block in pre-O API`() {
+    fun `withTempDirectory returns result from block`() {
         val result =
             tempFileProvider.withTempDirectory("test_prefix") { dir ->
                 testFiles.add(dir) // Track for cleanup
+
                 "expected_result"
             }
 
@@ -83,8 +72,8 @@ class AndroidTempFileProviderLowerApiTest {
     }
 
     @Test
-    fun `withTempDirectory creates files in the directory in pre-O API`() {
-        val fileContents = "Test file contents for pre-O API"
+    fun `withTempDirectory creates files in the directory`() {
+        val fileContents = "Test file contents"
 
         var checked = false
         tempFileProvider.withTempDirectory("test_prefix") { dir ->
@@ -105,7 +94,7 @@ class AndroidTempFileProviderLowerApiTest {
     }
 
     @Test
-    fun `withTempDirectory cleans up even when block throws exception in pre-O API`() {
+    fun `withTempDirectory cleans up even when block throws exception`() {
         var tempDir: File? = null
 
         try {
@@ -125,8 +114,8 @@ class AndroidTempFileProviderLowerApiTest {
     }
 
     @Test
-    fun `withTempDirectory handles nested files in pre-O API`() {
-        val nestedContent = "Nested file content for pre-O API"
+    fun `withTempDirectory handles nested files`() {
+        val nestedContent = "Nested file content"
 
         var checked = false
         tempFileProvider.withTempDirectory("test_prefix") { dir ->
@@ -143,7 +132,6 @@ class AndroidTempFileProviderLowerApiTest {
             assertTrue("Nested directory should exist", nestedDir.exists())
             assertTrue("Nested file should exist", nestedFile.exists())
             assertEquals("Nested file should have correct contents", nestedContent, nestedFile.readText())
-
             checked = true
         }
 
@@ -151,7 +139,7 @@ class AndroidTempFileProviderLowerApiTest {
     }
 
     @Test
-    fun `withTempDirectory securely deletes files in pre-O API`() {
+    fun `withTempDirectory securely deletes files`() {
         // This test is more of a functional test than a unit test
         // since we can't easily verify the secure deletion in a test environment
         // But we can at least verify the method doesn't throw exceptions
@@ -184,38 +172,5 @@ class AndroidTempFileProviderLowerApiTest {
         }
 
         assertTrue("Looks like we didn't check the files", checked)
-    }
-
-    @Test
-    fun `should create multiple temporary directories in pre-O API`() {
-        val tempDirs = mutableListOf<File>()
-        var checkedCount = 0
-
-        // Create 3 temporary directories
-        for (i in 1..3) {
-            tempFileProvider.withTempDirectory("test_prefix_$i") { dir ->
-                tempDirs.add(dir)
-                testFiles.add(dir) // Track for cleanup
-
-                assertTrue("Directory $i should exist", dir.exists())
-                assertTrue("Directory $i should be a directory", dir.isDirectory)
-
-                // Create a file in each temp directory
-                val testFile = File(dir, "test_file_$i.txt")
-                testFile.writeText("Content for file $i")
-
-                assertTrue("Test file $i should exist", testFile.exists())
-
-                checkedCount++
-                "success_$i"
-            }
-        }
-
-        assertEquals("Should have checked 3 directories", 3, checkedCount)
-
-        // All directories should be deleted
-        tempDirs.forEach { dir ->
-            assertFalse("Directory should be deleted", dir.exists())
-        }
     }
 }

@@ -1,4 +1,4 @@
-package me.sdi.ethwallet.blockchain
+package me.sdi.ethwallet.core
 
 @JvmInline
 value class EthAddress(private val validEthAddress: String) {

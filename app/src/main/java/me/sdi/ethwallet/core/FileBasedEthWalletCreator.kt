@@ -1,5 +1,6 @@
-package me.sdi.ethwallet.blockchain
+package me.sdi.ethwallet.core
 
+import me.sdi.ethwallet.data.TempFileProvider
 import org.web3j.crypto.WalletUtils
 import java.security.SecureRandom
 

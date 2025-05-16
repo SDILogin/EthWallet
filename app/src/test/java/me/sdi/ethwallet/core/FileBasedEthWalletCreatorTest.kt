@@ -1,5 +1,6 @@
-package me.sdi.ethwallet.blockchain
+package me.sdi.ethwallet.core
 
+import me.sdi.ethwallet.data.TempFileProvider
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,7 +12,6 @@ import org.web3j.crypto.ECKeyPair
 import org.web3j.crypto.Keys
 import java.io.File
 import java.util.Locale
-import kotlin.io.path.ExperimentalPathApi
 
 class FileBasedEthWalletCreatorTest {
     private lateinit var fakeTempFileProvider: FakeTempFileProvider
