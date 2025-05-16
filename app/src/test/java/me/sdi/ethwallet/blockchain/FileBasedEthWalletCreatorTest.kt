@@ -133,7 +133,7 @@ class FileBasedEthWalletCreatorTest {
         val uniqueWords = result.seedPhrase.toSet()
         assertTrue(
             "Seed phrase should have some diversity in words",
-            uniqueWords.size > 5, // At least half the words should be unique
+            uniqueWords.size > 5,
         )
     }
 
