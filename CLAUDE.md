@@ -19,6 +19,22 @@ This project uses Gradle with Kotlin DSL for the build system:
 - **Install debug APK**: `./gradlew installDebug`
 - **Generate APK**: `./gradlew assembleDebug` or `./gradlew assembleRelease`
 
+## Code Formatting
+
+The project uses Spotless and ktlint for code formatting and style checking:
+
+- **Check formatting**: `./gradlew spotlessCheck`
+- **Apply formatting**: `./gradlew spotlessApply`
+
+Code style rules are defined in:
+- `.editorconfig` - Contains ktlint configuration
+- `tools/ethwallet-codestyle.xml` - IDE code style settings
+
+A pre-push Git hook is installed that runs formatting checks automatically before pushing. To reinstall the hook, run:
+```
+./tools/setup.sh
+```
+
 ## Development Environment
 
 - The project uses Kotlin 2.0.21
