@@ -1,4 +1,4 @@
-package me.sdi.ethwallet
+package me.sdi.ethwallet.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -13,6 +13,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import me.sdi.ethwallet.InitialNavigationViewModel
+import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 
 @Composable
@@ -35,9 +37,9 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                             .fillMaxSize()
                             .padding(innerPadding),
                     navController = navController,
-                    startDestination = "onboarding",
+                    startDestination = Destination.OnBoardingScreen,
                 ) {
-                    composable("onboarding") {
+                    composable<Destination.OnBoardingScreen> {
                         OnboardingScreen(
                             modifier = Modifier.fillMaxSize(),
                             onImportWallet = { },

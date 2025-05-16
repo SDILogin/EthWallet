@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import me.sdi.ethwallet.ui.EthWallet
 
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<InitialNavigationViewModel>()

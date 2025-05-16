@@ -1,4 +1,4 @@
-package me.sdi.ethwallet
+package me.sdi.ethwallet.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -23,6 +23,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import me.sdi.ethwallet.R
 
 @Composable
 fun OnboardingScreen(
