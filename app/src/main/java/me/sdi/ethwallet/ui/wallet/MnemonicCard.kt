@@ -72,11 +72,8 @@ fun MnemonicCard(
             ) {
                 // first half of the mnemonic
                 val words = seedPhrase.take(seedPhrase.size / 2)
-                val modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(end = 8.dp)
-                WordsColumn(words, textStyle, textMeasurer, modifier)
+                val modifier = Modifier.padding(end = 8.dp)
+                WordsColumn(0, words, textStyle, textMeasurer, modifier)
             }
 
             Box(
@@ -85,11 +82,8 @@ fun MnemonicCard(
             ) {
                 // second half of the mnemonic
                 val words = seedPhrase.drop(seedPhrase.size / 2)
-                val modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = 8.dp)
-                WordsColumn(words, textStyle, textMeasurer, modifier)
+                val modifier = Modifier.padding(start = 8.dp)
+                WordsColumn(seedPhrase.size / 2, words, textStyle, textMeasurer, modifier)
             }
         }
     }
@@ -97,6 +91,7 @@ fun MnemonicCard(
 
 @Composable
 private fun WordsColumn(
+    indexOffset: Int,
     words: List<String>,
     textStyle: TextStyle,
     textMeasurer: TextMeasurer,
@@ -104,12 +99,11 @@ private fun WordsColumn(
 ) {
     Column(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         words.forEachIndexed { index, word ->
             IndexedText(
-                index = index,
+                index = index + indexOffset,
                 word = word,
                 textStyle = textStyle,
                 textMeasurer = textMeasurer,
@@ -166,18 +160,18 @@ private fun MnemonicCardPreview() {
             MnemonicCard(
                 seedPhrase =
                     listOf(
-                        "word1",
-                        "word2",
-                        "word3",
-                        "word4",
-                        "word5",
-                        "word6",
-                        "word7",
-                        "word8",
-                        "word9",
-                        "word10",
-                        "word11",
-                        "word12",
+                        "draft",
+                        "decode",
+                        "demand",
+                        "dare",
+                        "dare",
+                        "draft",
+                        "decode",
+                        "demand",
+                        "dare",
+                        "draft",
+                        "decode",
+                        "demand",
                     ),
             )
         }
