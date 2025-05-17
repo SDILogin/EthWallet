@@ -18,18 +18,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,19 +57,38 @@ import java.net.SocketTimeoutException
 /**
  * Screen that displays the mnemonic phrase for a newly created wallet.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateWalletScreen(
     onMnemonicSaved: () -> Unit,
+    onUpButtonClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: CreateWalletViewModel = viewModel(factory = CreateWalletViewModel.Factory)
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
-    CreateWalletScreen(
-        viewState = viewState,
-        onEvent = { event -> viewModel.onEvent(event) },
-        onMnemonicSaved = onMnemonicSaved,
+    Scaffold(
         modifier = modifier,
-    )
+        topBar = {
+            TopAppBar(
+                title = { Text("Create Wallet") },
+                navigationIcon = {
+                    IconButton(onClick = onUpButtonClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                            contentDescription = null,
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        CreateWalletScreen(
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            viewState = viewState,
+            onEvent = { event -> viewModel.onEvent(event) },
+            onMnemonicSaved = onMnemonicSaved,
+        )
+    }
 }
 
 @Composable
@@ -79,23 +102,24 @@ private fun CreateWalletScreen(
         onEvent(CreateWalletEvent.CreateWallet)
     }
 
-    Surface(modifier = modifier) {
-        Crossfade(targetState = viewState::class.qualifiedName) { target ->
-            when (target) {
-                CreateWalletViewState.Loading::class.qualifiedName -> LoadingState()
-                CreateWalletViewState.Content::class.qualifiedName -> {
-                    (viewState as? CreateWalletViewState.Content)?.let { state ->
-                        ContentState(
-                            state = state,
-                            onMnemonicSaved = onMnemonicSaved,
-                        )
-                    }
+    Crossfade(
+        modifier = modifier,
+        targetState = viewState::class.qualifiedName,
+    ) { target ->
+        when (target) {
+            CreateWalletViewState.Loading::class.qualifiedName -> LoadingState()
+            CreateWalletViewState.Content::class.qualifiedName -> {
+                (viewState as? CreateWalletViewState.Content)?.let { state ->
+                    ContentState(
+                        state = state,
+                        onMnemonicSaved = onMnemonicSaved,
+                    )
                 }
+            }
 
-                CreateWalletViewState.Error::class.qualifiedName -> {
-                    (viewState as? CreateWalletViewState.Error)?.throwable?.let { throwable ->
-                        ErrorState(throwable)
-                    }
+            CreateWalletViewState.Error::class.qualifiedName -> {
+                (viewState as? CreateWalletViewState.Error)?.throwable?.let { throwable ->
+                    ErrorState(throwable)
                 }
             }
         }
@@ -153,10 +177,11 @@ private fun ContentState(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Spacer(modifier = Modifier.weight(1f))
         BasicText(
             text = "Your Recovery Phrase",
             style = MaterialTheme.typography.headlineMedium,
@@ -164,8 +189,6 @@ private fun ContentState(
         )
 
         Spacer(modifier = Modifier.height(8.dp))
-
-        Spacer(modifier = Modifier.weight(1f))
 
         BasicText(
             modifier = Modifier.widthIn(max = 420.dp),
