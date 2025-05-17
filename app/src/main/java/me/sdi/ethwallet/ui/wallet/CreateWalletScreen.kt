@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui.wallet
 
+import android.os.Build
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -39,6 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +57,7 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import java.net.SocketTimeoutException
 
@@ -66,6 +73,8 @@ fun CreateWalletScreen(
 ) {
     val viewModel: CreateWalletViewModel = viewModel(factory = CreateWalletViewModel.Factory)
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -81,12 +90,28 @@ fun CreateWalletScreen(
                 },
             )
         },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                snackbar = { snackbarData ->
+                    Snackbar(
+                        snackbarData = snackbarData,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                },
+            )
+        },
     ) { innerPadding ->
         CreateWalletScreen(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
             viewState = viewState,
             onEvent = { event -> viewModel.onEvent(event) },
             onMnemonicSaved = onMnemonicSaved,
+            snackbarHostState = snackbarHostState,
         )
     }
 }
@@ -97,6 +122,7 @@ private fun CreateWalletScreen(
     onEvent: (CreateWalletEvent) -> Unit,
     onMnemonicSaved: () -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState,
 ) {
     LaunchedEffect(Unit) {
         onEvent(CreateWalletEvent.CreateWallet)
@@ -113,6 +139,7 @@ private fun CreateWalletScreen(
                     ContentState(
                         state = state,
                         onMnemonicSaved = onMnemonicSaved,
+                        snackbarHostState = snackbarHostState,
                     )
                 }
             }
@@ -144,7 +171,9 @@ private fun LoadingState() {
 private fun ContentState(
     state: CreateWalletViewState.Content,
     onMnemonicSaved: () -> Unit,
+    snackbarHostState: SnackbarHostState,
 ) {
+    val scope = rememberCoroutineScope()
     var showConfirmationDialog by remember { mutableStateOf(false) }
     if (showConfirmationDialog) {
         AlertDialog(
@@ -207,6 +236,16 @@ private fun ContentState(
                 Modifier
                     .widthIn(max = 420.dp)
                     .fillMaxWidth(),
+            onCopied = {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Recovery phrase copied to clipboard",
+                            duration = SnackbarDuration.Short,
+                        )
+                    }
+                }
+            },
         )
         Spacer(modifier = Modifier.height(16.dp))
         SecurityWarning()
@@ -340,6 +379,7 @@ private fun CreateWalletScreenPreview(
             onEvent = { },
             onMnemonicSaved = { },
             modifier = Modifier.fillMaxSize(),
+            snackbarHostState = remember { SnackbarHostState() },
         )
     }
 }
