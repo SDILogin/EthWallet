@@ -16,6 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import me.sdi.ethwallet.InitialNavigationViewModel
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 
 @Composable
 fun EthWallet(viewModel: InitialNavigationViewModel) {
@@ -42,8 +43,18 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                     composable<Destination.OnBoardingScreen> {
                         OnboardingScreen(
                             modifier = Modifier.fillMaxSize(),
-                            onImportWallet = { },
-                            onCreateWallet = { },
+                            onImportWallet = {
+                            },
+                            onCreateWallet = {
+                                navController.navigate(Destination.CreateWalletScreen)
+                            },
+                        )
+                    }
+
+                    composable<Destination.CreateWalletScreen> {
+                        CreateWalletScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onMnemonicSaved = { },
                         )
                     }
                 }

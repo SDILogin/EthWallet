@@ -5,4 +5,7 @@ import kotlinx.serialization.Serializable
 sealed interface Destination {
     @Serializable
     data object OnBoardingScreen
+
+    @Serializable
+    data object CreateWalletScreen
 }
