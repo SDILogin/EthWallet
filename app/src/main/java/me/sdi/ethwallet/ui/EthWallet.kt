@@ -3,7 +3,6 @@ package me.sdi.ethwallet.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -12,7 +11,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -21,6 +19,7 @@ import me.sdi.ethwallet.InitialNavigationViewModel
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
+import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +49,7 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                         OnboardingScreen(
                             modifier = Modifier.fillMaxSize(),
                             onImportWallet = {
+                                navController.navigate(Destination.ImportWalletScreen)
                             },
                             onCreateWallet = {
                                 navController.navigate(Destination.CreateWalletScreen)
@@ -59,9 +59,20 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
 
                     composable<Destination.CreateWalletScreen> {
                         CreateWalletScreen(
-                            modifier = Modifier.fillMaxSize().background(Color.Red),
+                            modifier = Modifier.fillMaxSize(),
                             onUpButtonClick = { navController.navigateUp() },
                             onMnemonicSaved = {
+                                // Navigate to wallet home or dashboard
+                            },
+                        )
+                    }
+
+                    composable<Destination.ImportWalletScreen> {
+                        ImportWalletScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onUpButtonClick = { navController.navigateUp() },
+                            onWalletImported = {
+                                // Navigate to wallet home or dashboard
                             },
                         )
                     }

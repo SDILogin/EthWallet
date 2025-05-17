@@ -8,4 +8,7 @@ sealed interface Destination {
 
     @Serializable
     data object CreateWalletScreen
+
+    @Serializable
+    data object ImportWalletScreen
 }

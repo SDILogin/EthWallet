@@ -1,0 +1,149 @@
+package me.sdi.ethwallet.ui.wallet
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import me.sdi.ethwallet.ui.theme.EthWalletTheme
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ImportWalletScreen(
+    onWalletImported: () -> Unit,
+    onUpButtonClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = { Text("Import Wallet") },
+                navigationIcon = {
+                    IconButton(onClick = onUpButtonClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                            contentDescription = null,
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .padding(innerPadding)
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            var mnemonicInput by remember { mutableStateOf("") }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Enter Recovery Phrase",
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Enter your 12-word recovery phrase, separated by spaces.",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(max = 420.dp),
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            OutlinedTextField(
+                value = mnemonicInput,
+                onValueChange = { mnemonicInput = it },
+                label = { Text("Recovery Phrase") },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 420.dp),
+                keyboardOptions =
+                    KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Done,
+                    ),
+                placeholder = { Text("Enter 12 words separated by spaces") },
+                supportingText = { Text("Example: word1 word2 word3 ...") },
+                maxLines = 3,
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Button(
+                onClick = onWalletImported,
+                modifier =
+                    Modifier
+                        .widthIn(max = 380.dp)
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                enabled = isValidMnemonic(mnemonicInput),
+            ) {
+                Text(
+                    text = "Import Wallet",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+    }
+}
+
+private fun isValidMnemonic(mnemonic: String): Boolean {
+    val words = mnemonic.trim().split(Regex("\\s+"))
+    return words.size == 12 && words.all { it.isNotEmpty() }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview
+@Composable
+private fun ImportWalletScreenPreview() {
+    EthWalletTheme {
+        ImportWalletScreen(
+            onWalletImported = {},
+            onUpButtonClick = {},
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
