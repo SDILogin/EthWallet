@@ -1,5 +1,7 @@
 package me.sdi.ethwallet
 
+import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -16,13 +18,17 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
+        initLogger()
+
         var lastPrintAt = System.currentTimeMillis()
         splashScreen.setKeepOnScreenCondition {
             (viewModel.numberOfWallets.value < 0).also {
                 val now = System.currentTimeMillis()
                 if (now - lastPrintAt > 1000) {
                     lastPrintAt = now
-                    Log.d("MainActivity", "Splash screen condition: $it")
+                    Logger.debug("MainActivity") {
+                        "Splash screen condition: $it"
+                    }
                 }
             }
         }
@@ -30,4 +36,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent { EthWallet(viewModel) }
     }
+}
+
+private fun Context.initLogger() {
+    Logger.enabled = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+    Logger.printer = { level: Level, tag: Tag, message: Message ->
+        when (level) {
+            Level.DEBUG -> Log.d(tag, message)
+            Level.WARN -> Log.w(tag, message)
+        }
+    }
+    Logger.debug("EthWallet") { "Logger initialized" }
 }
