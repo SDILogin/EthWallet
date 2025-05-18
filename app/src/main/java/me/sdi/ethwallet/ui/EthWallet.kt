@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -20,6 +21,7 @@ import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
+import me.sdi.ethwallet.ui.wallet.WalletScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,7 +64,7 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                             modifier = Modifier.fillMaxSize(),
                             onUpButtonClick = { navController.navigateUp() },
                             onMnemonicSaved = {
-                                // Navigate to wallet home or dashboard
+                                navigateToWalletScreen(navController)
                             },
                         )
                     }
@@ -72,12 +74,34 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                             modifier = Modifier.fillMaxSize(),
                             onUpButtonClick = { navController.navigateUp() },
                             onWalletImported = {
-                                // Navigate to wallet home or dashboard
+                                navigateToWalletScreen(navController)
+                            },
+                        )
+                    }
+
+                    composable<Destination.WalletScreen> {
+                        WalletScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onLogout = {
+                                navController.navigate(Destination.OnBoardingScreen) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        inclusive = true
+                                    }
+                                }
                             },
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+private fun navigateToWalletScreen(navController: androidx.navigation.NavController) {
+    navController.navigate(Destination.WalletScreen) {
+        // Clear the back stack so the user can't navigate back to the onboarding flow
+        popUpTo(navController.graph.findStartDestination().id) {
+            inclusive = true
         }
     }
 }

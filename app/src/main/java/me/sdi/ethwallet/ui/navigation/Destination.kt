@@ -11,4 +11,7 @@ sealed interface Destination {
 
     @Serializable
     data object ImportWalletScreen
+
+    @Serializable
+    data object WalletScreen
 }
