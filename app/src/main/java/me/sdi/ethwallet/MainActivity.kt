@@ -9,10 +9,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.ui.EthWallet
 
 class MainActivity : ComponentActivity() {
-    private val viewModel by viewModels<InitialNavigationViewModel>()
+    private val viewModel by viewModels<InitialNavigationViewModel>(
+        factoryProducer = { InitialNavigationViewModel.Factory },
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -22,6 +25,9 @@ class MainActivity : ComponentActivity() {
 
         var lastPrintAt = System.currentTimeMillis()
         splashScreen.setKeepOnScreenCondition {
+            // warmup database
+            AppDatabase.getInstance(application)
+
             (viewModel.numberOfWallets.value < 0).also {
                 val now = System.currentTimeMillis()
                 if (now - lastPrintAt > 1000) {

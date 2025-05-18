@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.database.entity.WalletEntity
 
@@ -23,6 +24,9 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): AppDatabase {
             return instance ?: synchronized(this) {
+                Logger.debug("Db") {
+                    "Creating new instance of AppDatabase"
+                }
                 val newInstance =
                     Room.databaseBuilder(
                         context.applicationContext,
