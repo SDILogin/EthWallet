@@ -12,9 +12,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import me.sdi.ethwallet.core.EthWalletCreator
+import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.FileBasedEthWalletCreator
+import me.sdi.ethwallet.core.security.KeyStoreEncryptor
 import me.sdi.ethwallet.data.AndroidTempFileProvider
+import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.database.AppDatabase
 
 /**
  * UI state representation for the Create Wallet screen.
@@ -52,7 +55,9 @@ sealed interface CreateWalletEvent {
  * ViewModel for the Create Wallet screen.
  * Handles wallet creation and state management.
  */
-class CreateWalletViewModel(private val walletCreator: EthWalletCreator) : ViewModel() {
+class CreateWalletViewModel(
+    private val walletRepository: WalletRepository,
+) : ViewModel() {
     private val _viewState = MutableStateFlow<CreateWalletViewState>(CreateWalletViewState.Loading)
     val viewState: StateFlow<CreateWalletViewState> = _viewState.asStateFlow()
 
@@ -71,12 +76,16 @@ class CreateWalletViewModel(private val walletCreator: EthWalletCreator) : ViewM
         viewModelScope.launch {
             val vs: CreateWalletViewState =
                 try {
+                    val seedPhrase = walletRepository.createWallet(label = "My Wallet")
                     CreateWalletViewState.Content(
-                        seedPhrase = walletCreator.createWallet().seedPhrase,
+                        seedPhrase = seedPhrase,
                     )
                 } catch (e: Exception) {
                     ensureActive()
 
+                    Logger.debug("CreateWalletViewModel") {
+                        "Error creating wallet: ${e.message}"
+                    }
                     CreateWalletViewState.Error(e)
                 }
 
@@ -88,9 +97,21 @@ class CreateWalletViewModel(private val walletCreator: EthWalletCreator) : ViewM
         val Factory: ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
-                    val tempFileProvider = AndroidTempFileProvider(checkNotNull(this[APPLICATION_KEY]))
+                    val context = checkNotNull(this[APPLICATION_KEY])
+                    val tempFileProvider = AndroidTempFileProvider(context)
                     val walletCreator = FileBasedEthWalletCreator(tempFileProvider)
-                    CreateWalletViewModel(walletCreator)
+                    val keyStoreEncryptor = KeyStoreEncryptor()
+                    val database = AppDatabase.getInstance(context)
+                    val walletRepository =
+                        WalletRepository(
+                            walletDao = database.walletDao(),
+                            walletCreator = walletCreator,
+                            keyStoreEncryptor = keyStoreEncryptor,
+                        )
+
+                    CreateWalletViewModel(
+                        walletRepository = walletRepository,
+                    )
                 }
             }
     }

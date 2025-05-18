@@ -27,14 +27,13 @@ abstract class AppDatabase : RoomDatabase() {
                 Logger.debug("Db") {
                     "Creating new instance of AppDatabase"
                 }
-                val newInstance =
-                    Room.databaseBuilder(
-                        context.applicationContext,
-                        AppDatabase::class.java,
-                        DATABASE_NAME,
-                    ).build()
-                instance = newInstance
-                newInstance
+                Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    DATABASE_NAME,
+                ).build().also {
+                    instance = it
+                }
             }
         }
     }

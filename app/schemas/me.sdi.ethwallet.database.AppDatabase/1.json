@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "bfcc7d180ed7439397ed774d5a21c0e8",
+    "identityHash": "aa232a5ba6466211f15ff66f9abddd5d",
     "entities": [
       {
         "tableName": "wallets",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`address` TEXT NOT NULL, `encryptedPrivateKey` TEXT NOT NULL, `label` TEXT NOT NULL, PRIMARY KEY(`address`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`address` TEXT NOT NULL, `encryptedPrivateKeyBase64` TEXT NOT NULL, `label` TEXT NOT NULL, PRIMARY KEY(`address`))",
         "fields": [
           {
             "fieldPath": "address",
@@ -15,8 +15,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "encryptedPrivateKey",
-            "columnName": "encryptedPrivateKey",
+            "fieldPath": "encryptedPrivateKeyBase64",
+            "columnName": "encryptedPrivateKeyBase64",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -37,7 +37,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bfcc7d180ed7439397ed774d5a21c0e8')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'aa232a5ba6466211f15ff66f9abddd5d')"
     ]
   }
 }

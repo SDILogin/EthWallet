@@ -34,12 +34,12 @@ class InitialNavigationViewModelTest {
                 listOf(
                     WalletEntity(
                         address = "0x123abc",
-                        encryptedPrivateKey = "encrypted_key_1",
+                        encryptedPrivateKeyBase64 = "encrypted_key_1",
                         label = "Wallet 1",
                     ),
                     WalletEntity(
                         address = "0x456def",
-                        encryptedPrivateKey = "encrypted_key_2",
+                        encryptedPrivateKeyBase64 = "encrypted_key_2",
                         label = "Wallet 2",
                     ),
                 )
