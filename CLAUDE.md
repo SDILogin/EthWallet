@@ -25,6 +25,7 @@ The project uses Spotless and ktlint for code formatting and style checking:
 
 - **Check formatting**: `./gradlew spotlessCheck`
 - **Apply formatting**: `./gradlew spotlessApply`
+- **Always run `./gradlew spotlessKotlinApply spotlessKotlinCheck` before commiting any changes**
 
 Code style rules are defined in:
 - `.editorconfig` - Contains ktlint configuration
