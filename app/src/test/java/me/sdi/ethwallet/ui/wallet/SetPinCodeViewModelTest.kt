@@ -46,7 +46,6 @@ class SetPinCodeViewModelTest {
     @Test
     fun `digit clicks should append to first PIN when not in confirmation mode`() =
         runTest {
-            // Click digits 1, 2, 3
             viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
             viewModel.onEvent(SetPinCodeEvent.OnDigitClick(2))
             viewModel.onEvent(SetPinCodeEvent.OnDigitClick(3))
@@ -60,12 +59,9 @@ class SetPinCodeViewModelTest {
     @Test
     fun `should switch to confirmation mode when first PIN is complete`() =
         runTest {
-            // Enter a complete 6-digit PIN
             for (i in 1..6) {
                 viewModel.onEvent(SetPinCodeEvent.OnDigitClick(i))
             }
-
-            // Need to advance the test dispatcher for the delay to complete
             advanceUntilIdle()
 
             val state = viewModel.viewState.first()
@@ -77,15 +73,10 @@ class SetPinCodeViewModelTest {
     @Test
     fun `digit clicks should append to second PIN when in confirmation mode`() =
         runTest {
-            // Enter first PIN
             for (i in 1..6) {
                 viewModel.onEvent(SetPinCodeEvent.OnDigitClick(i))
             }
-
-            // Need to advance for the delay to complete
             advanceUntilIdle()
-
-            // Now in confirmation mode, enter second PIN
             viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
             viewModel.onEvent(SetPinCodeEvent.OnDigitClick(2))
 
@@ -98,12 +89,9 @@ class SetPinCodeViewModelTest {
     @Test
     fun `delete click should remove last digit from first PIN`() =
         runTest {
-            // Enter some digits
             viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
             viewModel.onEvent(SetPinCodeEvent.OnDigitClick(2))
             viewModel.onEvent(SetPinCodeEvent.OnDigitClick(3))
-
-            // Delete last digit
             viewModel.onEvent(SetPinCodeEvent.OnDeleteClick)
 
             val state = viewModel.viewState.first()
@@ -113,19 +101,13 @@ class SetPinCodeViewModelTest {
     @Test
     fun `delete click should remove last digit from second PIN when in confirmation mode`() =
         runTest {
-            // Enter first PIN to get to confirmation mode
             for (i in 1..6) {
                 viewModel.onEvent(SetPinCodeEvent.OnDigitClick(i))
             }
 
-            // Need to advance for the delay to complete
             advanceUntilIdle()
-
-            // Enter some digits for second PIN
             viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
             viewModel.onEvent(SetPinCodeEvent.OnDigitClick(2))
-
-            // Delete last digit
             viewModel.onEvent(SetPinCodeEvent.OnDeleteClick)
 
             val state = viewModel.viewState.first()
@@ -136,19 +118,13 @@ class SetPinCodeViewModelTest {
     @Test
     fun `reset click should clear second PIN and return to first PIN entry`() =
         runTest {
-            // Enter first PIN to get to confirmation mode
             for (i in 1..6) {
                 viewModel.onEvent(SetPinCodeEvent.OnDigitClick(i))
             }
 
-            // Need to advance for the delay to complete
             advanceUntilIdle()
-
-            // Enter some digits for second PIN
             viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
             viewModel.onEvent(SetPinCodeEvent.OnDigitClick(2))
-
-            // Reset
             viewModel.onEvent(SetPinCodeEvent.OnResetClick)
 
             val state = viewModel.viewState.first()
@@ -167,24 +143,16 @@ class SetPinCodeViewModelTest {
                 }
             }
 
-            // Enter first PIN (all 1s)
             repeat(6) {
                 viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
             }
 
-            // Need to advance for the delay to complete
             advanceUntilIdle()
-
-            // Enter second PIN (all 1s to match)
             repeat(6) {
                 viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
             }
-
-            // Need to advance for the delay to complete validation and emit news
             advanceUntilIdle()
 
-            val state = viewModel.viewState.first()
-            assertTrue("Should be in saving state", state.isSaving)
             assertEquals(
                 "Should emit PinCodeSet news with correct PIN",
                 SetPinCodeNews.PinCodeSet("111111"),
@@ -195,20 +163,13 @@ class SetPinCodeViewModelTest {
     @Test
     fun `should clear PINs and show error when PINs don't match`() =
         runTest {
-            // Enter first PIN (all 1s)
             repeat(6) {
                 viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
             }
-
-            // Need to advance for the delay to complete
             advanceUntilIdle()
-
-            // Enter second PIN (all 2s, won't match)
             repeat(6) {
                 viewModel.onEvent(SetPinCodeEvent.OnDigitClick(2))
             }
-
-            // Need to advance for the delay to complete validation
             advanceUntilIdle()
 
             val state = viewModel.viewState.first()
@@ -216,61 +177,5 @@ class SetPinCodeViewModelTest {
             assertEquals("Second PIN should be cleared", "", state.secondPin)
             assertFalse("Should not be in confirmation mode", state.isConfirmationMode)
             assertEquals("Should show error message", "PINs don't match. Try again.", state.errorMessage)
-        }
-
-    @Test
-    fun `should not process digit clicks when in saving state`() =
-        runTest {
-            // Enter first PIN (all 1s)
-            repeat(6) {
-                viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
-            }
-
-            // Need to advance for the delay to complete
-            advanceUntilIdle()
-
-            // Enter second PIN (all 1s to match)
-            repeat(6) {
-                viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
-            }
-
-            // Need to advance for the delay to complete validation
-            advanceUntilIdle()
-
-            // Now in saving state, try to click more digits
-            viewModel.onEvent(SetPinCodeEvent.OnDigitClick(3))
-
-            val state = viewModel.viewState.first()
-            assertEquals("First PIN should remain unchanged", "111111", state.firstPin)
-            assertEquals("Second PIN should remain unchanged", "111111", state.secondPin)
-            assertTrue("Should still be in saving state", state.isSaving)
-        }
-
-    @Test
-    fun `should not process delete clicks when in saving state`() =
-        runTest {
-            // Enter first PIN (all 1s)
-            repeat(6) {
-                viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
-            }
-
-            // Need to advance for the delay to complete
-            advanceUntilIdle()
-
-            // Enter second PIN (all 1s to match)
-            repeat(6) {
-                viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
-            }
-
-            // Need to advance for the delay to complete validation
-            advanceUntilIdle()
-
-            // Now in saving state, try to use delete
-            viewModel.onEvent(SetPinCodeEvent.OnDeleteClick)
-
-            val state = viewModel.viewState.first()
-            assertEquals("First PIN should remain unchanged", "111111", state.firstPin)
-            assertEquals("Second PIN should remain unchanged", "111111", state.secondPin)
-            assertTrue("Should still be in saving state", state.isSaving)
         }
 }

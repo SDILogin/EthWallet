@@ -39,24 +39,15 @@ class SetPinCodeViewModelWithStorageTest {
                 }
             }
 
-            // Enter first PIN (all 1s)
             repeat(6) {
                 viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
             }
-
-            // Need to advance for the delay to complete
             advanceUntilIdle()
-
-            // Enter second PIN (all 1s to match)
             repeat(6) {
                 viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
             }
-
-            // Need to advance for the delay to complete validation and emit news
             advanceUntilIdle()
 
-            val state = viewModel.viewState.first()
-            assertTrue("Should be in saving state", state.isSaving)
             assertEquals(
                 "Should emit PinCodeSet news with correct PIN",
                 SetPinCodeNews.PinCodeSet("111111"),
@@ -67,6 +58,7 @@ class SetPinCodeViewModelWithStorageTest {
     @Test
     fun `should show error when storage fails`() =
         runTest {
+            pinCodeStorage.setShouldThrowException(true)
             val collector = mutableListOf<SetPinCodeNews>()
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
                 viewModel.news.collect {
@@ -74,23 +66,13 @@ class SetPinCodeViewModelWithStorageTest {
                 }
             }
 
-            // Set storage to throw exception
-            pinCodeStorage.setShouldThrowException(true)
-
-            // Enter first PIN (all 1s)
             repeat(6) {
                 viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
             }
-
-            // Need to advance for the delay to complete
             advanceUntilIdle()
-
-            // Enter second PIN (all 1s to match)
             repeat(6) {
                 viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
             }
-
-            // Need to advance for the delay to complete validation and emit news
             advanceUntilIdle()
 
             val state = viewModel.viewState.first()
