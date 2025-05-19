@@ -1,8 +1,13 @@
 package me.sdi.ethwallet.ui.wallet
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,9 +30,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -38,7 +40,8 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 
 @Composable
@@ -166,49 +169,28 @@ fun NumberButton(
     }
 }
 
-enum class SetPinCodeState {
-    SET_PIN,
-    CONFIRM_PIN,
-}
-
 @Composable
 fun SetPinCodeScreen(
     onPinCodeSet: (String) -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: SetPinCodeViewModel = viewModel(factory = SetPinCodeViewModel.Factory),
 ) {
-    var pinState by remember { mutableStateOf(SetPinCodeState.SET_PIN) }
-    var firstPin by remember { mutableStateOf("") }
-    var secondPin by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
 
-    // Get current pin based on the state
-    val currentPin = if (pinState == SetPinCodeState.SET_PIN) firstPin else secondPin
-
-    // Handler for pin input completion
-    LaunchedEffect(currentPin) {
-        if (currentPin.length == 6) {
-            delay(300) // Short delay for animation to complete
-
-            when (pinState) {
-                SetPinCodeState.SET_PIN -> {
-                    pinState = SetPinCodeState.CONFIRM_PIN
-                }
-
-                SetPinCodeState.CONFIRM_PIN -> {
-                    if (firstPin == secondPin) {
-                        onPinCodeSet(firstPin)
-                    } else {
-                        errorMessage = "PINs don't match. Try again."
-                        delay(1500) // Show error for a short time
-                        errorMessage = null
-                        pinState = SetPinCodeState.SET_PIN
-                        firstPin = ""
-                        secondPin = ""
-                    }
+    // Observe one-time events from the ViewModel
+    LaunchedEffect(Unit) {
+        viewModel.news.collect { news ->
+            when (news) {
+                is SetPinCodeNews.PinCodeSet -> onPinCodeSet(news.pinCode)
+                is SetPinCodeNews.Error -> {
+                    // We're handling errors through the state already
                 }
             }
         }
     }
+
+    // Get current pin based on the confirmation mode
+    val currentPin = if (viewState.isConfirmationMode) viewState.secondPin else viewState.firstPin
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -229,10 +211,10 @@ fun SetPinCodeScreen(
 
                 Text(
                     text =
-                        if (pinState == SetPinCodeState.SET_PIN) {
-                            "Create PIN Code"
-                        } else {
+                        if (viewState.isConfirmationMode) {
                             "Confirm PIN Code"
+                        } else {
+                            "Create PIN Code"
                         },
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center,
@@ -242,10 +224,10 @@ fun SetPinCodeScreen(
 
                 Text(
                     text =
-                        if (pinState == SetPinCodeState.SET_PIN) {
-                            "Set a 6-digit PIN to secure your wallet"
-                        } else {
+                        if (viewState.isConfirmationMode) {
                             "Enter the same PIN again to confirm"
+                        } else {
+                            "Set a 6-digit PIN to secure your wallet"
                         },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -261,23 +243,26 @@ fun SetPinCodeScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                errorMessage?.let {
-                    Text(
-                        text = it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                AnimatedVisibility(
+                    visible = viewState.errorMessage != null,
+                    enter = fadeIn(animationSpec = tween(300)) + expandVertically(animationSpec = tween(300)),
+                    exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(animationSpec = tween(300)),
+                ) {
+                    // Only show if message is not null, but the content is always rendered inside the animation block
+                    viewState.errorMessage?.let { errorMessage ->
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                 }
 
                 // Reset PIN button only on confirmation step
-                if (pinState == SetPinCodeState.CONFIRM_PIN) {
+                if (viewState.isConfirmationMode) {
                     Spacer(modifier = Modifier.height(16.dp))
                     TextButton(
-                        onClick = {
-                            pinState = SetPinCodeState.SET_PIN
-                            firstPin = ""
-                            secondPin = ""
-                        },
+                        onClick = { viewModel.onEvent(SetPinCodeEvent.OnResetClick) },
                     ) {
                         Text(
                             text = "Reset PIN",
@@ -291,20 +276,10 @@ fun SetPinCodeScreen(
             // Number pad
             NumberPad(
                 onNumberClick = { number ->
-                    if (currentPin.length < 6) {
-                        if (pinState == SetPinCodeState.SET_PIN) {
-                            firstPin += number.toString()
-                        } else {
-                            secondPin += number.toString()
-                        }
-                    }
+                    viewModel.onEvent(SetPinCodeEvent.OnDigitClick(number))
                 },
                 onDeleteClick = {
-                    if (pinState == SetPinCodeState.SET_PIN && firstPin.isNotEmpty()) {
-                        firstPin = firstPin.dropLast(1)
-                    } else if (pinState == SetPinCodeState.CONFIRM_PIN && secondPin.isNotEmpty()) {
-                        secondPin = secondPin.dropLast(1)
-                    }
+                    viewModel.onEvent(SetPinCodeEvent.OnDeleteClick)
                 },
                 modifier = Modifier.padding(bottom = 32.dp),
             )
