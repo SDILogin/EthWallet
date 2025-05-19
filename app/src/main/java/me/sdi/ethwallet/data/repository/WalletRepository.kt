@@ -21,9 +21,10 @@ class WalletRepository(
      * Creates a new wallet, encrypts the private key, and saves it to the database.
      *
      * @param label Optional friendly name for the wallet
+     * @param setAsActive Whether to set this wallet as the active wallet
      * @return The mnemonic phrase (seed phrase) for the created wallet
      */
-    suspend fun createWallet(label: String = "My Wallet"): List<String> {
+    suspend fun createWallet(label: String = "My Wallet", setAsActive: Boolean = true): List<String> {
         Logger.debug(TAG) { "Creating new wallet" }
 
         val creationResult: EthCreationResult = walletCreator.createWallet()
@@ -36,11 +37,16 @@ class WalletRepository(
 
         Logger.debug(TAG) { "Saving wallet with address $ethAddress and label $label" }
 
+        if (setAsActive) {
+            walletDao.clearActiveWallets()
+        }
+
         val walletEntity =
             WalletEntity(
                 address = ethAddress,
                 encryptedPrivateKeyBase64 = encryptedKeyBase64,
                 label = label,
+                isActive = setAsActive,
             )
 
         walletDao.insertWallet(walletEntity)
@@ -48,5 +54,44 @@ class WalletRepository(
         Logger.debug(TAG) { "Wallet created and saved with address: $ethAddress" }
 
         return creationResult.seedPhrase
+    }
+
+    /**
+     * Retrieves all wallets from the database.
+     *
+     * @return List of wallet entities
+     */
+    suspend fun getAllWallets(): List<WalletEntity> {
+        return walletDao.getAllWallets()
+    }
+
+    /**
+     * Sets a wallet as the active wallet.
+     *
+     * @param address The address of the wallet to set as active
+     */
+    suspend fun setActiveWallet(address: String) {
+        Logger.debug(TAG) { "Setting wallet $address as active" }
+        walletDao.clearActiveWallets()
+        walletDao.setWalletActive(address)
+    }
+
+    /**
+     * Deletes a wallet by its address.
+     *
+     * @param address The address of the wallet to delete
+     */
+    suspend fun deleteWallet(address: String) {
+        Logger.debug(TAG) { "Deleting wallet with address $address" }
+        walletDao.deleteWalletByAddress(address)
+    }
+
+    /**
+     * Checks if any wallets exist in the database.
+     *
+     * @return True if at least one wallet exists, false otherwise
+     */
+    suspend fun hasWallets(): Boolean {
+        return walletDao.getWalletCount() > 0
     }
 }

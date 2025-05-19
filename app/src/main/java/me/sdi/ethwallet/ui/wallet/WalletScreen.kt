@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,6 +33,7 @@ import me.sdi.ethwallet.ui.theme.EthWalletTheme
 @Composable
 fun WalletScreen(
     onLogout: () -> Unit,
+    onManageWallets: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -40,6 +42,12 @@ fun WalletScreen(
             TopAppBar(
                 title = { Text("Wallet") },
                 actions = {
+                    IconButton(onClick = onManageWallets) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Manage Wallets",
+                        )
+                    }
                     IconButton(onClick = onLogout) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Default.ExitToApp,
@@ -110,6 +118,7 @@ fun WalletScreenPreview() {
     EthWalletTheme {
         WalletScreen(
             onLogout = {},
+            onManageWallets = {},
         )
     }
 }

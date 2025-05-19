@@ -17,11 +17,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import me.sdi.ethwallet.InitialNavigationViewModel
+import me.sdi.ethwallet.core.FileBasedEthWalletCreator
+import me.sdi.ethwallet.core.security.KeyStoreEncryptor
+import me.sdi.ethwallet.data.AndroidTempFileProvider
+import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
+import me.sdi.ethwallet.ui.wallet.WalletsListScreen
+import me.sdi.ethwallet.ui.wallet.WalletsListViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,6 +96,41 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                                     }
                                 }
                             },
+                            onManageWallets = {
+                                navController.navigate(Destination.WalletsListScreen)
+                            },
+                        )
+                    }
+
+                    composable<Destination.WalletsListScreen> {
+                        val database = AppDatabase.getInstance(navController.context)
+                        val walletDao = database.walletDao()
+                        val tempFileProvider = AndroidTempFileProvider(navController.context)
+                        val ethWalletCreator = FileBasedEthWalletCreator(tempFileProvider)
+                        val keyStoreEncryptor = KeyStoreEncryptor()
+                        val walletRepository = WalletRepository(walletDao, ethWalletCreator, keyStoreEncryptor)
+                        val walletsListViewModel = WalletsListViewModel(walletRepository)
+
+                        WalletsListScreen(
+                            viewModel = walletsListViewModel,
+                            onNavigate = { destination ->
+                                when (destination) {
+                                    Destination.OnBoardingScreen -> {
+                                        navController.navigate(Destination.OnBoardingScreen) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                inclusive = true
+                                            }
+                                        }
+                                    }
+                                    Destination.WalletScreen -> {
+                                        navController.navigateUp()
+                                    }
+                                    else -> {
+                                        navController.navigate(destination)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize(),
                         )
                     }
                 }

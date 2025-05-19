@@ -20,4 +20,13 @@ interface WalletDao {
 
     @Query("SELECT * FROM wallets")
     suspend fun getAllWallets(): List<WalletEntity>
+
+    @Query("UPDATE wallets SET isActive = 0")
+    suspend fun clearActiveWallets()
+
+    @Query("UPDATE wallets SET isActive = 1 WHERE address = :address")
+    suspend fun setWalletActive(address: String)
+
+    @Query("SELECT COUNT(*) FROM wallets")
+    suspend fun getWalletCount(): Int
 }
