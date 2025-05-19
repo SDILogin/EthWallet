@@ -15,12 +15,11 @@ class FakePinCodeStorage : PinCodeStorage {
         shouldThrowException = shouldThrow
     }
 
-    override suspend fun storePinCode(pinCode: String): Boolean {
+    override suspend fun storePinCode(pinCode: String) {
         if (shouldThrowException) {
             throw SecurityException("Simulated storage failure")
         }
         storedPin = pinCode
-        return true
     }
 
     override suspend fun verifyPinCode(pinCode: String): Boolean {
@@ -37,11 +36,10 @@ class FakePinCodeStorage : PinCodeStorage {
         return storedPin != null
     }
 
-    override suspend fun clearPinCode(): Boolean {
+    override suspend fun clearPinCode() {
         if (shouldThrowException) {
             throw SecurityException("Simulated clear failure")
         }
         storedPin = null
-        return true
     }
 }

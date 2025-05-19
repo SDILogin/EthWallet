@@ -39,16 +39,13 @@ class DataStorePinCodeStorage(
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val PIN_KEY_ALIAS = "wallet_pin_code_key"
-        private const val DATASTORE_NAME = "secure_pin_preferences"
         private const val GCM_IV_LENGTH = 12
         private const val GCM_TAG_LENGTH = 128
 
         private val ENCRYPTED_PIN = stringPreferencesKey("encrypted_pin")
     }
 
-    private val Context.pinDataStore by preferencesDataStore(name = DATASTORE_NAME)
-
-    private val dataStore = context.pinDataStore
+    val dataStore = context.pinDataStore
 
     override suspend fun storePinCode(pinCode: String) {
         val hashedPin = hashPinCode(pinCode)
@@ -186,3 +183,6 @@ class DataStorePinCodeStorage(
             Base64.encodeToString(combined, Base64.DEFAULT)
         }
 }
+
+private const val DATASTORE_NAME = "secure_pin_preferences"
+private val Context.pinDataStore by preferencesDataStore(name = DATASTORE_NAME)

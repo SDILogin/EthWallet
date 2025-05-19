@@ -5,7 +5,6 @@ package me.sdi.ethwallet.core.security
  * Implementations should use secure storage mechanisms like Android KeyStore.
  */
 interface PinCodeStorage {
-
     suspend fun storePinCode(pinCode: String)
 
     /**
