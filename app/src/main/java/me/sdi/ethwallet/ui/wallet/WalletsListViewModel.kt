@@ -75,10 +75,10 @@ class WalletsListViewModel(
                 walletRepository.deleteWallet(address)
 
                 val hasWallets = walletRepository.hasWallets()
-                if (!hasWallets) {
-                    _uiState.update { it.copy(navigateTo = Destination.OnBoardingScreen) }
-                } else {
+                if (hasWallets) {
                     loadWallets()
+                } else {
+                    _uiState.update { it.copy(navigateTo = Destination.OnBoardingScreen) }
                 }
             } catch (e: Exception) {
                 ensureActive()
