@@ -95,7 +95,6 @@ class WalletsListViewModelTest {
         runTest {
             coEvery { walletRepository.getAllWallets() } returns emptyList()
 
-            // Initialize with Start event
             viewModel.onEvent(WalletsListEvent.Start)
             advanceUntilIdle()
 
@@ -230,7 +229,6 @@ class WalletsListViewModelTest {
                 }
             }
 
-            // Verify repository interactions
             coVerify(exactly = 1) { walletRepository.deleteWallet(addressToDelete) }
 
             val currentState = viewModel.uiState.first()

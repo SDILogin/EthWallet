@@ -29,7 +29,6 @@ class InitialNavigationViewModelTest {
     @Test
     fun `should load wallet count on initialization`() =
         runTest {
-            // Arrange
             val wallets =
                 listOf(
                     WalletEntity(
@@ -46,26 +45,21 @@ class InitialNavigationViewModelTest {
 
             coEvery { walletDao.getAllWallets() } returns wallets
 
-            // Act
             viewModel = InitialNavigationViewModel(walletDao)
-            advanceUntilIdle() // Let coroutines complete
+            advanceUntilIdle()
 
-            // Assert
             assertEquals(2, viewModel.numberOfWallets.first())
         }
 
     @Test
     fun `should handle exceptions and set wallet count to 0`() =
         runTest {
-            // Arrange
             val exception = RuntimeException("Database error")
             coEvery { walletDao.getAllWallets() } throws exception
 
-            // Act
             viewModel = InitialNavigationViewModel(walletDao)
             advanceUntilIdle() // Let coroutines complete
 
-            // Assert
             assertEquals(0, viewModel.numberOfWallets.first())
         }
 }

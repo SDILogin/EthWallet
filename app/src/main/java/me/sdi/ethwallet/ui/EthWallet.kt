@@ -116,7 +116,6 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                         SetPinCodeScreen(
                             modifier = Modifier.fillMaxSize(),
                             onPinCodeSet = {
-                                // Navigate to appropriate screen after PIN is set
                                 navigateToWalletScreen(navController)
                             },
                         )
@@ -129,7 +128,6 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
 
 private fun navigateToWalletScreen(navController: NavController) {
     navController.navigate(Destination.WalletScreen) {
-        // Clear the back stack so the user can't navigate back to the onboarding flow
         popUpTo(navController.graph.findStartDestination().id) {
             inclusive = true
         }

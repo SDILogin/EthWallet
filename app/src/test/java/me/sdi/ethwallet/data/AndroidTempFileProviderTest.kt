@@ -29,7 +29,6 @@ class AndroidTempFileProviderTest {
 
     @After
     fun tearDown() {
-        // Clean up any test files that might have been created
         testFiles.forEach { file ->
             if (file.exists()) {
                 if (file.isDirectory) {
@@ -48,14 +47,12 @@ class AndroidTempFileProviderTest {
 
         tempFileProvider.withTempDirectory("test_prefix") { dir ->
             tempDir = dir
-            testFiles.add(dir) // Track for cleanup
+            testFiles.add(dir)
 
-            // Verify the directory exists
             assertTrue("Temporary directory should exist", dir.exists())
             assertTrue("Temporary directory should be a directory", dir.isDirectory)
         }
 
-        // Verify the directory is cleaned up after use
         assertFalse("Temporary directory should be deleted after use", tempDir?.exists() ?: true)
     }
 
@@ -63,7 +60,7 @@ class AndroidTempFileProviderTest {
     fun `withTempDirectory returns result from block`() {
         val result =
             tempFileProvider.withTempDirectory("test_prefix") { dir ->
-                testFiles.add(dir) // Track for cleanup
+                testFiles.add(dir)
 
                 "expected_result"
             }
@@ -77,13 +74,11 @@ class AndroidTempFileProviderTest {
 
         var checked = false
         tempFileProvider.withTempDirectory("test_prefix") { dir ->
-            testFiles.add(dir) // Track for cleanup
+            testFiles.add(dir)
 
-            // Create a file in the temp directory
             val testFile = File(dir, "test_file.txt")
             testFile.writeText(fileContents)
 
-            // Verify the file exists and has the correct contents
             assertTrue("Test file should exist", testFile.exists())
             assertEquals("File should have correct contents", fileContents, testFile.readText())
 
@@ -100,16 +95,13 @@ class AndroidTempFileProviderTest {
         try {
             tempFileProvider.withTempDirectory("test_prefix") { dir ->
                 tempDir = dir
-                testFiles.add(dir) // Track for cleanup
+                testFiles.add(dir)
 
-                // Throw an exception to test cleanup
                 throw RuntimeException("Test exception")
             }
         } catch (e: RuntimeException) {
-            // Expected exception, continue
         }
 
-        // Verify the directory is cleaned up after exception
         assertFalse("Temporary directory should be deleted after exception", tempDir?.exists() ?: true)
     }
 
@@ -119,13 +111,11 @@ class AndroidTempFileProviderTest {
 
         var checked = false
         tempFileProvider.withTempDirectory("test_prefix") { dir ->
-            testFiles.add(dir) // Track for cleanup
+            testFiles.add(dir)
 
-            // Create a nested directory structure
             val nestedDir = File(dir, "nested_dir")
             assertTrue("Should be able to create nested directory", nestedDir.mkdir())
 
-            // Create a file in the nested directory
             val nestedFile = File(nestedDir, "nested_file.txt")
             nestedFile.writeText(nestedContent)
 
@@ -140,10 +130,6 @@ class AndroidTempFileProviderTest {
 
     @Test
     fun `withTempDirectory securely deletes files`() {
-        // This test is more of a functional test than a unit test
-        // since we can't easily verify the secure deletion in a test environment
-        // But we can at least verify the method doesn't throw exceptions
-
         val tempFile = File.createTempFile("test", ".tmp")
         testFiles.add(tempFile)
 
@@ -151,13 +137,10 @@ class AndroidTempFileProviderTest {
         tempFileProvider.withTempDirectory("test_prefix") { dir ->
             testFiles.add(dir)
 
-            // Create a small file (to be securely deleted)
             val smallFile = File(dir, "small_file.txt")
             smallFile.writeText("Small file content")
 
-            // Create a large file (over the secure delete threshold)
             val largeFile = File(dir, "large_file.txt")
-            // Write a 15MB file
             largeFile.outputStream().use { out ->
                 val buffer = ByteArray(1024 * 1024) // 1MB buffer
                 for (i in 0 until 15) {

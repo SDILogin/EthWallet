@@ -177,7 +177,6 @@ fun SetPinCodeScreen(
 ) {
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
 
-    // Observe one-time events from the ViewModel
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
             when (news) {
@@ -189,7 +188,6 @@ fun SetPinCodeScreen(
         }
     }
 
-    // Get current pin based on the confirmation mode
     val currentPin = if (viewState.isConfirmationMode) viewState.secondPin else viewState.firstPin
 
     Surface(
@@ -248,7 +246,6 @@ fun SetPinCodeScreen(
                     enter = fadeIn(animationSpec = tween(300)) + expandVertically(animationSpec = tween(300)),
                     exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(animationSpec = tween(300)),
                 ) {
-                    // Only show if message is not null, but the content is always rendered inside the animation block
                     viewState.errorMessage?.let { errorMessage ->
                         Text(
                             text = errorMessage,
@@ -258,7 +255,6 @@ fun SetPinCodeScreen(
                     }
                 }
 
-                // Reset PIN button only on confirmation step
                 if (viewState.isConfirmationMode) {
                     Spacer(modifier = Modifier.height(16.dp))
                     TextButton(
@@ -273,7 +269,6 @@ fun SetPinCodeScreen(
                 }
             }
 
-            // Number pad
             NumberPad(
                 onNumberClick = { number ->
                     viewModel.onEvent(SetPinCodeEvent.OnDigitClick(number))

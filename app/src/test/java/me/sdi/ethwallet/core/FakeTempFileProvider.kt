@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.core
 
+import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.data.TempFileProvider
 import java.io.File
 import kotlin.io.path.ExperimentalPathApi
@@ -11,7 +12,6 @@ import kotlin.io.path.deleteRecursively
  * Uses Kotlin's standard library temp file APIs instead of Android-specific ones.
  */
 class FakeTempFileProvider : TempFileProvider {
-    // Track created directories for cleanup
     private val createdDirs = mutableListOf<File>()
 
     /**
@@ -47,7 +47,10 @@ class FakeTempFileProvider : TempFileProvider {
                 path.deleteRecursively()
             }
         } catch (e: Exception) {
-            // Fallback to regular deletion if deleteRecursively fails
+            Logger.warn("FakeTempFileProvider") {
+                "Failed to delete temp directory: ${e.printStackTrace()}"
+            }
+
             dir.deleteRecursively()
         } finally {
             createdDirs.remove(dir)

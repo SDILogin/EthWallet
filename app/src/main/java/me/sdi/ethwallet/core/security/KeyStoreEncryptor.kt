@@ -38,26 +38,20 @@ class KeyStoreEncryptor {
                 "Encrypting private key for address $address with alias $keyAlias"
             }
 
-            // Get or create the encryption key in the KeyStore
             val secretKey = getOrCreateSecretKey(keyAlias)
 
-            // Initialize cipher for encryption
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.ENCRYPT_MODE, secretKey)
 
-            // Get the initialization vector
             val iv = cipher.iv
 
-            // Convert BigInteger to byte array and encrypt
             val privateKeyBytes = privateKey.toByteArray()
             val encryptedBytes = cipher.doFinal(privateKeyBytes)
 
-            // Combine IV and encrypted bytes (IV needs to be stored for decryption)
             val combined = ByteArray(iv.size + encryptedBytes.size)
             System.arraycopy(iv, 0, combined, 0, iv.size)
             System.arraycopy(encryptedBytes, 0, combined, iv.size, encryptedBytes.size)
 
-            // Convert to Base64 for storage
             return Base64.encodeToString(combined, Base64.DEFAULT)
         } catch (e: Exception) {
             Logger.debug("KeyStoreEncryptor") {
@@ -81,29 +75,23 @@ class KeyStoreEncryptor {
                 "Decrypting private key for address $address with alias $keyAlias"
             }
 
-            // Get the encryption key from the KeyStore
             val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
             keyStore.load(null)
             val secretKey =
                 keyStore.getKey(keyAlias, null) as? SecretKey
                     ?: throw SecurityException("No key found with alias: $keyAlias")
 
-            // Decode the Base64 string
             val encryptedData = Base64.decode(encryptedBase64, Base64.DEFAULT)
 
-            // Extract IV and encrypted data
             val iv = encryptedData.copyOfRange(0, GCM_IV_LENGTH)
             val encrypted = encryptedData.copyOfRange(GCM_IV_LENGTH, encryptedData.size)
 
-            // Initialize cipher for decryption
             val cipher = Cipher.getInstance(TRANSFORMATION)
             val spec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
             cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
 
-            // Decrypt the data
             val decryptedBytes = cipher.doFinal(encrypted)
 
-            // Convert back to BigInteger
             return BigInteger(decryptedBytes)
         } catch (e: Exception) {
             Logger.debug("KeyStoreEncryptor") {
@@ -130,12 +118,10 @@ class KeyStoreEncryptor {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
         keyStore.load(null)
 
-        // Check if key already exists
         if (keyStore.containsAlias(keyAlias)) {
             return keyStore.getKey(keyAlias, null) as SecretKey
         }
 
-        // Create new key if not exists
         val keyGenerator =
             KeyGenerator.getInstance(
                 KeyProperties.KEY_ALGORITHM_AES,

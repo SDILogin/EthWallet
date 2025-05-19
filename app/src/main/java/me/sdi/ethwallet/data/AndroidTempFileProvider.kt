@@ -2,6 +2,7 @@ package me.sdi.ethwallet.data
 
 import android.content.Context
 import android.os.Build
+import me.sdi.ethwallet.Logger
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.ExperimentalPathApi
@@ -25,7 +26,6 @@ class AndroidTempFileProvider(private val context: Context) : TempFileProvider {
      */
     @OptIn(ExperimentalPathApi::class)
     override fun <T> withTempDirectory(prefix: String, block: (File) -> T): T {
-        // For API level < 26 (before Android O), we use a different approach
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             val cacheDir = File(context.cacheDir, "temp_${System.currentTimeMillis()}")
             if (!cacheDir.exists()) {
@@ -40,7 +40,6 @@ class AndroidTempFileProvider(private val context: Context) : TempFileProvider {
                 }
             }
         } else {
-            // For API level 26+ (Android O and above), we can use Path API
             val tempDir: Path = createTempDirectory(prefix)
             try {
                 return block(tempDir.toFile())
@@ -48,7 +47,10 @@ class AndroidTempFileProvider(private val context: Context) : TempFileProvider {
                 try {
                     tempDir.deleteRecursively()
                 } catch (e: Exception) {
-                    // Fallback to Java's delete for extra safety
+                    Logger.warn("AndroidTempFileProvider") {
+                        "Error deleting temporary directory: ${tempDir.toAbsolutePath()}\n${e.message}"
+                    }
+
                     deleteDirectoryRecursively(tempDir.toFile())
                 }
             }
@@ -88,7 +90,6 @@ class AndroidTempFileProvider(private val context: Context) : TempFileProvider {
     private fun secureDeleteFile(file: File) {
         try {
             if (file.exists() && file.isFile) {
-                // Overwrite with zeros
                 file.outputStream().use { output ->
                     val zeros = ByteArray(4096) // 4KB buffer of zeros
                     val fileSize = file.length()
@@ -103,11 +104,13 @@ class AndroidTempFileProvider(private val context: Context) : TempFileProvider {
                     output.flush()
                 }
 
-                // Delete the file
                 file.delete()
             }
         } catch (e: Exception) {
-            // Fallback to regular delete if secure delete fails
+            Logger.warn("AndroidTempFileProvider") {
+                "Error securely deleting file: ${file.absolutePath}\n${e.message}"
+            }
+
             file.delete()
         }
     }

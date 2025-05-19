@@ -22,13 +22,10 @@ class CreateWalletViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    // Mock dependencies
     private lateinit var walletRepository: WalletRepository
 
-    // Class under test
     private lateinit var viewModel: CreateWalletViewModel
 
-    // Test data
     private val testSeedPhrase =
         listOf(
             "abandon",

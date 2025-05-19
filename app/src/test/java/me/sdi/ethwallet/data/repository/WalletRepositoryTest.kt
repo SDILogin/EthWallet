@@ -25,15 +25,12 @@ class WalletRepositoryTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
-    // Mock dependencies
     private lateinit var walletDao: WalletDao
     private lateinit var walletCreator: EthWalletCreator
     private lateinit var keyStoreEncryptor: KeyStoreEncryptor
 
-    // Class under test
     private lateinit var walletRepository: WalletRepository
 
-    // Test data
     private val testAddress = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F"
     private val testPrivateKey = BigInteger("123456789012345678901234567890123456789012345678901234567890")
     private val testSeedPhrase =
@@ -56,12 +53,10 @@ class WalletRepositoryTest {
 
     @Before
     fun setUp() {
-        // Setup mocks
         walletDao = mockk(relaxed = true)
         walletCreator = mockk()
         keyStoreEncryptor = mockk()
 
-        // Configure default behavior for mocks
         every { walletCreator.createWallet() } returns
             EthCreationResult(
                 address = EthAddress(testAddress),
@@ -76,7 +71,6 @@ class WalletRepositoryTest {
             )
         } returns testEncryptedKey
 
-        // Create instance of class under test
         walletRepository =
             WalletRepository(
                 walletDao = walletDao,
@@ -93,7 +87,6 @@ class WalletRepositoryTest {
 
             val result = walletRepository.createWallet(testLabel)
 
-            // Assert
             assertEquals("Seed phrase should match the one from wallet creator", testSeedPhrase, result)
             coVerify(exactly = 1) { walletCreator.createWallet() }
             coVerify(exactly = 1) {
