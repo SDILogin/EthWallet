@@ -99,7 +99,7 @@ fun NumberPad(
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             (1..3).forEach { number ->
-                NumberButton(number = number, onClick = { onNumberClick(number) })
+                NumberButton(number = number, enabled = true, onClick = { onNumberClick(number) })
             }
         }
 
@@ -110,7 +110,7 @@ fun NumberPad(
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             (4..6).forEach { number ->
-                NumberButton(number = number, onClick = { onNumberClick(number) })
+                NumberButton(number = number, enabled = true, onClick = { onNumberClick(number) })
             }
         }
 
@@ -121,7 +121,7 @@ fun NumberPad(
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             (7..9).forEach { number ->
-                NumberButton(number = number, onClick = { onNumberClick(number) })
+                NumberButton(number = number, enabled = true, onClick = { onNumberClick(number) })
             }
         }
 
@@ -135,10 +135,11 @@ fun NumberPad(
                 // Empty space for layout balance
             }
 
-            NumberButton(number = 0, onClick = { onNumberClick(0) })
+            NumberButton(number = 0, enabled = true, onClick = { onNumberClick(0) })
 
             TextButton(
                 onClick = onDeleteClick,
+                enabled = true,
                 modifier = Modifier.size(72.dp),
             ) {
                 Icon(
@@ -154,6 +155,7 @@ fun NumberPad(
 @Composable
 fun NumberButton(
     number: Int,
+    enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {

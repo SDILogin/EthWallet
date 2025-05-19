@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -23,6 +25,9 @@ import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
 import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
+import me.sdi.ethwallet.ui.wallet.VerifyPinCodeNews
+import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
+import me.sdi.ethwallet.ui.wallet.VerifyPinCodeViewModel
 import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
 
@@ -30,11 +35,11 @@ import me.sdi.ethwallet.ui.wallet.WalletsListScreen
 @Composable
 fun EthWallet(viewModel: InitialNavigationViewModel) {
     EthWalletTheme {
-        val numberOfWallets by viewModel.numberOfWallets.collectAsStateWithLifecycle()
+        val state by viewModel.state.collectAsStateWithLifecycle()
         val navController = rememberNavController()
         AnimatedVisibility(
             modifier = Modifier.fillMaxSize(),
-            visible = numberOfWallets >= 0,
+            visible = state.numberOfWallets >= 0,
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
@@ -42,13 +47,16 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                 modifier = Modifier.fillMaxSize(),
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
             ) { innerPadding ->
+                // Determine start destination based on user state
+                val startDestination = state.initialRoute ?: Destination.OnBoardingScreen
+
                 NavHost(
                     modifier =
                         Modifier
                             .fillMaxSize()
                             .padding(innerPadding),
                     navController = navController,
-                    startDestination = Destination.OnBoardingScreen,
+                    startDestination = startDestination,
                 ) {
                     composable<Destination.OnBoardingScreen> {
                         OnboardingScreen(
@@ -118,6 +126,39 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                             onPinCodeSet = {
                                 navigateToWalletScreen(navController)
                             },
+                        )
+                    }
+
+                    composable<Destination.VerifyPinCodeScreen> {
+                        val viewModel = viewModel<VerifyPinCodeViewModel>(
+                            factory = VerifyPinCodeViewModel.Factory,
+                        )
+                        val viewState by viewModel.viewState.collectAsStateWithLifecycle()
+
+                        LaunchedEffect(Unit) {
+                            viewModel.news.collect { news ->
+                                when (news) {
+                                    is VerifyPinCodeNews.PinVerified -> {
+                                        navigateToWalletScreen(navController)
+                                    }
+                                    is VerifyPinCodeNews.LoggedOut -> {
+                                        navController.navigate(Destination.OnBoardingScreen) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                inclusive = true
+                                            }
+                                        }
+                                    }
+                                    is VerifyPinCodeNews.Error -> {
+                                        // Error already shown in the UI
+                                    }
+                                }
+                            }
+                        }
+
+                        VerifyPinCodeScreen(
+                            viewState = viewState,
+                            onEvent = viewModel::onEvent,
+                            modifier = Modifier.fillMaxSize(),
                         )
                     }
                 }

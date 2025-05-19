@@ -20,4 +20,7 @@ sealed interface Destination {
 
     @Serializable
     data object SetPinCodeScreen : Destination
+
+    @Serializable
+    data object VerifyPinCodeScreen : Destination
 }

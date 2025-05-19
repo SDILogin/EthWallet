@@ -11,27 +11,58 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import me.sdi.ethwallet.core.security.DataStorePinCodeStorage
+import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.database.dao.WalletDao
+import me.sdi.ethwallet.ui.navigation.Destination
+
+/**
+ * Initial state for navigation, including the initial route
+ */
+data class InitialNavigationState(
+    val numberOfWallets: Int = -1,
+    val isPinCodeSet: Boolean = false,
+    val initialRoute: Destination? = null,
+)
 
 class InitialNavigationViewModel(
     private val walletDao: WalletDao,
+    private val pinCodeStorage: PinCodeStorage,
 ) : ViewModel() {
-    private val _numberOfWallets = MutableStateFlow(-1)
-    val numberOfWallets: StateFlow<Int> = _numberOfWallets.asStateFlow()
+    private val _state = MutableStateFlow(InitialNavigationState())
+    val state: StateFlow<InitialNavigationState> = _state.asStateFlow()
+
+    // For backward compatibility
+    val numberOfWallets: StateFlow<Int> get() = MutableStateFlow(_state.value.numberOfWallets).asStateFlow()
 
     init {
         viewModelScope.launch {
-            _numberOfWallets.value =
-                try {
-                    walletDao.getAllWallets().size
-                } catch (e: Exception) {
-                    ensureActive()
+            try {
+                val wallets = walletDao.getAllWallets()
+                val hasPin = pinCodeStorage.hasPinCode()
 
-                    Logger.warn("Db") { e.stackTraceToString() }
-
-                    0
+                val initialRoute = when {
+                    wallets.isEmpty() -> Destination.OnBoardingScreen
+                    !hasPin -> Destination.SetPinCodeScreen
+                    else -> Destination.VerifyPinCodeScreen
                 }
+
+                _state.value = InitialNavigationState(
+                    numberOfWallets = wallets.size,
+                    isPinCodeSet = hasPin,
+                    initialRoute = initialRoute,
+                )
+            } catch (e: Exception) {
+                ensureActive()
+                Logger.warn("Db") { e.stackTraceToString() }
+
+                _state.value = InitialNavigationState(
+                    numberOfWallets = 0,
+                    isPinCodeSet = false,
+                    initialRoute = Destination.OnBoardingScreen,
+                )
+            }
         }
     }
 
@@ -42,7 +73,8 @@ class InitialNavigationViewModel(
                     val appContext = checkNotNull(this[APPLICATION_KEY])
                     val appDatabase = AppDatabase.getInstance(appContext)
                     val walletDao = appDatabase.walletDao()
-                    InitialNavigationViewModel(walletDao)
+                    val pinCodeStorage = DataStorePinCodeStorage(appContext)
+                    InitialNavigationViewModel(walletDao, pinCodeStorage)
                 }
             }
     }
