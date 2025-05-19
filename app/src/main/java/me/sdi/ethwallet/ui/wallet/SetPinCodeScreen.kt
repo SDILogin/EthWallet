@@ -268,6 +268,24 @@ fun SetPinCodeScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
+
+                // Reset PIN button only on confirmation step
+                if (pinState == SetPinCodeState.CONFIRM_PIN) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(
+                        onClick = {
+                            pinState = SetPinCodeState.SET_PIN
+                            firstPin = ""
+                            secondPin = ""
+                        },
+                    ) {
+                        Text(
+                            text = "Reset PIN",
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
             }
 
             // Number pad
