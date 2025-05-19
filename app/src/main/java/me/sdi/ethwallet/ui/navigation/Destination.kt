@@ -17,4 +17,7 @@ sealed interface Destination {
 
     @Serializable
     data object WalletsListScreen : Destination
+
+    @Serializable
+    data object SetPinCodeScreen : Destination
 }

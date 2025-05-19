@@ -1,6 +1,5 @@
 package me.sdi.ethwallet.ui
 
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -10,10 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -21,19 +18,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import me.sdi.ethwallet.InitialNavigationViewModel
-import me.sdi.ethwallet.core.FileBasedEthWalletCreator
-import me.sdi.ethwallet.core.security.KeyStoreEncryptor
-import me.sdi.ethwallet.data.AndroidTempFileProvider
-import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
+import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
-import me.sdi.ethwallet.ui.wallet.WalletScreenNews
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
-import me.sdi.ethwallet.ui.wallet.WalletsListViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,7 +67,7 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                             modifier = Modifier.fillMaxSize(),
                             onUpButtonClick = { navController.navigateUp() },
                             onMnemonicSaved = {
-                                navigateToWalletScreen(navController)
+                                navController.navigate(Destination.SetPinCodeScreen)
                             },
                         )
                     }
@@ -86,7 +77,7 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                             modifier = Modifier.fillMaxSize(),
                             onUpButtonClick = { navController.navigateUp() },
                             onWalletImported = {
-                                navigateToWalletScreen(navController)
+                                navController.navigate(Destination.SetPinCodeScreen)
                             },
                         )
                     }
@@ -117,7 +108,17 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                                     }
                                 }
                             },
-                            navigateToWalletDetails = { navigateToWalletScreen(navController) }
+                            navigateToWalletDetails = { navigateToWalletScreen(navController) },
+                        )
+                    }
+
+                    composable<Destination.SetPinCodeScreen> {
+                        SetPinCodeScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onPinCodeSet = {
+                                // Navigate to appropriate screen after PIN is set
+                                navigateToWalletScreen(navController)
+                            },
                         )
                     }
                 }
