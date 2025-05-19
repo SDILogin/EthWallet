@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui.wallet
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -36,40 +37,83 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewFontScale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import me.sdi.ethwallet.core.FileBasedEthWalletCreator
+import me.sdi.ethwallet.core.security.KeyStoreEncryptor
+import me.sdi.ethwallet.data.AndroidTempFileProvider
+import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.database.entity.WalletEntity
-import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletsListScreen(
-    viewModel: WalletsListViewModel,
-    onNavigate: (Destination) -> Unit,
     modifier: Modifier = Modifier,
+    navigateToOnboarding: () -> Unit,
+    navigateToWalletDetails: () -> Unit,
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val applicationContext = LocalContext.current.applicationContext
+    val viewModel =
+        remember {
+            val database = AppDatabase.getInstance(applicationContext)
+            val walletDao = database.walletDao()
+            val tempFileProvider = AndroidTempFileProvider(applicationContext)
+            val ethWalletCreator = FileBasedEthWalletCreator(tempFileProvider)
+            val keyStoreEncryptor = KeyStoreEncryptor()
+            val walletRepository = WalletRepository(walletDao, ethWalletCreator, keyStoreEncryptor)
+            WalletsListViewModel(walletRepository)
+        }
 
-    LaunchedEffect(uiState.navigateTo) {
-        uiState.navigateTo?.let {
-            onNavigate(it)
-            viewModel.consumeNavigation()
+    val uiState by viewModel.uiState.collectAsState()
+    LaunchedEffect(Unit) {
+        viewModel.news.collect { news ->
+            when (news) {
+                WalletScreenNews.NavigateToOnBoarding -> navigateToOnboarding()
+                WalletScreenNews.NavigateToWalletDetails -> navigateToWalletDetails()
+                is WalletScreenNews.ShowErrorMessage -> {
+                    val message =
+                        news.error
+                            .localizedMessage
+                            .takeIf { message -> message.isNullOrBlank() }
+                            ?: "Something went wrong"
+
+                    Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
+    LaunchedEffect(viewModel) {
+        viewModel.onEvent(WalletsListEvent.Start)
+    }
+    WalletsListScreen(modifier, uiState, viewModel::onEvent)
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun WalletsListScreen(
+    modifier: Modifier,
+    uiState: WalletsListUiState,
+    onEvent: (WalletsListEvent) -> Unit,
+) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = { Text("My Wallets") },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.navigateToWalletDetails() }) {
+                    IconButton(onClick = { onEvent(WalletsListEvent.OnBackPress) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Default.ArrowBack,
                             contentDescription = "Back",
@@ -116,8 +160,8 @@ fun WalletsListScreen(
                         WalletCard(
                             modifier = Modifier.fillMaxWidth(),
                             wallet = wallet,
-                            onWalletClicked = { viewModel.setActiveWallet(wallet.address) },
-                            onDeleteClicked = { viewModel.deleteWallet(wallet.address) },
+                            onWalletClicked = { onEvent(WalletsListEvent.SetActiveWallet(wallet.address)) },
+                            onDeleteClicked = { onEvent(WalletsListEvent.DeleteWallet(wallet.address)) },
                         )
                     }
                 }
@@ -128,7 +172,7 @@ fun WalletsListScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WalletCard(
+private fun WalletCard(
     wallet: WalletEntity,
     onWalletClicked: () -> Unit,
     onDeleteClicked: () -> Unit,
@@ -207,22 +251,45 @@ fun WalletCard(
     }
 }
 
+private class UiStateProvider : PreviewParameterProvider<WalletsListUiState> {
+    override val values =
+        sequenceOf(
+            WalletsListUiState(
+                wallets = listOf(),
+                isLoading = false,
+            ),
+            WalletsListUiState(
+                wallets =
+                    listOf(
+                        WalletEntity(
+                            address = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+                            encryptedPrivateKeyBase64 = "",
+                            label = "My Wallet",
+                            isActive = true,
+                        ),
+                        WalletEntity(
+                            address = "0x71C7656EC7ab88b11223efB751B7401B5f6d8976F",
+                            encryptedPrivateKeyBase64 = "",
+                            label = "My secondary wallet",
+                            isActive = false,
+                        ),
+                    ),
+                isLoading = false,
+            ),
+            WalletsListUiState(
+                wallets = emptyList(),
+                isLoading = true,
+            ),
+        )
+}
+
 @Composable
 @PreviewLightDark
 @PreviewFontScale
-fun WalletCardPreview() {
+private fun WalletsListScreenPreview(
+    @PreviewParameter(UiStateProvider::class) uiState: WalletsListUiState,
+) {
     EthWalletTheme {
-        WalletCard(
-            modifier = Modifier.fillMaxWidth(),
-            wallet =
-                WalletEntity(
-                    address = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-                    encryptedPrivateKeyBase64 = "",
-                    label = "My Wallet",
-                    isActive = true,
-                ),
-            onWalletClicked = {},
-            onDeleteClicked = {},
-        )
+        WalletsListScreen(Modifier.fillMaxSize(), uiState) {}
     }
 }

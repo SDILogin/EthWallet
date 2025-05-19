@@ -123,7 +123,7 @@ class WalletRepositoryTest {
             assertEquals("Label should be the default", "My Wallet", capturedEntity.label)
             assertEquals("isActive should be true by default", true, capturedEntity.isActive)
         }
-        
+
     @Test
     fun `createWallet should set isActive to false when specified`() =
         runTest {
@@ -165,29 +165,30 @@ class WalletRepositoryTest {
 
             walletRepository.createWallet()
         }
-        
+
     @Test
     fun `getAllWallets should return all wallets from the database`() =
         runTest {
-            val testWallets = listOf(
-                WalletEntity(
-                    address = testAddress,
-                    encryptedPrivateKeyBase64 = testEncryptedKey,
-                    label = testLabel,
-                    isActive = true
-                ),
-                WalletEntity(
-                    address = "0x123456",
-                    encryptedPrivateKeyBase64 = "another_encrypted_key",
-                    label = "Another Wallet",
-                    isActive = false
+            val testWallets =
+                listOf(
+                    WalletEntity(
+                        address = testAddress,
+                        encryptedPrivateKeyBase64 = testEncryptedKey,
+                        label = testLabel,
+                        isActive = true,
+                    ),
+                    WalletEntity(
+                        address = "0x123456",
+                        encryptedPrivateKeyBase64 = "another_encrypted_key",
+                        label = "Another Wallet",
+                        isActive = false,
+                    ),
                 )
-            )
-            
+
             coEvery { walletDao.getAllWallets() } returns testWallets
-            
+
             val result = walletRepository.getAllWallets()
-            
+
             assertEquals("Should return all wallets", testWallets, result)
             coVerify(exactly = 1) { walletDao.getAllWallets() }
         }
@@ -196,47 +197,25 @@ class WalletRepositoryTest {
     fun `setActiveWallet should clear active wallets and set the specified wallet as active`() =
         runTest {
             val address = "0x123456"
-            
+
             coEvery { walletDao.clearActiveWallets() } returns Unit
             coEvery { walletDao.setWalletActive(address) } returns Unit
-            
+
             walletRepository.setActiveWallet(address)
-            
+
             coVerify(exactly = 1) { walletDao.clearActiveWallets() }
             coVerify(exactly = 1) { walletDao.setWalletActive(address) }
         }
-        
+
     @Test
     fun `deleteWallet should delete wallet by address`() =
         runTest {
             val address = "0x123456"
-            
+
             coEvery { walletDao.deleteWalletByAddress(address) } returns Unit
-            
+
             walletRepository.deleteWallet(address)
-            
+
             coVerify(exactly = 1) { walletDao.deleteWalletByAddress(address) }
-        }
-        
-    @Test
-    fun `hasWallets should return true when wallets exist`() =
-        runTest {
-            coEvery { walletDao.getWalletCount() } returns 3
-            
-            val result = walletRepository.hasWallets()
-            
-            assertEquals("Should return true when wallet count > 0", true, result)
-            coVerify(exactly = 1) { walletDao.getWalletCount() }
-        }
-        
-    @Test
-    fun `hasWallets should return false when no wallets exist`() =
-        runTest {
-            coEvery { walletDao.getWalletCount() } returns 0
-            
-            val result = walletRepository.hasWallets()
-            
-            assertEquals("Should return false when wallet count = 0", false, result)
-            coVerify(exactly = 1) { walletDao.getWalletCount() }
         }
 }

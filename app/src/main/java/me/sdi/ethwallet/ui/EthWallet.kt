@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -9,9 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -27,6 +31,7 @@ import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
+import me.sdi.ethwallet.ui.wallet.WalletScreenNews
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListViewModel
 
@@ -103,34 +108,16 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                     }
 
                     composable<Destination.WalletsListScreen> {
-                        val database = AppDatabase.getInstance(navController.context)
-                        val walletDao = database.walletDao()
-                        val tempFileProvider = AndroidTempFileProvider(navController.context)
-                        val ethWalletCreator = FileBasedEthWalletCreator(tempFileProvider)
-                        val keyStoreEncryptor = KeyStoreEncryptor()
-                        val walletRepository = WalletRepository(walletDao, ethWalletCreator, keyStoreEncryptor)
-                        val walletsListViewModel = WalletsListViewModel(walletRepository)
-
                         WalletsListScreen(
-                            viewModel = walletsListViewModel,
-                            onNavigate = { destination ->
-                                when (destination) {
-                                    Destination.OnBoardingScreen -> {
-                                        navController.navigate(Destination.OnBoardingScreen) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                inclusive = true
-                                            }
-                                        }
-                                    }
-                                    Destination.WalletScreen -> {
-                                        navController.navigateUp()
-                                    }
-                                    else -> {
-                                        navController.navigate(destination)
+                            modifier = Modifier.fillMaxSize(),
+                            navigateToOnboarding = {
+                                navController.navigate(Destination.OnBoardingScreen) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        inclusive = true
                                     }
                                 }
                             },
-                            modifier = Modifier.fillMaxSize(),
+                            navigateToWalletDetails = { navigateToWalletScreen(navController) }
                         )
                     }
                 }
@@ -139,7 +126,7 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
     }
 }
 
-private fun navigateToWalletScreen(navController: androidx.navigation.NavController) {
+private fun navigateToWalletScreen(navController: NavController) {
     navController.navigate(Destination.WalletScreen) {
         // Clear the back stack so the user can't navigate back to the onboarding flow
         popUpTo(navController.graph.findStartDestination().id) {

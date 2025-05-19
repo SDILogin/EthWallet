@@ -85,13 +85,4 @@ class WalletRepository(
         Logger.debug(TAG) { "Deleting wallet with address $address" }
         walletDao.deleteWalletByAddress(address)
     }
-
-    /**
-     * Checks if any wallets exist in the database.
-     *
-     * @return True if at least one wallet exists, false otherwise
-     */
-    suspend fun hasWallets(): Boolean {
-        return walletDao.getWalletCount() > 0
-    }
 }
