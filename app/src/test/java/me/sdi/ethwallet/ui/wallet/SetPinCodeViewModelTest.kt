@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.MainDispatcherRule
+import me.sdi.ethwallet.core.security.FakePinCodeStorage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -22,9 +23,12 @@ class SetPinCodeViewModelTest {
 
     private lateinit var viewModel: SetPinCodeViewModel
 
+    private lateinit var pinCodeStorage: FakePinCodeStorage
+
     @Before
     fun setUp() {
-        viewModel = SetPinCodeViewModel()
+        pinCodeStorage = FakePinCodeStorage()
+        viewModel = SetPinCodeViewModel(pinCodeStorage)
     }
 
     @Test

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -15,6 +16,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.DataStorePinCodeStorage
+import me.sdi.ethwallet.core.security.PinCodeStorage
 
 /**
  * UI state for the Set Pin Code screen.
@@ -65,8 +68,12 @@ sealed interface SetPinCodeEvent {
 /**
  * ViewModel for the Set Pin Code screen.
  * Handles PIN code setting and validation using Unidirectional Data Flow pattern.
+ *
+ * @param pinCodeStorage The storage implementation for saving and verifying PIN codes
  */
-class SetPinCodeViewModel : ViewModel() {
+class SetPinCodeViewModel(
+    private val pinCodeStorage: PinCodeStorage,
+) : ViewModel() {
     private val _viewState = MutableStateFlow(SetPinCodeViewState())
     val viewState: StateFlow<SetPinCodeViewState> = _viewState.asStateFlow()
 
@@ -86,27 +93,20 @@ class SetPinCodeViewModel : ViewModel() {
 
     private fun handleDigitClick(digit: Int) {
         val currentState = _viewState.value
-
         if (currentState.isSaving) {
             return
         }
 
-        // Clear any error message when user inputs a new digit
         if (currentState.errorMessage != null) {
             _viewState.update { it.copy(errorMessage = null) }
         }
 
         if (currentState.isConfirmationMode) {
-            // Handle confirmation mode
             val secondPin = currentState.secondPin
             if (secondPin.length < PIN_MAX_LENGTH) {
                 val updatedPin = secondPin + digit.toString()
-
                 _viewState.update { it.copy(secondPin = updatedPin) }
-
-                // Check if PIN is complete and perform validation
                 if (updatedPin.length == PIN_MAX_LENGTH) {
-                    // Add delay before validation to allow the user to see the complete PIN
                     viewModelScope.launch {
                         delay(300) // 300ms delay for animation
                         validatePins()
@@ -114,16 +114,11 @@ class SetPinCodeViewModel : ViewModel() {
                 }
             }
         } else {
-            // Handle initial PIN entry
             val firstPin = currentState.firstPin
             if (firstPin.length < PIN_MAX_LENGTH) {
                 val updatedPin = firstPin + digit.toString()
-
                 _viewState.update { it.copy(firstPin = updatedPin) }
-
-                // When the first PIN is complete, switch to confirmation mode
                 if (updatedPin.length == PIN_MAX_LENGTH) {
-                    // Add delay before switching to confirmation mode
                     viewModelScope.launch {
                         delay(300) // 300ms delay for animation
                         _viewState.update {
@@ -142,7 +137,6 @@ class SetPinCodeViewModel : ViewModel() {
             return
         }
 
-        // Clear any error message when user presses delete
         if (currentState.errorMessage != null) {
             _viewState.update { it.copy(errorMessage = null) }
         }
@@ -176,18 +170,31 @@ class SetPinCodeViewModel : ViewModel() {
         val secondPin = currentState.secondPin
 
         if (firstPin == secondPin) {
-            // PINs match, handle success
             _viewState.update { it.copy(isSaving = true) }
 
             viewModelScope.launch {
-                // In a real implementation, we would store the PIN securely here
-                Logger.debug(TAG) { "PIN code set successfully: $firstPin" }
+                try {
+                    pinCodeStorage.storePinCode(firstPin).also {
+                        Logger.debug(TAG) { "PIN code stored successfully" }
+                    }
 
-                // Emit success event
-                _news.emit(SetPinCodeNews.PinCodeSet(firstPin))
+                    _viewState.update { it.copy(isSaving = false) }
+
+                    _news.emit(SetPinCodeNews.PinCodeSet(firstPin))
+                } catch (e: Exception) {
+                    ensureActive()
+
+                    Logger.debug(TAG) { "Error storing PIN code: ${e.message}" }
+                    _viewState.update {
+                        it.copy(
+                            errorMessage = "Error: ${e.message}",
+                            isSaving = false,
+                        )
+                    }
+                    _news.emit(SetPinCodeNews.Error(e.message ?: "Unknown error"))
+                }
             }
         } else {
-            // PINs don't match, show error
             _viewState.update {
                 it.copy(
                     errorMessage = "PINs don't match. Try again.",
@@ -206,7 +213,9 @@ class SetPinCodeViewModel : ViewModel() {
         val Factory: ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
-                    SetPinCodeViewModel()
+                    val context = checkNotNull(this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
+                    val pinCodeStorage = DataStorePinCodeStorage(context)
+                    SetPinCodeViewModel(pinCodeStorage)
                 }
             }
     }
