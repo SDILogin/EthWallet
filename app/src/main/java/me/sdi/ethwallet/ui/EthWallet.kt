@@ -26,6 +26,7 @@ import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
 import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
+import me.sdi.ethwallet.ui.wallet.WalletViewState
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,6 +82,7 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                     composable<Destination.WalletScreen> {
                         WalletScreen(
                             modifier = Modifier.fillMaxSize(),
+                            viewState = WalletViewState(),
                             onManageWallets = { navController.navigate(Destination.WalletsListScreen) },
                         )
                     }
