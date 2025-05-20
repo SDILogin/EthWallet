@@ -24,6 +24,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -33,19 +35,9 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
-
-/**
- * UI state for the Verify Pin Code screen.
- */
-data class VerifyPinCodeViewState(
-    val enteredPin: String = "",
-    val errorMessage: String? = null,
-    val remainingAttempts: Int = 3,
-    val isVerifying: Boolean = false,
-    val isLocked: Boolean = false,
-    val lockCountdown: Int = 0,
-)
 
 /**
  * Events that can be handled by the VerifyPinCodeViewModel.
@@ -69,6 +61,36 @@ sealed interface VerifyPinCodeEvent {
 
 @Composable
 fun VerifyPinCodeScreen(
+    onPinVerified: () -> Unit,
+    onLogout: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val viewModel = viewModel<VerifyPinCodeViewModel>(
+        factory = VerifyPinCodeViewModel.Factory,
+    )
+    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.news.collect { news ->
+            when (news) {
+                is VerifyPinCodeNews.PinVerified -> onPinVerified()
+                is VerifyPinCodeNews.LoggedOut -> onLogout()
+                is VerifyPinCodeNews.Error -> {
+                    // Error already shown in the UI
+                }
+            }
+        }
+    }
+
+    VerifyPinCodeScreen(
+        viewState = viewState,
+        onEvent = viewModel::onEvent,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun VerifyPinCodeScreen(
     viewState: VerifyPinCodeViewState,
     onEvent: (VerifyPinCodeEvent) -> Unit,
     modifier: Modifier = Modifier,
@@ -170,7 +192,7 @@ fun VerifyPinCodeScreen(
 }
 
 @Composable
-fun NumberPad(
+private fun NumberPad(
     onNumberClick: (Int) -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,

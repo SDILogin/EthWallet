@@ -9,13 +9,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -25,9 +25,7 @@ import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
 import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
-import me.sdi.ethwallet.ui.wallet.VerifyPinCodeNews
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
-import me.sdi.ethwallet.ui.wallet.VerifyPinCodeViewModel
 import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
 
@@ -47,7 +45,6 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                 modifier = Modifier.fillMaxSize(),
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
             ) { innerPadding ->
-                // Determine start destination based on user state
                 val startDestination = state.initialRoute ?: Destination.OnBoardingScreen
 
                 NavHost(
@@ -61,12 +58,8 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                     composable<Destination.OnBoardingScreen> {
                         OnboardingScreen(
                             modifier = Modifier.fillMaxSize(),
-                            onImportWallet = {
-                                navController.navigate(Destination.ImportWalletScreen)
-                            },
-                            onCreateWallet = {
-                                navController.navigate(Destination.CreateWalletScreen)
-                            },
+                            onImportWallet = { navController.navigate(Destination.ImportWalletScreen) },
+                            onCreateWallet = { navController.navigate(Destination.CreateWalletScreen) },
                         )
                     }
 
@@ -74,9 +67,7 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                         CreateWalletScreen(
                             modifier = Modifier.fillMaxSize(),
                             onUpButtonClick = { navController.navigateUp() },
-                            onMnemonicSaved = {
-                                navController.navigate(Destination.SetPinCodeScreen)
-                            },
+                            onMnemonicSaved = { navController.navigate(Destination.SetPinCodeScreen) },
                         )
                     }
 
@@ -84,38 +75,22 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                         ImportWalletScreen(
                             modifier = Modifier.fillMaxSize(),
                             onUpButtonClick = { navController.navigateUp() },
-                            onWalletImported = {
-                                navController.navigate(Destination.SetPinCodeScreen)
-                            },
+                            onWalletImported = { navController.navigate(Destination.SetPinCodeScreen) },
                         )
                     }
 
                     composable<Destination.WalletScreen> {
                         WalletScreen(
                             modifier = Modifier.fillMaxSize(),
-                            onLogout = {
-                                navController.navigate(Destination.OnBoardingScreen) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        inclusive = true
-                                    }
-                                }
-                            },
-                            onManageWallets = {
-                                navController.navigate(Destination.WalletsListScreen)
-                            },
+                            onLogout = { navigateToOnboardingScreen(navController) },
+                            onManageWallets = { navController.navigate(Destination.WalletsListScreen) },
                         )
                     }
 
                     composable<Destination.WalletsListScreen> {
                         WalletsListScreen(
                             modifier = Modifier.fillMaxSize(),
-                            navigateToOnboarding = {
-                                navController.navigate(Destination.OnBoardingScreen) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        inclusive = true
-                                    }
-                                }
-                            },
+                            navigateToOnboarding = { navigateToOnboardingScreen(navController) },
                             navigateToWalletDetails = { navigateToWalletScreen(navController) },
                         )
                     }
@@ -123,46 +98,27 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                     composable<Destination.SetPinCodeScreen> {
                         SetPinCodeScreen(
                             modifier = Modifier.fillMaxSize(),
-                            onPinCodeSet = {
-                                navigateToWalletScreen(navController)
-                            },
+                            onPinCodeSet = { navigateToWalletScreen(navController) },
                         )
                     }
 
                     composable<Destination.VerifyPinCodeScreen> {
-                        val viewModel = viewModel<VerifyPinCodeViewModel>(
-                            factory = VerifyPinCodeViewModel.Factory,
-                        )
-                        val viewState by viewModel.viewState.collectAsStateWithLifecycle()
-
-                        LaunchedEffect(Unit) {
-                            viewModel.news.collect { news ->
-                                when (news) {
-                                    is VerifyPinCodeNews.PinVerified -> {
-                                        navigateToWalletScreen(navController)
-                                    }
-                                    is VerifyPinCodeNews.LoggedOut -> {
-                                        navController.navigate(Destination.OnBoardingScreen) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                inclusive = true
-                                            }
-                                        }
-                                    }
-                                    is VerifyPinCodeNews.Error -> {
-                                        // Error already shown in the UI
-                                    }
-                                }
-                            }
-                        }
-
                         VerifyPinCodeScreen(
-                            viewState = viewState,
-                            onEvent = viewModel::onEvent,
+                            onLogout = { navigateToOnboardingScreen(navController) },
+                            onPinVerified = { navigateToWalletScreen(navController) },
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+private fun navigateToOnboardingScreen(navController: NavHostController) {
+    navController.navigate(Destination.OnBoardingScreen) {
+        popUpTo(navController.graph.findStartDestination().id) {
+            inclusive = true
         }
     }
 }

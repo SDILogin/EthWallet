@@ -19,26 +19,6 @@ import me.sdi.ethwallet.core.security.DataStorePinCodeStorage
 import me.sdi.ethwallet.core.security.PinCodeStorage
 
 /**
- * One-time UI events emitted by the ViewModel
- */
-sealed interface VerifyPinCodeNews {
-    /**
-     * PIN was verified successfully
-     */
-    data object PinVerified : VerifyPinCodeNews
-
-    /**
-     * User chose to logout
-     */
-    data object LoggedOut : VerifyPinCodeNews
-
-    /**
-     * Error occurred
-     */
-    data class Error(val message: String) : VerifyPinCodeNews
-}
-
-/**
  * ViewModel for the PIN code verification screen
  * Handles PIN verification, attempts counting, and timeouts
  *
@@ -207,4 +187,36 @@ class VerifyPinCodeViewModel(
                 }
             }
     }
+}
+
+/**
+ * UI state for the Verify Pin Code screen.
+ */
+data class VerifyPinCodeViewState(
+    val enteredPin: String = "",
+    val errorMessage: String? = null,
+    val remainingAttempts: Int = 3,
+    val isVerifying: Boolean = false,
+    val isLocked: Boolean = false,
+    val lockCountdown: Int = 0,
+)
+
+/**
+ * One-time UI events emitted by the ViewModel
+ */
+sealed interface VerifyPinCodeNews {
+    /**
+     * PIN was verified successfully
+     */
+    data object PinVerified : VerifyPinCodeNews
+
+    /**
+     * User chose to logout
+     */
+    data object LoggedOut : VerifyPinCodeNews
+
+    /**
+     * Error occurred
+     */
+    data class Error(val message: String) : VerifyPinCodeNews
 }
