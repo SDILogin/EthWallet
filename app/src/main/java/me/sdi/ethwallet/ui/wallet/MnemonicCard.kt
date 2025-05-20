@@ -59,7 +59,10 @@ fun MnemonicCard(
     onCopied: () -> Unit = {},
 ) {
     val textMeasurer = rememberTextMeasurer()
-    val textStyle = MaterialTheme.typography.bodyMedium
+    val textStyle = MaterialTheme.typography.bodyMedium.copy(
+        color = MaterialTheme.colorScheme.onSurface,
+        fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+    )
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val interactionSource = remember { MutableInteractionSource() }

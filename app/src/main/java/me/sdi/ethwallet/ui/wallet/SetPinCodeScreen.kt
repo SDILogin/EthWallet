@@ -22,7 +22,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewFontScale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -85,7 +89,7 @@ fun PinCodeInput(
 }
 
 @Composable
-fun NumberPad(
+private fun NumberPad(
     onNumberClick: (Int) -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -137,10 +141,13 @@ fun NumberPad(
 
             NumberButton(number = 0, enabled = true, onClick = { onNumberClick(0) })
 
-            TextButton(
+            IconButton(
                 onClick = onDeleteClick,
                 enabled = true,
                 modifier = Modifier.size(72.dp),
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.Clear,
@@ -161,7 +168,11 @@ fun NumberButton(
 ) {
     TextButton(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier.size(72.dp),
+        colors = ButtonDefaults.textButtonColors(
+            contentColor = MaterialTheme.colorScheme.onBackground
+        )
     ) {
         Text(
             text = number.toString(),
@@ -190,6 +201,15 @@ fun SetPinCodeScreen(
         }
     }
 
+    SetPinCodeScreen(viewState, viewModel::onEvent, modifier)
+}
+
+@Composable
+private fun SetPinCodeScreen(
+    viewState: SetPinCodeViewState,
+    onEvent: (SetPinCodeEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val currentPin = if (viewState.isConfirmationMode) viewState.secondPin else viewState.firstPin
 
     Surface(
@@ -260,7 +280,7 @@ fun SetPinCodeScreen(
                 if (viewState.isConfirmationMode) {
                     Spacer(modifier = Modifier.height(16.dp))
                     TextButton(
-                        onClick = { viewModel.onEvent(SetPinCodeEvent.OnResetClick) },
+                        onClick = { onEvent(SetPinCodeEvent.OnResetClick) },
                     ) {
                         Text(
                             text = "Reset PIN",
@@ -272,27 +292,57 @@ fun SetPinCodeScreen(
             }
 
             NumberPad(
-                onNumberClick = { number ->
-                    viewModel.onEvent(SetPinCodeEvent.OnDigitClick(number))
-                },
-                onDeleteClick = {
-                    viewModel.onEvent(SetPinCodeEvent.OnDeleteClick)
-                },
+                onNumberClick = { number -> onEvent(SetPinCodeEvent.OnDigitClick(number)) },
+                onDeleteClick = { onEvent(SetPinCodeEvent.OnDeleteClick) },
                 modifier = Modifier.padding(bottom = 32.dp),
             )
         }
     }
 }
 
+class ViewStatePreviewParameterProvider :
+    androidx.compose.ui.tooling.preview.PreviewParameterProvider<SetPinCodeViewState> {
+    override val values = sequenceOf(
+        SetPinCodeViewState(
+            isConfirmationMode = false,
+            firstPin = "",
+            secondPin = "",
+            errorMessage = null,
+        ),
+        SetPinCodeViewState(
+            isConfirmationMode = false,
+            firstPin = "1234",
+            secondPin = "",
+            errorMessage = null,
+        ),
+        SetPinCodeViewState(
+            isConfirmationMode = true,
+            firstPin = "123456",
+            secondPin = "12345",
+            errorMessage = "PINs do not match",
+        ),
+        SetPinCodeViewState(
+            isConfirmationMode = true,
+            firstPin = "123456",
+            secondPin = "123456",
+            errorMessage = null,
+        ),
+    )
+}
+
 @Composable
 @PreviewLightDark
 @PreviewFontScale
 @PreviewScreenSizes
-private fun PreviewSetPinCodeScreen() {
+private fun PreviewSetPinCodeScreen(
+    @PreviewParameter(ViewStatePreviewParameterProvider::class)
+    viewState: SetPinCodeViewState,
+) {
     EthWalletTheme {
         SetPinCodeScreen(
-            onPinCodeSet = { /* Handle pin code set */ },
+            viewState = viewState,
             modifier = Modifier.fillMaxSize(),
+            onEvent = { },
         )
     }
 }

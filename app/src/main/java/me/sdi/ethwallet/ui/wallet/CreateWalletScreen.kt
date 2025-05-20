@@ -213,7 +213,9 @@ private fun ContentState(
         Spacer(modifier = Modifier.weight(1f))
         BasicText(
             text = "Your Recovery Phrase",
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                color = MaterialTheme.colorScheme.onBackground,
+            ),
             maxLines = 1,
         )
 
@@ -222,10 +224,10 @@ private fun ContentState(
         BasicText(
             modifier = Modifier.widthIn(max = 420.dp),
             text = "Write down these 12 words in order and keep them somewhere safe.",
-            style =
-                MaterialTheme.typography.bodyMedium.copy(
-                    textAlign = TextAlign.Center,
-                ),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onBackground,
+            ),
             maxLines = 1,
         )
 
