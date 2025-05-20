@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,7 +31,6 @@ import me.sdi.ethwallet.ui.theme.EthWalletTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletScreen(
-    onLogout: () -> Unit,
     onManageWallets: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -46,12 +44,6 @@ fun WalletScreen(
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Manage Wallets",
-                        )
-                    }
-                    IconButton(onClick = onLogout) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Default.ExitToApp,
-                            contentDescription = "Logout",
                         )
                     }
                 },
@@ -117,7 +109,6 @@ fun TotalFiatBalanceCard() {
 fun WalletScreenPreview() {
     EthWalletTheme {
         WalletScreen(
-            onLogout = {},
             onManageWallets = {},
         )
     }

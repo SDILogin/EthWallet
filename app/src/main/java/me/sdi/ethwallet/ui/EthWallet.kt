@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -82,7 +81,6 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                     composable<Destination.WalletScreen> {
                         WalletScreen(
                             modifier = Modifier.fillMaxSize(),
-                            onLogout = { navigateToOnboardingScreen(navController) },
                             onManageWallets = { navController.navigate(Destination.WalletsListScreen) },
                         )
                     }

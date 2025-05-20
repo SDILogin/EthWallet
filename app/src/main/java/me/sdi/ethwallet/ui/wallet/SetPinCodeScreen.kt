@@ -147,7 +147,7 @@ private fun NumberPad(
                 modifier = Modifier.size(72.dp),
                 colors = IconButtonDefaults.iconButtonColors(
                     contentColor = MaterialTheme.colorScheme.onBackground,
-                )
+                ),
             ) {
                 Icon(
                     imageVector = Icons.Default.Clear,
@@ -171,8 +171,8 @@ fun NumberButton(
         enabled = enabled,
         modifier = modifier.size(72.dp),
         colors = ButtonDefaults.textButtonColors(
-            contentColor = MaterialTheme.colorScheme.onBackground
-        )
+            contentColor = MaterialTheme.colorScheme.onBackground,
+        ),
     ) {
         Text(
             text = number.toString(),

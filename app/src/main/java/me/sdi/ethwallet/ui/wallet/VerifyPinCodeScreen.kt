@@ -251,8 +251,8 @@ private fun NumberPad(
                 modifier = Modifier.size(72.dp),
                 enabled = enabled,
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onBackground
-                )
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                ),
             ) {
                 Icon(
                     imageVector = Icons.Default.Clear,
