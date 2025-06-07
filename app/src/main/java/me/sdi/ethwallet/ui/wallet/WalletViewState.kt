@@ -1,5 +1,7 @@
 package me.sdi.ethwallet.ui.wallet
 
+import me.sdi.ethwallet.core.EthAddress
+
 /**
  * Represents the state of the wallet screen.
  *
@@ -23,40 +25,9 @@ data class WalletViewState(
  * @property usdValue The approximate USD value of the tokens (as a string)
  */
 data class FavoriteToken(
-    val address: String,
+    val address: EthAddress,
     val name: String,
     val ticker: String,
     val amount: String,
     val usdValue: String,
-) {
-    /**
-     * Returns the balance of the token formatted for display.
-     */
-    val formattedBalance: String
-        get() = "$amount $ticker"
-
-    /**
-     * Returns the first character of the ticker for display on the token icon.
-     */
-    val iconText: String
-        get() = when (ticker) {
-            "USDT" -> "Ƭ"
-            "USDC" -> "$"
-            "DAI" -> "◈"
-            else -> ticker.firstOrNull()?.toString() ?: ""
-        }
-
-    /**
-     * Returns the background color for the token icon.
-     */
-    val iconBackground: Long
-        get() = when (ticker) {
-            "USDT" -> 0xFF26A17B
-            "USDC" -> 0xFF2775CA
-            "DAI" -> 0xFFF5AC37
-            "ETH" -> 0xFF627EEA
-            "BTC" -> 0xFFF7931A
-            "LINK" -> 0xFF2A5ADA
-            else -> 0xFF808080 // Default gray color
-        }
-}
+)
