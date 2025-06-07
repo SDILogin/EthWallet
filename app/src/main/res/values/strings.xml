@@ -1,3 +1,16 @@
 <resources>
     <string name="app_name">EthWallet</string>
+    <string name="create_wallet_title">Create Wallet</string>
+    <string name="create_wallet_loading_message">Creating your Ethereum wallet...</string>
+    <string name="create_wallet_confirmation_dialog_title">Confirm</string>
+    <string name="create_wallet_confirmation_dialog_message">Are you sure you\'ve written down your recovery phrase? You won\'t be able to see it again.</string>
+    <string name="create_wallet_confirmation_dialog_confirm_button">Yes, I\'ve stored it securely</string>
+    <string name="create_wallet_confirmation_dialog_dismiss_button">No, let me check again</string>
+    <string name="create_wallet_recovery_phrase_title">Your Recovery Phrase</string>
+    <string name="create_wallet_recovery_phrase_instruction">Write down these 12 words in order and keep them somewhere safe.</string>
+    <string name="create_wallet_recovery_phrase_copied_message">Recovery phrase copied to clipboard</string>
+    <string name="create_wallet_next_button_text">I\'ve safely stored my recovery phrase</string>
+    <string name="create_wallet_security_warning">WARNING: Never share your recovery phrase! Taking screenshots or storing it digitally may expose it to hackers. Write it down on paper and keep it in a secure location.</string>
+    <string name="create_wallet_error_title">Error Creating Wallet</string>
+    <string name="create_wallet_unknown_error_message">An unknown error occurred</string>
 </resources>
