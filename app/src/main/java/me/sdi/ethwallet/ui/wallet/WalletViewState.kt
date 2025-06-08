@@ -8,11 +8,13 @@ import me.sdi.ethwallet.core.EthAddress
  * @property totalBalanceUsd The total wallet balance in USD
  * @property totalBalanceEth The total wallet balance in ETH
  * @property favoriteTokens The list of favorite tokens
+ * @property isLoading Whether balance data is being loaded
  */
 data class WalletViewState(
     val totalBalanceUsd: String = "",
     val totalBalanceEth: String = "",
     val favoriteTokens: List<FavoriteToken> = emptyList(),
+    val isLoading: Boolean = false,
 )
 
 /**

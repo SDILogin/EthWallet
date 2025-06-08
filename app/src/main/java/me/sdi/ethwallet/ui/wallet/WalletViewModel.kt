@@ -15,15 +15,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.BalanceProvider
+import me.sdi.ethwallet.core.Web3BalanceProvider
+import me.sdi.ethwallet.core.Web3Provider
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.ui.KnownTokens
+import org.web3j.utils.Convert
 import java.math.BigDecimal
 
 private const val TAG = "WalletViewModel"
 
 class WalletViewModel(
     private val walletRepository: WalletRepository,
+    private val balanceProvider: BalanceProvider = Web3BalanceProvider(Web3Provider.web3j),
     private val usdFormatter: (BigDecimal) -> String = { usdAmount ->
         val currencyFormatter = NumberFormat.getCurrencyInstance()
         currencyFormatter.currency = Currency.getInstance("USD")
@@ -79,24 +84,37 @@ class WalletViewModel(
     }
 
     private fun updateWalletState(wallet: WalletEntity) {
-        val ethBalance = 0.97
-        val usdBalance = BigDecimal(1280.75)
-        val favoriteTokens = KnownTokens.entries.map { knownToken ->
-            FavoriteToken(
-                address = knownToken.ethAddress,
-                name = knownToken.tokenName,
-                ticker = knownToken.name,
-                amount = "0",
-                usdValue = "0",
-            )
-        }
+        viewModelScope.launch {
+            try {
+                _viewState.update { it.copy(isLoading = true) }
 
-        _viewState.update {
-            it.copy(
-                totalBalanceUsd = usdFormatter(usdBalance),
-                totalBalanceEth = "$ethBalance ETH",
-                favoriteTokens = favoriteTokens,
-            )
+                val ethBalanceWei = balanceProvider.getEthBalance(wallet.address)
+                val ethBalanceFormatted = Convert.fromWei(ethBalanceWei.toString(), Convert.Unit.ETHER)
+
+                val favoriteTokens = KnownTokens.entries.map { knownToken ->
+                    FavoriteToken(
+                        address = knownToken.ethAddress,
+                        name = knownToken.tokenName,
+                        ticker = knownToken.name,
+                        amount = "0",
+                        usdValue = "0",
+                    )
+                }
+
+                _viewState.update {
+                    it.copy(
+                        totalBalanceEth = "$ethBalanceFormatted ETH",
+                        totalBalanceUsd = usdFormatter(BigDecimal.ZERO),
+                        favoriteTokens = favoriteTokens,
+                        isLoading = false,
+                    )
+                }
+            } catch (e: Exception) {
+                ensureActive()
+                Logger.warn(TAG) { "Error fetching ETH balance: ${e.message}" }
+                _news.emit(WalletNews.ShowErrorMessage(e))
+                _viewState.update { it.copy(isLoading = false) }
+            }
         }
     }
 }
