@@ -153,4 +153,84 @@ class CreateWalletViewModelTest {
                 finalState is CreateWalletViewState.Content,
             )
         }
+
+    @Test
+    fun `multiple createWallet events should not interfere with each other`() =
+        runTest {
+            coEvery { walletRepository.createWallet(any()) } returns testSeedPhrase
+
+            viewModel.onEvent(CreateWalletEvent.CreateWallet)
+            viewModel.onEvent(CreateWalletEvent.CreateWallet)
+            advanceUntilIdle()
+
+            val currentState = viewModel.viewState.first()
+            assertTrue(
+                "State should be Content after wallet creation",
+                currentState is CreateWalletViewState.Content,
+            )
+
+            coVerify(exactly = 2) { walletRepository.createWallet(label = "My Wallet") }
+        }
+
+    @Test
+    fun `createWallet should use correct wallet label`() =
+        runTest {
+            coEvery { walletRepository.createWallet(any()) } returns testSeedPhrase
+
+            viewModel.onEvent(CreateWalletEvent.CreateWallet)
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { walletRepository.createWallet(label = "My Wallet") }
+        }
+
+    @Test
+    fun `createWallet should preserve seed phrase content correctly`() =
+        runTest {
+            val customSeedPhrase = listOf("test", "seed", "phrase", "words")
+            coEvery { walletRepository.createWallet(any()) } returns customSeedPhrase
+
+            viewModel.onEvent(CreateWalletEvent.CreateWallet)
+            advanceUntilIdle()
+
+            val currentState = viewModel.viewState.first()
+            assertTrue(
+                "State should be Content",
+                currentState is CreateWalletViewState.Content,
+            )
+
+            val contentState = currentState as CreateWalletViewState.Content
+            assertEquals(
+                "Seed phrase should match exactly",
+                customSeedPhrase,
+                contentState.seedPhrase,
+            )
+        }
+
+    @Test
+    fun `error state should preserve the original exception`() =
+        runTest {
+            val originalException = IllegalStateException("Custom error message")
+            coEvery { walletRepository.createWallet(any()) } throws originalException
+
+            viewModel.onEvent(CreateWalletEvent.CreateWallet)
+            advanceUntilIdle()
+
+            val currentState = viewModel.viewState.first()
+            assertTrue(
+                "State should be Error",
+                currentState is CreateWalletViewState.Error,
+            )
+
+            val errorState = currentState as CreateWalletViewState.Error
+            assertEquals(
+                "Error should preserve original exception",
+                originalException,
+                errorState.throwable,
+            )
+            assertEquals(
+                "Error message should be preserved",
+                "Custom error message",
+                errorState.throwable.message,
+            )
+        }
 }

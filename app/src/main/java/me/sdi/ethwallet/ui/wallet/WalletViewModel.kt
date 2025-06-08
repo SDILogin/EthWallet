@@ -16,8 +16,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.BalanceProvider
+import me.sdi.ethwallet.core.CryptocompareEthPriceProvider
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthBalanceProvider
+import me.sdi.ethwallet.core.EthPriceProvider
 import me.sdi.ethwallet.core.Web3Provider
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
@@ -31,6 +33,7 @@ private const val TAG = "WalletViewModel"
 class WalletViewModel(
     private val walletRepository: WalletRepository,
     private val balanceProvider: BalanceProvider = EthBalanceProvider(Web3Provider.web3j),
+    private val ethPriceProvider: EthPriceProvider = CryptocompareEthPriceProvider(),
     private val usdFormatter: (BigDecimal) -> String = { usdAmount ->
         val currencyFormatter = NumberFormat.getCurrencyInstance()
         currencyFormatter.currency = Currency.getInstance("USD")
@@ -89,7 +92,9 @@ class WalletViewModel(
 
     private suspend fun updateEthAccountInfo(address: EthAddress) {
         val ethBalanceWei: BigInteger = balanceProvider.getEthBalance(address)
+        val ethPriceUsd: BigDecimal = ethPriceProvider.getPrice()
         val ethBalanceFormatted: BigDecimal? = Convert.fromWei(ethBalanceWei.toString(), Convert.Unit.ETHER)
+        val totalUsdValue = ethBalanceFormatted?.multiply(ethPriceUsd) ?: BigDecimal.ZERO
         val favoriteTokens = KnownTokens.entries.map { knownToken ->
             FavoriteToken(
                 address = knownToken.ethAddress,
@@ -102,7 +107,7 @@ class WalletViewModel(
         _viewState.update { walletViewState: WalletViewState ->
             walletViewState.copy(
                 totalBalanceEth = "$ethBalanceFormatted ETH",
-                totalBalanceUsd = usdFormatter(BigDecimal.ZERO),
+                totalBalanceUsd = usdFormatter(totalUsdValue),
                 favoriteTokens = favoriteTokens,
             )
         }
