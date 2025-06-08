@@ -13,13 +13,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.database.entity.WalletEntity
 
 private const val TAG = "WalletsListViewModel"
 
 data class WalletsListUiState(
-    val wallets: List<WalletEntity> = emptyList(),
+    val activeWallet: EthWallet? = null,
+    val otherWallets: List<EthWallet> = emptyList(),
     val isLoading: Boolean = false,
 )
 
@@ -34,9 +36,9 @@ sealed interface WalletScreenNews {
 sealed interface WalletsListEvent {
     data object Start : WalletsListEvent
 
-    data class SetActiveWallet(val address: String) : WalletsListEvent
+    data class SetActiveWallet(val address: EthAddress) : WalletsListEvent
 
-    data class DeleteWallet(val address: String) : WalletsListEvent
+    data class DeleteWallet(val address: EthAddress) : WalletsListEvent
 
     data object OnBackPress : WalletsListEvent
 }
@@ -63,7 +65,7 @@ class WalletsListViewModel(
         }
     }
 
-    private fun setActiveWallet(address: String) {
+    private fun setActiveWallet(address: EthAddress) {
         viewModelScope.launch {
             try {
                 walletRepository.setActiveWallet(address)
@@ -80,14 +82,14 @@ class WalletsListViewModel(
         }
     }
 
-    private fun deleteWallet(address: String) {
+    private fun deleteWallet(address: EthAddress) {
         viewModelScope.launch {
             try {
                 walletRepository.deleteWallet(address)
 
-                val onScreenWallets = uiState.value.wallets.filterNot { it.address == address }
+                val onScreenWallets = uiState.value.otherWallets.filterNot { it.address == address }
 
-                _uiState.update { vs -> vs.copy(wallets = onScreenWallets) }
+                _uiState.update { vs -> vs.copy(otherWallets = onScreenWallets) }
 
                 if (onScreenWallets.isEmpty()) {
                     _news.emit(WalletScreenNews.NavigateToOnBoarding)
@@ -118,7 +120,7 @@ class WalletsListViewModel(
                 val wallets = walletRepository.getAllWallets()
                 _uiState.update {
                     it.copy(
-                        wallets = wallets,
+                        otherWallets = wallets,
                         isLoading = false,
                     )
                 }

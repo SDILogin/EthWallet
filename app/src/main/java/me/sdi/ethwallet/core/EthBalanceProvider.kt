@@ -6,10 +6,10 @@ import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameterName
 import java.math.BigInteger
 
-class Web3BalanceProvider(private val web3j: Web3j) : BalanceProvider {
-    override suspend fun getEthBalance(address: String): BigInteger = withContext(Dispatchers.IO) {
+class EthBalanceProvider(private val web3j: Web3j) : BalanceProvider {
+    override suspend fun getEthBalance(address: EthAddress): BigInteger = withContext(Dispatchers.IO) {
         val ethGetBalance = web3j
-            .ethGetBalance(address, DefaultBlockParameterName.LATEST)
+            .ethGetBalance(address.toString(), DefaultBlockParameterName.LATEST)
             .sendAsync()
             .get()
         ethGetBalance.balance

@@ -12,6 +12,7 @@ import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthCreationResult
 import me.sdi.ethwallet.core.EthWalletCreator
 import me.sdi.ethwallet.core.security.KeyStoreEncryptor
+import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.database.entity.WalletEntity
 import org.junit.Assert.assertEquals
@@ -171,7 +172,7 @@ class WalletRepositoryTest {
                         isActive = true,
                     ),
                     WalletEntity(
-                        address = "0x123456",
+                        address = "0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF",
                         encryptedPrivateKeyBase64 = "another_encrypted_key",
                         label = "Another Wallet",
                         isActive = false,
@@ -182,19 +183,29 @@ class WalletRepositoryTest {
 
             val result = walletRepository.getAllWallets()
 
-            assertEquals("Should return all wallets", testWallets, result)
+            val expectedEthWallets = listOf(
+                EthWallet(
+                    label = testLabel,
+                    address = EthAddress(testAddress),
+                ),
+                EthWallet(
+                    label = "Another Wallet",
+                    address = EthAddress("0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF"),
+                ),
+            )
+            assertEquals("Should return all wallets", expectedEthWallets, result)
             coVerify(exactly = 1) { walletDao.getAllWallets() }
         }
 
     @Test
     fun `setActiveWallet should clear active wallets and set the specified wallet as active`() =
         runTest {
-            val address = "0x123456"
+            val address = "0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF"
 
             coEvery { walletDao.clearActiveWallets() } returns Unit
             coEvery { walletDao.setWalletActive(address) } returns Unit
 
-            walletRepository.setActiveWallet(address)
+            walletRepository.setActiveWallet(EthAddress(address))
 
             coVerify(exactly = 1) { walletDao.clearActiveWallets() }
             coVerify(exactly = 1) { walletDao.setWalletActive(address) }
@@ -203,11 +214,11 @@ class WalletRepositoryTest {
     @Test
     fun `deleteWallet should delete wallet by address`() =
         runTest {
-            val address = "0x123456"
+            val address = "0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF"
 
             coEvery { walletDao.deleteWalletByAddress(address) } returns Unit
 
-            walletRepository.deleteWallet(address)
+            walletRepository.deleteWallet(EthAddress(address))
 
             coVerify(exactly = 1) { walletDao.deleteWalletByAddress(address) }
         }

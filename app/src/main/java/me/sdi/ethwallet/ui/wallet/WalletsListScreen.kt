@@ -36,6 +36,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -48,12 +49,13 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.FileBasedEthWalletCreator
 import me.sdi.ethwallet.core.security.KeyStoreEncryptor
 import me.sdi.ethwallet.data.AndroidTempFileProvider
+import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.database.AppDatabase
-import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -134,7 +136,7 @@ private fun WalletsListScreen(
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
                 )
-            } else if (uiState.wallets.isEmpty()) {
+            } else if (uiState.otherWallets.isEmpty()) {
                 Column(
                     modifier =
                         Modifier
@@ -149,6 +151,11 @@ private fun WalletsListScreen(
                     )
                 }
             } else {
+                val allWallets by remember {
+                    derivedStateOf {
+                        (listOfNotNull(uiState.activeWallet) + uiState.otherWallets).sortedBy { it.label }
+                    }
+                }
                 LazyColumn(
                     modifier =
                         Modifier
@@ -156,10 +163,15 @@ private fun WalletsListScreen(
                             .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(uiState.wallets) { wallet ->
+                    items(
+                        items = allWallets,
+                        key = { wallet -> wallet.address.toString() },
+                        contentType = { it::class.qualifiedName },
+                    ) { wallet ->
                         WalletCard(
                             modifier = Modifier.fillMaxWidth(),
                             wallet = wallet,
+                            isActive = wallet.address == uiState.activeWallet?.address,
                             onWalletClicked = { onEvent(WalletsListEvent.SetActiveWallet(wallet.address)) },
                             onDeleteClicked = { onEvent(WalletsListEvent.DeleteWallet(wallet.address)) },
                         )
@@ -173,7 +185,8 @@ private fun WalletsListScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WalletCard(
-    wallet: WalletEntity,
+    wallet: EthWallet,
+    isActive: Boolean,
     onWalletClicked: () -> Unit,
     onDeleteClicked: () -> Unit,
     modifier: Modifier = Modifier,
@@ -209,7 +222,7 @@ private fun WalletCard(
                     )
 
                     AnimatedVisibility(
-                        wallet.isActive,
+                        isActive,
                         enter = fadeIn() + scaleIn(),
                         exit = fadeOut() + scaleOut(),
                     ) {
@@ -223,7 +236,7 @@ private fun WalletCard(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = wallet.address,
+                    text = wallet.address.toString(),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     maxLines = 1,
@@ -255,29 +268,29 @@ private class UiStateProvider : PreviewParameterProvider<WalletsListUiState> {
     override val values =
         sequenceOf(
             WalletsListUiState(
-                wallets = listOf(),
+                otherWallets = listOf(),
                 isLoading = false,
             ),
             WalletsListUiState(
-                wallets =
+                activeWallet = EthWallet(
+                    address = EthAddress("0x71C7656EC7ab88b11223efB751B7403333133326F"),
+                    label = "My Wallet",
+                ),
+                otherWallets =
                     listOf(
-                        WalletEntity(
-                            address = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-                            encryptedPrivateKeyBase64 = "",
-                            label = "My Wallet",
-                            isActive = true,
+                        EthWallet(
+                            address = EthAddress("0x71C7656EC7ab88b11223efB751B7403333133326F"),
+                            label = "Other wallet #1",
                         ),
-                        WalletEntity(
-                            address = "0x71C7656EC7ab88b11223efB751B7401B5f6d8976F",
-                            encryptedPrivateKeyBase64 = "",
-                            label = "My secondary wallet",
-                            isActive = false,
+                        EthWallet(
+                            address = EthAddress("0x71C7656EC7ab88b11223efB751B7403333133326F"),
+                            label = "Other wallet #2",
                         ),
                     ),
                 isLoading = false,
             ),
             WalletsListUiState(
-                wallets = emptyList(),
+                otherWallets = emptyList(),
                 isLoading = true,
             ),
         )

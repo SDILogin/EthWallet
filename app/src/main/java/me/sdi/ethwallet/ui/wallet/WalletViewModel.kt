@@ -16,19 +16,21 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.BalanceProvider
-import me.sdi.ethwallet.core.Web3BalanceProvider
+import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.core.EthBalanceProvider
 import me.sdi.ethwallet.core.Web3Provider
+import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.ui.KnownTokens
 import org.web3j.utils.Convert
 import java.math.BigDecimal
+import java.math.BigInteger
 
 private const val TAG = "WalletViewModel"
 
 class WalletViewModel(
     private val walletRepository: WalletRepository,
-    private val balanceProvider: BalanceProvider = Web3BalanceProvider(Web3Provider.web3j),
+    private val balanceProvider: BalanceProvider = EthBalanceProvider(Web3Provider.web3j),
     private val usdFormatter: (BigDecimal) -> String = { usdAmount ->
         val currencyFormatter = NumberFormat.getCurrencyInstance()
         currencyFormatter.currency = Currency.getInstance("USD")
@@ -53,18 +55,18 @@ class WalletViewModel(
     }
 
     private fun loadActiveWallet() {
+        _viewState.update { it.copy(isLoading = true) }
+
         viewModelScope.launch {
             try {
-                val wallets = walletRepository.getAllWallets()
-                val activeWallet = wallets.firstOrNull { it.isActive }
-
+                val activeWallet: EthWallet? = walletRepository.getActiveWallet()
                 if (activeWallet != null) {
-                    updateWalletState(activeWallet)
+                    updateEthAccountInfo(activeWallet.address)
                 } else {
                     // For now, use a placeholder. In a real app, we might navigate away
                     // or show a message prompting the user to create or select a wallet.
-                    _viewState.update {
-                        it.copy(
+                    _viewState.update { walletViewState: WalletViewState ->
+                        walletViewState.copy(
                             totalBalanceUsd = usdFormatter(BigDecimal.ZERO),
                             totalBalanceEth = "0 ETH",
                             favoriteTokens = emptyList(),
@@ -75,46 +77,34 @@ class WalletViewModel(
                 ensureActive()
 
                 Logger.warn(TAG) {
-                    "Error loading active wallet\n ${e.printStackTrace()}"
+                    "Error loading active wallet\n ${e.stackTraceToString()}"
                 }
 
                 _news.emit(WalletNews.ShowErrorMessage(e))
             }
+        }.invokeOnCompletion {
+            _viewState.update { it.copy(isLoading = false) }
         }
     }
 
-    private fun updateWalletState(wallet: WalletEntity) {
-        viewModelScope.launch {
-            try {
-                _viewState.update { it.copy(isLoading = true) }
-
-                val ethBalanceWei = balanceProvider.getEthBalance(wallet.address)
-                val ethBalanceFormatted = Convert.fromWei(ethBalanceWei.toString(), Convert.Unit.ETHER)
-
-                val favoriteTokens = KnownTokens.entries.map { knownToken ->
-                    FavoriteToken(
-                        address = knownToken.ethAddress,
-                        name = knownToken.tokenName,
-                        ticker = knownToken.name,
-                        amount = "0",
-                        usdValue = "0",
-                    )
-                }
-
-                _viewState.update {
-                    it.copy(
-                        totalBalanceEth = "$ethBalanceFormatted ETH",
-                        totalBalanceUsd = usdFormatter(BigDecimal.ZERO),
-                        favoriteTokens = favoriteTokens,
-                        isLoading = false,
-                    )
-                }
-            } catch (e: Exception) {
-                ensureActive()
-                Logger.warn(TAG) { "Error fetching ETH balance: ${e.message}" }
-                _news.emit(WalletNews.ShowErrorMessage(e))
-                _viewState.update { it.copy(isLoading = false) }
-            }
+    private suspend fun updateEthAccountInfo(address: EthAddress) {
+        val ethBalanceWei: BigInteger = balanceProvider.getEthBalance(address)
+        val ethBalanceFormatted: BigDecimal? = Convert.fromWei(ethBalanceWei.toString(), Convert.Unit.ETHER)
+        val favoriteTokens = KnownTokens.entries.map { knownToken ->
+            FavoriteToken(
+                address = knownToken.ethAddress,
+                name = knownToken.tokenName,
+                ticker = knownToken.name,
+                amount = "0",
+                usdValue = "0",
+            )
+        }
+        _viewState.update { walletViewState: WalletViewState ->
+            walletViewState.copy(
+                totalBalanceEth = "$ethBalanceFormatted ETH",
+                totalBalanceUsd = usdFormatter(BigDecimal.ZERO),
+                favoriteTokens = favoriteTokens,
+            )
         }
     }
 }

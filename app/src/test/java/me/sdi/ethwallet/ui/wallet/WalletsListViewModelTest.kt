@@ -10,6 +10,8 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.MainDispatcherRule
+import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.ui.wallet.WalletScreenNews.NavigateToOnBoarding
@@ -30,19 +32,15 @@ class WalletsListViewModelTest {
     private lateinit var walletRepository: WalletRepository
     private lateinit var viewModel: WalletsListViewModel
     private val testWallet1 =
-        WalletEntity(
-            address = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
-            encryptedPrivateKeyBase64 = "encrypted_key_1",
+        EthWallet(
+            address = EthAddress("0x71C7656EC7ab88b098defB751B7401B5f6d8976F"),
             label = "My Primary Wallet",
-            isActive = true,
         )
 
     private val testWallet2 =
-        WalletEntity(
-            address = "0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF",
-            encryptedPrivateKeyBase64 = "encrypted_key_2",
+        EthWallet(
+            address = EthAddress("0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF"),
             label = "My Secondary Wallet",
-            isActive = false,
         )
 
     private val testWallets = listOf(testWallet1, testWallet2)
@@ -67,7 +65,7 @@ class WalletsListViewModelTest {
 
             val initialState = viewModel.uiState.first()
             assertTrue("Initial state should have isLoading = true", initialState.isLoading)
-            assertEquals("Initial state should have empty wallet list", emptyList<WalletEntity>(), initialState.wallets)
+            assertEquals("Initial state should have empty wallet list", emptyList<EthWallet>(), initialState.otherWallets)
             assertTrue("Initial state should have no navigation target", news.isEmpty())
         }
 
@@ -86,7 +84,7 @@ class WalletsListViewModelTest {
 
             val currentState = viewModel.uiState.first()
             assertFalse("Loading state should be false after initialization", currentState.isLoading)
-            assertEquals("Wallet list should be updated with test wallets", testWallets, currentState.wallets)
+            assertEquals("Wallet list should be updated with test wallets", testWallets, currentState.otherWallets)
             assertTrue("Navigation state should remain null", news.isEmpty())
         }
 
@@ -107,7 +105,7 @@ class WalletsListViewModelTest {
 
             val currentState = viewModel.uiState.first()
             assertFalse("Loading state should be false after initialization", currentState.isLoading)
-            assertEquals("Wallet list should be empty", emptyList<WalletEntity>(), currentState.wallets)
+            assertEquals("Wallet list should be empty", emptyList<WalletEntity>(), currentState.otherWallets)
             assertTrue("Navigation state should remain null", news.isEmpty())
         }
 
@@ -128,7 +126,7 @@ class WalletsListViewModelTest {
 
             val currentState = viewModel.uiState.first()
             assertFalse("Loading state should be false after error", currentState.isLoading)
-            assertEquals("Wallet list should remain empty after error", emptyList<WalletEntity>(), currentState.wallets)
+            assertEquals("Wallet list should remain empty after error", emptyList<EthWallet>(), currentState.otherWallets)
             assertTrue("Navigation state should remain null", news.isEmpty())
         }
 
@@ -164,7 +162,7 @@ class WalletsListViewModelTest {
             coVerify(exactly = 1) { walletRepository.setActiveWallet(targetAddress) }
 
             val currentState = viewModel.uiState.first()
-            assertEquals("Wallet list should not change after error", testWallets, currentState.wallets)
+            assertEquals("Wallet list should not change after error", testWallets, currentState.otherWallets)
             assertFalse("Loading state should be false after error", currentState.isLoading)
             assertEquals("There should be 1 error news item", 1, news.size)
             assertTrue("News should contain error message", news[0] is WalletScreenNews.ShowErrorMessage)
@@ -232,7 +230,7 @@ class WalletsListViewModelTest {
             coVerify(exactly = 1) { walletRepository.deleteWallet(addressToDelete) }
 
             val currentState = viewModel.uiState.first()
-            assertEquals("Wallet list should not change after error", testWallets, currentState.wallets)
+            assertEquals("Wallet list should not change after error", testWallets, currentState.otherWallets)
             assertFalse("Loading state should be false after error", currentState.isLoading)
             assertTrue("Navigation state should remain null", news.isEmpty())
         }
