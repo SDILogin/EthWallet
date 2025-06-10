@@ -79,7 +79,7 @@ fun OnboardingScreen(
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
 
             OutlinedButton(
                 modifier =
@@ -96,6 +96,8 @@ fun OnboardingScreen(
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
