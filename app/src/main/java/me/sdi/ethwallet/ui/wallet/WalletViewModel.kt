@@ -4,6 +4,7 @@ import android.icu.text.NumberFormat
 import android.icu.util.Currency
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,6 +28,7 @@ import me.sdi.ethwallet.ui.KnownTokens
 import org.web3j.utils.Convert
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.math.RoundingMode
 
 private const val TAG = "WalletViewModel"
 
@@ -91,25 +93,67 @@ class WalletViewModel(
     }
 
     private suspend fun updateEthAccountInfo(address: EthAddress) {
+        Logger.debug(TAG) { "Updating account info for address: $address" }
+
         val ethBalanceWei: BigInteger = balanceProvider.getEthBalance(address)
         val ethPriceUsd: BigDecimal = ethPriceProvider.getPrice()
         val ethBalanceFormatted: BigDecimal? = Convert.fromWei(ethBalanceWei.toString(), Convert.Unit.ETHER)
-        val totalUsdValue = ethBalanceFormatted?.multiply(ethPriceUsd) ?: BigDecimal.ZERO
+        val ethUsdValue = ethBalanceFormatted?.multiply(ethPriceUsd) ?: BigDecimal.ZERO
+
+        // Fetch ERC-20 token balances
+        val tokenContractAddresses = KnownTokens.entries.map { it.ethAddress }
+        val tokenBalances = try {
+            balanceProvider.getErc20TokensBalance(address, tokenContractAddresses)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+
+            Logger.warn(TAG) { "Failed to fetch ERC-20 token balances: ${e.message}" }
+            emptyMap<EthAddress, BigInteger>()
+        }
+
+        // Convert token balances and calculate USD values
+        var totalTokenUsdValue = BigDecimal.ZERO
         val favoriteTokens = KnownTokens.entries.map { knownToken ->
+            val balanceWei = tokenBalances[knownToken.ethAddress] ?: BigInteger.ZERO
+            // Convert from smallest units to token units using correct decimals
+            val tokenAmount = BigDecimal(balanceWei).divide(
+                BigDecimal.TEN.pow(knownToken.decimals),
+                knownToken.decimals,
+                RoundingMode.DOWN,
+            )
+            // For stablecoins, use 1:1 USD rate
+            val tokenUsdValue = tokenAmount
+            totalTokenUsdValue = totalTokenUsdValue.add(tokenUsdValue)
+
             FavoriteToken(
                 address = knownToken.ethAddress,
                 name = knownToken.tokenName,
                 ticker = knownToken.name,
-                amount = "0",
-                usdValue = "0",
+                amount = formatTokenAmount(tokenAmount),
+                usdValue = usdFormatter(tokenUsdValue),
             )
         }
+
+        val totalUsdValue = ethUsdValue.add(totalTokenUsdValue)
+
+        Logger.debug(TAG) {
+            "Balance update: ETH=$ethBalanceFormatted ($$ethUsdValue), Tokens=$$totalTokenUsdValue, Total=$$totalUsdValue"
+        }
+
         _viewState.update { walletViewState: WalletViewState ->
             walletViewState.copy(
                 totalBalanceEth = "$ethBalanceFormatted ETH",
                 totalBalanceUsd = usdFormatter(totalUsdValue),
                 favoriteTokens = favoriteTokens,
             )
+        }
+    }
+
+    private fun formatTokenAmount(amount: BigDecimal): String {
+        return when {
+            amount == BigDecimal.ZERO -> "0"
+            amount < BigDecimal.ONE -> amount.setScale(6, RoundingMode.DOWN).stripTrailingZeros().toPlainString()
+            else -> amount.setScale(2, RoundingMode.DOWN).stripTrailingZeros().toPlainString()
         }
     }
 }
