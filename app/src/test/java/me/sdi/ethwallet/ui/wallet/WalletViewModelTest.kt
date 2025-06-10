@@ -9,7 +9,7 @@ import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.MainDispatcherRule
 import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.EthAddress
-import me.sdi.ethwallet.core.EthPriceProvider
+import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.ui.KnownTokens
@@ -28,7 +28,7 @@ class WalletViewModelTest {
 
     private lateinit var walletRepository: WalletRepository
     private lateinit var balanceProvider: BalanceProvider
-    private lateinit var ethPriceProvider: EthPriceProvider
+    private lateinit var fiatRateProvider: FiatRateProvider
     private lateinit var viewModel: WalletViewModel
 
     private val testAddress = EthAddress("0x1234567890123456789012345678901234567890")
@@ -47,11 +47,11 @@ class WalletViewModelTest {
     fun setUp() {
         walletRepository = mockk()
         balanceProvider = mockk()
-        ethPriceProvider = mockk()
+        fiatRateProvider = mockk()
         viewModel = WalletViewModel(
             walletRepository = walletRepository,
             balanceProvider = balanceProvider,
-            ethPriceProvider = ethPriceProvider,
+            fiatRateProvider = fiatRateProvider,
             usdFormatter = testUsdFormatter,
         )
     }
@@ -64,7 +64,12 @@ class WalletViewModelTest {
 
             coEvery { walletRepository.getActiveWallet() } returns testWallet
             coEvery { balanceProvider.getEthBalance(testAddress) } returns oneEthInWei
-            coEvery { ethPriceProvider.getPrice() } returns ethPrice
+            coEvery { fiatRateProvider.getUsdRates(any()) } returns mapOf(
+                "ETH" to ethPrice,
+                "USDT" to BigDecimal.ONE,
+                "USDC" to BigDecimal.ONE,
+                "DAI" to BigDecimal.ONE
+            )
             mockEmptyTokenBalances()
 
             viewModel.onEvent(WalletEvent.Initialize)
@@ -96,7 +101,12 @@ class WalletViewModelTest {
 
             coEvery { walletRepository.getActiveWallet() } returns testWallet
             coEvery { balanceProvider.getEthBalance(testAddress) } returns zeroWei
-            coEvery { ethPriceProvider.getPrice() } returns ethPrice
+            coEvery { fiatRateProvider.getUsdRates(any()) } returns mapOf(
+                "ETH" to ethPrice,
+                "USDT" to BigDecimal.ONE,
+                "USDC" to BigDecimal.ONE,
+                "DAI" to BigDecimal.ONE
+            )
             mockEmptyTokenBalances()
 
             viewModel.onEvent(WalletEvent.Initialize)
@@ -123,7 +133,12 @@ class WalletViewModelTest {
 
             coEvery { walletRepository.getActiveWallet() } returns testWallet
             coEvery { balanceProvider.getEthBalance(testAddress) } returns halfEthInWei
-            coEvery { ethPriceProvider.getPrice() } returns ethPrice
+            coEvery { fiatRateProvider.getUsdRates(any()) } returns mapOf(
+                "ETH" to ethPrice,
+                "USDT" to BigDecimal.ONE,
+                "USDC" to BigDecimal.ONE,
+                "DAI" to BigDecimal.ONE
+            )
             mockEmptyTokenBalances()
 
             viewModel.onEvent(WalletEvent.Initialize)
@@ -150,7 +165,12 @@ class WalletViewModelTest {
 
             coEvery { walletRepository.getActiveWallet() } returns testWallet
             coEvery { balanceProvider.getEthBalance(testAddress) } returns twoEthInWei
-            coEvery { ethPriceProvider.getPrice() } returns ethPrice
+            coEvery { fiatRateProvider.getUsdRates(any()) } returns mapOf(
+                "ETH" to ethPrice,
+                "USDT" to BigDecimal.ONE,
+                "USDC" to BigDecimal.ONE,
+                "DAI" to BigDecimal.ONE
+            )
             mockEmptyTokenBalances()
 
             viewModel.onEvent(WalletEvent.Refresh)
@@ -188,7 +208,12 @@ class WalletViewModelTest {
 
             coEvery { walletRepository.getActiveWallet() } returns testWallet
             coEvery { balanceProvider.getEthBalance(testAddress) } returns oneEthInWei
-            coEvery { ethPriceProvider.getPrice() } returns ethPrice
+            coEvery { fiatRateProvider.getUsdRates(any()) } returns mapOf(
+                "ETH" to ethPrice,
+                "USDT" to BigDecimal.ONE,
+                "USDC" to BigDecimal.ONE,
+                "DAI" to BigDecimal.ONE
+            )
             coEvery { balanceProvider.getErc20TokensBalance(testAddress, any()) } returns tokenBalances
 
             viewModel.onEvent(WalletEvent.Initialize)
@@ -222,7 +247,12 @@ class WalletViewModelTest {
 
             coEvery { walletRepository.getActiveWallet() } returns testWallet
             coEvery { balanceProvider.getEthBalance(testAddress) } returns oneEthInWei
-            coEvery { ethPriceProvider.getPrice() } returns ethPrice
+            coEvery { fiatRateProvider.getUsdRates(any()) } returns mapOf(
+                "ETH" to ethPrice,
+                "USDT" to BigDecimal.ONE,
+                "USDC" to BigDecimal.ONE,
+                "DAI" to BigDecimal.ONE
+            )
             mockEmptyTokenBalances()
 
             viewModel.onEvent(WalletEvent.Initialize)
@@ -257,7 +287,12 @@ class WalletViewModelTest {
 
             coEvery { walletRepository.getActiveWallet() } returns testWallet
             coEvery { balanceProvider.getEthBalance(testAddress) } returns zeroEth
-            coEvery { ethPriceProvider.getPrice() } returns ethPrice
+            coEvery { fiatRateProvider.getUsdRates(any()) } returns mapOf(
+                "ETH" to ethPrice,
+                "USDT" to BigDecimal.ONE,
+                "USDC" to BigDecimal.ONE,
+                "DAI" to BigDecimal.ONE
+            )
             coEvery { balanceProvider.getErc20TokensBalance(testAddress, any()) } returns tokenBalances
 
             viewModel.onEvent(WalletEvent.Initialize)
@@ -288,7 +323,12 @@ class WalletViewModelTest {
 
             coEvery { walletRepository.getActiveWallet() } returns testWallet
             coEvery { balanceProvider.getEthBalance(testAddress) } returns oneEthInWei
-            coEvery { ethPriceProvider.getPrice() } returns ethPrice
+            coEvery { fiatRateProvider.getUsdRates(any()) } returns mapOf(
+                "ETH" to ethPrice,
+                "USDT" to BigDecimal.ONE,
+                "USDC" to BigDecimal.ONE,
+                "DAI" to BigDecimal.ONE
+            )
             coEvery { balanceProvider.getErc20TokensBalance(testAddress, any()) } throws RuntimeException("Network error")
 
             viewModel.onEvent(WalletEvent.Initialize)
@@ -329,7 +369,12 @@ class WalletViewModelTest {
 
             coEvery { walletRepository.getActiveWallet() } returns testWallet
             coEvery { balanceProvider.getEthBalance(testAddress) } returns halfEthInWei
-            coEvery { ethPriceProvider.getPrice() } returns ethPrice
+            coEvery { fiatRateProvider.getUsdRates(any()) } returns mapOf(
+                "ETH" to ethPrice,
+                "USDT" to BigDecimal.ONE,
+                "USDC" to BigDecimal.ONE,
+                "DAI" to BigDecimal.ONE
+            )
             coEvery { balanceProvider.getErc20TokensBalance(testAddress, any()) } returns tokenBalances
 
             viewModel.onEvent(WalletEvent.Initialize)

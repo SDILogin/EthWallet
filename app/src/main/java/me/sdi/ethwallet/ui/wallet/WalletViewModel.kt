@@ -17,10 +17,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.BalanceProvider
-import me.sdi.ethwallet.core.CryptocompareEthPriceProvider
+import me.sdi.ethwallet.core.CryptocompareFiatRateProvider
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthBalanceProvider
-import me.sdi.ethwallet.core.EthPriceProvider
+import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.core.Web3Provider
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
@@ -35,7 +35,7 @@ private const val TAG = "WalletViewModel"
 class WalletViewModel(
     private val walletRepository: WalletRepository,
     private val balanceProvider: BalanceProvider = EthBalanceProvider(Web3Provider.web3j),
-    private val ethPriceProvider: EthPriceProvider = CryptocompareEthPriceProvider(),
+    private val fiatRateProvider: FiatRateProvider = CryptocompareFiatRateProvider(),
     private val usdFormatter: (BigDecimal) -> String = { usdAmount ->
         val currencyFormatter = NumberFormat.getCurrencyInstance()
         currencyFormatter.currency = Currency.getInstance("USD")
@@ -96,7 +96,9 @@ class WalletViewModel(
         Logger.debug(TAG) { "Updating account info for address: $address" }
 
         val ethBalanceWei: BigInteger = balanceProvider.getEthBalance(address)
-        val ethPriceUsd: BigDecimal = ethPriceProvider.getPrice()
+        val tokenNames = KnownTokens.entries.map { it.name }
+        val fiatRates = fiatRateProvider.getUsdRates(tokenNames)
+        val ethPriceUsd: BigDecimal = fiatRates["ETH"] ?: BigDecimal.ZERO
         val ethBalanceFormatted: BigDecimal? = Convert.fromWei(ethBalanceWei.toString(), Convert.Unit.ETHER)
         val ethUsdValue = ethBalanceFormatted?.multiply(ethPriceUsd) ?: BigDecimal.ZERO
 
@@ -121,8 +123,9 @@ class WalletViewModel(
                 knownToken.decimals,
                 RoundingMode.DOWN,
             )
-            // For stablecoins, use 1:1 USD rate
-            val tokenUsdValue = tokenAmount
+            // Get token USD rate from fiat rates
+            val tokenRate = fiatRates[knownToken.name] ?: BigDecimal.ONE
+            val tokenUsdValue = tokenAmount.multiply(tokenRate)
             totalTokenUsdValue = totalTokenUsdValue.add(tokenUsdValue)
 
             FavoriteToken(

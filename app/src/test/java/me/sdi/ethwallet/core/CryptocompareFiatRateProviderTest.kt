@@ -12,35 +12,36 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.SocketTimeoutException
 
-class CryptocompareEthPriceProviderTest {
+class CryptocompareFiatRateProviderTest {
     @Test
     fun `getPrice returns correct price`() = runTest {
         val mockEngine = MockEngine {
             respond(
-                content = """{"USD": 1500.0}""",
+                content = """{"ETH": 0.0003638, "DAI": 1.0}""",
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }
         val ethPriceProvider = createCryptocompareEthPriceProvider(mockEngine)
 
-        val price = ethPriceProvider.getPrice()
+        val rates = ethPriceProvider.getUsdRates(listOf("DAI"))
 
-        assertEquals("1500.0", price.toPlainString()) // Changed
+        assertEquals("2748.7", rates["ETH"]?.toPlainString()?.substring(0, 6))
+        assertEquals("1.0", rates["DAI"]?.toPlainString())
     }
 
     @Test(expected = JsonConvertException::class)
     fun `invalid json throws exception`() = runTest {
         val mockEngine = MockEngine {
             respond(
-                content = """{"USD": "invalid"}""",
+                content = """{"ETH": "invalid"}""",
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }
         val ethPriceProvider = createCryptocompareEthPriceProvider(mockEngine)
 
-        ethPriceProvider.getPrice()
+        ethPriceProvider.getUsdRates(listOf("DAI"))
     }
 
     @Test(expected = SocketTimeoutException::class)
@@ -48,11 +49,11 @@ class CryptocompareEthPriceProviderTest {
         val mockEngine = MockEngine { throw SocketTimeoutException() }
         val ethPriceProvider = createCryptocompareEthPriceProvider(mockEngine)
 
-        ethPriceProvider.getPrice()
+        ethPriceProvider.getUsdRates(listOf("DAI"))
     }
 
-    private fun createCryptocompareEthPriceProvider(mockEngine: MockEngine): CryptocompareEthPriceProvider {
+    private fun createCryptocompareEthPriceProvider(mockEngine: MockEngine): CryptocompareFiatRateProvider {
         val networkManagerConfigurator = NetworkManagerConfigurator(mockEngine)
-        return CryptocompareEthPriceProvider(networkManagerConfigurator)
+        return CryptocompareFiatRateProvider(networkManagerConfigurator)
     }
 }
