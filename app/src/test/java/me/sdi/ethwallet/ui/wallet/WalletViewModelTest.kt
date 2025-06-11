@@ -68,7 +68,7 @@ class WalletViewModelTest {
                 "ETH" to ethPrice,
                 "USDT" to BigDecimal.ONE,
                 "USDC" to BigDecimal.ONE,
-                "DAI" to BigDecimal.ONE
+                "DAI" to BigDecimal.ONE,
             )
             mockEmptyTokenBalances()
 
@@ -105,7 +105,7 @@ class WalletViewModelTest {
                 "ETH" to ethPrice,
                 "USDT" to BigDecimal.ONE,
                 "USDC" to BigDecimal.ONE,
-                "DAI" to BigDecimal.ONE
+                "DAI" to BigDecimal.ONE,
             )
             mockEmptyTokenBalances()
 
@@ -137,7 +137,7 @@ class WalletViewModelTest {
                 "ETH" to ethPrice,
                 "USDT" to BigDecimal.ONE,
                 "USDC" to BigDecimal.ONE,
-                "DAI" to BigDecimal.ONE
+                "DAI" to BigDecimal.ONE,
             )
             mockEmptyTokenBalances()
 
@@ -169,7 +169,7 @@ class WalletViewModelTest {
                 "ETH" to ethPrice,
                 "USDT" to BigDecimal.ONE,
                 "USDC" to BigDecimal.ONE,
-                "DAI" to BigDecimal.ONE
+                "DAI" to BigDecimal.ONE,
             )
             mockEmptyTokenBalances()
 
@@ -212,7 +212,7 @@ class WalletViewModelTest {
                 "ETH" to ethPrice,
                 "USDT" to BigDecimal.ONE,
                 "USDC" to BigDecimal.ONE,
-                "DAI" to BigDecimal.ONE
+                "DAI" to BigDecimal.ONE,
             )
             coEvery { balanceProvider.getErc20TokensBalance(testAddress, any()) } returns tokenBalances
 
@@ -251,7 +251,7 @@ class WalletViewModelTest {
                 "ETH" to ethPrice,
                 "USDT" to BigDecimal.ONE,
                 "USDC" to BigDecimal.ONE,
-                "DAI" to BigDecimal.ONE
+                "DAI" to BigDecimal.ONE,
             )
             mockEmptyTokenBalances()
 
@@ -291,7 +291,7 @@ class WalletViewModelTest {
                 "ETH" to ethPrice,
                 "USDT" to BigDecimal.ONE,
                 "USDC" to BigDecimal.ONE,
-                "DAI" to BigDecimal.ONE
+                "DAI" to BigDecimal.ONE,
             )
             coEvery { balanceProvider.getErc20TokensBalance(testAddress, any()) } returns tokenBalances
 
@@ -327,7 +327,7 @@ class WalletViewModelTest {
                 "ETH" to ethPrice,
                 "USDT" to BigDecimal.ONE,
                 "USDC" to BigDecimal.ONE,
-                "DAI" to BigDecimal.ONE
+                "DAI" to BigDecimal.ONE,
             )
             coEvery { balanceProvider.getErc20TokensBalance(testAddress, any()) } throws RuntimeException("Network error")
 
@@ -373,7 +373,7 @@ class WalletViewModelTest {
                 "ETH" to ethPrice,
                 "USDT" to BigDecimal.ONE,
                 "USDC" to BigDecimal.ONE,
-                "DAI" to BigDecimal.ONE
+                "DAI" to BigDecimal.ONE,
             )
             coEvery { balanceProvider.getErc20TokensBalance(testAddress, any()) } returns tokenBalances
 
