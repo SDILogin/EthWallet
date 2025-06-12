@@ -4,6 +4,7 @@ import android.icu.text.NumberFormat
 import android.icu.util.Currency
 import android.widget.Toast
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.valentinilk.shimmer.shimmer
 import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.FileBasedEthWalletCreator
@@ -146,13 +148,21 @@ fun WalletScreen(
                     .padding(horizontal = 16.dp),
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
-                TotalFiatBalanceCard(
-                    fiatBalance = viewState.totalBalanceUsd,
-                    ethBalance = viewState.totalBalanceEth,
-                )
+
+                if (viewState.isLoading) {
+                    TotalBalanceShimmer()
+                } else {
+                    TotalFiatBalanceCard(
+                        fiatBalance = viewState.totalBalanceUsd,
+                        ethBalance = viewState.totalBalanceEth,
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (viewState.favoriteTokens.isNotEmpty()) {
+                if (viewState.isLoading) {
+                    TokensCardShimmer()
+                } else if (viewState.favoriteTokens.isNotEmpty()) {
                     TokensCard(
                         favoriteTokens = viewState.favoriteTokens,
                         onEditButtonClick = onEditButtonClick,
@@ -312,6 +322,147 @@ private fun TokenItem(
 }
 
 @Composable
+private fun TotalBalanceShimmer(
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.shimmer().fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // Main balance shimmer placeholder
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.6f)
+                .height(56.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(8.dp),
+                ),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        // ETH balance shimmer placeholder
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.4f)
+                .height(24.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(6.dp),
+                ),
+        )
+    }
+}
+
+@Composable
+private fun TokensCardShimmer(
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.shimmer(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(32.dp)
+                        .padding(16.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(6.dp),
+                        ),
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(width = 60.dp, height = 32.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(16.dp),
+                        ),
+                )
+            }
+
+            repeat(3) {
+                TokenItemShimmer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun TokenItemShimmer(
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.shimmer(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Token icon shimmer
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(24.dp),
+                ),
+        )
+
+        Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            // Token name shimmer
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(20.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(4.dp),
+                    ),
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            // Token symbol shimmer
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.4f)
+                    .height(16.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(4.dp),
+                    ),
+            )
+        }
+
+        // Token balance shimmer
+        Box(
+            modifier = Modifier
+                .size(width = 80.dp, height = 20.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(4.dp),
+                ),
+        )
+    }
+}
+
+@Composable
 @PreviewFontScale
 @PreviewLightDark
 fun WalletScreenPreview() {
@@ -334,6 +485,25 @@ fun WalletScreenPreview() {
                         )
                     },
                 ),
+            onEditButtonClick = { },
+            onManageWallets = { },
+            onTokenClick = { },
+        )
+    }
+}
+
+@Composable
+@PreviewFontScale
+@PreviewLightDark
+fun WalletScreenLoadingPreview() {
+    EthWalletTheme {
+        WalletScreen(
+            viewState = WalletViewState(
+                isLoading = true,
+                totalBalanceUsd = "",
+                totalBalanceEth = "",
+                favoriteTokens = emptyList(),
+            ),
             onEditButtonClick = { },
             onManageWallets = { },
             onTokenClick = { },
