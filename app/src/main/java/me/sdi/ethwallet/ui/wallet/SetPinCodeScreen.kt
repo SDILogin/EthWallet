@@ -45,8 +45,8 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun PinCodeInput(
@@ -186,7 +186,7 @@ fun NumberButton(
 fun SetPinCodeScreen(
     onPinCodeSet: (String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: SetPinCodeViewModel = viewModel(factory = SetPinCodeViewModel.Factory),
+    viewModel: SetPinCodeViewModel = koinViewModel(),
 ) {
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
 

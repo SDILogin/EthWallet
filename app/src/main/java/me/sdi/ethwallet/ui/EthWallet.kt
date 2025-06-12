@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -19,6 +20,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import me.sdi.ethwallet.InitialNavigationViewModel
+import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
@@ -30,10 +33,27 @@ import me.sdi.ethwallet.ui.wallet.WalletsListScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EthWallet(viewModel: InitialNavigationViewModel) {
+fun EthWallet(
+    viewModel: InitialNavigationViewModel,
+    userActivityManager: UserActivityManager,
+) {
     EthWalletTheme {
         val state by viewModel.state.collectAsStateWithLifecycle()
         val navController = rememberNavController()
+        LaunchedEffect(Unit) {
+            navController.currentBackStack.collect { backstack ->
+                Logger.debug("Navigation") {
+                    "Current back stack: ${backstack.joinToString { it.destination.route ?: "unknown" }}"
+                }
+            }
+        }
+
+        val showLockScreen by userActivityManager.showLockScreen.collectAsStateWithLifecycle()
+        if (showLockScreen) {
+            LaunchedEffect(Unit) {
+                navigateToVerifyPinCodeScreen(navController)
+            }
+        }
         AnimatedVisibility(
             modifier = Modifier.fillMaxSize(),
             visible = state.numberOfWallets >= 0,
@@ -111,6 +131,15 @@ fun EthWallet(viewModel: InitialNavigationViewModel) {
                     }
                 }
             }
+        }
+    }
+}
+
+private fun navigateToVerifyPinCodeScreen(navController: NavHostController) {
+    navController.navigate(Destination.VerifyPinCodeScreen) {
+        // pop up to root
+        popUpTo(0) {
+            inclusive = false
         }
     }
 }

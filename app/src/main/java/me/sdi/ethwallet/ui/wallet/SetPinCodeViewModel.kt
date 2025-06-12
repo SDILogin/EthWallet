@@ -1,10 +1,7 @@
 package me.sdi.ethwallet.ui.wallet
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -16,7 +13,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
-import me.sdi.ethwallet.core.security.DataStorePinCodeStorage
 import me.sdi.ethwallet.core.security.PinCodeStorage
 
 /**
@@ -209,14 +205,5 @@ class SetPinCodeViewModel(
     companion object {
         private const val TAG = "SetPinCodeViewModel"
         private const val PIN_MAX_LENGTH = 6
-
-        val Factory: ViewModelProvider.Factory =
-            viewModelFactory {
-                initializer {
-                    val context = checkNotNull(this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY])
-                    val pinCodeStorage = DataStorePinCodeStorage(context)
-                    SetPinCodeViewModel(pinCodeStorage)
-                }
-            }
     }
 }

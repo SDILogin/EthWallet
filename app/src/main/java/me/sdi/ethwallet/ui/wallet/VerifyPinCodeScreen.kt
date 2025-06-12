@@ -37,8 +37,8 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.koin.androidx.compose.koinViewModel
 
 /**
  * Events that can be handled by the VerifyPinCodeViewModel.
@@ -65,12 +65,8 @@ fun VerifyPinCodeScreen(
     onPinVerified: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: VerifyPinCodeViewModel = koinViewModel(),
 ) {
-    val viewModel = viewModel<VerifyPinCodeViewModel>(
-        factory = VerifyPinCodeViewModel.Factory,
-    )
-    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
-
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
             when (news) {
@@ -83,6 +79,7 @@ fun VerifyPinCodeScreen(
         }
     }
 
+    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
     VerifyPinCodeScreen(
         viewState = viewState,
         onEvent = viewModel::onEvent,

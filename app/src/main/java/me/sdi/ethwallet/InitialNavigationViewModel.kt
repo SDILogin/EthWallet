@@ -1,19 +1,13 @@
 package me.sdi.ethwallet
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import me.sdi.ethwallet.core.security.DataStorePinCodeStorage
 import me.sdi.ethwallet.core.security.PinCodeStorage
-import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.ui.navigation.Destination
 
@@ -64,18 +58,5 @@ class InitialNavigationViewModel(
                 )
             }
         }
-    }
-
-    companion object {
-        val Factory: ViewModelProvider.Factory =
-            viewModelFactory {
-                initializer {
-                    val appContext = checkNotNull(this[APPLICATION_KEY])
-                    val appDatabase = AppDatabase.getInstance(appContext)
-                    val walletDao = appDatabase.walletDao()
-                    val pinCodeStorage = DataStorePinCodeStorage(appContext)
-                    InitialNavigationViewModel(walletDao, pinCodeStorage)
-                }
-            }
     }
 }

@@ -7,15 +7,16 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.ui.EthWallet
+import org.koin.android.ext.android.inject
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
-    private val viewModel by viewModels<InitialNavigationViewModel>(
-        factoryProducer = { InitialNavigationViewModel.Factory },
-    )
+    private val viewModel: InitialNavigationViewModel by viewModel()
+    private val userActivityManager: UserActivityManager by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -28,7 +29,7 @@ class MainActivity : ComponentActivity() {
             // warmup database
             AppDatabase.getInstance(application)
 
-            (viewModel.numberOfWallets.value < 0).also {
+            (viewModel.state.value.numberOfWallets < 0).also {
                 val now = System.currentTimeMillis()
                 if (now - lastPrintAt > 1000) {
                     lastPrintAt = now
@@ -40,7 +41,13 @@ class MainActivity : ComponentActivity() {
         }
 
         enableEdgeToEdge()
-        setContent { EthWallet(viewModel) }
+        setContent { EthWallet(viewModel, userActivityManager) }
+    }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+
+        userActivityManager.onAnyUserAction()
     }
 }
 

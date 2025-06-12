@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.data.UserActivityManager
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import java.security.MessageDigest
@@ -32,6 +33,7 @@ import javax.crypto.spec.GCMParameterSpec
  */
 class DataStorePinCodeStorage(
     context: Context,
+    private val userActivityManager: UserActivityManager,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : PinCodeStorage {
     companion object {
@@ -68,6 +70,9 @@ class DataStorePinCodeStorage(
         val storedHashedPin = loadPin()
         val result = storedHashedPin.contentEquals(hashedInputPin)
         Logger.debug(TAG) { "PIN verification result: $result" }
+        if (result) {
+            userActivityManager.onAppUnlocked()
+        }
         return result
     }
 
