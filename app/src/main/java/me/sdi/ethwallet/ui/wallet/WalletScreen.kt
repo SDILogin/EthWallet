@@ -45,21 +45,14 @@ import androidx.compose.ui.tooling.preview.PreviewFontScale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import com.valentinilk.shimmer.shimmer
 import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
-import me.sdi.ethwallet.core.FileBasedEthWalletCreator
-import me.sdi.ethwallet.core.security.KeyStoreEncryptor
-import me.sdi.ethwallet.data.AndroidTempFileProvider
-import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.koin.androidx.compose.koinViewModel
+import java.math.BigDecimal
 
 @Composable
 fun WalletScreen(
@@ -67,26 +60,8 @@ fun WalletScreen(
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
     modifier: Modifier = Modifier,
+    viewModel: WalletViewModel = koinViewModel<WalletViewModel>(),
 ) {
-    val viewModel = viewModel<WalletViewModel>(
-        factory = viewModelFactory {
-            initializer {
-                val context = checkNotNull(this[APPLICATION_KEY])
-                val tempFileProvider = AndroidTempFileProvider(context)
-                val walletCreator = FileBasedEthWalletCreator(tempFileProvider)
-                val keyStoreEncryptor = KeyStoreEncryptor()
-                val database = AppDatabase.getInstance(context)
-                val walletRepository = WalletRepository(
-                    walletDao = database.walletDao(),
-                    walletCreator = walletCreator,
-                    keyStoreEncryptor = keyStoreEncryptor,
-                )
-                WalletViewModel(walletRepository)
-            }
-        },
-    )
-    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
-
     LaunchedEffect(viewModel) {
         viewModel.onEvent(WalletEvent.Initialize)
     }
@@ -103,6 +78,7 @@ fun WalletScreen(
         }
     }
 
+    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
     WalletScreen(
         viewState = viewState,
         onManageWallets = onManageWallets,
@@ -481,7 +457,8 @@ fun WalletScreenPreview() {
                             name = knownToken.name,
                             ticker = knownToken.name,
                             amount = "1.53",
-                            usdValue = "1.53",
+                            usdValue = BigDecimal("1.53"),
+                            usdValueFormatted = "1.53",
                         )
                     },
                 ),

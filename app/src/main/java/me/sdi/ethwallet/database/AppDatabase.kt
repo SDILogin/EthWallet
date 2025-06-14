@@ -5,16 +5,28 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.database.dao.FiatRateDao
+import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.dao.WalletDao
+import me.sdi.ethwallet.database.entity.FiatRateEntity
+import me.sdi.ethwallet.database.entity.TokenBalanceEntity
 import me.sdi.ethwallet.database.entity.WalletEntity
 
 @Database(
-    entities = [WalletEntity::class],
+    entities = [
+        WalletEntity::class,
+        TokenBalanceEntity::class,
+        FiatRateEntity::class,
+    ],
     version = 1,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun walletDao(): WalletDao
+
+    abstract fun tokenBalanceDao(): TokenBalanceDao
+
+    abstract fun fiatRateDao(): FiatRateDao
 
     companion object {
         private const val DATABASE_NAME = "ethwallet_db"

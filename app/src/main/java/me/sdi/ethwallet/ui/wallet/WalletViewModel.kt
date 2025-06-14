@@ -5,23 +5,26 @@ import android.icu.util.Currency
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.BalanceProvider
-import me.sdi.ethwallet.core.CryptocompareFiatRateProvider
 import me.sdi.ethwallet.core.EthAddress
-import me.sdi.ethwallet.core.EthBalanceProvider
+import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
-import me.sdi.ethwallet.core.Web3Provider
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.ui.KnownTokens
@@ -34,8 +37,8 @@ private const val TAG = "WalletViewModel"
 
 class WalletViewModel(
     private val walletRepository: WalletRepository,
-    private val balanceProvider: BalanceProvider = EthBalanceProvider(Web3Provider.web3j),
-    private val fiatRateProvider: FiatRateProvider = CryptocompareFiatRateProvider(),
+    private val balanceProvider: BalanceProvider,
+    private val fiatRateProvider: FiatRateProvider,
     private val usdFormatter: (BigDecimal) -> String = { usdAmount ->
         val currencyFormatter = NumberFormat.getCurrencyInstance()
         currencyFormatter.currency = Currency.getInstance("USD")
@@ -52,103 +55,185 @@ class WalletViewModel(
     )
     val news: SharedFlow<WalletNews> = _news.asSharedFlow()
 
+    private var forceUpdateJob: Job? = null
+
     fun onEvent(event: WalletEvent) {
         when (event) {
-            is WalletEvent.Initialize -> loadActiveWallet()
-            is WalletEvent.Refresh -> loadActiveWallet()
+            is WalletEvent.Initialize -> startObservingActiveWalletBalanceChanges()
+            is WalletEvent.Refresh -> onRefreshRequested()
         }
     }
 
-    private fun loadActiveWallet() {
+    private fun onRefreshRequested() {
+        if (forceUpdateJob?.isActive == true) {
+            Logger.debug(TAG) {
+                "Balance update already in progress, skipping new request"
+            }
+            return
+        }
+
+        if (forceUpdateJob == null) {
+            viewModelScope.launch {
+                forceUpdateJob = launch(CoroutineName("BalanceUpdate")) {
+                    val activeWallet: EthWallet? = getActiveWalletOrShowError()
+                    if (activeWallet == null) {
+                        Logger.warn(TAG) {
+                            "No active wallet found, cannot refresh balance"
+                        }
+
+                        return@launch
+                    }
+
+                    updateWalletBalanceOrShowError(activeWallet)
+                    updateFiatRatesOrShowError()
+                }
+            }
+        }
+    }
+
+    private fun startObservingActiveWalletBalanceChanges() {
         _viewState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            try {
-                val activeWallet: EthWallet? = walletRepository.getActiveWallet()
-                if (activeWallet != null) {
-                    updateEthAccountInfo(activeWallet.address)
-                } else {
-                    // For now, use a placeholder. In a real app, we might navigate away
-                    // or show a message prompting the user to create or select a wallet.
-                    _viewState.update { walletViewState: WalletViewState ->
-                        walletViewState.copy(
-                            totalBalanceUsd = usdFormatter(BigDecimal.ZERO),
-                            totalBalanceEth = "0 ETH",
-                            favoriteTokens = emptyList(),
-                        )
+            val activeWallet: EthWallet? = getActiveWalletOrShowError()
+            if (activeWallet == null) {
+                Logger.warn(TAG) {
+                    "No active wallet found, stop observing balance updates"
+                }
+
+                return@launch
+            }
+
+            balanceProvider
+                .observe(activeWallet.address)
+                .combine(fiatRateProvider.observe()) { balance, fiatRates ->
+                    Logger.debug(TAG) {
+                        "Combining balance and fiat rates for ${activeWallet.address}"
+                    }
+                    CombinedBalance(balance, fiatRates)
+                }
+                .onStart {
+                    forceUpdateJob = launch(CoroutineName("BalanceUpdate")) {
+                        updateWalletBalanceOrShowError(activeWallet)
+                        updateFiatRatesOrShowError()
                     }
                 }
-            } catch (e: Exception) {
-                ensureActive()
-
-                Logger.warn(TAG) {
-                    "Error loading active wallet\n ${e.stackTraceToString()}"
+                .onEach {
+                    Logger.debug(TAG) {
+                        "Balance update for ${activeWallet.address}: $it"
+                    }
                 }
-
-                _news.emit(WalletNews.ShowErrorMessage(e))
-            }
-        }.invokeOnCompletion {
-            _viewState.update { it.copy(isLoading = false) }
+                .collectLatest { combinedBalance: CombinedBalance ->
+                    displayUpdatedBalance(combinedBalance)
+                }
         }
     }
 
-    private suspend fun updateEthAccountInfo(address: EthAddress) {
-        Logger.debug(TAG) { "Updating account info for address: $address" }
+    private fun displayUpdatedBalance(combinedBalance: CombinedBalance) {
+        _viewState.update { it.copy(isLoading = false) }
 
-        val ethBalanceWei: BigInteger = balanceProvider.getEthBalance(address)
-        val tokenNames = KnownTokens.entries.map { it.name }
-        val fiatRates = fiatRateProvider.getUsdRates(tokenNames)
-        val ethPriceUsd: BigDecimal = fiatRates["ETH"] ?: BigDecimal.ZERO
-        val ethBalanceFormatted: BigDecimal? = Convert.fromWei(ethBalanceWei.toString(), Convert.Unit.ETHER)
-        val ethUsdValue = ethBalanceFormatted?.multiply(ethPriceUsd) ?: BigDecimal.ZERO
-
-        // Fetch ERC-20 token balances
-        val tokenContractAddresses = KnownTokens.entries.map { it.ethAddress }
-        val tokenBalances = try {
-            balanceProvider.getErc20TokensBalance(address, tokenContractAddresses)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-
-            Logger.warn(TAG) { "Failed to fetch ERC-20 token balances: ${e.message}" }
-            emptyMap<EthAddress, BigInteger>()
-        }
-
-        // Convert token balances and calculate USD values
-        var totalTokenUsdValue = BigDecimal.ZERO
-        val favoriteTokens = KnownTokens.entries.map { knownToken ->
-            val balanceWei = tokenBalances[knownToken.ethAddress] ?: BigInteger.ZERO
-            // Convert from smallest units to token units using correct decimals
-            val tokenAmount = BigDecimal(balanceWei).divide(
-                BigDecimal.TEN.pow(knownToken.decimals),
-                knownToken.decimals,
-                RoundingMode.DOWN,
-            )
-            // Get token USD rate from fiat rates
-            val tokenRate = fiatRates[knownToken.name] ?: BigDecimal.ONE
-            val tokenUsdValue = tokenAmount.multiply(tokenRate)
-            totalTokenUsdValue = totalTokenUsdValue.add(tokenUsdValue)
-
-            FavoriteToken(
-                address = knownToken.ethAddress,
-                name = knownToken.tokenName,
-                ticker = knownToken.name,
-                amount = formatTokenAmount(tokenAmount),
-                usdValue = usdFormatter(tokenUsdValue),
+        val balance = combinedBalance.balance
+        val fiatRates = combinedBalance.fiatRates
+        val ethBalanceWei = balance[EthContractAddress] ?: BigInteger.ZERO
+        val ethBalanceEth: BigDecimal = Convert.fromWei(ethBalanceWei.toString(), Convert.Unit.ETHER)
+        _viewState.update {
+            it.copy(
+                totalBalanceEth = "${ethBalanceEth.toPlainString()} ETH",
             )
         }
 
-        val totalUsdValue = ethUsdValue.add(totalTokenUsdValue)
+        val erc20Balances = balance.filterKeys { it != EthContractAddress }
+        val ethPriceUsd: BigDecimal = fiatRates[EthContractAddress] ?: BigDecimal.ZERO
+        val ethUsdValue = ethBalanceEth.multiply(ethPriceUsd)
+
+        val favoriteTokens = getFavoriteTokensUiState(erc20Balances, fiatRates)
+        val totalErc20TokensUsdValue = favoriteTokens.mapNotNull { it.usdValue }.sumOf { it }
+        val totalUsdValue = ethUsdValue.add(totalErc20TokensUsdValue)
 
         Logger.debug(TAG) {
-            "Balance update: ETH=$ethBalanceFormatted ($$ethUsdValue), Tokens=$$totalTokenUsdValue, Total=$$totalUsdValue"
+            "Balance update: ETH=$ethBalanceEth ($$ethUsdValue), Tokens=$$totalErc20TokensUsdValue, Total=$$totalUsdValue"
         }
 
-        _viewState.update { walletViewState: WalletViewState ->
-            walletViewState.copy(
-                totalBalanceEth = "$ethBalanceFormatted ETH",
+        _viewState.update { currentViewState: WalletViewState ->
+            currentViewState.copy(
+                totalBalanceEth = "$ethBalanceEth ETH",
                 totalBalanceUsd = usdFormatter(totalUsdValue),
                 favoriteTokens = favoriteTokens,
             )
+        }
+    }
+
+    private fun getFavoriteTokensUiState(
+        erc20Balances: Map<EthAddress, BigInteger>,
+        fiatRates: Map<EthAddress, BigDecimal>,
+    ): List<FavoriteToken> = KnownTokens.entries.map { tokenInfo ->
+        val tokenBalanceInMinimalUnits = erc20Balances[tokenInfo.ethAddress] ?: BigInteger.ZERO
+        // Convert from smallest units to token units using correct decimals
+        val tokenAmount = BigDecimal(tokenBalanceInMinimalUnits).divide(
+            BigDecimal.TEN.pow(tokenInfo.decimals),
+            tokenInfo.decimals,
+            RoundingMode.DOWN,
+        )
+
+        val tokenUsdValue = fiatRates[tokenInfo.ethAddress]?.let { rate ->
+            tokenAmount.multiply(rate)
+        }
+        if (tokenUsdValue == null) {
+            Logger.warn(TAG) {
+                "No fiat rate found for token ${tokenInfo.name}"
+            }
+        }
+        FavoriteToken(
+            address = tokenInfo.ethAddress,
+            name = tokenInfo.tokenName,
+            ticker = tokenInfo.name,
+            amount = formatTokenAmount(tokenAmount),
+            usdValue = tokenUsdValue,
+            usdValueFormatted = tokenUsdValue?.let { usdFormatter(tokenUsdValue) } ?: "N/A",
+        )
+    }
+
+    private suspend fun getActiveWalletOrShowError(): EthWallet? {
+        return try {
+            walletRepository.getActiveWallet()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+
+            Logger.warn(TAG) {
+                "Error loading active wallet\n ${e.stackTraceToString()}"
+            }
+
+            _news.emit(WalletNews.ShowErrorMessage(e))
+
+            null
+        }
+    }
+
+    private suspend fun updateFiatRatesOrShowError() {
+        try {
+            fiatRateProvider.forceUpdate()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+
+            Logger.warn(TAG) {
+                "Failed to force update fiat rates: ${e.message}"
+            }
+
+            _news.emit(WalletNews.ShowErrorMessage(e))
+        }
+    }
+
+    private suspend fun updateWalletBalanceOrShowError(wallet: EthWallet) {
+        try {
+            balanceProvider.forceUpdate(wallet)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+
+            Logger.warn(TAG) {
+                "Failed to force update balance for ${wallet.address}: ${e.message}"
+            }
+
+            _news.emit(WalletNews.ShowErrorMessage(e))
         }
     }
 
@@ -160,3 +245,8 @@ class WalletViewModel(
         }
     }
 }
+
+data class CombinedBalance(
+    val balance: Map<EthAddress, BigInteger>,
+    val fiatRates: Map<EthAddress, BigDecimal>,
+)

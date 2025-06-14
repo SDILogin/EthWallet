@@ -1,98 +1,80 @@
 package me.sdi.ethwallet.core
 
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import me.sdi.ethwallet.Logger
-import org.web3j.abi.FunctionEncoder
-import org.web3j.abi.FunctionReturnDecoder
-import org.web3j.abi.TypeReference
-import org.web3j.abi.datatypes.Address
-import org.web3j.abi.datatypes.Function
-import org.web3j.abi.datatypes.generated.Uint256
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.DefaultBlockParameterName
-import org.web3j.protocol.core.methods.request.Transaction
+import me.sdi.ethwallet.data.repository.EthWallet
+import me.sdi.ethwallet.database.dao.TokenBalanceDao
+import me.sdi.ethwallet.database.entity.TokenBalanceEntity
 import java.math.BigInteger
 
-class EthBalanceProvider(private val web3j: Web3j) : BalanceProvider {
-    override suspend fun getEthBalance(address: EthAddress): BigInteger = withContext(Dispatchers.IO) {
-        Logger.debug("EthBalanceProvider") {
-            "Fetching ETH balance for address: $address"
+private const val TAG = "EthBalanceProvider"
+
+class EthBalanceProvider(
+    private val ethManager: EthManager,
+    private val tokenBalanceDao: TokenBalanceDao,
+    private val now: () -> Long = { System.currentTimeMillis() },
+) : BalanceProvider {
+    override suspend fun forceUpdate(wallet: EthWallet) {
+        Logger.debug(TAG) {
+            "Forcing update of ETH and ERC-20 token balances"
         }
 
-        val ethGetBalance = web3j
-            .ethGetBalance(address.toString(), DefaultBlockParameterName.LATEST)
-            .sendAsync()
-            .get()
-        ethGetBalance.balance.also {
-            Logger.debug("EthBalanceProvider") {
-                "ETH balance for address $address: $it wei"
+        val ethBalance: Map<EthAddress, Result<BigInteger>> = ethManager.getBalance(wallet)
+        val tokenBalanceEntities: List<TokenBalanceEntity> = ethBalance.map { (tokenAddress, result) ->
+            val balance: BigInteger = result
+                .recoverCatching { throwable ->
+                    val dbEntity = tokenBalanceDao.read(
+                        walletAddress = wallet.address.toString(),
+                        tokenAddress = tokenAddress.toString(),
+                    )
+                    if (dbEntity == null) {
+                        Logger.warn(TAG) {
+                            "No previous balance found for token $tokenAddress, defaulting to zero"
+                        }
+                        throw throwable
+                    }
+
+                    dbEntity.balance.toBigInteger()
+                }
+                .onFailure {
+                    Logger.warn(TAG) {
+                        val stacktrace = result.exceptionOrNull()?.stackTraceToString()
+                        "Failed to fetch balance for token $tokenAddress: $stacktrace"
+                    }
+                }
+                .getOrDefault(BigInteger.ZERO)
+
+            Logger.debug(TAG) {
+                "Token: $tokenAddress, Balance: $balance"
             }
+            TokenBalanceEntity(
+                walletAddress = wallet.address.toString(),
+                tokenAddress = tokenAddress.toString(),
+                balance = balance.toString(),
+                timestamp = now(),
+            )
         }
+
+        tokenBalanceDao.insertAll(tokenBalanceEntities)
     }
 
-    override suspend fun getErc20TokensBalance(
-        walletAddress: EthAddress,
-        tokenContractAddresses: List<EthAddress>,
-    ): Map<EthAddress, BigInteger> = withContext(Dispatchers.IO) {
-        Logger.debug("EthBalanceProvider") {
-            "Fetching ERC-20 balances for wallet $walletAddress, tokens: ${tokenContractAddresses.size}"
-        }
-
-        tokenContractAddresses.map { tokenAddress ->
-            async {
-                try {
-                    Logger.debug("EthBalanceProvider") {
-                        "Fetching balance for token $tokenAddress"
-                    }
-
-                    val balanceOfFunction = Function(
-                        "balanceOf",
-                        listOf(Address(walletAddress.toString())),
-                        listOf(object : TypeReference<Uint256>() {}),
-                    )
-
-                    val encodedFunction = FunctionEncoder.encode(balanceOfFunction)
-
-                    val response = web3j.ethCall(
-                        Transaction.createEthCallTransaction(
-                            walletAddress.toString(),
-                            tokenAddress.toString(),
-                            encodedFunction,
-                        ),
-                        DefaultBlockParameterName.LATEST,
-                    ).sendAsync().get()
-
-                    val output = response.value
-                    val decoded = FunctionReturnDecoder.decode(output, balanceOfFunction.outputParameters)
-
-                    val balance = if (decoded.isNotEmpty()) {
-                        decoded[0].value as BigInteger
-                    } else {
-                        BigInteger.ZERO
-                    }
-
-                    Logger.debug("EthBalanceProvider") {
-                        "Token $tokenAddress balance: $balance wei"
-                    }
-
-                    tokenAddress to balance
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-
-                    Logger.warn("EthBalanceProvider") {
-                        "Failed to fetch balance for token $tokenAddress: ${e.message}"
-                    }
-
-                    tokenAddress to BigInteger.ZERO
-                }
+    override fun observe(address: EthAddress): Flow<Map<EthAddress, BigInteger>> {
+        return tokenBalanceDao.observe(address.toString()).map { tokenBalanceEntities ->
+            Logger.debug(TAG) {
+                "Observing balances for address: $address, found ${tokenBalanceEntities.size} entries"
             }
-        }.awaitAll().toMap().also { result ->
-            Logger.debug("EthBalanceProvider") {
-                "Completed ERC-20 balance fetching. Retrieved ${result.size} token balances"
+            tokenBalanceEntities.associate { entity ->
+                val tokenAddress = EthAddress(entity.tokenAddress)
+                val balance = BigInteger(entity.balance)
+                Logger.debug(TAG) {
+                    "Token: $tokenAddress, Balance: $balance"
+                }
+                tokenAddress to balance
+            }.also { result ->
+                Logger.debug(TAG) {
+                    "Observed balances: ${result.size} tokens"
+                }
             }
         }
     }

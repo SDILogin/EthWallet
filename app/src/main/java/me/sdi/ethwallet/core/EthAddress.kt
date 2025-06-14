@@ -14,3 +14,6 @@ value class EthAddress(private val validEthAddress: String) {
         return validEthAddress
     }
 }
+
+// fake address to work with ETH the way we work with ERC-20 tokens
+val EthContractAddress = EthAddress("0x0000000000000000000000000000000000000000")

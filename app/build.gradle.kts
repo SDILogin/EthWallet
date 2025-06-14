@@ -81,7 +81,7 @@ dependencies {
     implementation(libs.koin.androidx.compose)
 
     // Shimmer
-    implementation("com.valentinilk.shimmer:compose-shimmer:1.3.3")
+    implementation(libs.compose.shimmer)
 
     // Ktor Client
     implementation(libs.ktor.client.core)
