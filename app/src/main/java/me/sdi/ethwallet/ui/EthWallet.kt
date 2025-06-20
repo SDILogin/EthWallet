@@ -20,9 +20,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import me.sdi.ethwallet.InitialNavigationViewModel
-import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.ui.navigation.Destination
+import me.sdi.ethwallet.ui.receive.ReceiveScreen
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
@@ -40,13 +40,7 @@ fun EthWallet(
     EthWalletTheme {
         val state by viewModel.state.collectAsStateWithLifecycle()
         val navController = rememberNavController()
-        LaunchedEffect(Unit) {
-            navController.currentBackStack.collect { backstack ->
-                Logger.debug("Navigation") {
-                    "Current back stack: ${backstack.joinToString { it.destination.route ?: "unknown" }}"
-                }
-            }
-        }
+        // Navigation logging removed due to restricted API usage
 
         val showLockScreen by userActivityManager.showLockScreen.collectAsStateWithLifecycle()
         if (showLockScreen) {
@@ -110,6 +104,9 @@ fun EthWallet(
                     }
 
                     composable<Destination.ReceiveQrScreen> {
+                        ReceiveScreen(
+                            onBackPressed = { navController.navigateUp() },
+                        )
                     }
 
                     composable<Destination.WalletsListScreen> {

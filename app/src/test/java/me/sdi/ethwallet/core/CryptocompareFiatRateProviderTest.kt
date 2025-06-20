@@ -31,9 +31,9 @@ class CryptocompareFiatRateProviderTest {
     @Test
     fun `observe returns empty map initially`() = runTest {
         val ethPriceProvider = createCryptocompareEthPriceProvider(MockEngine { throw RuntimeException("Should not call network") })
-        
+
         val result = ethPriceProvider.observe().first()
-        
+
         assertEquals("Should return empty map when no cached rates exist", emptyMap<EthAddress, BigDecimal>(), result)
     }
 
@@ -51,8 +51,12 @@ class CryptocompareFiatRateProviderTest {
         ethPriceProvider.forceUpdate()
 
         val result = ethPriceProvider.observe().first()
-        
-        assertEquals("Should return ETH rate", BigDecimal("2748.7630566245"), result[EthContractAddress]?.setScale(10, RoundingMode.HALF_UP))
+
+        assertEquals(
+            "Should return ETH rate",
+            BigDecimal("2748.7630566245"),
+            result[EthContractAddress]?.setScale(10, RoundingMode.HALF_UP),
+        )
         assertEquals("Should return USDT rate", BigDecimal("1.0"), result[KnownTokens.USDT.ethAddress])
         assertEquals("Should return USDC rate", BigDecimal("1.0"), result[KnownTokens.USDC.ethAddress])
         assertEquals("Should return DAI rate", BigDecimal("1.0"), result[KnownTokens.DAI.ethAddress])
@@ -65,33 +69,35 @@ class CryptocompareFiatRateProviderTest {
         val usdtRate = BigDecimal("1.0")
         val usdcRate = BigDecimal("1.0")
         val daiRate = BigDecimal("1.0")
-        inMemoryFiatRateDao.insertAll(listOf(
-            FiatRateEntity(
-                tokenAddress = EthContractAddress.toString(),
-                rate = ethRate.toString(),
-                lastUpdatedTimestamp = currentTime
+        inMemoryFiatRateDao.insertAll(
+            listOf(
+                FiatRateEntity(
+                    tokenAddress = EthContractAddress.toString(),
+                    rate = ethRate.toString(),
+                    lastUpdatedTimestamp = currentTime,
+                ),
+                FiatRateEntity(
+                    tokenAddress = KnownTokens.USDT.ethAddress.toString(),
+                    rate = usdtRate.toString(),
+                    lastUpdatedTimestamp = currentTime,
+                ),
+                FiatRateEntity(
+                    tokenAddress = KnownTokens.USDC.ethAddress.toString(),
+                    rate = usdcRate.toString(),
+                    lastUpdatedTimestamp = currentTime,
+                ),
+                FiatRateEntity(
+                    tokenAddress = KnownTokens.DAI.ethAddress.toString(),
+                    rate = daiRate.toString(),
+                    lastUpdatedTimestamp = currentTime,
+                ),
             ),
-            FiatRateEntity(
-                tokenAddress = KnownTokens.USDT.ethAddress.toString(),
-                rate = usdtRate.toString(),
-                lastUpdatedTimestamp = currentTime
-            ),
-            FiatRateEntity(
-                tokenAddress = KnownTokens.USDC.ethAddress.toString(),
-                rate = usdcRate.toString(),
-                lastUpdatedTimestamp = currentTime
-            ),
-            FiatRateEntity(
-                tokenAddress = KnownTokens.DAI.ethAddress.toString(),
-                rate = daiRate.toString(),
-                lastUpdatedTimestamp = currentTime
-            )
-        ))
-        
+        )
+
         val ethPriceProvider = createCryptocompareEthPriceProvider(MockEngine { throw RuntimeException("Should not call network") })
-        
+
         val result = ethPriceProvider.observe().first()
-        
+
         assertEquals("Should return cached ETH rate", ethRate, result[EthContractAddress])
         assertEquals("Should return cached USDT rate", usdtRate, result[KnownTokens.USDT.ethAddress])
         assertEquals("Should return cached USDC rate", usdcRate, result[KnownTokens.USDC.ethAddress])

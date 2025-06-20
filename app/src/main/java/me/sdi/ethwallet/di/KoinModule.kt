@@ -24,6 +24,7 @@ import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.dao.WalletDao
+import me.sdi.ethwallet.ui.receive.ReceiveQrViewModel
 import me.sdi.ethwallet.ui.wallet.CreateWalletViewModel
 import me.sdi.ethwallet.ui.wallet.SetPinCodeViewModel
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeViewModel
@@ -112,6 +113,12 @@ val appModule = module {
             walletRepository = get(),
             balanceProvider = get(),
             fiatRateProvider = get(),
+        )
+    }
+
+    viewModel<ReceiveQrViewModel> {
+        ReceiveQrViewModel(
+            walletRepository = get(),
         )
     }
 }

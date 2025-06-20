@@ -90,6 +90,9 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.client.logging)
 
+    // ZXing QR Code Generation
+    implementation("com.google.zxing:core:3.5.3")
+
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

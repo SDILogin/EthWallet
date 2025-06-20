@@ -60,7 +60,7 @@ class ReceiveQrViewModelTest {
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.viewState.collect { collector.add(it) }
         }
-        
+
         testScheduler.advanceUntilIdle()
         job.cancel()
 
@@ -79,7 +79,7 @@ class ReceiveQrViewModelTest {
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.viewState.collect { collector.add(it) }
         }
-        
+
         testScheduler.advanceUntilIdle()
         job.cancel()
 
@@ -174,7 +174,7 @@ class ReceiveQrViewModelTest {
         }
 
         viewModel.onEvent(ReceiveQrEvent.OnAmountChanged("1.123456"))
-        
+
         testScheduler.advanceUntilIdle()
         job.cancel()
 
@@ -207,7 +207,7 @@ class ReceiveQrViewModelTest {
         }
 
         viewModel.onEvent(ReceiveQrEvent.OnGenerateQrCode)
-        
+
         // Wait for async operations to complete
         testScheduler.advanceUntilIdle()
         job.cancel()
@@ -229,7 +229,7 @@ class ReceiveQrViewModelTest {
         }
 
         viewModel.onEvent(ReceiveQrEvent.OnGenerateQrCode)
-        
+
         testScheduler.advanceUntilIdle()
         job.cancel()
 
@@ -250,7 +250,7 @@ class ReceiveQrViewModelTest {
         }
 
         viewModel.onEvent(ReceiveQrEvent.OnGenerateQrCode)
-        
+
         testScheduler.advanceUntilIdle()
         job.cancel()
 
@@ -275,7 +275,7 @@ class ReceiveQrViewModelTest {
         }
 
         viewModel.onEvent(ReceiveQrEvent.OnGenerateQrCode)
-        
+
         testScheduler.advanceUntilIdle()
         job.cancel()
 
@@ -295,7 +295,7 @@ class ReceiveQrViewModelTest {
         }
 
         viewModel.onEvent(ReceiveQrEvent.OnGenerateQrCode)
-        
+
         testScheduler.advanceUntilIdle()
         job.cancel()
 
@@ -362,16 +362,16 @@ class ReceiveQrViewModelTest {
     fun `should clear QR code when token changes`() = runTest {
         viewModel.onEvent(ReceiveQrEvent.OnAmountChanged("1.5"))
         viewModel.onEvent(ReceiveQrEvent.OnGenerateQrCode)
-        
+
         testScheduler.advanceUntilIdle()
-        
+
         val collector = mutableListOf<ReceiveQrViewState>()
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.viewState.collect { collector.add(it) }
         }
 
         viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(SelectedToken.ERC20(KnownTokens.USDC)))
-        
+
         testScheduler.advanceUntilIdle()
         job.cancel()
 
@@ -388,7 +388,7 @@ class ReceiveQrViewModelTest {
         }
 
         viewModel.onEvent(ReceiveQrEvent.OnAmountChanged("2.5"))
-        
+
         testScheduler.advanceUntilIdle()
         job.cancel()
 
@@ -407,7 +407,7 @@ class ReceiveQrViewModelTest {
         }
 
         viewModel.onEvent(ReceiveQrEvent.OnAmountChanged("1." + "0".repeat(18)))
-        
+
         testScheduler.advanceUntilIdle()
         job.cancel()
 

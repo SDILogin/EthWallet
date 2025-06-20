@@ -41,6 +41,9 @@ class ReceiveQrViewModel(
             ReceiveQrEvent.OnGenerateQrCode -> handleGenerateQrCode()
             ReceiveQrEvent.OnClearAmount -> handleClearAmount()
             ReceiveQrEvent.OnCopyAddress -> handleCopyAddress()
+            ReceiveQrEvent.OnBackPressed -> {
+                // Back navigation is handled in the UI layer
+            }
         }
     }
 

@@ -22,7 +22,7 @@ class InMemoryFiatRateDao : FiatRateDao {
     override suspend fun insertAll(fiatRates: List<FiatRateEntity>) {
         fiatRates.forEach { fiatRate ->
             val existingIndex = rates.indexOfFirst { it.tokenAddress == fiatRate.tokenAddress }
-            
+
             if (existingIndex != -1) {
                 rates[existingIndex] = fiatRate
             } else {

@@ -34,7 +34,9 @@ object ReceiveUtils {
     ): String {
         val baseUri = "ethereum:$receiverAddress"
         return if (amount != null) {
-            "$baseUri?value=${amount.toPlainString()}"
+            // Convert ETH amount to wei (18 decimals)
+            val amountInWei = convertToMinimalUnits(amount, 18)
+            "$baseUri?value=$amountInWei"
         } else {
             baseUri
         }

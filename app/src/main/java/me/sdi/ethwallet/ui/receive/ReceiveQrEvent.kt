@@ -10,4 +10,6 @@ sealed interface ReceiveQrEvent {
     object OnClearAmount : ReceiveQrEvent
 
     object OnCopyAddress : ReceiveQrEvent
+
+    object OnBackPressed : ReceiveQrEvent
 }
