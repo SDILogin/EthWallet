@@ -23,4 +23,7 @@ sealed interface Destination {
 
     @Serializable
     data object VerifyPinCodeScreen : Destination
+
+    @Serializable
+    data object ReceiveQrScreen : Destination
 }

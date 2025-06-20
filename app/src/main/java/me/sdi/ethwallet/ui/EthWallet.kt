@@ -102,9 +102,14 @@ fun EthWallet(
                         WalletScreen(
                             modifier = Modifier.fillMaxSize(),
                             onManageWallets = { navController.navigate(Destination.WalletsListScreen) },
+                            onReceiveButtonClick = { navController.navigate(Destination.ReceiveQrScreen) },
+                            onSendButtonClick = { },
                             onEditButtonClick = { },
                             onTokenClick = { },
                         )
+                    }
+
+                    composable<Destination.ReceiveQrScreen> {
                     }
 
                     composable<Destination.WalletsListScreen> {
