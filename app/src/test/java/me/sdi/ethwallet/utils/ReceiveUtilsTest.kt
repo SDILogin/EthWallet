@@ -26,7 +26,7 @@ class ReceiveUtilsTest {
     }
 
     @Test
-    fun `generateReceiveQrPayload should generate ETH URI with amount in plain decimal format`() {
+    fun `generateReceiveQrPayload should generate ETH URI with amount in wei format`() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
         val amount = BigDecimal("1.5")
 
@@ -37,8 +37,8 @@ class ReceiveUtilsTest {
         )
 
         assertEquals(
-            "ETH URI should include value parameter with plain decimal format",
-            "ethereum:0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2?value=1.5",
+            "ETH URI should include value parameter with wei format",
+            "ethereum:0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2?value=1500000000000000000",
             result,
         )
     }
@@ -55,8 +55,8 @@ class ReceiveUtilsTest {
         )
 
         assertTrue(
-            "ETH URI should use plain decimal format instead of scientific notation",
-            result.contains("value=0.000000001"),
+            "ETH URI should convert to wei format (1000000000 wei for 0.000000001 ETH)",
+            result.contains("value=1000000000"),
         )
         assertTrue(
             "Value part should not contain scientific notation",

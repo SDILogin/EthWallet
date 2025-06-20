@@ -2,17 +2,27 @@ package me.sdi.ethwallet.ui.receive
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.utils.ReceiveUtils
 import java.math.BigDecimal
 
@@ -24,21 +34,53 @@ class ReceiveQrViewModel(
     private val _viewState = MutableStateFlow(ReceiveQrViewState())
     val viewState = _viewState.asStateFlow()
 
+    private val receiverAddress: Flow<EthAddress> = flow {
+        emit(checkNotNull(walletRepository.getActiveWallet()?.address))
+    }.distinctUntilChanged().onEach {
+        Logger.debug(TAG) { "(flow) Address loaded: $it" }
+    }
+
+    private val selectedTokenContractAddress: Flow<EthAddress> = viewState
+        .mapNotNull { it.selectedTokenContract }
+        .distinctUntilChanged()
+        .onEach { Logger.debug(TAG) { "(flow) Selected token contract: $it" } }
+
+    private val amount: Flow<BigDecimal?> = viewState
+        .mapNotNull { state -> state.amount.toBigDecimalOrNull()?.takeIf { state.amountError == null } }
+        .distinctUntilChanged()
+        .onEach { Logger.debug(TAG) { "(flow) Amount changed: $it" } }
+
+    private val qrCodePayload = combine(
+        receiverAddress,
+        selectedTokenContractAddress,
+        amount.onStart { emit(null) },
+    ) { currentWalletAddress: EthAddress, selectedTokenContractAddress: EthAddress, amount: BigDecimal? ->
+        ReceiveUtils.generateReceiveQrPayload(
+            receiverEthAddress = currentWalletAddress,
+            contractAddress = selectedTokenContractAddress,
+            amount = amount,
+        )
+    }.distinctUntilChanged().onEach {
+        Logger.debug(TAG) { "(flow) QR code payload: $it" }
+    }
+
     private val _news = MutableSharedFlow<ReceiveQrNews>(
         extraBufferCapacity = 1,
-        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
     val news = _news.asSharedFlow()
 
     init {
-        loadWalletAddress()
+        qrCodePayload
+            .onEach { qrPayload -> _viewState.update { vs -> vs.copy(qrPayload = qrPayload) } }
+            .catch { e -> Logger.warn(TAG) { "Failed to generate QR code: ${e.message}" } }
+            .launchIn(viewModelScope)
     }
 
     fun onEvent(event: ReceiveQrEvent) {
         when (event) {
-            is ReceiveQrEvent.OnTokenSelected -> handleTokenSelected(event.token)
+            is ReceiveQrEvent.OnTokenSelected -> handleTokenSelected(event.tokenContractAddress)
             is ReceiveQrEvent.OnAmountChanged -> handleAmountChanged(event.amount)
-            ReceiveQrEvent.OnGenerateQrCode -> handleGenerateQrCode()
             ReceiveQrEvent.OnClearAmount -> handleClearAmount()
             ReceiveQrEvent.OnCopyAddress -> handleCopyAddress()
             ReceiveQrEvent.OnBackPressed -> {
@@ -47,193 +89,43 @@ class ReceiveQrViewModel(
         }
     }
 
-    private fun loadWalletAddress() {
-        viewModelScope.launch {
-            try {
-                _viewState.update { it.copy(isLoading = true, error = null) }
-
-                val activeWallet = walletRepository.getActiveWallet()
-                if (activeWallet == null) {
-                    _viewState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = "No active wallet found",
-                        )
-                    }
-                    return@launch
-                }
-
-                _viewState.update {
-                    it.copy(
-                        receiverAddress = activeWallet.address,
-                        isLoading = false,
-                        error = null,
-                    )
-                }
-
-                Logger.debug(TAG) { "Loaded wallet address: ${activeWallet.address}" }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Logger.warn(TAG) { "Failed to load wallet address: ${e.message}" }
-                _viewState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "Failed to load wallet address",
-                    )
-                }
+    private fun handleTokenSelected(contractAddress: EthAddress) {
+        Logger.debug(TAG) {
+            val selectedTokenName = when (contractAddress) {
+                EthContractAddress -> "Eth"
+                else -> KnownTokens.entries.find { it.ethAddress == contractAddress }?.name ?: "Unknown"
             }
-        }
-    }
 
-    private fun handleTokenSelected(token: SelectedToken) {
-        Logger.debug(TAG) { "Token selected: $token" }
-
-        _viewState.update {
-            it.copy(
-                selectedToken = token,
-                qrPayload = null,
-                amountError = null,
-            )
+            "Selected $selectedTokenName"
         }
+
+        _viewState.update { it.copy(selectedTokenContract = contractAddress) }
     }
 
     private fun handleAmountChanged(amount: String) {
         Logger.debug(TAG) { "Amount changed: $amount" }
 
-        val cleanAmount = amount.trim()
-        _viewState.update {
-            it.copy(
-                amount = cleanAmount,
-                amountError = null,
-                qrPayload = null,
-            )
-        }
-
-        if (cleanAmount.isNotEmpty()) {
-            validateAmount(cleanAmount)
-        }
-    }
-
-    private fun handleGenerateQrCode() {
-        Logger.debug(TAG) { "Generate QR code requested" }
-
-        val currentState = _viewState.value
-        val address = currentState.receiverAddress
-
-        if (address == null) {
-            _viewState.update { it.copy(error = "Wallet address not available") }
-            return
-        }
-
-        val amount = if (currentState.amount.isNotEmpty()) {
-            try {
-                BigDecimal(currentState.amount)
-            } catch (e: Exception) {
-                Logger.warn(TAG) { "Invalid amount format: ${currentState.amount}. ${e.stackTraceToString()}" }
-
-                _viewState.update { it.copy(amountError = "Invalid amount format") }
-                return
-            }
-        } else {
-            null
-        }
-
-        if (amount != null && !isValidAmount(amount)) {
-            return
-        }
-
-        generateQrCode(address, currentState.selectedToken, amount)
+        _viewState.update { it.copy(amount = amount.trim()) }
     }
 
     private fun handleClearAmount() {
         Logger.debug(TAG) { "Clear amount requested" }
 
-        _viewState.update {
-            it.copy(
-                amount = "",
-                amountError = null,
-                qrPayload = null,
-            )
-        }
+        _viewState.update { it.copy(amount = "") }
     }
 
     private fun handleCopyAddress() {
         Logger.debug(TAG) { "Copy address requested" }
 
-        val address = _viewState.value.receiverAddress
-        if (address != null) {
-            _news.tryEmit(ReceiveQrNews.CopyToClipboard(address.toString()))
-            _news.tryEmit(ReceiveQrNews.ShowToast("Address copied to clipboard"))
-        } else {
-            _news.tryEmit(ReceiveQrNews.ShowToast("Address not available"))
-        }
-    }
-
-    private fun validateAmount(amountString: String) {
-        try {
-            val amount = BigDecimal(amountString)
-            isValidAmount(amount)
-        } catch (e: Exception) {
-            Logger.warn(TAG) { "Invalid amount format: $amountString. ${e.stackTraceToString()}" }
-
-            _viewState.update { it.copy(amountError = "Invalid number format") }
-        }
-    }
-
-    private fun isValidAmount(amount: BigDecimal): Boolean {
-        return when {
-            amount <= BigDecimal.ZERO -> {
-                _viewState.update { it.copy(amountError = "Amount must be greater than zero") }
-                false
-            }
-            amount.scale() > getMaxDecimalPlaces() -> {
-                _viewState.update {
-                    it.copy(amountError = "Too many decimal places for selected token")
-                }
-                false
-            }
-            else -> {
-                _viewState.update { it.copy(amountError = null) }
-                true
-            }
-        }
-    }
-
-    private fun getMaxDecimalPlaces(): Int {
-        return when (val token = _viewState.value.selectedToken) {
-            SelectedToken.ETH -> 18
-            is SelectedToken.ERC20 -> token.token.decimals
-        }
-    }
-
-    private fun generateQrCode(
-        receiverAddress: EthAddress,
-        selectedToken: SelectedToken,
-        amount: BigDecimal?,
-    ) {
         viewModelScope.launch {
-            try {
-                val contractAddress = when (selectedToken) {
-                    SelectedToken.ETH -> EthContractAddress
-                    is SelectedToken.ERC20 -> selectedToken.token.ethAddress
-                }
-
-                val qrPayload = ReceiveUtils.generateReceiveQrPayload(
-                    receiverEthAddress = receiverAddress,
-                    contractAddress = contractAddress,
-                    amount = amount,
-                )
-
-                _viewState.update { it.copy(qrPayload = qrPayload) }
-
-                Logger.debug(TAG) { "Generated QR code URI: $qrPayload" }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Logger.warn(TAG) { "Failed to generate QR code: ${e.message}" }
-                _viewState.update { it.copy(error = "Failed to generate QR code") }
+            val address: String? = walletRepository.getActiveWallet()?.address?.toString()
+            val news: ReceiveQrNews = if (address == null) {
+                ReceiveQrNews.ShowToast("Address not available")
+            } else {
+                ReceiveQrNews.CopyToClipboard(address)
             }
+
+            _news.tryEmit(news)
         }
     }
 }

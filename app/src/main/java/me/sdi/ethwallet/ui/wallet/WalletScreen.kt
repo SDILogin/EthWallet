@@ -16,11 +16,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
@@ -42,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -184,15 +187,19 @@ private fun ButtonsPanel(
         } else {
             CircularButtonWithTitle(
                 title = "Receive",
+                icon = Icons.Default.Add,
                 onClick = onReceiveClick,
             )
         }
+
+        Spacer(modifier = Modifier.width(32.dp))
 
         if (isLoading) {
             CircularButtonWithTitleShimmer()
         } else {
             CircularButtonWithTitle(
                 title = "Send",
+                icon = Icons.AutoMirrored.Default.Send,
                 onClick = onSendButtonClick,
             )
         }
@@ -202,6 +209,7 @@ private fun ButtonsPanel(
 @Composable
 private fun CircularButtonWithTitle(
     title: String,
+    icon: ImageVector,
     onClick: () -> Unit,
 ) {
     Column(
@@ -215,7 +223,7 @@ private fun CircularButtonWithTitle(
             ),
         ) {
             Icon(
-                imageVector = Icons.Default.Add,
+                imageVector = icon,
                 contentDescription = title,
                 tint = MaterialTheme.colorScheme.onPrimary,
             )

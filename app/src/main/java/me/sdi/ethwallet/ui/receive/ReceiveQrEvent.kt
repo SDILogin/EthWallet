@@ -1,11 +1,11 @@
 package me.sdi.ethwallet.ui.receive
 
+import me.sdi.ethwallet.core.EthAddress
+
 sealed interface ReceiveQrEvent {
-    data class OnTokenSelected(val token: SelectedToken) : ReceiveQrEvent
+    data class OnTokenSelected(val tokenContractAddress: EthAddress) : ReceiveQrEvent
 
     data class OnAmountChanged(val amount: String) : ReceiveQrEvent
-
-    object OnGenerateQrCode : ReceiveQrEvent
 
     object OnClearAmount : ReceiveQrEvent
 

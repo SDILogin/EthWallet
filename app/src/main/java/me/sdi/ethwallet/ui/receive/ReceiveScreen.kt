@@ -1,7 +1,11 @@
 package me.sdi.ethwallet.ui.receive
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +34,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -46,6 +54,12 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.common.BitMatrix
+import com.google.zxing.qrcode.QRCodeWriter
+import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.koin.androidx.compose.koinViewModel
@@ -67,8 +81,9 @@ fun ReceiveScreen(
                     Toast.makeText(context, news.message, Toast.LENGTH_SHORT).show()
                 }
                 is ReceiveQrNews.CopyToClipboard -> {
-                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                    val clip = android.content.ClipData.newPlainText("Address", news.text)
+                    val clipboard =
+                        context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val clip = ClipData.newPlainText("Address", news.text)
                     clipboard.setPrimaryClip(clip)
                 }
             }
@@ -118,13 +133,11 @@ private fun ReceiveScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Currency Picker
             CurrencyPicker(
-                selectedToken = viewState.selectedToken,
+                selectedTokenContract = viewState.selectedTokenContract,
                 onTokenSelected = { onEvent(ReceiveQrEvent.OnTokenSelected(it)) },
             )
 
-            // Amount Input
             AmountInput(
                 amount = viewState.amount,
                 amountError = viewState.amountError,
@@ -132,35 +145,15 @@ private fun ReceiveScreen(
                 onClearAmount = { onEvent(ReceiveQrEvent.OnClearAmount) },
             )
 
-            // QR Code Display
-            QrCodeDisplay(
-                qrPayload = viewState.qrPayload,
-                isLoading = viewState.isLoading,
-            )
-
-            // Action Buttons
-            ActionButtons(
-                onGenerateQr = { onEvent(ReceiveQrEvent.OnGenerateQrCode) },
-                onCopyAddress = { onEvent(ReceiveQrEvent.OnCopyAddress) },
-                hasQrCode = viewState.qrPayload != null,
-            )
-
-            // Error Display
-            viewState.error?.let { error ->
-                Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
+            QrCodeDisplay(qrPayload = viewState.qrPayload)
         }
     }
 }
 
 @Composable
 private fun CurrencyPicker(
-    selectedToken: SelectedToken,
-    onTokenSelected: (SelectedToken) -> Unit,
+    selectedTokenContract: EthAddress?,
+    onTokenSelected: (EthAddress) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -177,20 +170,28 @@ private fun CurrencyPicker(
         ) {
             // ETH Chip
             FilterChip(
-                selected = selectedToken == SelectedToken.ETH,
-                onClick = { onTokenSelected(SelectedToken.ETH) },
+                selected = selectedTokenContract == EthContractAddress,
+                onClick = { onTokenSelected(EthContractAddress) },
                 label = { Text("ETH") },
             )
 
             // ERC20 Token Chips
             KnownTokens.entries.forEach { token ->
                 FilterChip(
-                    selected = selectedToken is SelectedToken.ERC20 && selectedToken.token == token,
-                    onClick = { onTokenSelected(SelectedToken.ERC20(token)) },
-                    label = { Text(token.name.split(" ")[0]) },
+                    selected = selectedTokenContract == token.ethAddress,
+                    onClick = { onTokenSelected(token.ethAddress) },
+                    label = {
+                        val name = when (token) {
+                            KnownTokens.USDT -> "USDT"
+                            KnownTokens.USDC -> "USDC"
+                            KnownTokens.DAI -> "DAI"
+                        }
+                        Text(name)
+                    },
                     leadingIcon = {
                         Icon(
                             painter = painterResource(id = token.icon),
+                            tint = Color.Unspecified,
                             contentDescription = token.tokenName,
                             modifier = Modifier.size(16.dp),
                         )
@@ -243,7 +244,6 @@ private fun AmountInput(
 @Composable
 private fun QrCodeDisplay(
     qrPayload: String?,
-    isLoading: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -262,9 +262,6 @@ private fun QrCodeDisplay(
             contentAlignment = Alignment.Center,
         ) {
             when {
-                isLoading -> {
-                    CircularProgressIndicator()
-                }
                 qrPayload != null -> {
                     QrCodeCanvas(
                         qrData = qrPayload,
@@ -289,76 +286,56 @@ private fun QrCodeCanvas(
     modifier: Modifier = Modifier,
     size: Dp = 300.dp,
 ) {
+    var bitMatrix: BitMatrix? by remember { mutableStateOf(null) }
+    var loading: Boolean by remember { mutableStateOf(bitMatrix == null) }
+
     val density = LocalDensity.current
+    val sizePx = with(density) { size.toPx().toInt() }
+    LaunchedEffect(qrData) {
+        Logger.debug("QrCodeCanvas") { "Generating QR code for $qrData" }
+        bitMatrix = QRCodeWriter().encode(
+            qrData,
+            BarcodeFormat.QR_CODE,
+            150,
+            150,
+        )
+        loading = false
+    }
 
-    Canvas(modifier = modifier.size(size)) {
-        try {
-            val sizePx = with(density) { size.toPx().toInt() }
-            val qrCodeWriter = com.google.zxing.qrcode.QRCodeWriter()
-            val bitMatrix = qrCodeWriter.encode(
-                qrData,
-                com.google.zxing.BarcodeFormat.QR_CODE,
-                sizePx,
-                sizePx,
-            )
-
+    if (loading) {
+        SideEffect {
+            Logger.debug("QrCodeCanvas") { "Loading" }
+        }
+        CircularProgressIndicator()
+    } else {
+        SideEffect {
+            Logger.debug("QrCodeCanvas") { "Canvas" }
+        }
+        bitMatrix?.let { bitMatrix ->
+            SideEffect {
+                Logger.debug("QrCodeCanvas") { "Draw matrix" }
+            }
             val pixelSize = sizePx.toFloat() / bitMatrix.width
-            val canvasSize = Size(sizePx.toFloat(), sizePx.toFloat())
-
-            // Draw white background
-            drawRect(
-                color = Color.White,
-                topLeft = Offset.Zero,
-                size = canvasSize,
-            )
-
-            // Draw QR code pixels
-            for (x in 0 until bitMatrix.width) {
-                for (y in 0 until bitMatrix.height) {
-                    if (bitMatrix[x, y]) {
-                        drawRect(
-                            color = Color.Black,
-                            topLeft = Offset(x * pixelSize, y * pixelSize),
-                            size = Size(pixelSize, pixelSize),
-                        )
+            val invertColors = isSystemInDarkTheme()
+            val activeColor = if (invertColors) Color.White else MaterialTheme.colorScheme.background
+            val inactiveColor = if (invertColors) MaterialTheme.colorScheme.background else Color.White
+            Canvas(modifier = modifier.size(size)) {
+                drawRect(
+                    color = inactiveColor,
+                    size = Size(sizePx.toFloat(), sizePx.toFloat()),
+                )
+                for (x in 0 until bitMatrix.width) {
+                    for (y in 0 until bitMatrix.height) {
+                        if (bitMatrix[x, y]) {
+                            drawRect(
+                                color = activeColor,
+                                topLeft = Offset(x * pixelSize, y * pixelSize),
+                                size = Size(pixelSize, pixelSize),
+                            )
+                        }
                     }
                 }
             }
-        } catch (e: Exception) {
-            // Handle QR generation error - draw placeholder
-            val sizePx = with(density) { size.toPx() }
-            drawRect(
-                color = Color.LightGray,
-                topLeft = Offset.Zero,
-                size = Size(sizePx, sizePx),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ActionButtons(
-    onGenerateQr: () -> Unit,
-    onCopyAddress: () -> Unit,
-    hasQrCode: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Button(
-            onClick = onGenerateQr,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Generate QR Code")
-        }
-
-        Button(
-            onClick = onCopyAddress,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Copy Address")
         }
     }
 }
