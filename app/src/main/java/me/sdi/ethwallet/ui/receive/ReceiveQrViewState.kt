@@ -9,6 +9,7 @@ data class ReceiveQrViewState(
     val selectedTokenContract: EthAddress? = null,
     val qrPayload: String? = null,
     val amount: String = "",
+    val walletAddress: EthAddress? = null,
 ) {
     val amountError: String? = getAmountError(
         selectedTokenContractAddress = selectedTokenContract,

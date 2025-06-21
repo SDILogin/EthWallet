@@ -3,8 +3,10 @@ package me.sdi.ethwallet.ui.receive
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,10 +19,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CopyAll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,6 +37,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -47,8 +53,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.Dp
@@ -85,6 +95,11 @@ fun ReceiveScreen(
                         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val clip = ClipData.newPlainText("Address", news.text)
                     clipboard.setPrimaryClip(clip)
+
+                    // Show toast for older Android versions where clipboard labels aren't shown
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                        Toast.makeText(context, "Address copied", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
@@ -145,7 +160,11 @@ private fun ReceiveScreen(
                 onClearAmount = { onEvent(ReceiveQrEvent.OnClearAmount) },
             )
 
-            QrCodeDisplay(qrPayload = viewState.qrPayload)
+            QrCodeDisplay(
+                qrPayload = viewState.qrPayload,
+                walletAddress = viewState.walletAddress,
+                onCopyAddress = { onEvent(ReceiveQrEvent.OnCopyAddress) },
+            )
         }
     }
 }
@@ -244,19 +263,14 @@ private fun AmountInput(
 @Composable
 private fun QrCodeDisplay(
     qrPayload: String?,
+    walletAddress: EthAddress?,
+    onCopyAddress: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = "QR Code",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
         Box(
             modifier = Modifier.size(300.dp),
             contentAlignment = Alignment.Center,
@@ -270,14 +284,69 @@ private fun QrCodeDisplay(
                 }
                 else -> {
                     Text(
-                        text = "Generate QR code to display",
+                        text = "Select currency to generate QR code",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
         }
+
+        // Address display with copy functionality
+        walletAddress?.let { address ->
+            Spacer(modifier = Modifier.height(16.dp))
+            AddressDisplay(
+                address = address,
+                onCopyAddress = onCopyAddress,
+            )
+        }
     }
+}
+
+@Composable
+private fun AddressDisplay(
+    address: EthAddress,
+    onCopyAddress: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val addressString = address.toString()
+    val truncatedAddress = "${addressString.take(6)}...${addressString.takeLast(4)}"
+
+    val annotatedText = buildAnnotatedString {
+        append(truncatedAddress)
+        append(" ")
+        appendInlineContent("copyIcon", "[copy]")
+    }
+
+    val inlineContent = mapOf(
+        "copyIcon" to InlineTextContent(
+            placeholder = Placeholder(
+                width = MaterialTheme.typography.bodyMedium.fontSize,
+                height = MaterialTheme.typography.bodyMedium.fontSize,
+                placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+            ),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.CopyAll,
+                contentDescription = "Copy Address",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp),
+            )
+        },
+    )
+
+    Text(
+        text = annotatedText,
+        inlineContent = inlineContent,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = modifier
+            .fillMaxWidth()
+            .minimumInteractiveComponentSize()
+            .clickable { onCopyAddress() }
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    )
 }
 
 @Composable

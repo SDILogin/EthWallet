@@ -75,6 +75,11 @@ class ReceiveQrViewModel(
             .onEach { qrPayload -> _viewState.update { vs -> vs.copy(qrPayload = qrPayload) } }
             .catch { e -> Logger.warn(TAG) { "Failed to generate QR code: ${e.message}" } }
             .launchIn(viewModelScope)
+
+        receiverAddress
+            .onEach { address -> _viewState.update { vs -> vs.copy(walletAddress = address) } }
+            .catch { e -> Logger.warn(TAG) { "Failed to load wallet address: ${e.message}" } }
+            .launchIn(viewModelScope)
     }
 
     fun onEvent(event: ReceiveQrEvent) {
