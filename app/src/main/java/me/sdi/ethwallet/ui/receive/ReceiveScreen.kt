@@ -73,6 +73,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.ui.KnownTokens
@@ -197,6 +198,14 @@ private fun CurrencyPicker(
                 selected = selectedTokenContract == EthContractAddress,
                 onClick = { onTokenSelected(EthContractAddress) },
                 label = { Text("ETH") },
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(id = R.drawable.eth_logo_120w),
+                        tint = Color.Unspecified,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                },
             )
 
             // ERC20 Token Chips
@@ -216,7 +225,7 @@ private fun CurrencyPicker(
                         Icon(
                             painter = painterResource(id = token.icon),
                             tint = Color.Unspecified,
-                            contentDescription = token.tokenName,
+                            contentDescription = null,
                             modifier = Modifier.size(16.dp),
                         )
                     },
