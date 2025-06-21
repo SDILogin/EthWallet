@@ -6,7 +6,7 @@ import me.sdi.ethwallet.ui.KnownTokens
 import java.math.BigDecimal
 
 data class ReceiveQrViewState(
-    val selectedTokenContract: EthAddress? = null,
+    val selectedTokenContract: EthAddress = EthContractAddress,
     val qrPayload: String? = null,
     val amount: String = "",
     val walletAddress: EthAddress? = null,
@@ -17,7 +17,7 @@ data class ReceiveQrViewState(
     )
 }
 
-private fun getAmountError(selectedTokenContractAddress: EthAddress?, amount: BigDecimal?): String? {
+private fun getAmountError(selectedTokenContractAddress: EthAddress, amount: BigDecimal?): String? {
     return when {
         amount == null -> null
         amount <= BigDecimal.ZERO -> "Amount must be greater than zero"
@@ -26,7 +26,7 @@ private fun getAmountError(selectedTokenContractAddress: EthAddress?, amount: Bi
     }
 }
 
-private fun getMaxDecimalPlaces(selectedTokenAddress: EthAddress?): Int {
+private fun getMaxDecimalPlaces(selectedTokenAddress: EthAddress): Int {
     return when (selectedTokenAddress) {
         EthContractAddress -> 18
         else ->

@@ -176,7 +176,7 @@ private fun ReceiveScreen(
 
 @Composable
 private fun CurrencyPicker(
-    selectedTokenContract: EthAddress?,
+    selectedTokenContract: EthAddress,
     onTokenSelected: (EthAddress) -> Unit,
     modifier: Modifier = Modifier,
 ) {

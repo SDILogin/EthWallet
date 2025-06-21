@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -41,7 +42,7 @@ class ReceiveQrViewModel(
     }
 
     private val selectedTokenContractAddress: Flow<EthAddress> = viewState
-        .mapNotNull { it.selectedTokenContract }
+        .map { it.selectedTokenContract }
         .distinctUntilChanged()
         .onEach { Logger.debug(TAG) { "(flow) Selected token contract: $it" } }
 

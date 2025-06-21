@@ -43,7 +43,7 @@ class ReceiveQrViewModelTest {
     fun `initial state should have correct default values`() = runTest {
         val state = viewModel.viewState.first()
 
-        assertNull("Initial token should be null", state.selectedTokenContract)
+        assertEquals("Initial token should be EthContractAddress", EthContractAddress, state.selectedTokenContract)
         assertEquals("Initial amount should be empty", "", state.amount)
         assertNull("Initial amount error should be null", state.amountError)
         assertNull("Initial QR code URI should be null", state.qrPayload)
@@ -63,7 +63,7 @@ class ReceiveQrViewModelTest {
         job.cancel()
 
         val finalState = collector.last()
-        assertNull("Initial token should be null", finalState.selectedTokenContract)
+        assertEquals("Initial token should be EthContractAddress", EthContractAddress, finalState.selectedTokenContract)
         assertEquals("Initial amount should be empty", "", finalState.amount)
         assertNull("QR payload should be null without wallet", finalState.qrPayload)
     }
@@ -82,7 +82,7 @@ class ReceiveQrViewModelTest {
         job.cancel()
 
         val finalState = collector.last()
-        assertNull("Token should be null when exception occurs", finalState.selectedTokenContract)
+        assertEquals("Token should be EthContractAddress even when exception occurs", EthContractAddress, finalState.selectedTokenContract)
         assertEquals("Amount should be empty", "", finalState.amount)
         assertNull("QR payload should be null on error", finalState.qrPayload)
     }
