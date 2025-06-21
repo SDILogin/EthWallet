@@ -5,6 +5,11 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -25,8 +30,8 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CopyAll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -243,20 +248,27 @@ private fun AmountInput(
             label = { Text("Enter amount") },
             isError = amountError != null,
             supportingText = amountError?.let { { Text(it) } },
+            trailingIcon = {
+                AnimatedVisibility(
+                    amount.isNotEmpty(),
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut(),
+                ) {
+                    IconButton(
+                        onClick = onClearAmount,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = null,
+                        )
+                    }
+                }
+            },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Decimal,
             ),
             modifier = Modifier.fillMaxWidth(),
         )
-
-        if (amount.isNotEmpty()) {
-            Button(
-                onClick = onClearAmount,
-                modifier = Modifier.padding(top = 8.dp),
-            ) {
-                Text("Clear Amount")
-            }
-        }
     }
 }
 
