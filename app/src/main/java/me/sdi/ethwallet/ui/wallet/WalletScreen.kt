@@ -24,7 +24,14 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowOutward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SwitchAccount
+import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -118,7 +125,7 @@ fun WalletScreen(
                 actions = {
                     IconButton(onClick = onManageWallets) {
                         Icon(
-                            imageVector = Icons.Default.Settings,
+                            imageVector = Icons.Default.SwitchAccount,
                             contentDescription = "Manage Wallets",
                         )
                     }
@@ -187,7 +194,7 @@ private fun ButtonsPanel(
         } else {
             CircularButtonWithTitle(
                 title = "Receive",
-                icon = Icons.Default.Add,
+                icon = Icons.Default.ArrowDownward,
                 onClick = onReceiveClick,
             )
         }
@@ -199,7 +206,7 @@ private fun ButtonsPanel(
         } else {
             CircularButtonWithTitle(
                 title = "Send",
-                icon = Icons.AutoMirrored.Default.Send,
+                icon = Icons.Default.ArrowOutward,
                 onClick = onSendButtonClick,
             )
         }
