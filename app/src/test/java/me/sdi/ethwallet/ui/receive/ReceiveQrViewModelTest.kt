@@ -189,7 +189,7 @@ class ReceiveQrViewModelTest {
 
         val finalState = collector.last()
         assertEquals("Amount should be updated", "abc", finalState.amount)
-        assertNull("Amount error should be null for non-numeric string", finalState.amountError)
+        assertEquals("Amount error should show invalid amount for non-numeric string", "Invalid amount", finalState.amountError)
     }
 
     @Test

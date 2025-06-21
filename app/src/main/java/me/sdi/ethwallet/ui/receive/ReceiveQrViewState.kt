@@ -13,13 +13,15 @@ data class ReceiveQrViewState(
 ) {
     val amountError: String? = getAmountError(
         selectedTokenContractAddress = selectedTokenContract,
-        amount = amount.toBigDecimalOrNull(),
+        rawAmount = amount,
     )
 }
 
-private fun getAmountError(selectedTokenContractAddress: EthAddress, amount: BigDecimal?): String? {
+private fun getAmountError(selectedTokenContractAddress: EthAddress, rawAmount: String): String? {
+    val amount = rawAmount.toBigDecimalOrNull()
     return when {
-        amount == null -> null
+        rawAmount.isBlank() -> null
+        amount == null -> "Invalid amount"
         amount <= BigDecimal.ZERO -> "Amount must be greater than zero"
         amount.scale() > getMaxDecimalPlaces(selectedTokenContractAddress) -> "Too many decimal places for selected token"
         else -> null
@@ -27,12 +29,8 @@ private fun getAmountError(selectedTokenContractAddress: EthAddress, amount: Big
 }
 
 private fun getMaxDecimalPlaces(selectedTokenAddress: EthAddress): Int {
-    return when (selectedTokenAddress) {
-        EthContractAddress -> 18
-        else ->
-            KnownTokens
-                .entries
-                .find { it.ethAddress == selectedTokenAddress }
-                ?.decimals ?: 18
-    }
+    return KnownTokens
+        .entries
+        .find { it.ethAddress == selectedTokenAddress }
+        ?.decimals ?: 18
 }
