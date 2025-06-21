@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
@@ -47,7 +46,7 @@ class ReceiveQrViewModel(
         .onEach { Logger.debug(TAG) { "(flow) Selected token contract: $it" } }
 
     private val amount: Flow<BigDecimal?> = viewState
-        .mapNotNull { state -> state.amount.toBigDecimalOrNull()?.takeIf { state.amountError == null } }
+        .map { state -> state.amount.toBigDecimalOrNull()?.takeIf { state.amountError == null } }
         .distinctUntilChanged()
         .onEach { Logger.debug(TAG) { "(flow) Amount changed: $it" } }
 
