@@ -113,6 +113,7 @@ fun EthWallet(
                     composable<Destination.SendScreen> {
                         SendScreen(
                             modifier = Modifier.fillMaxSize(),
+                            onBackPress = { navController.navigateUp() },
                         )
                     }
 
