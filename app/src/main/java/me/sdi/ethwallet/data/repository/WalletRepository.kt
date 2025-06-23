@@ -110,4 +110,19 @@ class WalletRepository(
         Logger.debug(TAG) { "Deleting wallet with address $address" }
         walletDao.deleteWalletByAddress(address.toString())
     }
+
+    /**
+     * Retrieves the encrypted private key for a specific wallet address.
+     *
+     * @param address The address of the wallet
+     * @return The encrypted private key as Base64 string
+     * @throws IllegalStateException if the wallet is not found
+     */
+    suspend fun getEncryptedPrivateKey(address: EthAddress): String {
+        val walletEntity: List<WalletEntity> = walletDao.getAllWallets()
+        val wallet = walletEntity.firstOrNull { it.address == address.toString() }
+            ?: throw IllegalStateException("Wallet not found for address: $address")
+
+        return wallet.encryptedPrivateKeyBase64
+    }
 }

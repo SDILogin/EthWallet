@@ -14,6 +14,7 @@ import me.sdi.ethwallet.core.Web3jEthManager
 import me.sdi.ethwallet.core.security.DataStorePinCodeStorage
 import me.sdi.ethwallet.core.security.KeyStoreEncryptor
 import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.transfer.TransferInteractor
 import me.sdi.ethwallet.data.AndroidTempFileProvider
 import me.sdi.ethwallet.data.NetworkManagerConfigurator
 import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
@@ -56,6 +57,7 @@ val appModule = module {
     factory<EthManager> { Web3jEthManager(get()) }
     factory<BalanceProvider> { EthBalanceProvider(get(), get()) }
     factory<FiatRateProvider> { CryptocompareFiatRateProvider(get(), get()) }
+    factory<TransferInteractor> { TransferInteractor(get(), get(), get(), get()) }
 
     // Repository
     single<WalletRepository> {
