@@ -23,6 +23,7 @@ import me.sdi.ethwallet.InitialNavigationViewModel
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.receive.ReceiveScreen
+import me.sdi.ethwallet.ui.send.SendScreen
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
@@ -97,7 +98,7 @@ fun EthWallet(
                             modifier = Modifier.fillMaxSize(),
                             onManageWallets = { navController.navigate(Destination.WalletsListScreen) },
                             onReceiveButtonClick = { navController.navigate(Destination.ReceiveQrScreen) },
-                            onSendButtonClick = { },
+                            onSendButtonClick = { navController.navigate(Destination.SendScreen) },
                             onEditButtonClick = { },
                             onTokenClick = { },
                         )
@@ -106,6 +107,12 @@ fun EthWallet(
                     composable<Destination.ReceiveQrScreen> {
                         ReceiveScreen(
                             onBackPressed = { navController.navigateUp() },
+                        )
+                    }
+
+                    composable<Destination.SendScreen> {
+                        SendScreen(
+                            modifier = Modifier.fillMaxSize(),
                         )
                     }
 

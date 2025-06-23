@@ -26,4 +26,7 @@ sealed interface Destination {
 
     @Serializable
     data object ReceiveQrScreen : Destination
+
+    @Serializable
+    data object SendScreen : Destination
 }
