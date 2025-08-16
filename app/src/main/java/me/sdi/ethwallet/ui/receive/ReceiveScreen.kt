@@ -407,8 +407,8 @@ private fun QrCodeCanvas(
             }
             val pixelSize = sizePx.toFloat() / bitMatrix.width
             val invertColors = isSystemInDarkTheme()
-            val activeColor = if (invertColors) Color.White else MaterialTheme.colorScheme.background
-            val inactiveColor = if (invertColors) MaterialTheme.colorScheme.background else Color.White
+            val activeColor = if (invertColors) Color.White else Color.Black
+            val inactiveColor =MaterialTheme.colorScheme.background
             Canvas(modifier = modifier.size(size)) {
                 drawRect(
                     color = inactiveColor,
@@ -436,7 +436,9 @@ private fun QrCodeCanvas(
 private fun ReceiveScreenPreview() {
     EthWalletTheme {
         ReceiveScreen(
-            viewState = ReceiveQrViewState(),
+            viewState = ReceiveQrViewState(
+                qrPayload = "123",
+            ),
             onEvent = {},
         )
     }

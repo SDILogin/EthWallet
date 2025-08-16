@@ -65,7 +65,7 @@ dependencies {
     implementation(libs.androidx.material3)
 
     // Material Icons Extended
-    implementation("androidx.compose.material:material-icons-extended:1.7.8")
+    implementation(libs.androidx.compose.material.icons.extended)
 
     // Web3j for Ethereum blockchain interaction
     implementation(libs.web3j.core)
@@ -94,7 +94,7 @@ dependencies {
     implementation(libs.ktor.client.logging)
 
     // ZXing QR Code Generation
-    implementation("com.google.zxing:core:3.5.3")
+    implementation(libs.core)
 
     // Testing
     testImplementation(libs.junit)
