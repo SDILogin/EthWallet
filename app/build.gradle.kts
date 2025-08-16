@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "me.sdi.ethwallet"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "me.sdi.ethwallet"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
