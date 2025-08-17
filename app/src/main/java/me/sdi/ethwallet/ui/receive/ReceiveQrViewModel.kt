@@ -28,6 +28,9 @@ import java.math.BigDecimal
 
 private const val TAG = "ReceiveQrViewModel"
 
+// reasonable maximum length for an amount input
+private const val AMOUNT_MAX_LENGTH = 50
+
 class ReceiveQrViewModel(
     private val walletRepository: WalletRepository,
 ) : ViewModel() {
@@ -110,7 +113,17 @@ class ReceiveQrViewModel(
     private fun handleAmountChanged(amount: String) {
         Logger.debug(TAG) { "Amount changed: $amount" }
 
-        _viewState.update { it.copy(amount = amount.trim()) }
+        val trimmedAmount = amount.trim().take(AMOUNT_MAX_LENGTH)
+        val formattedAmount = if (trimmedAmount.length == AMOUNT_MAX_LENGTH) {
+            // maybe the last character is a dot
+            trimmedAmount.dropLastWhile { char -> !char.isDigit() }
+        } else {
+            trimmedAmount
+        }
+
+        _viewState.update { viewState ->
+            viewState.copy(amount = formattedAmount)
+        }
     }
 
     private fun handleClearAmount() {

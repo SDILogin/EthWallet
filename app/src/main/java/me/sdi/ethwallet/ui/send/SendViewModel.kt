@@ -22,6 +22,11 @@ import java.math.BigInteger
 
 private const val TAG = "SendViewModel"
 
+private const val ETH_ADDRESS_LENGTH = 42
+
+// reasonable maximum length for an amount input
+private const val AMOUNT_MAX_LENGTH = 50
+
 class SendViewModel(
     private val transferInteractor: TransferInteractor,
 ) : ViewModel() {
@@ -69,7 +74,7 @@ class SendViewModel(
     private fun handleReceiverAddressChanged(rawReceiverWalletAddress: String) {
         Logger.debug(TAG) { "Receiver address changed: $rawReceiverWalletAddress" }
 
-        val trimmedAddress = rawReceiverWalletAddress.trim()
+        val trimmedAddress = rawReceiverWalletAddress.trim().take(ETH_ADDRESS_LENGTH)
         val error: String? = validateAddress(trimmedAddress)
 
         _viewState.update { currentState ->
@@ -85,14 +90,21 @@ class SendViewModel(
     private fun handleAmountChanged(amount: String) {
         Logger.debug(TAG) { "Amount changed: $amount" }
 
-        val trimmedAmount = amount.trim()
+        val trimmedAmount = amount.trim().take(AMOUNT_MAX_LENGTH)
+        val formattedAmount = if (trimmedAmount.length == AMOUNT_MAX_LENGTH) {
+            // maybe the last character is a dot
+            trimmedAmount.dropLastWhile { char -> !char.isDigit() }
+        } else {
+            trimmedAmount
+        }
+
         val currentToken = _viewState.value.selectedTokenContractAddress
-        val error = validateAmount(trimmedAmount, currentToken)
+        val error = validateAmount(formattedAmount, currentToken)
 
         _viewState.update { currentState ->
             currentState.copy(
                 amount = AmountInputState(
-                    value = trimmedAmount,
+                    value = formattedAmount,
                     error = error,
                 ),
             )
@@ -191,7 +203,7 @@ private fun validateAddress(address: String): String? {
     return when {
         address.isBlank() -> null
         !address.startsWith("0x") -> "Address must start with 0x"
-        address.length != 42 -> "Address must be exactly 42 characters"
+        address.length != ETH_ADDRESS_LENGTH -> "Address must be exactly 42 characters"
         !address.matches(Regex("^0x[0-9a-fA-F]{40}$")) -> "Invalid address format"
         else -> null
     }

@@ -245,7 +245,7 @@ private fun ReceiverAddressInput(
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
+            singleLine = false,
         )
     }
 }
