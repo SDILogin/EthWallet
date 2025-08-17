@@ -23,6 +23,13 @@ object Logger {
         }
     }
 
+    fun warn(tag: String, throwable: Throwable, message: () -> String) {
+        if (enabled) {
+            val messageWithThrowable = "${message()} - Exception: ${throwable.message} \n ${throwable.stackTraceToString()}"
+            printer(Level.WARN, tag, messageWithThrowable)
+        }
+    }
+
     fun debug(tag: String, message: () -> String) {
         if (enabled) {
             printer(Level.DEBUG, tag, message())

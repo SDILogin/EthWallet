@@ -381,14 +381,23 @@ private fun QrCodeCanvas(
 
     val density = LocalDensity.current
     val sizePx = with(density) { size.toPx().toInt() }
+    val context = LocalContext.current
     LaunchedEffect(qrData) {
         Logger.debug("QrCodeCanvas") { "Generating QR code for $qrData" }
-        bitMatrix = QRCodeWriter().encode(
-            qrData,
-            BarcodeFormat.QR_CODE,
-            150,
-            150,
-        )
+        bitMatrix = try {
+            // qrcode data based size
+            val size = if (qrData.length > 100) 300 else 150
+            QRCodeWriter().encode(
+                qrData,
+                BarcodeFormat.QR_CODE,
+                size,
+                size,
+            )
+        } catch (t: Throwable) {
+            Logger.warn("QrCode", t) { "Error generating QR code" }
+            Toast.makeText(context, "Error generating QR code: ${t.message}", Toast.LENGTH_SHORT).show()
+            null
+        }
         loading = false
     }
 
@@ -408,7 +417,7 @@ private fun QrCodeCanvas(
             val pixelSize = sizePx.toFloat() / bitMatrix.width
             val invertColors = isSystemInDarkTheme()
             val activeColor = if (invertColors) Color.White else Color.Black
-            val inactiveColor =MaterialTheme.colorScheme.background
+            val inactiveColor = MaterialTheme.colorScheme.background
             Canvas(modifier = modifier.size(size)) {
                 drawRect(
                     color = inactiveColor,
