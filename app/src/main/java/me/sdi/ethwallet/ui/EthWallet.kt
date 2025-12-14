@@ -11,17 +11,17 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
 import me.sdi.ethwallet.InitialNavigationViewModel
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.ui.navigation.Destination
+import me.sdi.ethwallet.ui.navigation.Navigator
+import me.sdi.ethwallet.ui.navigation.rememberNavigationState
 import me.sdi.ethwallet.ui.receive.ReceiveScreen
 import me.sdi.ethwallet.ui.send.SendScreen
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
@@ -40,132 +40,139 @@ fun EthWallet(
 ) {
     EthWalletTheme {
         val state by viewModel.state.collectAsStateWithLifecycle()
-        val navController = rememberNavController()
-        // Navigation logging removed due to restricted API usage
 
         val showLockScreen by userActivityManager.showLockScreen.collectAsStateWithLifecycle()
-        if (showLockScreen) {
-            LaunchedEffect(Unit) {
-                navigateToVerifyPinCodeScreen(navController)
-            }
-        }
+
         AnimatedVisibility(
             modifier = Modifier.fillMaxSize(),
             visible = state.numberOfWallets >= 0,
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
+            val startDestination = state.initialRoute ?: Destination.OnBoardingScreen
+            val navigationState = rememberNavigationState(startDestination)
+            val navigator = remember(navigationState) { Navigator(navigationState) }
+
+            if (showLockScreen) {
+                LaunchedEffect(Unit) {
+                    navigator.navigateToVerifyPinCode()
+                }
+            }
+
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
             ) { innerPadding ->
-                val startDestination = state.initialRoute ?: Destination.OnBoardingScreen
-
-                NavHost(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                    navController = navController,
-                    startDestination = startDestination,
+                val entryProvider = entryProvider<Destination>(
+                    fallback = { key ->
+                        NavEntry(key) { }
+                    },
                 ) {
-                    composable<Destination.OnBoardingScreen> {
+                    entry<Destination.OnBoardingScreen> {
                         OnboardingScreen(
                             modifier = Modifier.fillMaxSize(),
-                            onImportWallet = { navController.navigate(Destination.ImportWalletScreen) },
-                            onCreateWallet = { navController.navigate(Destination.CreateWalletScreen) },
+                            onImportWallet = {
+                                navigator.navigate(Destination.ImportWalletScreen)
+                            },
+                            onCreateWallet = {
+                                navigator.navigate(Destination.CreateWalletScreen)
+                            },
                         )
                     }
 
-                    composable<Destination.CreateWalletScreen> {
+                    entry<Destination.CreateWalletScreen> {
                         CreateWalletScreen(
                             modifier = Modifier.fillMaxSize(),
-                            onUpButtonClick = { navController.navigateUp() },
-                            onMnemonicSaved = { navController.navigate(Destination.SetPinCodeScreen) },
+                            onUpButtonClick = { navigator.goBack() },
+                            onMnemonicSaved = {
+                                navigator.navigate(Destination.SetPinCodeScreen)
+                            },
                         )
                     }
 
-                    composable<Destination.ImportWalletScreen> {
+                    entry<Destination.ImportWalletScreen> {
                         ImportWalletScreen(
                             modifier = Modifier.fillMaxSize(),
-                            onUpButtonClick = { navController.navigateUp() },
-                            onWalletImported = { navController.navigate(Destination.SetPinCodeScreen) },
+                            onUpButtonClick = { navigator.goBack() },
+                            onWalletImported = {
+                                navigator.navigate(Destination.SetPinCodeScreen)
+                            },
                         )
                     }
 
-                    composable<Destination.WalletScreen> {
+                    entry<Destination.WalletScreen> {
                         WalletScreen(
                             modifier = Modifier.fillMaxSize(),
-                            onManageWallets = { navController.navigate(Destination.WalletsListScreen) },
-                            onReceiveButtonClick = { navController.navigate(Destination.ReceiveQrScreen) },
-                            onSendButtonClick = { navController.navigate(Destination.SendScreen) },
+                            onManageWallets = {
+                                navigator.navigate(Destination.WalletsListScreen)
+                            },
+                            onReceiveButtonClick = {
+                                navigator.navigate(Destination.ReceiveQrScreen)
+                            },
+                            onSendButtonClick = {
+                                navigator.navigate(Destination.SendScreen)
+                            },
                             onEditButtonClick = { },
                             onTokenClick = { },
                         )
                     }
 
-                    composable<Destination.ReceiveQrScreen> {
+                    entry<Destination.ReceiveQrScreen> {
                         ReceiveScreen(
-                            onBackPressed = { navController.navigateUp() },
+                            onBackPressed = { navigator.goBack() },
                         )
                     }
 
-                    composable<Destination.SendScreen> {
+                    entry<Destination.SendScreen> {
                         SendScreen(
                             modifier = Modifier.fillMaxSize(),
-                            onBackPress = { navController.navigateUp() },
+                            onBackPress = { navigator.goBack() },
                         )
                     }
 
-                    composable<Destination.WalletsListScreen> {
+                    entry<Destination.WalletsListScreen> {
                         WalletsListScreen(
                             modifier = Modifier.fillMaxSize(),
-                            navigateToOnboarding = { navigateToOnboardingScreen(navController) },
-                            navigateToWalletDetails = { navigateToWalletScreen(navController) },
+                            navigateToOnboarding = {
+                                navigator.navigateAndClearStack(Destination.OnBoardingScreen)
+                            },
+                            navigateToWalletDetails = {
+                                navigator.navigateAndClearStack(Destination.WalletScreen)
+                            },
                         )
                     }
 
-                    composable<Destination.SetPinCodeScreen> {
+                    entry<Destination.SetPinCodeScreen> {
                         SetPinCodeScreen(
                             modifier = Modifier.fillMaxSize(),
-                            onPinCodeSet = { navigateToWalletScreen(navController) },
+                            onPinCodeSet = {
+                                navigator.navigateAndClearStack(Destination.WalletScreen)
+                            },
                         )
                     }
 
-                    composable<Destination.VerifyPinCodeScreen> {
+                    entry<Destination.VerifyPinCodeScreen> {
                         VerifyPinCodeScreen(
-                            onLogout = { navigateToOnboardingScreen(navController) },
-                            onPinVerified = { navigateToWalletScreen(navController) },
+                            onLogout = {
+                                navigator.navigateAndClearStack(Destination.OnBoardingScreen)
+                            },
+                            onPinVerified = {
+                                navigator.navigateAndClearStack(Destination.WalletScreen)
+                            },
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
                 }
+
+                NavDisplay(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    backStack = navigationState.backStack,
+                    entryProvider = entryProvider,
+                    onBack = { navigator.goBack() },
+                )
             }
-        }
-    }
-}
-
-private fun navigateToVerifyPinCodeScreen(navController: NavHostController) {
-    navController.navigate(Destination.VerifyPinCodeScreen) {
-        // pop up to root
-        popUpTo(0) {
-            inclusive = false
-        }
-    }
-}
-
-private fun navigateToOnboardingScreen(navController: NavHostController) {
-    navController.navigate(Destination.OnBoardingScreen) {
-        popUpTo(navController.graph.findStartDestination().id) {
-            inclusive = true
-        }
-    }
-}
-
-private fun navigateToWalletScreen(navController: NavController) {
-    navController.navigate(Destination.WalletScreen) {
-        popUpTo(navController.graph.findStartDestination().id) {
-            inclusive = true
         }
     }
 }

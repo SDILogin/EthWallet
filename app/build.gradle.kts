@@ -67,6 +67,8 @@ android {
     packagingOptions {
         resources.excludes.add("META-INF/INDEX.LIST")
         resources.excludes.add("META-INF/DEPENDENCIES")
+        resources.excludes.add("META-INF/FastDoubleParser-LICENSE")
+        resources.excludes.add("META-INF/FastDoubleParser-NOTICE")
     }
 }
 
@@ -76,7 +78,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.splashscreen)
-    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
