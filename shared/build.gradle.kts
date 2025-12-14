@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
     alias(libs.plugins.jetbrains.compose)
+    alias(libs.plugins.compose.hot.reload)
     alias(libs.plugins.spotless)
 }
 
