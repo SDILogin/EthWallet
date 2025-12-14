@@ -7,6 +7,18 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+    alias(libs.plugins.spotless)
+}
+
+spotless {
+    kotlin {
+        target("**/*.kt")
+        ktlint(libs.versions.ktlint.get())
+    }
+    kotlinGradle {
+        target("**/*.kts")
+        ktlint(libs.versions.ktlint.get())
+    }
 }
 
 android {
