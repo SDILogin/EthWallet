@@ -26,7 +26,7 @@ datastore = "1.1.7"
 koin = "4.1.0"
 composeShimmer = "1.3.3"
 composePlugin = "1.9.3"
-composeHotReload = "1.1.0-alpha02"
+composeHotReload = "1.1.0-alpha+172"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
