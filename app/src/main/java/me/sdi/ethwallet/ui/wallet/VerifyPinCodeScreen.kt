@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewFontScale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -37,6 +38,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import me.sdi.ethwallet.R
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.koin.androidx.compose.koinViewModel
 
@@ -110,7 +112,7 @@ private fun VerifyPinCodeScreen(
                 Spacer(modifier = Modifier.height(64.dp))
 
                 Text(
-                    text = "Enter PIN Code",
+                    text = stringResource(R.string.pin_enter_title),
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center,
                 )
@@ -119,9 +121,9 @@ private fun VerifyPinCodeScreen(
 
                 Text(
                     text = if (viewState.isLocked) {
-                        "Too many attempts. Try again in ${viewState.lockCountdown} seconds"
+                        stringResource(R.string.pin_locked_subtitle, viewState.lockCountdown)
                     } else {
-                        "Enter your 6-digit PIN to access your wallet"
+                        stringResource(R.string.pin_enter_subtitle)
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -154,7 +156,10 @@ private fun VerifyPinCodeScreen(
                             if (viewState.remainingAttempts > 0) {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Attempts remaining: ${viewState.remainingAttempts}",
+                                    text = stringResource(
+                                        R.string.pin_attempts_remaining,
+                                        viewState.remainingAttempts,
+                                    ),
                                     color = MaterialTheme.colorScheme.error,
                                     style = MaterialTheme.typography.bodySmall,
                                 )
@@ -171,7 +176,10 @@ private fun VerifyPinCodeScreen(
                     onClick = { onEvent(VerifyPinCodeEvent.OnLogoutClick) },
                     modifier = Modifier.fillMaxWidth(0.8f),
                 ) {
-                    Text(text = "Forgot PIN Code?", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = stringResource(R.string.pin_forgot),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
                 }
 
                 NumberPad(
@@ -253,7 +261,7 @@ private fun NumberPad(
             ) {
                 Icon(
                     imageVector = Icons.Default.Clear,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.delete),
                     modifier = Modifier.size(28.dp),
                 )
             }

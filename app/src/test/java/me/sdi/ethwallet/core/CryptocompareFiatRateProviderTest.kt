@@ -1,14 +1,17 @@
 package me.sdi.ethwallet.core
 
+import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.JsonConvertException
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import me.sdi.ethwallet.data.NetworkManagerConfigurator
+import kotlinx.serialization.json.Json
 import me.sdi.ethwallet.database.dao.InMemoryFiatRateDao
 import me.sdi.ethwallet.database.entity.FiatRateEntity
 import me.sdi.ethwallet.ui.KnownTokens
@@ -127,7 +130,17 @@ class CryptocompareFiatRateProviderTest {
     }
 
     private fun createCryptocompareEthPriceProvider(mockEngine: MockEngine): CryptocompareFiatRateProvider {
-        val networkManagerConfigurator = NetworkManagerConfigurator(mockEngine)
-        return CryptocompareFiatRateProvider(networkManagerConfigurator, inMemoryFiatRateDao, now = { currentTime })
+        val httpClient = HttpClient(mockEngine) {
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        prettyPrint = true
+                        isLenient = true
+                        ignoreUnknownKeys = true
+                    },
+                )
+            }
+        }
+        return CryptocompareFiatRateProvider(httpClient, inMemoryFiatRateDao, now = { currentTime })
     }
 }

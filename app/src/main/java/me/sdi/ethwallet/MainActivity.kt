@@ -9,7 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import me.sdi.ethwallet.data.UserActivityManager
-import me.sdi.ethwallet.database.AppDatabase
+import me.sdi.ethwallet.database.DatabaseBuilder
 import me.sdi.ethwallet.ui.EthWallet
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
         var lastPrintAt = System.currentTimeMillis()
         splashScreen.setKeepOnScreenCondition {
             // warmup database
-            AppDatabase.getInstance(application)
+            DatabaseBuilder.getInstance(application)
 
             (viewModel.state.value.numberOfWallets < 0).also {
                 val now = System.currentTimeMillis()

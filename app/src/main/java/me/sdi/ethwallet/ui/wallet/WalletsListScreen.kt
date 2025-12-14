@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewFontScale
@@ -49,13 +50,14 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.FileBasedEthWalletCreator
 import me.sdi.ethwallet.core.security.KeyStoreEncryptor
 import me.sdi.ethwallet.data.AndroidTempFileProvider
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.database.AppDatabase
+import me.sdi.ethwallet.database.DatabaseBuilder
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,7 +70,7 @@ fun WalletsListScreen(
     val applicationContext = LocalContext.current.applicationContext
     val viewModel =
         remember {
-            val database = AppDatabase.getInstance(applicationContext)
+            val database = DatabaseBuilder.getInstance(applicationContext)
             val walletDao = database.walletDao()
             val tempFileProvider = AndroidTempFileProvider(applicationContext)
             val ethWalletCreator = FileBasedEthWalletCreator(tempFileProvider)
@@ -87,8 +89,8 @@ fun WalletsListScreen(
                     val message =
                         news.error
                             .localizedMessage
-                            .takeIf { message -> message.isNullOrBlank() }
-                            ?: "Something went wrong"
+                            .takeIf { message -> !message.isNullOrBlank() }
+                            ?: applicationContext.getString(R.string.error_something_went_wrong)
 
                     Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
                 }
@@ -113,12 +115,12 @@ private fun WalletsListScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("My Wallets") },
+                title = { Text(stringResource(R.string.wallets_list_title)) },
                 navigationIcon = {
                     IconButton(onClick = { onEvent(WalletsListEvent.OnBackPress) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Default.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                         )
                     }
                 },
@@ -146,7 +148,7 @@ private fun WalletsListScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = "No wallets found",
+                        text = stringResource(R.string.wallets_list_no_wallets),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
@@ -228,7 +230,7 @@ private fun WalletCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Wallet Icon",
+                            contentDescription = stringResource(R.string.wallets_list_active_wallet_icon),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp),
                         )
@@ -256,7 +258,7 @@ private fun WalletCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete wallet",
+                    contentDescription = stringResource(R.string.wallets_list_delete_wallet),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }

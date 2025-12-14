@@ -21,6 +21,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        multiDexEnabled = true
     }
 
     room {
@@ -54,13 +55,12 @@ android {
 }
 
 dependencies {
-
+    implementation(project(":shared"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.splashscreen)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -71,34 +71,31 @@ dependencies {
     // Material Icons Extended
     implementation(libs.androidx.compose.material.icons.extended)
 
-    // Web3j for Ethereum blockchain interaction
-    implementation(libs.web3j.core)
-
-    // Room Database
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
-
     // DataStore Preferences
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.datastore.preferences.core)
 
     // Koin
-    implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
     // Shimmer
     implementation(libs.compose.shimmer)
 
-    // Ktor Client
-    implementation(libs.ktor.client.core)
+    // ZXing QR Code Generation
+    implementation(libs.core)
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+
+    // Web3j
+    implementation(libs.web3j.core)
+
+    // Ktor
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.client.logging)
-
-    // ZXing QR Code Generation
-    implementation(libs.core)
 
     // Testing
     testImplementation(libs.junit)

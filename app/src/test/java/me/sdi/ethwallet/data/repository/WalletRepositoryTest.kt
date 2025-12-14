@@ -11,7 +11,7 @@ import me.sdi.ethwallet.MainDispatcherRule
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthCreationResult
 import me.sdi.ethwallet.core.EthWalletCreator
-import me.sdi.ethwallet.core.security.KeyStoreEncryptor
+import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.database.entity.WalletEntity
@@ -28,7 +28,7 @@ class WalletRepositoryTest {
 
     private lateinit var walletDao: WalletDao
     private lateinit var walletCreator: EthWalletCreator
-    private lateinit var keyStoreEncryptor: KeyStoreEncryptor
+    private lateinit var privateKeyEncryptor: PrivateKeyEncryptor
 
     private lateinit var walletRepository: WalletRepository
 
@@ -56,7 +56,7 @@ class WalletRepositoryTest {
     fun setUp() {
         walletDao = mockk(relaxed = true)
         walletCreator = mockk()
-        keyStoreEncryptor = mockk()
+        privateKeyEncryptor = mockk()
 
         every { walletCreator.createWallet() } returns
             EthCreationResult(
@@ -66,7 +66,7 @@ class WalletRepositoryTest {
             )
 
         every {
-            keyStoreEncryptor.encryptPrivateKey(
+            privateKeyEncryptor.encryptPrivateKey(
                 privateKey = testPrivateKey,
                 address = testAddress,
             )
@@ -76,7 +76,7 @@ class WalletRepositoryTest {
             WalletRepository(
                 walletDao = walletDao,
                 walletCreator = walletCreator,
-                keyStoreEncryptor = keyStoreEncryptor,
+                privateKeyEncryptor = privateKeyEncryptor,
             )
     }
 
@@ -91,7 +91,7 @@ class WalletRepositoryTest {
             assertEquals("Seed phrase should match the one from wallet creator", testSeedPhrase, result)
             coVerify(exactly = 1) { walletCreator.createWallet() }
             coVerify(exactly = 1) {
-                keyStoreEncryptor.encryptPrivateKey(
+                privateKeyEncryptor.encryptPrivateKey(
                     privateKey = testPrivateKey,
                     address = testAddress,
                 )
@@ -143,7 +143,7 @@ class WalletRepositoryTest {
     fun `createWallet should propagate exceptions from encryptor`() =
         runTest {
             every {
-                keyStoreEncryptor.encryptPrivateKey(
+                privateKeyEncryptor.encryptPrivateKey(
                     privateKey = any(),
                     address = any(),
                 )

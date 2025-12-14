@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -44,6 +45,7 @@ import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.icon
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.koin.androidx.compose.koinViewModel
 
@@ -63,7 +65,7 @@ fun SendScreen(
                 is SendNews.TransferSuccess -> {
                     Toast.makeText(
                         context,
-                        "Transfer successful! Hash: ${news.transactionHash}",
+                        context.getString(R.string.send_transfer_successful, news.transactionHash),
                         Toast.LENGTH_LONG,
                     ).show()
                 }
@@ -100,12 +102,12 @@ private fun SendScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Send") },
+                title = { Text(stringResource(R.string.send_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPress) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                         )
                     }
                 },
@@ -146,7 +148,7 @@ private fun SendScreen(
                     onClick = { onEvent(SendEvent.OnClearForm) },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Clear Form")
+                    Text(stringResource(R.string.send_clear_form))
                 }
             }
         }
@@ -161,7 +163,7 @@ private fun TokenSelector(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = "Token",
+            text = stringResource(R.string.send_token),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -175,7 +177,7 @@ private fun TokenSelector(
             FilterChip(
                 selected = selectedTokenContract == EthContractAddress,
                 onClick = { onTokenSelected(EthContractAddress) },
-                label = { Text("ETH") },
+                label = { Text(stringResource(R.string.send_token_eth)) },
                 leadingIcon = {
                     Icon(
                         painter = painterResource(id = R.drawable.eth_logo_120w),
@@ -192,12 +194,12 @@ private fun TokenSelector(
                     selected = selectedTokenContract == token.ethAddress,
                     onClick = { onTokenSelected(token.ethAddress) },
                     label = {
-                        val name = when (token) {
-                            KnownTokens.USDT -> "USDT"
-                            KnownTokens.USDC -> "USDC"
-                            KnownTokens.DAI -> "DAI"
+                        val nameRes = when (token) {
+                            KnownTokens.USDT -> R.string.send_token_usdt
+                            KnownTokens.USDC -> R.string.send_token_usdc
+                            KnownTokens.DAI -> R.string.send_token_dai
                         }
-                        Text(name)
+                        Text(stringResource(nameRes))
                     },
                     leadingIcon = {
                         Icon(
@@ -221,7 +223,7 @@ private fun ReceiverAddressInput(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = "Receiver Address",
+            text = stringResource(R.string.send_receiver_address),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -230,8 +232,8 @@ private fun ReceiverAddressInput(
         OutlinedTextField(
             value = addressState.value,
             onValueChange = onAddressChanged,
-            label = { Text("Enter receiver address") },
-            placeholder = { Text("0x...") },
+            label = { Text(stringResource(R.string.send_enter_receiver_address)) },
+            placeholder = { Text(stringResource(R.string.send_address_placeholder)) },
             isError = addressState.error != null,
             supportingText = addressState.error?.let { { Text(it) } },
             trailingIcon = {
@@ -239,7 +241,7 @@ private fun ReceiverAddressInput(
                     IconButton(onClick = { onAddressChanged("") }) {
                         Icon(
                             imageVector = Icons.Default.Clear,
-                            contentDescription = "Clear address",
+                            contentDescription = stringResource(R.string.send_clear_address),
                         )
                     }
                 }
@@ -258,7 +260,7 @@ private fun AmountInput(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = "Amount",
+            text = stringResource(R.string.send_amount),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -267,8 +269,8 @@ private fun AmountInput(
         OutlinedTextField(
             value = amountState.value,
             onValueChange = onAmountChanged,
-            label = { Text("Enter amount") },
-            placeholder = { Text("0.0") },
+            label = { Text(stringResource(R.string.send_enter_amount)) },
+            placeholder = { Text(stringResource(R.string.send_amount_placeholder)) },
             isError = amountState.error != null,
             supportingText = amountState.error?.let { { Text(it) } },
             trailingIcon = {
@@ -276,7 +278,7 @@ private fun AmountInput(
                     IconButton(onClick = { onAmountChanged("") }) {
                         Icon(
                             imageVector = Icons.Default.Clear,
-                            contentDescription = "Clear amount",
+                            contentDescription = stringResource(R.string.send_clear_amount),
                         )
                     }
                 }
@@ -308,9 +310,9 @@ private fun SendButton(
                 strokeWidth = 2.dp,
             )
             Spacer(modifier = Modifier.size(8.dp))
-            Text("Sending...")
+            Text(stringResource(R.string.send_sending))
         } else {
-            Text("Send Transaction")
+            Text(stringResource(R.string.send_transaction))
         }
     }
 }

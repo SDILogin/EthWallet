@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.PreviewFontScale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -57,6 +58,7 @@ import com.valentinilk.shimmer.shimmer
 import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.icon
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.koin.androidx.compose.koinViewModel
 import java.math.BigDecimal
@@ -80,7 +82,10 @@ fun WalletScreen(
         viewModel.news.collect { news ->
             when (news) {
                 is WalletNews.ShowErrorMessage -> {
-                    val message = "Error: ${news.error.message ?: "Unknown error"}"
+                    val message = context.getString(
+                        R.string.wallet_error_format,
+                        news.error.message ?: context.getString(R.string.error_unknown),
+                    )
                     Toast.makeText(context.applicationContext, message, Toast.LENGTH_LONG).show()
                 }
             }
@@ -114,12 +119,12 @@ fun WalletScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Wallet") },
+                title = { Text(stringResource(R.string.wallet_title)) },
                 actions = {
                     IconButton(onClick = onManageWallets) {
                         Icon(
                             imageVector = Icons.Default.SwitchAccount,
-                            contentDescription = "Manage Wallets",
+                            contentDescription = stringResource(R.string.wallet_manage_wallets),
                         )
                     }
                 },
@@ -186,7 +191,7 @@ private fun ButtonsPanel(
             CircularButtonWithTitleShimmer()
         } else {
             CircularButtonWithTitle(
-                title = "Receive",
+                title = stringResource(R.string.wallet_receive),
                 icon = Icons.Default.ArrowDownward,
                 onClick = onReceiveClick,
             )
@@ -198,7 +203,7 @@ private fun ButtonsPanel(
             CircularButtonWithTitleShimmer()
         } else {
             CircularButtonWithTitle(
-                title = "Send",
+                title = stringResource(R.string.wallet_send),
                 icon = Icons.Default.ArrowOutward,
                 onClick = onSendButtonClick,
             )
@@ -318,7 +323,7 @@ private fun TokensCard(
             ) {
                 Box(Modifier.weight(1f)) {
                     BasicText(
-                        text = "Tokens (ERC-20)",
+                        text = stringResource(R.string.wallet_tokens_erc20),
                         autoSize = TextAutoSize.StepBased(
                             minFontSize = 12.sp,
                             maxFontSize = 20.sp,
@@ -336,7 +341,7 @@ private fun TokensCard(
                     onClick = { onEditButtonClick() },
                 ) {
                     Text(
-                        "Edit",
+                        stringResource(R.string.edit),
                     )
                 }
             }

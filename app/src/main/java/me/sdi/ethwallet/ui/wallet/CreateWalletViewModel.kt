@@ -17,7 +17,7 @@ import me.sdi.ethwallet.core.FileBasedEthWalletCreator
 import me.sdi.ethwallet.core.security.KeyStoreEncryptor
 import me.sdi.ethwallet.data.AndroidTempFileProvider
 import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.database.AppDatabase
+import me.sdi.ethwallet.database.DatabaseBuilder
 
 /**
  * UI state representation for the Create Wallet screen.
@@ -100,13 +100,13 @@ class CreateWalletViewModel(
                     val context = checkNotNull(this[APPLICATION_KEY])
                     val tempFileProvider = AndroidTempFileProvider(context)
                     val walletCreator = FileBasedEthWalletCreator(tempFileProvider)
-                    val keyStoreEncryptor = KeyStoreEncryptor()
-                    val database = AppDatabase.getInstance(context)
+                    val privateKeyEncryptor = KeyStoreEncryptor()
+                    val database = DatabaseBuilder.getInstance(context)
                     val walletRepository =
                         WalletRepository(
                             walletDao = database.walletDao(),
                             walletCreator = walletCreator,
-                            keyStoreEncryptor = keyStoreEncryptor,
+                            privateKeyEncryptor = privateKeyEncryptor,
                         )
 
                     CreateWalletViewModel(

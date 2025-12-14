@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
@@ -77,6 +78,7 @@ import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.icon
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.koin.androidx.compose.koinViewModel
 
@@ -104,7 +106,11 @@ fun ReceiveScreen(
 
                     // Show toast for older Android versions where clipboard labels aren't shown
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                        Toast.makeText(context, "Address copied", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.receive_address_copied),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                     }
                 }
             }
@@ -134,12 +140,12 @@ private fun ReceiveScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Receive") },
+                title = { Text(stringResource(R.string.receive_title)) },
                 navigationIcon = {
                     IconButton(onClick = { onEvent(ReceiveQrEvent.OnBackPressed) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                         )
                     }
                 },
@@ -183,7 +189,7 @@ private fun CurrencyPicker(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = "Currency",
+            text = stringResource(R.string.receive_currency),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -197,7 +203,7 @@ private fun CurrencyPicker(
             FilterChip(
                 selected = selectedTokenContract == EthContractAddress,
                 onClick = { onTokenSelected(EthContractAddress) },
-                label = { Text("ETH") },
+                label = { Text(stringResource(R.string.send_token_eth)) },
                 leadingIcon = {
                     Icon(
                         painter = painterResource(id = R.drawable.eth_logo_120w),
@@ -214,12 +220,12 @@ private fun CurrencyPicker(
                     selected = selectedTokenContract == token.ethAddress,
                     onClick = { onTokenSelected(token.ethAddress) },
                     label = {
-                        val name = when (token) {
-                            KnownTokens.USDT -> "USDT"
-                            KnownTokens.USDC -> "USDC"
-                            KnownTokens.DAI -> "DAI"
+                        val nameRes = when (token) {
+                            KnownTokens.USDT -> R.string.send_token_usdt
+                            KnownTokens.USDC -> R.string.send_token_usdc
+                            KnownTokens.DAI -> R.string.send_token_dai
                         }
-                        Text(name)
+                        Text(stringResource(nameRes))
                     },
                     leadingIcon = {
                         Icon(
@@ -245,7 +251,7 @@ private fun AmountInput(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = "Amount (Optional)",
+            text = stringResource(R.string.receive_amount_optional),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -254,7 +260,7 @@ private fun AmountInput(
         OutlinedTextField(
             value = amount,
             onValueChange = onAmountChanged,
-            label = { Text("Enter amount") },
+            label = { Text(stringResource(R.string.send_enter_amount)) },
             isError = amountError != null,
             supportingText = amountError?.let { { Text(it) } },
             trailingIcon = {
@@ -305,7 +311,7 @@ private fun QrCodeDisplay(
                 }
                 else -> {
                     Text(
-                        text = "Select currency to generate QR code",
+                        text = stringResource(R.string.receive_select_currency),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -349,7 +355,7 @@ private fun AddressDisplay(
         ) {
             Icon(
                 imageVector = Icons.Filled.CopyAll,
-                contentDescription = "Copy Address",
+                contentDescription = stringResource(R.string.receive_copy_address),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(16.dp),
             )
@@ -395,7 +401,11 @@ private fun QrCodeCanvas(
             )
         } catch (t: Throwable) {
             Logger.warn("QrCode", t) { "Error generating QR code" }
-            Toast.makeText(context, "Error generating QR code: ${t.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                context.getString(R.string.receive_qr_error, t.message ?: ""),
+                Toast.LENGTH_SHORT,
+            ).show()
             null
         }
         loading = false

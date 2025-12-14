@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -53,7 +54,7 @@ fun OnboardingScreen(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = "ETH Wallet",
+                text = stringResource(R.string.onboarding_title),
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.headlineLarge,
@@ -74,7 +75,7 @@ fun OnboardingScreen(
                 onClick = onCreateWallet,
             ) {
                 Text(
-                    text = "Create new wallet",
+                    text = stringResource(R.string.onboarding_create_wallet),
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -92,7 +93,7 @@ fun OnboardingScreen(
                 onClick = onImportWallet,
             ) {
                 Text(
-                    text = "Import existing wallet",
+                    text = stringResource(R.string.onboarding_import_wallet),
                     style = MaterialTheme.typography.labelLarge,
                 )
             }

@@ -31,10 +31,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import me.sdi.ethwallet.R
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,12 +50,12 @@ fun ImportWalletScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Import Wallet") },
+                title = { Text(stringResource(R.string.import_wallet_title)) },
                 navigationIcon = {
                     IconButton(onClick = onUpButtonClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Default.ArrowBack,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.back),
                         )
                     }
                 },

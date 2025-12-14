@@ -1,7 +1,15 @@
 package me.sdi.ethwallet.di
 
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.serialization.json.Json
 import me.sdi.ethwallet.InitialNavigationViewModel
 import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.CryptocompareFiatRateProvider
@@ -14,14 +22,15 @@ import me.sdi.ethwallet.core.Web3jEthManager
 import me.sdi.ethwallet.core.security.DataStorePinCodeStorage
 import me.sdi.ethwallet.core.security.KeyStoreEncryptor
 import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.core.transfer.TransferInteractor
 import me.sdi.ethwallet.data.AndroidTempFileProvider
-import me.sdi.ethwallet.data.NetworkManagerConfigurator
 import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
 import me.sdi.ethwallet.data.TempFileProvider
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.database.AppDatabase
+import me.sdi.ethwallet.database.DatabaseBuilder
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.dao.WalletDao
@@ -36,13 +45,14 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
+import me.sdi.ethwallet.Logger as WalletLogger
 
 val appModule = module {
     // Application Scope - for app-level background operations
     single<CoroutineScope> { CoroutineScope(SupervisorJob()) }
 
     // Database
-    single<AppDatabase> { AppDatabase.getInstance(androidContext()) }
+    single<AppDatabase> { DatabaseBuilder.getInstance(androidContext()) }
     single<WalletDao> { get<AppDatabase>().walletDao() }
     single<TokenBalanceDao> { get<AppDatabase>().tokenBalanceDao() }
     single<FiatRateDao> { get<AppDatabase>().fiatRateDao() }
@@ -50,11 +60,33 @@ val appModule = module {
     // Core components
     single<TempFileProvider> { AndroidTempFileProvider(androidContext()) }
     single<EthWalletCreator> { FileBasedEthWalletCreator(get()) }
-    single<KeyStoreEncryptor> { KeyStoreEncryptor() }
+    single<PrivateKeyEncryptor> { KeyStoreEncryptor() }
 
     // Web3 and Blockchain
     single { Web3j.build(HttpService("https://eth.llamarpc.com")) }
-    single<NetworkManagerConfigurator> { NetworkManagerConfigurator() }
+
+    single<HttpClient> {
+        HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        prettyPrint = true
+                        isLenient = true
+                        ignoreUnknownKeys = true
+                    },
+                )
+            }
+            install(Logging) {
+                logger = object : Logger {
+                    override fun log(message: String) {
+                        WalletLogger.debug("KtorHttpClient") { message }
+                    }
+                }
+                level = LogLevel.ALL
+            }
+        }
+    }
+
     factory<EthManager> { Web3jEthManager(get()) }
     factory<BalanceProvider> { EthBalanceProvider(get(), get()) }
     factory<FiatRateProvider> { CryptocompareFiatRateProvider(get(), get()) }
@@ -65,7 +97,7 @@ val appModule = module {
         WalletRepository(
             walletDao = get(),
             walletCreator = get(),
-            keyStoreEncryptor = get(),
+            privateKeyEncryptor = get(),
         )
     }
 
