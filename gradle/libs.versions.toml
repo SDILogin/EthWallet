@@ -26,6 +26,7 @@ datastore = "1.1.7"
 koin = "4.1.0"
 composeShimmer = "1.3.3"
 composePlugin = "1.7.3"
+composeHotReload = "1.1.0-alpha02"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
@@ -91,4 +92,4 @@ spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
 jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "composePlugin" }
-
+compose-hot-reload = { id = "org.jetbrains.compose.hot-reload", version.ref = "composeHotReload" }
