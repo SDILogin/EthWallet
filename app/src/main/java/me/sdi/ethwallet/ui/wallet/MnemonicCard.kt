@@ -33,6 +33,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -47,6 +49,7 @@ import androidx.compose.ui.tooling.preview.PreviewFontScale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import me.sdi.ethwallet.R
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 
 /**
@@ -66,14 +69,20 @@ fun MnemonicCard(
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val interactionSource = remember { MutableInteractionSource() }
+    val context = LocalContext.current
+    val mnemonicDescription = context.getString(
+        R.string.mnemonic_content_description,
+        seedPhrase.size,
+        seedPhrase.joinToString(separator = " ") { it },
+    )
+    val clipboardLabel = stringResource(R.string.mnemonic_clipboard_label)
 
     Card(
         modifier =
             modifier
                 .sensitiveContent(isContentSensitive = true)
                 .semantics {
-                    contentDescription =
-                        "${seedPhrase.size} words mnemonic. ${seedPhrase.joinToString(separator = " ") { it }}"
+                    contentDescription = mnemonicDescription
                 }
                 .background(
                     color = MaterialTheme.colorScheme.surfaceVariant,
@@ -90,7 +99,7 @@ fun MnemonicCard(
                     onClick = { /* No action on click */ },
                     onLongClick = {
                         scope.launch {
-                            copyToClipboard(seedPhrase, clipboardManager)
+                            copyToClipboard(seedPhrase, clipboardManager, clipboardLabel)
                             onCopied()
                         }
                     },
@@ -128,7 +137,7 @@ fun MnemonicCard(
             Spacer(modifier = Modifier.size(8.dp))
             Text(
                 modifier = Modifier.padding(horizontal = 16.dp),
-                text = "* Long-press to copy",
+                text = stringResource(R.string.mnemonic_long_press_to_copy),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -137,10 +146,14 @@ fun MnemonicCard(
     }
 }
 
-private suspend fun copyToClipboard(seedPhrase: List<String>, clipboard: Clipboard) {
+private suspend fun copyToClipboard(
+    seedPhrase: List<String>,
+    clipboard: Clipboard,
+    clipboardLabel: String,
+) {
     val clipData =
         ClipData(
-            "seedPhrase",
+            clipboardLabel,
             arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN),
             ClipData.Item(seedPhrase.joinToString(" ")),
         )

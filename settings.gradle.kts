@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "EthWallet"
 include(":app")
- 
+include(":shared")
+include(":desktopApp")

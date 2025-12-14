@@ -77,7 +77,7 @@ fun ImportWalletScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Enter Recovery Phrase",
+                text = stringResource(R.string.import_wallet_enter_recovery_phrase),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
             )
@@ -85,7 +85,7 @@ fun ImportWalletScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Enter your 12-word recovery phrase, separated by spaces.",
+                text = stringResource(R.string.import_wallet_instruction),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.widthIn(max = 420.dp),
@@ -96,7 +96,7 @@ fun ImportWalletScreen(
             OutlinedTextField(
                 value = mnemonicInput,
                 onValueChange = { mnemonicInput = it },
-                label = { Text("Recovery Phrase") },
+                label = { Text(stringResource(R.string.import_wallet_recovery_phrase_label)) },
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -105,8 +105,8 @@ fun ImportWalletScreen(
                     KeyboardOptions.Default.copy(
                         imeAction = ImeAction.Done,
                     ),
-                placeholder = { Text("Enter 12 words separated by spaces") },
-                supportingText = { Text("Example: word1 word2 word3 ...") },
+                placeholder = { Text(stringResource(R.string.import_wallet_recovery_phrase_placeholder)) },
+                supportingText = { Text(stringResource(R.string.import_wallet_recovery_phrase_supporting)) },
                 maxLines = 3,
             )
 
@@ -124,7 +124,7 @@ fun ImportWalletScreen(
                 enabled = isValidMnemonic(mnemonicInput),
             ) {
                 Text(
-                    text = "Import Wallet",
+                    text = stringResource(R.string.import_wallet_button),
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
