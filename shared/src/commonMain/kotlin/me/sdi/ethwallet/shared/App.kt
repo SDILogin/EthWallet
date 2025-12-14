@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 fun App() {
     MaterialTheme {
         Column {
-            Text(text = "Hello from KMP Shared UI! (Desktop & Android)")
+            Text(text = "H& x Android)")
         }
     }
 }
