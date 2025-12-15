@@ -78,9 +78,6 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.eth_logo_120w
-import me.sdi.ethwallet.resources.logo_dai_56
-import me.sdi.ethwallet.resources.logo_usdc_56
-import me.sdi.ethwallet.resources.logo_usdt_56
 import me.sdi.ethwallet.resources.receive_address_copied
 import me.sdi.ethwallet.resources.receive_amount_optional
 import me.sdi.ethwallet.resources.receive_copy_address
