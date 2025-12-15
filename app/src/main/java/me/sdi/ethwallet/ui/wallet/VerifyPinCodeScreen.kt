@@ -29,7 +29,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewFontScale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -38,8 +37,15 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import me.sdi.ethwallet.R
+import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.delete
+import me.sdi.ethwallet.resources.pin_attempts_remaining
+import me.sdi.ethwallet.resources.pin_enter_subtitle
+import me.sdi.ethwallet.resources.pin_enter_title
+import me.sdi.ethwallet.resources.pin_forgot
+import me.sdi.ethwallet.resources.pin_locked_subtitle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.jetbrains.compose.resources.stringResource
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -112,7 +118,7 @@ private fun VerifyPinCodeScreen(
                 Spacer(modifier = Modifier.height(64.dp))
 
                 Text(
-                    text = stringResource(R.string.pin_enter_title),
+                    text = stringResource(Res.string.pin_enter_title),
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center,
                 )
@@ -121,9 +127,9 @@ private fun VerifyPinCodeScreen(
 
                 Text(
                     text = if (viewState.isLocked) {
-                        stringResource(R.string.pin_locked_subtitle, viewState.lockCountdown)
+                        stringResource(Res.string.pin_locked_subtitle, viewState.lockCountdown)
                     } else {
-                        stringResource(R.string.pin_enter_subtitle)
+                        stringResource(Res.string.pin_enter_subtitle)
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -157,7 +163,7 @@ private fun VerifyPinCodeScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = stringResource(
-                                        R.string.pin_attempts_remaining,
+                                        Res.string.pin_attempts_remaining,
                                         viewState.remainingAttempts,
                                     ),
                                     color = MaterialTheme.colorScheme.error,
@@ -177,7 +183,7 @@ private fun VerifyPinCodeScreen(
                     modifier = Modifier.fillMaxWidth(0.8f),
                 ) {
                     Text(
-                        text = stringResource(R.string.pin_forgot),
+                        text = stringResource(Res.string.pin_forgot),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
@@ -261,7 +267,7 @@ private fun NumberPad(
             ) {
                 Icon(
                     imageVector = Icons.Default.Clear,
-                    contentDescription = stringResource(R.string.delete),
+                    contentDescription = stringResource(Res.string.delete),
                     modifier = Modifier.size(28.dp),
                 )
             }

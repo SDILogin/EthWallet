@@ -23,6 +23,12 @@ spotless {
     }
 }
 
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "me.sdi.ethwallet.resources"
+    generateResClass = always
+}
+
 kotlin {
     androidTarget {
         compilerOptions {

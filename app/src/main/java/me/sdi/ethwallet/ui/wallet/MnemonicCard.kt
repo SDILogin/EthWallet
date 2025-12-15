@@ -34,7 +34,6 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -50,7 +49,11 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.R
+import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.mnemonic_clipboard_label
+import me.sdi.ethwallet.resources.mnemonic_long_press_to_copy
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * A card that displays a mnemonic seed phrase with a copy button.
@@ -75,7 +78,7 @@ fun MnemonicCard(
         seedPhrase.size,
         seedPhrase.joinToString(separator = " ") { it },
     )
-    val clipboardLabel = stringResource(R.string.mnemonic_clipboard_label)
+    val clipboardLabel = stringResource(Res.string.mnemonic_clipboard_label)
 
     Card(
         modifier =
@@ -137,7 +140,7 @@ fun MnemonicCard(
             Spacer(modifier = Modifier.size(8.dp))
             Text(
                 modifier = Modifier.padding(horizontal = 16.dp),
-                text = stringResource(R.string.mnemonic_long_press_to_copy),
+                text = stringResource(Res.string.mnemonic_long_press_to_copy),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )

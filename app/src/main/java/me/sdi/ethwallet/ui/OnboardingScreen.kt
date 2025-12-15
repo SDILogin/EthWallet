@@ -20,12 +20,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import me.sdi.ethwallet.R
+import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.eth_logo_120w
+import me.sdi.ethwallet.resources.onboarding_create_wallet
+import me.sdi.ethwallet.resources.onboarding_import_wallet
+import me.sdi.ethwallet.resources.onboarding_title
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun OnboardingScreen(
@@ -45,7 +49,7 @@ fun OnboardingScreen(
 
             Spacer(Modifier.height(16.dp))
             Icon(
-                painter = painterResource(R.drawable.eth_logo_120w),
+                painter = painterResource(Res.drawable.eth_logo_120w),
                 tint = Color.Unspecified,
                 contentDescription = null,
                 modifier = Modifier.width(100.dp),
@@ -54,7 +58,7 @@ fun OnboardingScreen(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = stringResource(R.string.onboarding_title),
+                text = stringResource(Res.string.onboarding_title),
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.headlineLarge,
@@ -75,7 +79,7 @@ fun OnboardingScreen(
                 onClick = onCreateWallet,
             ) {
                 Text(
-                    text = stringResource(R.string.onboarding_create_wallet),
+                    text = stringResource(Res.string.onboarding_create_wallet),
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -93,7 +97,7 @@ fun OnboardingScreen(
                 onClick = onImportWallet,
             ) {
                 Text(
-                    text = stringResource(R.string.onboarding_import_wallet),
+                    text = stringResource(Res.string.onboarding_import_wallet),
                     style = MaterialTheme.typography.labelLarge,
                 )
             }

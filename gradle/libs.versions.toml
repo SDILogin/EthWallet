@@ -84,6 +84,9 @@ koin-test-junit4 = { group = "io.insert-koin", name = "koin-test-junit4", versio
 # Shimmer
 compose_shimmer = { group = "com.valentinilk.shimmer", name = "compose-shimmer", version.ref = "composeShimmer" }
 
+# Compose Resources
+compose-resources = { group = "org.jetbrains.compose.components", name = "components-resources", version.ref = "composePlugin" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }

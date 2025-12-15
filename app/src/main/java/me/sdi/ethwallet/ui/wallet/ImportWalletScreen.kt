@@ -31,13 +31,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import me.sdi.ethwallet.R
+import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.back
+import me.sdi.ethwallet.resources.import_wallet_button
+import me.sdi.ethwallet.resources.import_wallet_enter_recovery_phrase
+import me.sdi.ethwallet.resources.import_wallet_instruction
+import me.sdi.ethwallet.resources.import_wallet_recovery_phrase_label
+import me.sdi.ethwallet.resources.import_wallet_recovery_phrase_placeholder
+import me.sdi.ethwallet.resources.import_wallet_recovery_phrase_supporting
+import me.sdi.ethwallet.resources.import_wallet_title
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,12 +58,12 @@ fun ImportWalletScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.import_wallet_title)) },
+                title = { Text(stringResource(Res.string.import_wallet_title)) },
                 navigationIcon = {
                     IconButton(onClick = onUpButtonClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Default.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
+                            contentDescription = stringResource(Res.string.back),
                         )
                     }
                 },
@@ -77,7 +85,7 @@ fun ImportWalletScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = stringResource(R.string.import_wallet_enter_recovery_phrase),
+                text = stringResource(Res.string.import_wallet_enter_recovery_phrase),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
             )
@@ -85,7 +93,7 @@ fun ImportWalletScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = stringResource(R.string.import_wallet_instruction),
+                text = stringResource(Res.string.import_wallet_instruction),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.widthIn(max = 420.dp),
@@ -96,7 +104,7 @@ fun ImportWalletScreen(
             OutlinedTextField(
                 value = mnemonicInput,
                 onValueChange = { mnemonicInput = it },
-                label = { Text(stringResource(R.string.import_wallet_recovery_phrase_label)) },
+                label = { Text(stringResource(Res.string.import_wallet_recovery_phrase_label)) },
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -105,8 +113,8 @@ fun ImportWalletScreen(
                     KeyboardOptions.Default.copy(
                         imeAction = ImeAction.Done,
                     ),
-                placeholder = { Text(stringResource(R.string.import_wallet_recovery_phrase_placeholder)) },
-                supportingText = { Text(stringResource(R.string.import_wallet_recovery_phrase_supporting)) },
+                placeholder = { Text(stringResource(Res.string.import_wallet_recovery_phrase_placeholder)) },
+                supportingText = { Text(stringResource(Res.string.import_wallet_recovery_phrase_supporting)) },
                 maxLines = 3,
             )
 
@@ -124,7 +132,7 @@ fun ImportWalletScreen(
                 enabled = isValidMnemonic(mnemonicInput),
             ) {
                 Text(
-                    text = stringResource(R.string.import_wallet_button),
+                    text = stringResource(Res.string.import_wallet_button),
                     style = MaterialTheme.typography.labelLarge,
                 )
             }

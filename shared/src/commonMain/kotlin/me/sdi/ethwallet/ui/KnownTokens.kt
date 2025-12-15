@@ -1,7 +1,11 @@
 package me.sdi.ethwallet.ui
 
-import androidx.annotation.DrawableRes
 import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.logo_dai_56
+import me.sdi.ethwallet.resources.logo_usdc_56
+import me.sdi.ethwallet.resources.logo_usdt_56
+import org.jetbrains.compose.resources.DrawableResource
 
 enum class KnownTokens(
     val ethAddress: EthAddress,
@@ -25,5 +29,9 @@ enum class KnownTokens(
     ),
 }
 
-expect val KnownTokens.icon: Int
-    @DrawableRes get
+val KnownTokens.icon: DrawableResource
+    get() = when (this) {
+        KnownTokens.USDT -> Res.drawable.logo_usdt_56
+        KnownTokens.USDC -> Res.drawable.logo_usdc_56
+        KnownTokens.DAI -> Res.drawable.logo_dai_56
+    }

@@ -1,0 +1,97 @@
+<resources>
+    <string name="app_name">EthWallet</string>
+    <string name="create_wallet_title">Create Wallet</string>
+    <string name="create_wallet_loading_message">Creating your Ethereum wallet...</string>
+    <string name="create_wallet_confirmation_dialog_title">Confirm</string>
+    <string name="create_wallet_confirmation_dialog_message">Are you sure you\'ve written down your recovery phrase? You won\'t be able to see it again.</string>
+    <string name="create_wallet_confirmation_dialog_confirm_button">Yes, I\'ve stored it securely</string>
+    <string name="create_wallet_confirmation_dialog_dismiss_button">No, let me check again</string>
+    <string name="create_wallet_recovery_phrase_title">Your Recovery Phrase</string>
+    <string name="create_wallet_recovery_phrase_instruction">Write down these 12 words in order and keep them somewhere safe.</string>
+    <string name="create_wallet_recovery_phrase_copied_message">Recovery phrase copied to clipboard</string>
+    <string name="create_wallet_next_button_text">I\'ve safely stored my recovery phrase</string>
+    <string name="create_wallet_security_warning">WARNING: Never share your recovery phrase! Taking screenshots or storing it digitally may expose it to hackers. Write it down on paper and keep it in a secure location.</string>
+    <string name="create_wallet_error_title">Error Creating Wallet</string>
+    <string name="create_wallet_unknown_error_message">An unknown error occurred</string>
+
+    <!-- Common -->
+    <string name="back">Back</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="error_something_went_wrong">Something went wrong</string>
+    <string name="error_unknown">Unknown error</string>
+
+    <!-- Onboarding Screen -->
+    <string name="onboarding_title">ETH Wallet</string>
+    <string name="onboarding_create_wallet">Create new wallet</string>
+    <string name="onboarding_import_wallet">Import existing wallet</string>
+
+    <!-- Wallets List Screen -->
+    <string name="wallets_list_title">My Wallets</string>
+    <string name="wallets_list_no_wallets">No wallets found</string>
+    <string name="wallets_list_active_wallet_icon">Active wallet</string>
+    <string name="wallets_list_delete_wallet">Delete wallet</string>
+
+    <!-- Wallet Screen -->
+    <string name="wallet_title">Wallet</string>
+    <string name="wallet_manage_wallets">Manage Wallets</string>
+    <string name="wallet_receive">Receive</string>
+    <string name="wallet_send">Send</string>
+    <string name="wallet_tokens_erc20">Tokens (ERC-20)</string>
+    <string name="wallet_error_format">Error: %1$s</string>
+
+    <!-- Send Screen -->
+    <string name="send_title">Send</string>
+    <string name="send_clear_form">Clear Form</string>
+    <string name="send_token">Token</string>
+    <string name="send_token_eth">ETH</string>
+    <string name="send_token_usdt">USDT</string>
+    <string name="send_token_usdc">USDC</string>
+    <string name="send_token_dai">DAI</string>
+    <string name="send_receiver_address">Receiver Address</string>
+    <string name="send_enter_receiver_address">Enter receiver address</string>
+    <string name="send_address_placeholder">0x…</string>
+    <string name="send_clear_address">Clear address</string>
+    <string name="send_amount">Amount</string>
+    <string name="send_enter_amount">Enter amount</string>
+    <string name="send_amount_placeholder">0.0</string>
+    <string name="send_clear_amount">Clear amount</string>
+    <string name="send_sending">Sending…</string>
+    <string name="send_transaction">Send Transaction</string>
+    <string name="send_transfer_successful">Transfer successful! Hash: %1$s</string>
+
+    <!-- Receive Screen -->
+    <string name="receive_title">Receive</string>
+    <string name="receive_currency">Currency</string>
+    <string name="receive_amount_optional">Amount (Optional)</string>
+    <string name="receive_select_currency">Select currency to generate QR code</string>
+    <string name="receive_copy_address">Copy Address</string>
+    <string name="receive_address_copied">Address copied</string>
+    <string name="receive_qr_error">Error generating QR code: %1$s</string>
+
+    <!-- PIN Code Screens -->
+    <string name="pin_enter_title">Enter PIN Code</string>
+    <string name="pin_create_title">Create PIN Code</string>
+    <string name="pin_confirm_title">Confirm PIN Code</string>
+    <string name="pin_enter_subtitle">Enter your 6-digit PIN to access your wallet</string>
+    <string name="pin_create_subtitle">Set a 6-digit PIN to secure your wallet</string>
+    <string name="pin_confirm_subtitle">Enter the same PIN again to confirm</string>
+    <string name="pin_locked_subtitle">Too many attempts. Try again in %1$d seconds</string>
+    <string name="pin_attempts_remaining">Attempts remaining: %1$d</string>
+    <string name="pin_forgot">Forgot PIN Code?</string>
+    <string name="pin_reset">Reset PIN</string>
+
+    <!-- Import Wallet Screen -->
+    <string name="import_wallet_title">Import Wallet</string>
+    <string name="import_wallet_enter_recovery_phrase">Enter Recovery Phrase</string>
+    <string name="import_wallet_instruction">Enter your 12-word recovery phrase, separated by spaces.</string>
+    <string name="import_wallet_recovery_phrase_label">Recovery Phrase</string>
+    <string name="import_wallet_recovery_phrase_placeholder">Enter 12 words separated by spaces</string>
+    <string name="import_wallet_recovery_phrase_supporting">Example: word1 word2 word3 …</string>
+    <string name="import_wallet_button">Import Wallet</string>
+
+    <!-- Mnemonic Card -->
+    <string name="mnemonic_content_description">%1$d words mnemonic. %2$s</string>
+    <string name="mnemonic_long_press_to_copy">* Long-press to copy</string>
+    <string name="mnemonic_clipboard_label">seedPhrase</string>
+</resources>

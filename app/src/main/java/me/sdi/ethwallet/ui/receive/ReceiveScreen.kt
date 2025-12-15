@@ -57,8 +57,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
@@ -77,9 +75,29 @@ import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
+import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.back
+import me.sdi.ethwallet.resources.eth_logo_120w
+import me.sdi.ethwallet.resources.logo_dai_56
+import me.sdi.ethwallet.resources.logo_usdc_56
+import me.sdi.ethwallet.resources.logo_usdt_56
+import me.sdi.ethwallet.resources.receive_address_copied
+import me.sdi.ethwallet.resources.receive_amount_optional
+import me.sdi.ethwallet.resources.receive_copy_address
+import me.sdi.ethwallet.resources.receive_currency
+import me.sdi.ethwallet.resources.receive_qr_error
+import me.sdi.ethwallet.resources.receive_select_currency
+import me.sdi.ethwallet.resources.receive_title
+import me.sdi.ethwallet.resources.send_enter_amount
+import me.sdi.ethwallet.resources.send_token_dai
+import me.sdi.ethwallet.resources.send_token_eth
+import me.sdi.ethwallet.resources.send_token_usdc
+import me.sdi.ethwallet.resources.send_token_usdt
 import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.ui.icon
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -140,12 +158,12 @@ private fun ReceiveScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.receive_title)) },
+                title = { Text(stringResource(Res.string.receive_title)) },
                 navigationIcon = {
                     IconButton(onClick = { onEvent(ReceiveQrEvent.OnBackPressed) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
+                            contentDescription = stringResource(Res.string.back),
                         )
                     }
                 },
@@ -189,7 +207,7 @@ private fun CurrencyPicker(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = stringResource(R.string.receive_currency),
+            text = stringResource(Res.string.receive_currency),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -203,10 +221,10 @@ private fun CurrencyPicker(
             FilterChip(
                 selected = selectedTokenContract == EthContractAddress,
                 onClick = { onTokenSelected(EthContractAddress) },
-                label = { Text(stringResource(R.string.send_token_eth)) },
+                label = { Text(stringResource(Res.string.send_token_eth)) },
                 leadingIcon = {
                     Icon(
-                        painter = painterResource(id = R.drawable.eth_logo_120w),
+                        painter = painterResource(Res.drawable.eth_logo_120w),
                         tint = Color.Unspecified,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
@@ -221,15 +239,15 @@ private fun CurrencyPicker(
                     onClick = { onTokenSelected(token.ethAddress) },
                     label = {
                         val nameRes = when (token) {
-                            KnownTokens.USDT -> R.string.send_token_usdt
-                            KnownTokens.USDC -> R.string.send_token_usdc
-                            KnownTokens.DAI -> R.string.send_token_dai
+                            KnownTokens.USDT -> Res.string.send_token_usdt
+                            KnownTokens.USDC -> Res.string.send_token_usdc
+                            KnownTokens.DAI -> Res.string.send_token_dai
                         }
                         Text(stringResource(nameRes))
                     },
                     leadingIcon = {
                         Icon(
-                            painter = painterResource(id = token.icon),
+                            painter = painterResource(token.icon),
                             tint = Color.Unspecified,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
@@ -251,7 +269,7 @@ private fun AmountInput(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = stringResource(R.string.receive_amount_optional),
+            text = stringResource(Res.string.receive_amount_optional),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -260,7 +278,7 @@ private fun AmountInput(
         OutlinedTextField(
             value = amount,
             onValueChange = onAmountChanged,
-            label = { Text(stringResource(R.string.send_enter_amount)) },
+            label = { Text(stringResource(Res.string.send_enter_amount)) },
             isError = amountError != null,
             supportingText = amountError?.let { { Text(it) } },
             trailingIcon = {
@@ -311,7 +329,7 @@ private fun QrCodeDisplay(
                 }
                 else -> {
                     Text(
-                        text = stringResource(R.string.receive_select_currency),
+                        text = stringResource(Res.string.receive_select_currency),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -355,7 +373,7 @@ private fun AddressDisplay(
         ) {
             Icon(
                 imageVector = Icons.Filled.CopyAll,
-                contentDescription = stringResource(R.string.receive_copy_address),
+                contentDescription = stringResource(Res.string.receive_copy_address),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(16.dp),
             )

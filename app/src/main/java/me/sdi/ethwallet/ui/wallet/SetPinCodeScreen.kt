@@ -36,7 +36,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewFontScale
@@ -46,8 +45,15 @@ import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import me.sdi.ethwallet.R
+import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.delete
+import me.sdi.ethwallet.resources.pin_confirm_subtitle
+import me.sdi.ethwallet.resources.pin_confirm_title
+import me.sdi.ethwallet.resources.pin_create_subtitle
+import me.sdi.ethwallet.resources.pin_create_title
+import me.sdi.ethwallet.resources.pin_reset
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.jetbrains.compose.resources.stringResource
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -153,7 +159,7 @@ private fun NumberPad(
             ) {
                 Icon(
                     imageVector = Icons.Default.Clear,
-                    contentDescription = stringResource(R.string.delete),
+                    contentDescription = stringResource(Res.string.delete),
                     modifier = Modifier.size(28.dp),
                 )
             }
@@ -234,9 +240,9 @@ private fun SetPinCodeScreen(
                 Text(
                     text =
                         if (viewState.isConfirmationMode) {
-                            stringResource(R.string.pin_confirm_title)
+                            stringResource(Res.string.pin_confirm_title)
                         } else {
-                            stringResource(R.string.pin_create_title)
+                            stringResource(Res.string.pin_create_title)
                         },
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center,
@@ -247,9 +253,9 @@ private fun SetPinCodeScreen(
                 Text(
                     text =
                         if (viewState.isConfirmationMode) {
-                            stringResource(R.string.pin_confirm_subtitle)
+                            stringResource(Res.string.pin_confirm_subtitle)
                         } else {
-                            stringResource(R.string.pin_create_subtitle)
+                            stringResource(Res.string.pin_create_subtitle)
                         },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -285,7 +291,7 @@ private fun SetPinCodeScreen(
                         onClick = { onEvent(SetPinCodeEvent.OnResetClick) },
                     ) {
                         Text(
-                            text = stringResource(R.string.pin_reset),
+                            text = stringResource(Res.string.pin_reset),
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.labelLarge,
                         )

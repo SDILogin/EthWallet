@@ -33,8 +33,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -44,9 +42,32 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
+import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.back
+import me.sdi.ethwallet.resources.eth_logo_120w
+import me.sdi.ethwallet.resources.send_address_placeholder
+import me.sdi.ethwallet.resources.send_amount
+import me.sdi.ethwallet.resources.send_amount_placeholder
+import me.sdi.ethwallet.resources.send_clear_address
+import me.sdi.ethwallet.resources.send_clear_amount
+import me.sdi.ethwallet.resources.send_clear_form
+import me.sdi.ethwallet.resources.send_enter_amount
+import me.sdi.ethwallet.resources.send_enter_receiver_address
+import me.sdi.ethwallet.resources.send_receiver_address
+import me.sdi.ethwallet.resources.send_sending
+import me.sdi.ethwallet.resources.send_title
+import me.sdi.ethwallet.resources.send_token
+import me.sdi.ethwallet.resources.send_token_dai
+import me.sdi.ethwallet.resources.send_token_eth
+import me.sdi.ethwallet.resources.send_token_usdc
+import me.sdi.ethwallet.resources.send_token_usdt
+import me.sdi.ethwallet.resources.send_transaction
+import me.sdi.ethwallet.resources.send_transfer_successful
 import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.ui.icon
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,12 +123,12 @@ private fun SendScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.send_title)) },
+                title = { Text(stringResource(Res.string.send_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPress) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
+                            contentDescription = stringResource(Res.string.back),
                         )
                     }
                 },
@@ -148,7 +169,7 @@ private fun SendScreen(
                     onClick = { onEvent(SendEvent.OnClearForm) },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringResource(R.string.send_clear_form))
+                    Text(stringResource(Res.string.send_clear_form))
                 }
             }
         }
@@ -163,7 +184,7 @@ private fun TokenSelector(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = stringResource(R.string.send_token),
+            text = stringResource(Res.string.send_token),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -177,10 +198,10 @@ private fun TokenSelector(
             FilterChip(
                 selected = selectedTokenContract == EthContractAddress,
                 onClick = { onTokenSelected(EthContractAddress) },
-                label = { Text(stringResource(R.string.send_token_eth)) },
+                label = { Text(stringResource(Res.string.send_token_eth)) },
                 leadingIcon = {
                     Icon(
-                        painter = painterResource(id = R.drawable.eth_logo_120w),
+                        painter = painterResource(Res.drawable.eth_logo_120w),
                         tint = Color.Unspecified,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
@@ -195,15 +216,15 @@ private fun TokenSelector(
                     onClick = { onTokenSelected(token.ethAddress) },
                     label = {
                         val nameRes = when (token) {
-                            KnownTokens.USDT -> R.string.send_token_usdt
-                            KnownTokens.USDC -> R.string.send_token_usdc
-                            KnownTokens.DAI -> R.string.send_token_dai
+                            KnownTokens.USDT -> Res.string.send_token_usdt
+                            KnownTokens.USDC -> Res.string.send_token_usdc
+                            KnownTokens.DAI -> Res.string.send_token_dai
                         }
                         Text(stringResource(nameRes))
                     },
                     leadingIcon = {
                         Icon(
-                            painter = painterResource(id = token.icon),
+                            painter = painterResource(token.icon),
                             tint = Color.Unspecified,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
@@ -223,7 +244,7 @@ private fun ReceiverAddressInput(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = stringResource(R.string.send_receiver_address),
+            text = stringResource(Res.string.send_receiver_address),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -232,8 +253,8 @@ private fun ReceiverAddressInput(
         OutlinedTextField(
             value = addressState.value,
             onValueChange = onAddressChanged,
-            label = { Text(stringResource(R.string.send_enter_receiver_address)) },
-            placeholder = { Text(stringResource(R.string.send_address_placeholder)) },
+            label = { Text(stringResource(Res.string.send_enter_receiver_address)) },
+            placeholder = { Text(stringResource(Res.string.send_address_placeholder)) },
             isError = addressState.error != null,
             supportingText = addressState.error?.let { { Text(it) } },
             trailingIcon = {
@@ -241,7 +262,7 @@ private fun ReceiverAddressInput(
                     IconButton(onClick = { onAddressChanged("") }) {
                         Icon(
                             imageVector = Icons.Default.Clear,
-                            contentDescription = stringResource(R.string.send_clear_address),
+                            contentDescription = stringResource(Res.string.send_clear_address),
                         )
                     }
                 }
@@ -260,7 +281,7 @@ private fun AmountInput(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = stringResource(R.string.send_amount),
+            text = stringResource(Res.string.send_amount),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -269,8 +290,8 @@ private fun AmountInput(
         OutlinedTextField(
             value = amountState.value,
             onValueChange = onAmountChanged,
-            label = { Text(stringResource(R.string.send_enter_amount)) },
-            placeholder = { Text(stringResource(R.string.send_amount_placeholder)) },
+            label = { Text(stringResource(Res.string.send_enter_amount)) },
+            placeholder = { Text(stringResource(Res.string.send_amount_placeholder)) },
             isError = amountState.error != null,
             supportingText = amountState.error?.let { { Text(it) } },
             trailingIcon = {
@@ -278,7 +299,7 @@ private fun AmountInput(
                     IconButton(onClick = { onAmountChanged("") }) {
                         Icon(
                             imageVector = Icons.Default.Clear,
-                            contentDescription = stringResource(R.string.send_clear_amount),
+                            contentDescription = stringResource(Res.string.send_clear_amount),
                         )
                     }
                 }
@@ -310,9 +331,9 @@ private fun SendButton(
                 strokeWidth = 2.dp,
             )
             Spacer(modifier = Modifier.size(8.dp))
-            Text(stringResource(R.string.send_sending))
+            Text(stringResource(Res.string.send_sending))
         } else {
-            Text(stringResource(R.string.send_transaction))
+            Text(stringResource(Res.string.send_transaction))
         }
     }
 }

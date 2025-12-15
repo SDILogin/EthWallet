@@ -3,7 +3,6 @@ package me.sdi.ethwallet.ui.wallet
 import android.icu.text.NumberFormat
 import android.icu.util.Currency
 import android.widget.Toast
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,8 +45,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.PreviewFontScale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -57,9 +54,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.valentinilk.shimmer.shimmer
 import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.edit
+import me.sdi.ethwallet.resources.ic_question_mark_56
+import me.sdi.ethwallet.resources.wallet_manage_wallets
+import me.sdi.ethwallet.resources.wallet_receive
+import me.sdi.ethwallet.resources.wallet_send
+import me.sdi.ethwallet.resources.wallet_title
+import me.sdi.ethwallet.resources.wallet_tokens_erc20
 import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.ui.icon
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.androidx.compose.koinViewModel
 import java.math.BigDecimal
 
@@ -119,12 +127,12 @@ fun WalletScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.wallet_title)) },
+                title = { Text(stringResource(Res.string.wallet_title)) },
                 actions = {
                     IconButton(onClick = onManageWallets) {
                         Icon(
                             imageVector = Icons.Default.SwitchAccount,
-                            contentDescription = stringResource(R.string.wallet_manage_wallets),
+                            contentDescription = stringResource(Res.string.wallet_manage_wallets),
                         )
                     }
                 },
@@ -191,7 +199,7 @@ private fun ButtonsPanel(
             CircularButtonWithTitleShimmer()
         } else {
             CircularButtonWithTitle(
-                title = stringResource(R.string.wallet_receive),
+                title = stringResource(Res.string.wallet_receive),
                 icon = Icons.Default.ArrowDownward,
                 onClick = onReceiveClick,
             )
@@ -203,7 +211,7 @@ private fun ButtonsPanel(
             CircularButtonWithTitleShimmer()
         } else {
             CircularButtonWithTitle(
-                title = stringResource(R.string.wallet_send),
+                title = stringResource(Res.string.wallet_send),
                 icon = Icons.Default.ArrowOutward,
                 onClick = onSendButtonClick,
             )
@@ -323,7 +331,7 @@ private fun TokensCard(
             ) {
                 Box(Modifier.weight(1f)) {
                     BasicText(
-                        text = stringResource(R.string.wallet_tokens_erc20),
+                        text = stringResource(Res.string.wallet_tokens_erc20),
                         autoSize = TextAutoSize.StepBased(
                             minFontSize = 12.sp,
                             maxFontSize = 20.sp,
@@ -341,7 +349,7 @@ private fun TokensCard(
                     onClick = { onEditButtonClick() },
                 ) {
                     Text(
-                        stringResource(R.string.edit),
+                        stringResource(Res.string.edit),
                     )
                 }
             }
@@ -372,12 +380,11 @@ private fun TokenItem(
     tokenBalance: String,
     modifier: Modifier = Modifier,
 ) {
-    @DrawableRes
-    val tokenIcon: Int = remember(tokenAddress) {
+    val tokenIcon: DrawableResource = remember(tokenAddress) {
         val token = KnownTokens.entries.firstOrNull { knownToken ->
             knownToken.ethAddress == tokenAddress
         }
-        token?.icon ?: R.drawable.ic_question_mark_56
+        token?.icon ?: Res.drawable.ic_question_mark_56
     }
 
     Row(
@@ -426,7 +433,6 @@ private fun TotalBalanceShimmer(
             .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Main balance shimmer placeholder
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.6f)
@@ -437,7 +443,6 @@ private fun TotalBalanceShimmer(
                 ),
         )
         Spacer(modifier = Modifier.height(8.dp))
-        // ETH balance shimmer placeholder
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.4f)
@@ -511,7 +516,6 @@ private fun TokenItemShimmer(
         modifier = modifier.shimmer(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Token icon shimmer
         Box(
             modifier = Modifier
                 .size(48.dp)
@@ -524,7 +528,6 @@ private fun TokenItemShimmer(
         Spacer(modifier = Modifier.padding(horizontal = 8.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            // Token name shimmer
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.7f)
@@ -535,7 +538,6 @@ private fun TokenItemShimmer(
                     ),
             )
             Spacer(modifier = Modifier.height(4.dp))
-            // Token symbol shimmer
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.4f)
@@ -547,7 +549,6 @@ private fun TokenItemShimmer(
             )
         }
 
-        // Token balance shimmer
         Box(
             modifier = Modifier
                 .size(width = 80.dp, height = 20.dp)

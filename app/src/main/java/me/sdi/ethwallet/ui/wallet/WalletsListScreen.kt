@@ -42,7 +42,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewFontScale
@@ -58,7 +57,15 @@ import me.sdi.ethwallet.data.AndroidTempFileProvider
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.database.DatabaseBuilder
+import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.back
+import me.sdi.ethwallet.resources.error_something_went_wrong
+import me.sdi.ethwallet.resources.wallets_list_active_wallet_icon
+import me.sdi.ethwallet.resources.wallets_list_delete_wallet
+import me.sdi.ethwallet.resources.wallets_list_no_wallets
+import me.sdi.ethwallet.resources.wallets_list_title
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,12 +122,12 @@ private fun WalletsListScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.wallets_list_title)) },
+                title = { Text(stringResource(Res.string.wallets_list_title)) },
                 navigationIcon = {
                     IconButton(onClick = { onEvent(WalletsListEvent.OnBackPress) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Default.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
+                            contentDescription = stringResource(Res.string.back),
                         )
                     }
                 },
@@ -148,7 +155,7 @@ private fun WalletsListScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = stringResource(R.string.wallets_list_no_wallets),
+                        text = stringResource(Res.string.wallets_list_no_wallets),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
@@ -230,7 +237,7 @@ private fun WalletCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(R.string.wallets_list_active_wallet_icon),
+                            contentDescription = stringResource(Res.string.wallets_list_active_wallet_icon),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp),
                         )
@@ -258,7 +265,7 @@ private fun WalletCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.wallets_list_delete_wallet),
+                    contentDescription = stringResource(Res.string.wallets_list_delete_wallet),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }

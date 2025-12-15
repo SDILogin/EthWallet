@@ -48,7 +48,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewFontScale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -59,8 +58,22 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import me.sdi.ethwallet.R
+import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_confirm_button
+import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_dismiss_button
+import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_message
+import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_title
+import me.sdi.ethwallet.resources.create_wallet_error_title
+import me.sdi.ethwallet.resources.create_wallet_loading_message
+import me.sdi.ethwallet.resources.create_wallet_next_button_text
+import me.sdi.ethwallet.resources.create_wallet_recovery_phrase_copied_message
+import me.sdi.ethwallet.resources.create_wallet_recovery_phrase_instruction
+import me.sdi.ethwallet.resources.create_wallet_recovery_phrase_title
+import me.sdi.ethwallet.resources.create_wallet_security_warning
+import me.sdi.ethwallet.resources.create_wallet_title
+import me.sdi.ethwallet.resources.create_wallet_unknown_error_message
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.jetbrains.compose.resources.stringResource
 import java.net.SocketTimeoutException
 
 /**
@@ -81,7 +94,7 @@ fun CreateWalletScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.create_wallet_title)) },
+                title = { Text(stringResource(Res.string.create_wallet_title)) },
                 navigationIcon = {
                     IconButton(onClick = onUpButtonClick) {
                         Icon(
@@ -164,7 +177,7 @@ private fun LoadingState() {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = stringResource(R.string.create_wallet_loading_message))
+            Text(text = stringResource(Res.string.create_wallet_loading_message))
         }
     }
 }
@@ -177,12 +190,12 @@ private fun ContentState(
 ) {
     val scope = rememberCoroutineScope()
     var showConfirmationDialog by remember { mutableStateOf(false) }
-    val copiedMessage = stringResource(R.string.create_wallet_recovery_phrase_copied_message)
+    val copiedMessage = stringResource(Res.string.create_wallet_recovery_phrase_copied_message)
     if (showConfirmationDialog) {
         AlertDialog(
             onDismissRequest = { showConfirmationDialog = false },
-            title = { Text(stringResource(R.string.create_wallet_confirmation_dialog_title)) },
-            text = { Text(stringResource(R.string.create_wallet_confirmation_dialog_message)) },
+            title = { Text(stringResource(Res.string.create_wallet_confirmation_dialog_title)) },
+            text = { Text(stringResource(Res.string.create_wallet_confirmation_dialog_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -190,7 +203,7 @@ private fun ContentState(
                         onMnemonicSaved()
                     },
                 ) {
-                    Text(stringResource(R.string.create_wallet_confirmation_dialog_confirm_button))
+                    Text(stringResource(Res.string.create_wallet_confirmation_dialog_confirm_button))
                 }
             },
             dismissButton = {
@@ -199,7 +212,7 @@ private fun ContentState(
                         showConfirmationDialog = false
                     },
                 ) {
-                    Text(stringResource(R.string.create_wallet_confirmation_dialog_dismiss_button))
+                    Text(stringResource(Res.string.create_wallet_confirmation_dialog_dismiss_button))
                 }
             },
         )
@@ -215,7 +228,7 @@ private fun ContentState(
     ) {
         Spacer(modifier = Modifier.weight(1f))
         BasicText(
-            text = stringResource(R.string.create_wallet_recovery_phrase_title),
+            text = stringResource(Res.string.create_wallet_recovery_phrase_title),
             style = MaterialTheme.typography.headlineMedium.copy(
                 color = MaterialTheme.colorScheme.onBackground,
             ),
@@ -226,7 +239,7 @@ private fun ContentState(
 
         BasicText(
             modifier = Modifier.widthIn(max = 420.dp),
-            text = stringResource(R.string.create_wallet_recovery_phrase_instruction),
+            text = stringResource(Res.string.create_wallet_recovery_phrase_instruction),
             style = MaterialTheme.typography.bodyMedium.copy(
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -277,7 +290,7 @@ private fun NextButton(onClick: () -> Unit) {
         shape = RoundedCornerShape(16.dp),
     ) {
         Text(
-            text = stringResource(R.string.create_wallet_next_button_text),
+            text = stringResource(Res.string.create_wallet_next_button_text),
             style = MaterialTheme.typography.labelLarge,
         )
     }
@@ -309,7 +322,7 @@ private fun SecurityWarning() {
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = stringResource(R.string.create_wallet_security_warning),
+                text = stringResource(Res.string.create_wallet_security_warning),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
@@ -328,7 +341,7 @@ private fun ErrorState(throwable: Throwable) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringResource(R.string.create_wallet_error_title),
+            text = stringResource(Res.string.create_wallet_error_title),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.error,
         )
@@ -336,7 +349,7 @@ private fun ErrorState(throwable: Throwable) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = throwable.message ?: stringResource(R.string.create_wallet_unknown_error_message),
+            text = throwable.message ?: stringResource(Res.string.create_wallet_unknown_error_message),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
         )
