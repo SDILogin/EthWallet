@@ -99,9 +99,6 @@ dependencies {
     // Koin
     implementation(libs.koin.androidx.compose)
 
-    // Shimmer
-    implementation(libs.compose.shimmer)
-
     // ZXing QR Code Generation
     implementation(libs.core)
 
