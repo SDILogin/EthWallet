@@ -1,0 +1,69 @@
+package me.sdi.ethwallet.di
+
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.serialization.json.Json
+import me.sdi.ethwallet.core.BalanceProvider
+import me.sdi.ethwallet.core.CryptocompareFiatRateProvider
+import me.sdi.ethwallet.core.EthBalanceProvider
+import me.sdi.ethwallet.core.FiatRateProvider
+import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
+import me.sdi.ethwallet.data.UserActivityManager
+import me.sdi.ethwallet.data.repository.WalletRepository
+import org.koin.core.module.Module
+import org.koin.dsl.module
+import me.sdi.ethwallet.Logger as WalletLogger
+
+expect fun platformModule(): Module
+
+val commonModule = module {
+    single<CoroutineScope> { CoroutineScope(SupervisorJob()) }
+
+    single<WalletRepository> {
+        WalletRepository(
+            walletDao = get(),
+            walletCreator = get(),
+            privateKeyEncryptor = get(),
+        )
+    }
+
+    single<UserActivityManager> {
+        ProcessLifetimeUserActivityManager(
+            walletRepository = get(),
+            applicationScope = get(),
+        )
+    }
+
+    factory<BalanceProvider> { EthBalanceProvider(get(), get()) }
+    factory<FiatRateProvider> { CryptocompareFiatRateProvider(get(), get()) }
+}
+
+fun createHttpClient(engine: io.ktor.client.engine.HttpClientEngine): HttpClient {
+    return HttpClient(engine) {
+        install(ContentNegotiation) {
+            json(
+                Json {
+                    prettyPrint = true
+                    isLenient = true
+                    ignoreUnknownKeys = true
+                },
+            )
+        }
+        install(Logging) {
+            logger = object : Logger {
+                override fun log(message: String) {
+                    WalletLogger.debug("KtorHttpClient") { message }
+                }
+            }
+            level = LogLevel.ALL
+        }
+    }
+}
+
+fun appModules(): List<Module> = listOf(commonModule, platformModule())

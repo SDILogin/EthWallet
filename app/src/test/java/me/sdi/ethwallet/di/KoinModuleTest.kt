@@ -11,8 +11,8 @@ import org.koin.test.verify.verify
 class KoinModuleTest {
     @OptIn(KoinExperimentalAPI::class)
     @Test
-    fun checkAllModules() {
-        appModule.verify(
+    fun checkViewModelsModule() {
+        viewModelsModule.verify(
             injections = injectedParameters(
                 definition<HttpClient>(HttpClientEngine::class),
             ),

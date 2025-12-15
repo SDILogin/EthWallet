@@ -57,6 +57,8 @@ kotlin {
 
                 // Koin
                 implementation(libs.koin.core)
+                implementation(libs.koin.compose)
+                implementation(libs.koin.compose.viewmodel)
 
                 // Room
                 implementation(libs.androidx.room.runtime)

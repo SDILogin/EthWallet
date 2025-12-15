@@ -55,6 +55,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlin {
         compilerOptions {
@@ -64,15 +65,22 @@ android {
     buildFeatures {
         compose = true
     }
-    packagingOptions {
-        resources.excludes.add("META-INF/INDEX.LIST")
-        resources.excludes.add("META-INF/DEPENDENCIES")
-        resources.excludes.add("META-INF/FastDoubleParser-LICENSE")
-        resources.excludes.add("META-INF/FastDoubleParser-NOTICE")
+    packaging {
+        resources {
+            excludes += setOf(
+                "META-INF/INDEX.LIST",
+                "META-INF/DEPENDENCIES",
+                "META-INF/FastDoubleParser-LICENSE",
+                "META-INF/FastDoubleParser-NOTICE",
+                "META-INF/io.netty.versions.properties",
+            )
+        }
     }
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
     implementation(project(":shared"))
     implementation(libs.compose.resources)
     implementation(libs.androidx.core.ktx)
@@ -96,8 +104,8 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.datastore.preferences.core)
 
-    // Koin
-    implementation(libs.koin.androidx.compose)
+    // Koin - provided by shared module via koin-compose and koin-compose-viewmodel
+    implementation(libs.koin.android)
 
     // ZXing QR Code Generation
     implementation(libs.core)
@@ -121,7 +129,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.ktor.client.mock)
-    testImplementation(libs.koin.test.junit4)
+    testImplementation(libs.koin.test)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
