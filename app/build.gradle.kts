@@ -55,7 +55,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        isCoreLibraryDesugaringEnabled = true
     }
     kotlin {
         compilerOptions {
@@ -79,8 +78,6 @@ android {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-
     implementation(project(":shared"))
     implementation(libs.compose.resources)
     implementation(libs.androidx.core.ktx)
@@ -104,8 +101,10 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.datastore.preferences.core)
 
-    // Koin - provided by shared module via koin-compose and koin-compose-viewmodel
+    // Koin
+    implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
+    implementation(libs.koin.androidx.compose)
 
     // ZXing QR Code Generation
     implementation(libs.core)

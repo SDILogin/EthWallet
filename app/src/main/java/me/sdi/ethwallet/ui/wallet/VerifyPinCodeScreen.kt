@@ -46,7 +46,7 @@ import me.sdi.ethwallet.resources.pin_forgot
 import me.sdi.ethwallet.resources.pin_locked_subtitle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.viewmodel.koinViewModel
+import org.koin.androidx.compose.koinViewModel
 
 /**
  * Events that can be handled by the VerifyPinCodeViewModel.

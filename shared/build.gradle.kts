@@ -101,6 +101,7 @@ kotlin {
 dependencies {
     add("kspAndroid", libs.androidx.room.compiler)
     add("kspDesktop", libs.androidx.room.compiler)
+    add("commonMainApi", platform(libs.koin.bom))
 }
 
 android {
