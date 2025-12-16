@@ -1,6 +1,5 @@
 package me.sdi.ethwallet.ui.wallet
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -483,7 +482,7 @@ private fun TokenItemShimmer() {
                     .fillMaxWidth(0.7f)
                     .height(20.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .shimmer()
+                    .shimmer(),
             )
             Spacer(modifier = Modifier.height(4.dp))
             Box(
@@ -491,7 +490,7 @@ private fun TokenItemShimmer() {
                     .fillMaxWidth(0.4f)
                     .height(16.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .shimmer()
+                    .shimmer(),
             )
         }
 
@@ -499,7 +498,7 @@ private fun TokenItemShimmer() {
             modifier = Modifier
                 .size(width = 80.dp, height = 20.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .shimmer()
+                .shimmer(),
         )
     }
 }
