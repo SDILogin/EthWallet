@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -73,7 +74,7 @@ fun EthWalletApp(
                 ) {
                     entry<Destination.OnBoardingScreen> {
                         OnboardingScreen(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().systemBarsPadding(),
                             onImportWallet = {
                                 navigator.navigate(Destination.ImportWalletScreen)
                             },
@@ -85,7 +86,7 @@ fun EthWalletApp(
 
                     entry<Destination.CreateWalletScreen> {
                         CreateWalletScreen(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().systemBarsPadding(),
                             onUpButtonClick = { navigator.goBack() },
                             onMnemonicSaved = {
                                 navigator.navigate(Destination.SetPinCodeScreen)
@@ -95,7 +96,7 @@ fun EthWalletApp(
 
                     entry<Destination.ImportWalletScreen> {
                         ImportWalletScreen(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().systemBarsPadding(),
                             onUpButtonClick = { navigator.goBack() },
                             onWalletImported = {
                                 navigator.navigate(Destination.SetPinCodeScreen)
