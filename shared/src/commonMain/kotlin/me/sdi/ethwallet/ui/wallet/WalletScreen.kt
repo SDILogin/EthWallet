@@ -61,6 +61,7 @@ import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -238,29 +239,22 @@ private fun CircularButtonWithTitle(
 }
 
 @Composable
-private fun CircularButtonWithTitleShimmer(
-    modifier: Modifier = Modifier,
-) {
+private fun CircularButtonWithTitleShimmer() {
     Column(
-        modifier = modifier.shimmer(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
-                    shape = CircleShape,
-                ),
+                .clip(CircleShape)
+                .shimmer(),
         )
         Spacer(modifier = Modifier.height(8.dp))
         Box(
             modifier = Modifier
                 .size(width = 60.dp, height = 16.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(4.dp),
-                ),
+                .clip(RoundedCornerShape(8.dp))
+                .shimmer(),
         )
     }
 }
@@ -416,39 +410,30 @@ private fun TotalBalanceShimmer(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .shimmer()
-            .fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.6f)
+                .clip(RoundedCornerShape(8.dp))
                 .height(56.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(8.dp),
-                ),
+                .shimmer(),
         )
         Spacer(modifier = Modifier.height(8.dp))
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.4f)
+                .clip(RoundedCornerShape(8.dp))
                 .height(24.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(6.dp),
-                ),
+                .shimmer(),
         )
     }
 }
 
 @Composable
-private fun TokensCardShimmer(
-    modifier: Modifier = Modifier,
-) {
+private fun TokensCardShimmer() {
     Card(
-        modifier = modifier.shimmer(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -458,37 +443,16 @@ private fun TokensCardShimmer(
         Column(
             modifier = Modifier.padding(8.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(32.dp)
-                        .padding(16.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(6.dp),
-                        ),
-                )
-
-                Box(
-                    modifier = Modifier
-                        .size(width = 60.dp, height = 32.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(16.dp),
-                        ),
-                )
-            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .size(width = 60.dp, height = 32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .shimmer(),
+            )
 
             repeat(3) {
-                TokenItemShimmer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                )
+                TokenItemShimmer()
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -497,20 +461,18 @@ private fun TokensCardShimmer(
 }
 
 @Composable
-private fun TokenItemShimmer(
-    modifier: Modifier = Modifier,
-) {
+private fun TokenItemShimmer() {
     Row(
-        modifier = modifier.shimmer(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(24.dp),
-                ),
+                .clip(CircleShape)
+                .shimmer(),
         )
 
         Spacer(modifier = Modifier.padding(horizontal = 8.dp))
@@ -520,30 +482,86 @@ private fun TokenItemShimmer(
                 modifier = Modifier
                     .fillMaxWidth(0.7f)
                     .height(20.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(4.dp),
-                    ),
+                    .clip(RoundedCornerShape(8.dp))
+                    .shimmer()
             )
             Spacer(modifier = Modifier.height(4.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.4f)
                     .height(16.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(4.dp),
-                    ),
+                    .clip(RoundedCornerShape(8.dp))
+                    .shimmer()
             )
         }
 
         Box(
             modifier = Modifier
                 .size(width = 80.dp, height = 20.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(4.dp),
+                .clip(RoundedCornerShape(8.dp))
+                .shimmer()
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun WalletScreenContentPreview() {
+    MaterialTheme {
+        WalletScreenContent(
+            viewState = WalletViewState(
+                totalBalanceUsd = "$12,345.67",
+                totalBalanceEth = "5.234 ETH",
+                favoriteTokens = listOf(
+                    FavoriteToken(
+                        address = KnownTokens.USDT.ethAddress,
+                        name = "Tether USD",
+                        ticker = "USDT",
+                        amount = "1,250.00",
+                        usdValue = java.math.BigDecimal("1250.00"),
+                        usdValueFormatted = "$1,250.00",
+                    ),
+                    FavoriteToken(
+                        address = KnownTokens.USDC.ethAddress,
+                        name = "USD Coin",
+                        ticker = "USDC",
+                        amount = "500.00",
+                        usdValue = java.math.BigDecimal("500.00"),
+                        usdValueFormatted = "$500.00",
+                    ),
+                    FavoriteToken(
+                        address = KnownTokens.DAI.ethAddress,
+                        name = "Dai Stablecoin",
+                        ticker = "DAI",
+                        amount = "750.50",
+                        usdValue = java.math.BigDecimal("750.50"),
+                        usdValueFormatted = "$750.50",
+                    ),
                 ),
+                isLoading = false,
+            ),
+            onManageWallets = {},
+            onEditButtonClick = {},
+            onTokenClick = {},
+            onReceiveButtonClick = {},
+            onSendButtonClick = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun WalletScreenContentShimmerPreview() {
+    MaterialTheme {
+        WalletScreenContent(
+            viewState = WalletViewState(
+                isLoading = true,
+            ),
+            onManageWallets = {},
+            onEditButtonClick = {},
+            onTokenClick = {},
+            onReceiveButtonClick = {},
+            onSendButtonClick = {},
         )
     }
 }
