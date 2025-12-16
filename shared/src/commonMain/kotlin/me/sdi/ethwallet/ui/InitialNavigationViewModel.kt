@@ -13,10 +13,11 @@ import me.sdi.ethwallet.database.dao.WalletDao
 
 /**
  * Represents the initial route the app should navigate to.
+ * Note: SetPinCode is not an initial route - it's shown via explicit navigation
+ * after wallet creation in onboarding flow.
  */
 enum class InitialRoute {
     OnBoarding,
-    SetPinCode,
     VerifyPinCode,
 }
 
@@ -43,22 +44,29 @@ class InitialNavigationViewModel(
         viewModelScope.launch {
             try {
                 val wallets = walletDao.getAllWallets()
-                val hasPin = pinCodeStorage.hasPinCode()
 
-                val initialRoute = when {
-                    wallets.isEmpty() -> InitialRoute.OnBoarding
-                    !hasPin -> InitialRoute.SetPinCode
-                    else -> InitialRoute.VerifyPinCode
+                val initialRoute = if (wallets.isEmpty()) {
+                    // No wallets - clear any stale PIN and show onboarding
+                    pinCodeStorage.clearPinCode()
+                    InitialRoute.OnBoarding
+                } else if (pinCodeStorage.hasPinCode()) {
+                    // Wallets exist and PIN is set - show unlock screen
+                    InitialRoute.VerifyPinCode
+                } else {
+                    // Wallets exist but no PIN - invalid state, clear and restart
+                    InitialRoute.OnBoarding
                 }
 
                 _state.value = InitialNavigationState(
                     numberOfWallets = wallets.size,
-                    isPinCodeSet = hasPin,
+                    isPinCodeSet = initialRoute == InitialRoute.VerifyPinCode,
                     initialRoute = initialRoute,
                 )
             } catch (e: Exception) {
                 ensureActive()
                 Logger.warn("Db") { e.stackTraceToString() }
+
+                runCatching { pinCodeStorage.clearPinCode() }
 
                 _state.value = InitialNavigationState(
                     numberOfWallets = 0,

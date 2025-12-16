@@ -50,7 +50,6 @@ fun EthWalletApp(
         ) {
             val startDestination: Destination = when (state.initialRoute) {
                 InitialRoute.OnBoarding -> Destination.OnBoardingScreen
-                InitialRoute.SetPinCode -> Destination.SetPinCodeScreen
                 InitialRoute.VerifyPinCode -> Destination.VerifyPinCodeScreen
                 null -> Destination.OnBoardingScreen
             }

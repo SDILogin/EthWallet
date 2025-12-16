@@ -1,7 +1,10 @@
 package me.sdi.ethwallet
 
 import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -32,10 +35,10 @@ class InitialNavigationViewModelTest {
     }
 
     @Test
-    fun `should load wallet count and set onboarding initial route when no wallets`() =
+    fun `should clear pin and show onboarding when no wallets`() =
         runTest {
             coEvery { walletDao.getAllWallets() } returns emptyList()
-            coEvery { pinCodeStorage.hasPinCode() } returns false
+            coEvery { pinCodeStorage.clearPinCode() } just runs
 
             viewModel = InitialNavigationViewModel(walletDao, pinCodeStorage)
             advanceUntilIdle()
@@ -44,6 +47,8 @@ class InitialNavigationViewModelTest {
             assertEquals(0, state.numberOfWallets)
             assertEquals(false, state.isPinCodeSet)
             assertEquals(InitialRoute.OnBoarding, state.initialRoute)
+
+            coVerify { pinCodeStorage.clearPinCode() }
 
             // Backward compatibility check
             assertEquals(0, viewModel.numberOfWallets.first())
@@ -82,7 +87,7 @@ class InitialNavigationViewModelTest {
         }
 
     @Test
-    fun `should set SetPinCodeScreen as initial route when wallets exist but no pin`() =
+    fun `should show onboarding when wallets exist but no pin (invalid state)`() =
         runTest {
             val wallets =
                 listOf(
@@ -102,23 +107,25 @@ class InitialNavigationViewModelTest {
             val state = viewModel.state.first()
             assertEquals(1, state.numberOfWallets)
             assertEquals(false, state.isPinCodeSet)
-            assertEquals(InitialRoute.SetPinCode, state.initialRoute)
+            assertEquals(InitialRoute.OnBoarding, state.initialRoute)
         }
 
     @Test
-    fun `should handle exceptions and set wallet count to 0 with onboarding route`() =
+    fun `should handle exceptions clear pin and set onboarding route`() =
         runTest {
             val exception = RuntimeException("Database error")
             coEvery { walletDao.getAllWallets() } throws exception
-            coEvery { pinCodeStorage.hasPinCode() } returns false // This shouldn't be called due to exception
+            coEvery { pinCodeStorage.clearPinCode() } just runs
 
             viewModel = InitialNavigationViewModel(walletDao, pinCodeStorage)
-            advanceUntilIdle() // Let coroutines complete
+            advanceUntilIdle()
 
             val state = viewModel.state.first()
             assertEquals(0, state.numberOfWallets)
             assertEquals(false, state.isPinCodeSet)
             assertEquals(InitialRoute.OnBoarding, state.initialRoute)
+
+            coVerify { pinCodeStorage.clearPinCode() }
 
             // Backward compatibility check
             assertEquals(0, viewModel.numberOfWallets.first())
