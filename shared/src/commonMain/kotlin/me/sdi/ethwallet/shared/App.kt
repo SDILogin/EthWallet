@@ -1,15 +1,18 @@
 package me.sdi.ethwallet.shared
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import me.sdi.ethwallet.ui.OnboardingScreen
+import me.sdi.ethwallet.ui.theme.EthWalletTheme
 
 @Composable
 fun App() {
-    MaterialTheme {
-        Column {
-            Text(text = "Hello from KMP Shared UI! (Desktop & Android)")
-        }
+    EthWalletTheme {
+        OnboardingScreen(
+            modifier = Modifier.fillMaxSize(),
+            onCreateWallet = {},
+            onImportWallet = {},
+        )
     }
 }

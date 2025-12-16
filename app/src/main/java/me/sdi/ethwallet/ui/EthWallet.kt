@@ -31,6 +31,7 @@ import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
+import me.sdi.ethwallet.ui.OnboardingScreen as SharedOnboardingScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +70,7 @@ fun EthWallet(
                     },
                 ) {
                     entry<Destination.OnBoardingScreen> {
-                        OnboardingScreen(
+                        SharedOnboardingScreen(
                             modifier = Modifier.fillMaxSize(),
                             onImportWallet = {
                                 navigator.navigate(Destination.ImportWalletScreen)
