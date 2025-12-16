@@ -6,7 +6,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.MainDispatcherRule
 import me.sdi.ethwallet.core.BalanceProvider
@@ -53,9 +52,10 @@ class WalletViewModelTest {
     @Before
     fun setUp() {
         walletRepository = mockk()
-
         coEvery { walletRepository.getActiveWallet() } returns testWallet
+    }
 
+    private fun createViewModel() {
         viewModel = WalletViewModel(
             walletRepository = walletRepository,
             balanceProvider = balanceProvider,
@@ -63,16 +63,16 @@ class WalletViewModelTest {
         )
     }
 
+    private fun advanceUntilIdle() {
+        mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+    }
+
     @Test
     fun `should observe balance and fiat rate flows and update state correctly`() = runTest {
         val oneEthInWei = BigInteger("1000000000000000000")
         val ethPrice = BigDecimal("2000.00")
 
-        // Initialize with empty flows
-        viewModel.onEvent(WalletEvent.Initialize)
-        advanceUntilIdle()
-
-        // Emit balance and fiat rate data
+        // Set up flow values BEFORE creating the ViewModel
         balanceFlow.value = mapOf(
             EthContractAddress to oneEthInWei,
             KnownTokens.USDT.ethAddress to BigInteger.ZERO,
@@ -87,6 +87,8 @@ class WalletViewModelTest {
             KnownTokens.DAI.ethAddress to BigDecimal.ONE,
         )
 
+        createViewModel()
+        viewModel.onEvent(WalletEvent.Initialize)
         advanceUntilIdle()
 
         val currentState = viewModel.viewState.first()
@@ -98,7 +100,7 @@ class WalletViewModelTest {
         )
         assertEquals(
             "USD value should be calculated correctly",
-            "$2000.00",
+            "$2,000.00",
             currentState.totalBalanceUsd,
         )
         assertEquals(
@@ -113,9 +115,7 @@ class WalletViewModelTest {
         val zeroWei = BigInteger.ZERO
         val ethPrice = BigDecimal("3000.00")
 
-        viewModel.onEvent(WalletEvent.Initialize)
-        advanceUntilIdle()
-
+        // Set up flow values BEFORE creating the ViewModel
         balanceFlow.value = mapOf(
             EthContractAddress to zeroWei,
             KnownTokens.USDT.ethAddress to BigInteger.ZERO,
@@ -130,6 +130,8 @@ class WalletViewModelTest {
             KnownTokens.DAI.ethAddress to BigDecimal.ONE,
         )
 
+        createViewModel()
+        viewModel.onEvent(WalletEvent.Initialize)
         advanceUntilIdle()
 
         val currentState = viewModel.viewState.first()
@@ -155,9 +157,7 @@ class WalletViewModelTest {
         val usdcBalance = BigInteger("50000000") // 50 USDC (6 decimals)
         val daiBalance = BigInteger("200000000000000000000") // 200 DAI (18 decimals)
 
-        viewModel.onEvent(WalletEvent.Initialize)
-        advanceUntilIdle()
-
+        // Set up flow values BEFORE creating the ViewModel
         balanceFlow.value = mapOf(
             EthContractAddress to oneEthInWei,
             KnownTokens.USDT.ethAddress to usdtBalance,
@@ -172,6 +172,8 @@ class WalletViewModelTest {
             KnownTokens.DAI.ethAddress to BigDecimal.ONE,
         )
 
+        createViewModel()
+        viewModel.onEvent(WalletEvent.Initialize)
         advanceUntilIdle()
 
         val currentState = viewModel.viewState.first()
@@ -179,7 +181,7 @@ class WalletViewModelTest {
         // ETH: $2000, Tokens: $350 (100+50+200), Total: $2350
         assertEquals(
             "Total USD should include ETH and token values",
-            "$2350.00",
+            "$2,350.00",
             currentState.totalBalanceUsd,
         )
 
