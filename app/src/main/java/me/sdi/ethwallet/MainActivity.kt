@@ -10,7 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.database.DatabaseBuilder
-import me.sdi.ethwallet.ui.EthWallet
+import me.sdi.ethwallet.ui.EthWalletApp
 import me.sdi.ethwallet.ui.InitialNavigationViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
         }
 
         enableEdgeToEdge()
-        setContent { EthWallet(viewModel, userActivityManager) }
+        setContent { EthWalletApp(viewModel, userActivityManager) }
     }
 
     override fun onUserInteraction() {

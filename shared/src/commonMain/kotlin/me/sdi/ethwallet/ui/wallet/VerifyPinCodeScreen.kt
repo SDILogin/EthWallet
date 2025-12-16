@@ -26,17 +26,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.PreviewFontScale
-import androidx.compose.ui.tooling.preview.PreviewLightDark
-import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.tooling.preview.PreviewParameterProvider
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.delete
 import me.sdi.ethwallet.resources.pin_attempts_remaining
@@ -44,29 +39,8 @@ import me.sdi.ethwallet.resources.pin_enter_subtitle
 import me.sdi.ethwallet.resources.pin_enter_title
 import me.sdi.ethwallet.resources.pin_forgot
 import me.sdi.ethwallet.resources.pin_locked_subtitle
-import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.stringResource
-import org.koin.androidx.compose.koinViewModel
-
-/**
- * Events that can be handled by the VerifyPinCodeViewModel.
- */
-sealed interface VerifyPinCodeEvent {
-    /**
-     * User clicked a digit button
-     */
-    data class OnDigitClick(val digit: Int) : VerifyPinCodeEvent
-
-    /**
-     * User clicked the delete button
-     */
-    data object OnDeleteClick : VerifyPinCodeEvent
-
-    /**
-     * User clicked the logout button
-     */
-    data object OnLogoutClick : VerifyPinCodeEvent
-}
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun VerifyPinCodeScreen(
@@ -87,7 +61,7 @@ fun VerifyPinCodeScreen(
         }
     }
 
-    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
+    val viewState by viewModel.viewState.collectAsState()
     VerifyPinCodeScreen(
         viewState = viewState,
         onEvent = viewModel::onEvent,
@@ -188,7 +162,7 @@ private fun VerifyPinCodeScreen(
                     )
                 }
 
-                NumberPad(
+                VerifyNumberPad(
                     onNumberClick = { number ->
                         onEvent(VerifyPinCodeEvent.OnDigitClick(number))
                     },
@@ -204,7 +178,7 @@ private fun VerifyPinCodeScreen(
 }
 
 @Composable
-private fun NumberPad(
+private fun VerifyNumberPad(
     onNumberClick: (Int) -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -272,39 +246,5 @@ private fun NumberPad(
                 )
             }
         }
-    }
-}
-
-private class VerifyPinCodeScreenPreviewParameter : PreviewParameterProvider<VerifyPinCodeViewState> {
-    override val values = sequenceOf(
-        VerifyPinCodeViewState(
-            enteredPin = "123",
-            errorMessage = "Incorrect PIN code",
-            remainingAttempts = 2,
-        ),
-        VerifyPinCodeViewState(
-            enteredPin = "",
-            errorMessage = "Too many failed attempts",
-            remainingAttempts = 0,
-            isLocked = true,
-            lockCountdown = 30,
-        ),
-    )
-}
-
-@Composable
-@PreviewLightDark
-@PreviewFontScale
-@PreviewScreenSizes
-private fun PreviewVerifyPinCodeScreen(
-    @PreviewParameter(VerifyPinCodeScreenPreviewParameter::class)
-    viewState: VerifyPinCodeViewState,
-) {
-    EthWalletTheme {
-        VerifyPinCodeScreen(
-            viewState = viewState,
-            onEvent = { /* Handle event */ },
-            modifier = Modifier.fillMaxSize(),
-        )
     }
 }

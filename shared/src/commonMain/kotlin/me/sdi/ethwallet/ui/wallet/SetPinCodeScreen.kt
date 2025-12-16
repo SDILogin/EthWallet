@@ -32,19 +32,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.PreviewFontScale
-import androidx.compose.ui.tooling.preview.PreviewLightDark
-import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.delete
 import me.sdi.ethwallet.resources.pin_confirm_subtitle
@@ -52,9 +48,8 @@ import me.sdi.ethwallet.resources.pin_confirm_title
 import me.sdi.ethwallet.resources.pin_create_subtitle
 import me.sdi.ethwallet.resources.pin_create_title
 import me.sdi.ethwallet.resources.pin_reset
-import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.stringResource
-import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun PinCodeInput(
@@ -196,7 +191,7 @@ fun SetPinCodeScreen(
     modifier: Modifier = Modifier,
     viewModel: SetPinCodeViewModel = koinViewModel(),
 ) {
-    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
+    val viewState by viewModel.viewState.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
@@ -305,52 +300,5 @@ private fun SetPinCodeScreen(
                 modifier = Modifier.padding(bottom = 32.dp),
             )
         }
-    }
-}
-
-class ViewStatePreviewParameterProvider :
-    androidx.compose.ui.tooling.preview.PreviewParameterProvider<SetPinCodeViewState> {
-    override val values = sequenceOf(
-        SetPinCodeViewState(
-            isConfirmationMode = false,
-            firstPin = "",
-            secondPin = "",
-            errorMessage = null,
-        ),
-        SetPinCodeViewState(
-            isConfirmationMode = false,
-            firstPin = "1234",
-            secondPin = "",
-            errorMessage = null,
-        ),
-        SetPinCodeViewState(
-            isConfirmationMode = true,
-            firstPin = "123456",
-            secondPin = "12345",
-            errorMessage = "PINs do not match",
-        ),
-        SetPinCodeViewState(
-            isConfirmationMode = true,
-            firstPin = "123456",
-            secondPin = "123456",
-            errorMessage = null,
-        ),
-    )
-}
-
-@Composable
-@PreviewLightDark
-@PreviewFontScale
-@PreviewScreenSizes
-private fun PreviewSetPinCodeScreen(
-    @PreviewParameter(ViewStatePreviewParameterProvider::class)
-    viewState: SetPinCodeViewState,
-) {
-    EthWalletTheme {
-        SetPinCodeScreen(
-            viewState = viewState,
-            modifier = Modifier.fillMaxSize(),
-            onEvent = { },
-        )
     }
 }

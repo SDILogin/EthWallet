@@ -1,6 +1,5 @@
 package me.sdi.ethwallet.ui.wallet
 
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -41,22 +40,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.PreviewFontScale
-import androidx.compose.ui.tooling.preview.PreviewLightDark
-import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
-import me.sdi.ethwallet.R
-import me.sdi.ethwallet.core.EthAddress
-import me.sdi.ethwallet.core.FileBasedEthWalletCreator
-import me.sdi.ethwallet.core.security.KeyStoreEncryptor
-import me.sdi.ethwallet.data.AndroidTempFileProvider
 import me.sdi.ethwallet.data.repository.EthWallet
-import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.database.DatabaseBuilder
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.error_something_went_wrong
@@ -64,8 +51,9 @@ import me.sdi.ethwallet.resources.wallets_list_active_wallet_icon
 import me.sdi.ethwallet.resources.wallets_list_delete_wallet
 import me.sdi.ethwallet.resources.wallets_list_no_wallets
 import me.sdi.ethwallet.resources.wallets_list_title
-import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,33 +61,20 @@ fun WalletsListScreen(
     modifier: Modifier = Modifier,
     navigateToOnboarding: () -> Unit,
     navigateToWalletDetails: () -> Unit,
+    viewModel: WalletsListViewModel = koinViewModel(),
 ) {
-    val applicationContext = LocalContext.current.applicationContext
-    val viewModel =
-        remember {
-            val database = DatabaseBuilder.getInstance(applicationContext)
-            val walletDao = database.walletDao()
-            val tempFileProvider = AndroidTempFileProvider(applicationContext)
-            val ethWalletCreator = FileBasedEthWalletCreator(tempFileProvider)
-            val keyStoreEncryptor = KeyStoreEncryptor()
-            val walletRepository = WalletRepository(walletDao, ethWalletCreator, keyStoreEncryptor)
-            WalletsListViewModel(walletRepository)
-        }
-
     val uiState by viewModel.uiState.collectAsState()
+    val toastManager = rememberToastManager()
+    val errorMessage = stringResource(Res.string.error_something_went_wrong)
+
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
             when (news) {
                 WalletScreenNews.NavigateToOnBoarding -> navigateToOnboarding()
                 WalletScreenNews.NavigateToWalletDetails -> navigateToWalletDetails()
                 is WalletScreenNews.ShowErrorMessage -> {
-                    val message =
-                        news.error
-                            .localizedMessage
-                            .takeIf { message -> !message.isNullOrBlank() }
-                            ?: applicationContext.getString(R.string.error_something_went_wrong)
-
-                    Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
+                    val message = news.error.message?.takeIf { it.isNotBlank() } ?: errorMessage
+                    toastManager.showToast(message)
                 }
             }
         }
@@ -108,12 +83,12 @@ fun WalletsListScreen(
     LaunchedEffect(viewModel) {
         viewModel.onEvent(WalletsListEvent.Start)
     }
-    WalletsListScreen(modifier, uiState, viewModel::onEvent)
+    WalletsListScreenContent(modifier, uiState, viewModel::onEvent)
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun WalletsListScreen(
+private fun WalletsListScreenContent(
     modifier: Modifier,
     uiState: WalletsListUiState,
     onEvent: (WalletsListEvent) -> Unit,
@@ -270,48 +245,5 @@ private fun WalletCard(
                 )
             }
         }
-    }
-}
-
-private class UiStateProvider : PreviewParameterProvider<WalletsListUiState> {
-    override val values =
-        sequenceOf(
-            WalletsListUiState(
-                otherWallets = listOf(),
-                isLoading = false,
-            ),
-            WalletsListUiState(
-                activeWallet = EthWallet(
-                    address = EthAddress("0x71C7656EC7ab88b11223efB751B7403333133326F"),
-                    label = "My Wallet",
-                ),
-                otherWallets =
-                    listOf(
-                        EthWallet(
-                            address = EthAddress("0x71C7656EC7ab88b11223efB751B7403333133326F"),
-                            label = "Other wallet #1",
-                        ),
-                        EthWallet(
-                            address = EthAddress("0x71C7656EC7ab88b11223efB751B7403333133326F"),
-                            label = "Other wallet #2",
-                        ),
-                    ),
-                isLoading = false,
-            ),
-            WalletsListUiState(
-                otherWallets = emptyList(),
-                isLoading = true,
-            ),
-        )
-}
-
-@Composable
-@PreviewLightDark
-@PreviewFontScale
-private fun WalletsListScreenPreview(
-    @PreviewParameter(UiStateProvider::class) uiState: WalletsListUiState,
-) {
-    EthWalletTheme {
-        WalletsListScreen(Modifier.fillMaxSize(), uiState) {}
     }
 }

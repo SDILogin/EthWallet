@@ -10,10 +10,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
@@ -30,18 +30,17 @@ import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
-import me.sdi.ethwallet.ui.OnboardingScreen as SharedOnboardingScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EthWallet(
+fun EthWalletApp(
     viewModel: InitialNavigationViewModel,
     userActivityManager: UserActivityManager,
 ) {
     EthWalletTheme {
-        val state by viewModel.state.collectAsStateWithLifecycle()
+        val state by viewModel.state.collectAsState()
 
-        val showLockScreen by userActivityManager.showLockScreen.collectAsStateWithLifecycle()
+        val showLockScreen by userActivityManager.showLockScreen.collectAsState()
 
         AnimatedVisibility(
             modifier = Modifier.fillMaxSize(),
@@ -74,7 +73,7 @@ fun EthWallet(
                     },
                 ) {
                     entry<Destination.OnBoardingScreen> {
-                        SharedOnboardingScreen(
+                        OnboardingScreen(
                             modifier = Modifier.fillMaxSize(),
                             onImportWallet = {
                                 navigator.navigate(Destination.ImportWalletScreen)

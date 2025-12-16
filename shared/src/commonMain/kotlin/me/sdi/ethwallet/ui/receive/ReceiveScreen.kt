@@ -1,18 +1,11 @@
 package me.sdi.ethwallet.ui.receive
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.os.Build
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CopyAll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -45,34 +37,20 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.PreviewLightDark
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.common.BitMatrix
-import com.google.zxing.qrcode.QRCodeWriter
-import me.sdi.ethwallet.Logger
-import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.resources.Res
@@ -82,7 +60,6 @@ import me.sdi.ethwallet.resources.receive_address_copied
 import me.sdi.ethwallet.resources.receive_amount_optional
 import me.sdi.ethwallet.resources.receive_copy_address
 import me.sdi.ethwallet.resources.receive_currency
-import me.sdi.ethwallet.resources.receive_qr_error
 import me.sdi.ethwallet.resources.receive_select_currency
 import me.sdi.ethwallet.resources.receive_title
 import me.sdi.ethwallet.resources.send_enter_amount
@@ -92,10 +69,10 @@ import me.sdi.ethwallet.resources.send_token_usdc
 import me.sdi.ethwallet.resources.send_token_usdt
 import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.ui.icon
-import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,35 +81,26 @@ fun ReceiveScreen(
     modifier: Modifier = Modifier,
     viewModel: ReceiveQrViewModel = koinViewModel(),
 ) {
-    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val viewState by viewModel.viewState.collectAsState()
+    val toastManager = rememberToastManager()
+    val clipboardManager = LocalClipboardManager.current
+    val addressCopiedMessage = stringResource(Res.string.receive_address_copied)
 
     LaunchedEffect(key1 = viewModel.news) {
         viewModel.news.collect { news ->
             when (news) {
                 is ReceiveQrNews.ShowToast -> {
-                    Toast.makeText(context, news.message, Toast.LENGTH_SHORT).show()
+                    toastManager.showToast(news.message)
                 }
                 is ReceiveQrNews.CopyToClipboard -> {
-                    val clipboard =
-                        context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    val clip = ClipData.newPlainText("Address", news.text)
-                    clipboard.setPrimaryClip(clip)
-
-                    // Show toast for older Android versions where clipboard labels aren't shown
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.receive_address_copied),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
+                    clipboardManager.setText(AnnotatedString(news.text))
+                    toastManager.showToast(addressCopiedMessage)
                 }
             }
         }
     }
 
-    ReceiveScreen(
+    ReceiveScreenContent(
         modifier = modifier,
         viewState = viewState,
         onEvent = { event ->
@@ -146,7 +114,7 @@ fun ReceiveScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ReceiveScreen(
+private fun ReceiveScreenContent(
     modifier: Modifier = Modifier,
     viewState: ReceiveQrViewState,
     onEvent: (event: ReceiveQrEvent) -> Unit,
@@ -389,91 +357,4 @@ private fun AddressDisplay(
             .clickable { onCopyAddress() }
             .padding(horizontal = 16.dp, vertical = 8.dp),
     )
-}
-
-@Composable
-private fun QrCodeCanvas(
-    qrData: String,
-    modifier: Modifier = Modifier,
-    size: Dp = 300.dp,
-) {
-    var bitMatrix: BitMatrix? by remember { mutableStateOf(null) }
-    var loading: Boolean by remember { mutableStateOf(bitMatrix == null) }
-
-    val density = LocalDensity.current
-    val sizePx = with(density) { size.toPx().toInt() }
-    val context = LocalContext.current
-    LaunchedEffect(qrData) {
-        Logger.debug("QrCodeCanvas") { "Generating QR code for $qrData" }
-        bitMatrix = try {
-            // qrcode data based size
-            val size = if (qrData.length > 100) 300 else 150
-            QRCodeWriter().encode(
-                qrData,
-                BarcodeFormat.QR_CODE,
-                size,
-                size,
-            )
-        } catch (t: Throwable) {
-            Logger.warn("QrCode", t) { "Error generating QR code" }
-            Toast.makeText(
-                context,
-                context.getString(R.string.receive_qr_error, t.message ?: ""),
-                Toast.LENGTH_SHORT,
-            ).show()
-            null
-        }
-        loading = false
-    }
-
-    if (loading) {
-        SideEffect {
-            Logger.debug("QrCodeCanvas") { "Loading" }
-        }
-        CircularProgressIndicator()
-    } else {
-        SideEffect {
-            Logger.debug("QrCodeCanvas") { "Canvas" }
-        }
-        bitMatrix?.let { bitMatrix ->
-            SideEffect {
-                Logger.debug("QrCodeCanvas") { "Draw matrix" }
-            }
-            val pixelSize = sizePx.toFloat() / bitMatrix.width
-            val invertColors = isSystemInDarkTheme()
-            val activeColor = if (invertColors) Color.White else Color.Black
-            val inactiveColor = MaterialTheme.colorScheme.background
-            Canvas(modifier = modifier.size(size)) {
-                drawRect(
-                    color = inactiveColor,
-                    size = Size(sizePx.toFloat(), sizePx.toFloat()),
-                )
-                for (x in 0 until bitMatrix.width) {
-                    for (y in 0 until bitMatrix.height) {
-                        if (bitMatrix[x, y]) {
-                            drawRect(
-                                color = activeColor,
-                                topLeft = Offset(x * pixelSize, y * pixelSize),
-                                size = Size(pixelSize, pixelSize),
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-@PreviewScreenSizes
-@PreviewLightDark
-private fun ReceiveScreenPreview() {
-    EthWalletTheme {
-        ReceiveScreen(
-            viewState = ReceiveQrViewState(
-                qrPayload = "123",
-            ),
-            onEvent = {},
-        )
-    }
 }

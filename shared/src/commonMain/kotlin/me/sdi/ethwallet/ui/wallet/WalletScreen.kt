@@ -1,8 +1,5 @@
 package me.sdi.ethwallet.ui.wallet
 
-import android.icu.text.NumberFormat
-import android.icu.util.Currency
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -44,14 +42,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.PreviewFontScale
-import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.edit
@@ -64,12 +57,11 @@ import me.sdi.ethwallet.resources.wallet_tokens_erc20
 import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.ui.components.shimmer
 import me.sdi.ethwallet.ui.icon
-import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.koin.androidx.compose.koinViewModel
-import java.math.BigDecimal
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun WalletScreen(
@@ -85,23 +77,19 @@ fun WalletScreen(
         viewModel.onEvent(WalletEvent.Initialize)
     }
 
-    val context = LocalContext.current
+    val toastManager = rememberToastManager()
     LaunchedEffect(key1 = viewModel.news) {
         viewModel.news.collect { news ->
             when (news) {
                 is WalletNews.ShowErrorMessage -> {
-                    val message = context.getString(
-                        R.string.wallet_error_format,
-                        news.error.message ?: context.getString(R.string.error_unknown),
-                    )
-                    Toast.makeText(context.applicationContext, message, Toast.LENGTH_LONG).show()
+                    toastManager.showToast("Error: ${news.error.message ?: "Unknown error"}")
                 }
             }
         }
     }
 
-    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
-    WalletScreen(
+    val viewState by viewModel.viewState.collectAsState()
+    WalletScreenContent(
         viewState = viewState,
         onManageWallets = onManageWallets,
         onEditButtonClick = onEditButtonClick,
@@ -114,7 +102,7 @@ fun WalletScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WalletScreen(
+fun WalletScreenContent(
     viewState: WalletViewState,
     onManageWallets: () -> Unit,
     onEditButtonClick: () -> Unit,
@@ -556,60 +544,6 @@ private fun TokenItemShimmer(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
                     shape = RoundedCornerShape(4.dp),
                 ),
-        )
-    }
-}
-
-@Composable
-@PreviewFontScale
-@PreviewLightDark
-fun WalletScreenPreview() {
-    EthWalletTheme {
-        WalletScreen(
-            viewState =
-                WalletViewState(
-                    totalBalanceUsd = NumberFormat
-                        .getCurrencyInstance()
-                        .apply { currency = Currency.getInstance("USD") }
-                        .format(1280.75),
-                    totalBalanceEth = "0.97 ETH",
-                    favoriteTokens = KnownTokens.entries.map { knownToken ->
-                        FavoriteToken(
-                            address = knownToken.ethAddress,
-                            name = knownToken.name,
-                            ticker = knownToken.name,
-                            amount = "1.53",
-                            usdValue = BigDecimal("1.53"),
-                            usdValueFormatted = "1.53",
-                        )
-                    },
-                ),
-            onEditButtonClick = { },
-            onManageWallets = { },
-            onTokenClick = { },
-            onReceiveButtonClick = { },
-            onSendButtonClick = { },
-        )
-    }
-}
-
-@Composable
-@PreviewFontScale
-@PreviewLightDark
-fun WalletScreenLoadingPreview() {
-    EthWalletTheme {
-        WalletScreen(
-            viewState = WalletViewState(
-                isLoading = true,
-                totalBalanceUsd = "",
-                totalBalanceEth = "",
-                favoriteTokens = emptyList(),
-            ),
-            onEditButtonClick = { },
-            onManageWallets = { },
-            onTokenClick = { },
-            onReceiveButtonClick = { },
-            onSendButtonClick = { },
         )
     }
 }

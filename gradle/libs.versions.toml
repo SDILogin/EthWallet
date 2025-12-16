@@ -18,7 +18,9 @@ web3j = "4.8.9-android"
 robolectric = "4.16"
 splashscreen = "1.2.0"
 navigation3 = "1.0.0"
+navigation3Kmp = "1.0.0-alpha06"
 lifecycleViewModelNav3 = "2.10.0"
+lifecycleViewModelNav3Kmp = "2.10.0-alpha06"
 kotlinSerialization = "1.9.0"
 room = "2.8.4"
 coroutinesTest = "1.10.2"
@@ -49,6 +51,8 @@ androidx-splashscreen = { group = "androidx.core", name = "core-splashscreen", v
 androidx-navigation3-runtime = { group = "androidx.navigation3", name = "navigation3-runtime", version.ref = "navigation3" }
 androidx-navigation3-ui = { group = "androidx.navigation3", name = "navigation3-ui", version.ref = "navigation3" }
 androidx-lifecycle-viewmodel-navigation3 = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewModelNav3" }
+navigation3-ui-kmp = { group = "org.jetbrains.androidx.navigation3", name = "navigation3-ui", version.ref = "navigation3Kmp" }
+lifecycle-viewmodel-navigation3-kmp = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewModelNav3Kmp" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinSerialization" }
 web3j-core = { group = "org.web3j", name = "core", version.ref = "web3j" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }

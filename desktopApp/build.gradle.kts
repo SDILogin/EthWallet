@@ -27,6 +27,11 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(project(":shared"))
+
+                // Koin
+                implementation(libs.koin.core)
+                implementation(libs.koin.compose)
+                implementation(libs.koin.compose.viewmodel)
             }
         }
     }

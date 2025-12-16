@@ -1,6 +1,5 @@
 package me.sdi.ethwallet.ui.wallet
 
-import android.os.Build
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,13 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.PreviewFontScale
-import androidx.compose.ui.tooling.preview.PreviewLightDark
-import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.tooling.preview.PreviewParameterProvider
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_confirm_button
@@ -71,10 +65,8 @@ import me.sdi.ethwallet.resources.create_wallet_recovery_phrase_title
 import me.sdi.ethwallet.resources.create_wallet_security_warning
 import me.sdi.ethwallet.resources.create_wallet_title
 import me.sdi.ethwallet.resources.create_wallet_unknown_error_message
-import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.stringResource
-import org.koin.androidx.compose.koinViewModel
-import java.net.SocketTimeoutException
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Screen that displays the mnemonic phrase for a newly created wallet.
@@ -87,7 +79,7 @@ fun CreateWalletScreen(
     modifier: Modifier = Modifier,
 ) {
     val viewModel: CreateWalletViewModel = koinViewModel()
-    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
+    val viewState by viewModel.viewState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
@@ -118,7 +110,7 @@ fun CreateWalletScreen(
             )
         },
     ) { innerPadding ->
-        CreateWalletScreen(
+        CreateWalletScreenContent(
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -132,7 +124,7 @@ fun CreateWalletScreen(
 }
 
 @Composable
-private fun CreateWalletScreen(
+private fun CreateWalletScreenContent(
     viewState: CreateWalletViewState,
     onEvent: (CreateWalletEvent) -> Unit,
     onMnemonicSaved: () -> Unit,
@@ -255,13 +247,11 @@ private fun ContentState(
                     .widthIn(max = 420.dp)
                     .fillMaxWidth(),
             onCopied = {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = copiedMessage,
-                            duration = SnackbarDuration.Short,
-                        )
-                    }
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = copiedMessage,
+                        duration = SnackbarDuration.Short,
+                    )
                 }
             },
         )
@@ -352,49 +342,6 @@ private fun ErrorState(throwable: Throwable) {
             text = throwable.message ?: stringResource(Res.string.create_wallet_unknown_error_message),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-        )
-    }
-}
-
-private class ViewStateProvider : PreviewParameterProvider<CreateWalletViewState> {
-    override val values =
-        sequenceOf(
-            CreateWalletViewState.Loading,
-            CreateWalletViewState.Error(SocketTimeoutException()),
-            CreateWalletViewState.Content(
-                seedPhrase =
-                    listOf(
-                        "avocado",
-                        "avocado",
-                        "avocado",
-                        "avocado",
-                        "avocado",
-                        "avocado",
-                        "avocado",
-                        "avocado",
-                        "avocado",
-                        "avocado",
-                        "avocado",
-                        "avocado",
-                    ),
-            ),
-        )
-}
-
-@Composable
-@PreviewScreenSizes
-@PreviewLightDark
-@PreviewFontScale
-private fun CreateWalletScreenPreview(
-    @PreviewParameter(ViewStateProvider::class) viewState: CreateWalletViewState,
-) {
-    EthWalletTheme {
-        CreateWalletScreen(
-            viewState = viewState,
-            onEvent = { },
-            onMnemonicSaved = { },
-            modifier = Modifier.fillMaxSize(),
-            snackbarHostState = remember { SnackbarHostState() },
         )
     }
 }

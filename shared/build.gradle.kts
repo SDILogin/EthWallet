@@ -45,6 +45,7 @@ kotlin {
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
                 implementation(compose.ui)
                 implementation(compose.components.resources)
                 implementation(compose.components.uiToolingPreview)
@@ -67,6 +68,10 @@ kotlin {
 
                 // Serialization
                 implementation(libs.kotlinx.serialization.json)
+
+                // Navigation 3 KMP
+                implementation(libs.navigation3.ui.kmp)
+                implementation(libs.lifecycle.viewmodel.navigation3.kmp)
             }
         }
         val androidMain by getting {
@@ -86,6 +91,9 @@ kotlin {
                 // Room
                 implementation(libs.androidx.room.runtime)
                 implementation(libs.androidx.room.ktx)
+
+                // QR Code
+                implementation(libs.core)
             }
         }
         val desktopMain by getting {
@@ -93,6 +101,9 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.web3j.core)
+
+                // QR Code
+                implementation(libs.core)
             }
         }
     }

@@ -1,6 +1,5 @@
 package me.sdi.ethwallet.ui.send
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,17 +28,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.PreviewLightDark
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import me.sdi.ethwallet.R
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.resources.Res
@@ -65,10 +60,10 @@ import me.sdi.ethwallet.resources.send_transaction
 import me.sdi.ethwallet.resources.send_transfer_successful
 import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.ui.icon
-import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,24 +72,21 @@ fun SendScreen(
     viewModel: SendViewModel = koinViewModel(),
     onBackPress: () -> Unit,
 ) {
-    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val viewState by viewModel.viewState.collectAsState()
+    val toastManager = rememberToastManager()
+    val transferSuccessMessage = stringResource(Res.string.send_transfer_successful)
 
     LaunchedEffect(key1 = viewModel.news) {
         viewModel.news.collect { news ->
             when (news) {
                 is SendNews.TransferSuccess -> {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.send_transfer_successful, news.transactionHash),
-                        Toast.LENGTH_LONG,
-                    ).show()
+                    toastManager.showToast("$transferSuccessMessage ${news.transactionHash}")
                 }
                 is SendNews.TransferError -> {
-                    Toast.makeText(context, news.message, Toast.LENGTH_LONG).show()
+                    toastManager.showToast(news.message)
                 }
                 is SendNews.ValidationError -> {
-                    Toast.makeText(context, news.message, Toast.LENGTH_SHORT).show()
+                    toastManager.showToast(news.message)
                 }
                 SendNews.NavigateBack -> {
                     // Handle navigation back if needed
@@ -103,7 +95,7 @@ fun SendScreen(
         }
     }
 
-    SendScreen(
+    SendScreenContent(
         modifier = modifier,
         viewState = viewState,
         onEvent = viewModel::onEvent,
@@ -113,7 +105,7 @@ fun SendScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SendScreen(
+private fun SendScreenContent(
     modifier: Modifier = Modifier,
     viewState: SendViewState,
     onEvent: (SendEvent) -> Unit,
@@ -335,18 +327,5 @@ private fun SendButton(
         } else {
             Text(stringResource(Res.string.send_transaction))
         }
-    }
-}
-
-@Composable
-@PreviewScreenSizes
-@PreviewLightDark
-private fun SendScreenPreview() {
-    EthWalletTheme {
-        SendScreen(
-            viewState = SendViewState(),
-            onEvent = {},
-            onBackPress = { },
-        )
     }
 }

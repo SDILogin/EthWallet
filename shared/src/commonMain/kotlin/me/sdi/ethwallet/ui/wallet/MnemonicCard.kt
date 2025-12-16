@@ -1,11 +1,8 @@
 package me.sdi.ethwallet.ui.wallet
 
-import android.content.ClipData
-import android.content.ClipDescription
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -30,29 +26,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.Clipboard
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.sensitiveContent
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewFontScale
-import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import me.sdi.ethwallet.R
 import me.sdi.ethwallet.resources.Res
-import me.sdi.ethwallet.resources.mnemonic_clipboard_label
+import me.sdi.ethwallet.resources.mnemonic_content_description
 import me.sdi.ethwallet.resources.mnemonic_long_press_to_copy
-import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -69,21 +57,18 @@ fun MnemonicCard(
         color = MaterialTheme.colorScheme.onSurface,
         fontSize = MaterialTheme.typography.bodyMedium.fontSize,
     )
-    val clipboardManager = LocalClipboard.current
+    val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     val interactionSource = remember { MutableInteractionSource() }
-    val context = LocalContext.current
-    val mnemonicDescription = context.getString(
-        R.string.mnemonic_content_description,
+    val mnemonicDescription = stringResource(
+        Res.string.mnemonic_content_description,
         seedPhrase.size,
         seedPhrase.joinToString(separator = " ") { it },
     )
-    val clipboardLabel = stringResource(Res.string.mnemonic_clipboard_label)
 
     Card(
         modifier =
             modifier
-                .sensitiveContent(isContentSensitive = true)
                 .semantics {
                     contentDescription = mnemonicDescription
                 }
@@ -102,7 +87,7 @@ fun MnemonicCard(
                     onClick = { /* No action on click */ },
                     onLongClick = {
                         scope.launch {
-                            copyToClipboard(seedPhrase, clipboardManager, clipboardLabel)
+                            clipboardManager.setText(AnnotatedString(seedPhrase.joinToString(" ")))
                             onCopied()
                         }
                     },
@@ -122,8 +107,8 @@ fun MnemonicCard(
                 ) {
                     // first half of the mnemonic
                     val words = seedPhrase.take(seedPhrase.size / 2)
-                    val modifier = Modifier.padding(end = 8.dp)
-                    WordsColumn(0, words, textStyle, textMeasurer, modifier)
+                    val wordModifier = Modifier.padding(end = 8.dp)
+                    WordsColumn(0, words, textStyle, textMeasurer, wordModifier)
                 }
 
                 Box(
@@ -132,8 +117,8 @@ fun MnemonicCard(
                 ) {
                     // second half of the mnemonic
                     val words = seedPhrase.drop(seedPhrase.size / 2)
-                    val modifier = Modifier.padding(start = 8.dp)
-                    WordsColumn(seedPhrase.size / 2, words, textStyle, textMeasurer, modifier)
+                    val wordModifier = Modifier.padding(start = 8.dp)
+                    WordsColumn(seedPhrase.size / 2, words, textStyle, textMeasurer, wordModifier)
                 }
             }
 
@@ -147,20 +132,6 @@ fun MnemonicCard(
             Spacer(modifier = Modifier.size(8.dp))
         }
     }
-}
-
-private suspend fun copyToClipboard(
-    seedPhrase: List<String>,
-    clipboard: Clipboard,
-    clipboardLabel: String,
-) {
-    val clipData =
-        ClipData(
-            clipboardLabel,
-            arrayOf(ClipDescription.MIMETYPE_TEXT_PLAIN),
-            ClipData.Item(seedPhrase.joinToString(" ")),
-        )
-    clipboard.setClipEntry(ClipEntry(clipData))
 }
 
 @Composable
@@ -222,32 +193,4 @@ private fun IndexedText(
                     )
                 },
     )
-}
-
-@Composable
-@PreviewFontScale
-@PreviewLightDark
-@Preview
-private fun MnemonicCardPreview() {
-    EthWalletTheme {
-        Surface {
-            MnemonicCard(
-                seedPhrase =
-                    listOf(
-                        "draft",
-                        "decode",
-                        "demand",
-                        "dare",
-                        "dare",
-                        "draft",
-                        "decode",
-                        "demand",
-                        "dare",
-                        "draft",
-                        "decode",
-                        "demand",
-                    ),
-            )
-        }
-    }
 }

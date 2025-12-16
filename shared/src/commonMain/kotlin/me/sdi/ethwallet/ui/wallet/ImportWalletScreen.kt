@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.back
@@ -44,7 +43,6 @@ import me.sdi.ethwallet.resources.import_wallet_recovery_phrase_label
 import me.sdi.ethwallet.resources.import_wallet_recovery_phrase_placeholder
 import me.sdi.ethwallet.resources.import_wallet_recovery_phrase_supporting
 import me.sdi.ethwallet.resources.import_wallet_title
-import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -143,17 +141,4 @@ fun ImportWalletScreen(
 private fun isValidMnemonic(mnemonic: String): Boolean {
     val words = mnemonic.trim().split(Regex("\\s+"))
     return words.size == 12 && words.all { it.isNotEmpty() }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview
-@Composable
-private fun ImportWalletScreenPreview() {
-    EthWalletTheme {
-        ImportWalletScreen(
-            onWalletImported = {},
-            onUpButtonClick = {},
-            modifier = Modifier.fillMaxSize(),
-        )
-    }
 }
