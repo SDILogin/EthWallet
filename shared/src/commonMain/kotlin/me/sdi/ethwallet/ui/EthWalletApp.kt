@@ -59,7 +59,7 @@ fun EthWalletApp(
 
             if (showLockScreen) {
                 LaunchedEffect(Unit) {
-                    navigator.navigateToVerifyPinCode()
+                    navigator.navigateAndClearStack(Destination.VerifyPinCodeScreen)
                 }
             }
 

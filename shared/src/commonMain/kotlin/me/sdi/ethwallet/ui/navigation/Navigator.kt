@@ -8,8 +8,8 @@ class Navigator(
     }
 
     fun goBack(): Boolean {
-        return if (navigationState.backStack.size > 1) {
-            navigationState.backStack.removeLast()
+        return if (navigationState.backStack.isNotEmpty()) {
+            navigationState.backStack.removeLastOrNull()
             true
         } else {
             false
@@ -19,10 +19,5 @@ class Navigator(
     fun navigateAndClearStack(destination: Destination) {
         navigationState.backStack.clear()
         navigationState.backStack.add(destination)
-    }
-
-    fun navigateToVerifyPinCode() {
-        navigationState.backStack.clear()
-        navigationState.backStack.add(Destination.VerifyPinCodeScreen)
     }
 }
