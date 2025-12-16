@@ -7,5 +7,5 @@ sealed interface SendNews {
 
     data class ValidationError(val message: String) : SendNews
 
-    object NavigateBack : SendNews
+    data object NavigateBack : SendNews
 }

@@ -2,7 +2,6 @@ package me.sdi.ethwallet
 
 import android.app.Application
 import me.sdi.ethwallet.di.appModules
-import me.sdi.ethwallet.di.viewModelsModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -14,7 +13,7 @@ class EthWalletApplication : Application() {
         startKoin {
             androidLogger()
             androidContext(this@EthWalletApplication)
-            modules(appModules() + viewModelsModule)
+            modules(appModules())
         }
     }
 }

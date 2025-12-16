@@ -56,7 +56,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_confirm_button
@@ -74,6 +73,7 @@ import me.sdi.ethwallet.resources.create_wallet_title
 import me.sdi.ethwallet.resources.create_wallet_unknown_error_message
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.stringResource
+import org.koin.androidx.compose.koinViewModel
 import java.net.SocketTimeoutException
 
 /**
@@ -86,7 +86,7 @@ fun CreateWalletScreen(
     onUpButtonClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: CreateWalletViewModel = viewModel(factory = CreateWalletViewModel.Factory)
+    val viewModel: CreateWalletViewModel = koinViewModel()
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 

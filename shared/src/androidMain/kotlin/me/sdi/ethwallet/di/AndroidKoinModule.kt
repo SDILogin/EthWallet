@@ -11,6 +11,7 @@ import me.sdi.ethwallet.core.security.KeyStoreEncryptor
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.core.transfer.TransferInteractor
+import me.sdi.ethwallet.core.transfer.Web3jTransferInteractor
 import me.sdi.ethwallet.data.AndroidTempFileProvider
 import me.sdi.ethwallet.data.TempFileProvider
 import me.sdi.ethwallet.database.AppDatabase
@@ -39,7 +40,7 @@ actual fun platformModule(): Module = module {
     single<HttpClient> { createHttpClient(OkHttp.create()) }
 
     factory<EthManager> { Web3jEthManager(get()) }
-    factory<TransferInteractor> { TransferInteractor(get(), get(), get(), get()) }
+    factory<TransferInteractor> { Web3jTransferInteractor(get(), get(), get(), get()) }
 
     single<PinCodeStorage> {
         DataStorePinCodeStorage(

@@ -7,9 +7,9 @@ sealed interface ReceiveQrEvent {
 
     data class OnAmountChanged(val amount: String) : ReceiveQrEvent
 
-    object OnClearAmount : ReceiveQrEvent
+    data object OnClearAmount : ReceiveQrEvent
 
-    object OnCopyAddress : ReceiveQrEvent
+    data object OnCopyAddress : ReceiveQrEvent
 
-    object OnBackPressed : ReceiveQrEvent
+    data object OnBackPressed : ReceiveQrEvent
 }

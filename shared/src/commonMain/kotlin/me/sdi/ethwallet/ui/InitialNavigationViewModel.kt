@@ -1,4 +1,4 @@
-package me.sdi.ethwallet
+package me.sdi.ethwallet.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,9 +7,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.database.dao.WalletDao
-import me.sdi.ethwallet.ui.navigation.Destination
+
+/**
+ * Represents the initial route the app should navigate to.
+ */
+enum class InitialRoute {
+    OnBoarding,
+    SetPinCode,
+    VerifyPinCode,
+}
 
 /**
  * Initial state for navigation, including the initial route
@@ -17,7 +26,7 @@ import me.sdi.ethwallet.ui.navigation.Destination
 data class InitialNavigationState(
     val numberOfWallets: Int = -1,
     val isPinCodeSet: Boolean = false,
-    val initialRoute: Destination? = null,
+    val initialRoute: InitialRoute? = null,
 )
 
 class InitialNavigationViewModel(
@@ -37,9 +46,9 @@ class InitialNavigationViewModel(
                 val hasPin = pinCodeStorage.hasPinCode()
 
                 val initialRoute = when {
-                    wallets.isEmpty() -> Destination.OnBoardingScreen
-                    !hasPin -> Destination.SetPinCodeScreen
-                    else -> Destination.VerifyPinCodeScreen
+                    wallets.isEmpty() -> InitialRoute.OnBoarding
+                    !hasPin -> InitialRoute.SetPinCode
+                    else -> InitialRoute.VerifyPinCode
                 }
 
                 _state.value = InitialNavigationState(
@@ -54,7 +63,7 @@ class InitialNavigationViewModel(
                 _state.value = InitialNavigationState(
                     numberOfWallets = 0,
                     isPinCodeSet = false,
-                    initialRoute = Destination.OnBoardingScreen,
+                    initialRoute = InitialRoute.OnBoarding,
                 )
             }
         }

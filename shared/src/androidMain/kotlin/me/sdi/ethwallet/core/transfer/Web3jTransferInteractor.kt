@@ -26,16 +26,16 @@ import org.web3j.tx.gas.DefaultGasProvider
 import org.web3j.utils.Numeric
 import java.math.BigInteger
 
-class TransferInteractor(
+class Web3jTransferInteractor(
     private val web3j: Web3j,
     private val walletRepository: WalletRepository,
     private val privateKeyEncryptor: PrivateKeyEncryptor,
     private val balanceProvider: BalanceProvider,
-) {
+) : TransferInteractor {
     // Mutex to prevent race conditions in nonce management
     private val transferMutex = Mutex()
 
-    suspend fun transfer(transferData: TransferData): String {
+    override suspend fun transfer(transferData: TransferData): String {
         return transferMutex.withLock {
             val wallet = checkNotNull(walletRepository.getActiveWallet()) {
                 "No active wallet found"

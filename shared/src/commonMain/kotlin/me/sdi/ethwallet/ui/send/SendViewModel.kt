@@ -56,7 +56,7 @@ class SendViewModel(
                 else -> KnownTokens.entries.find { it.ethAddress == contractAddress }?.tokenName ?: "Unknown Token"
             }
             """
-            Token selected: $tokenName 
+            Token selected: $tokenName
             """.trimIndent()
         }
 

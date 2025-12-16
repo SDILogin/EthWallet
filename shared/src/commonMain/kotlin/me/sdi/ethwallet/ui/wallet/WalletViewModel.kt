@@ -1,7 +1,5 @@
 package me.sdi.ethwallet.ui.wallet
 
-import android.icu.text.NumberFormat
-import android.icu.util.Currency
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
@@ -28,6 +26,7 @@ import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.util.formatUsdCurrency
 import org.web3j.utils.Convert
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -39,12 +38,6 @@ class WalletViewModel(
     private val walletRepository: WalletRepository,
     private val balanceProvider: BalanceProvider,
     private val fiatRateProvider: FiatRateProvider,
-    private val usdFormatter: (BigDecimal) -> String = { usdAmount ->
-        val currencyFormatter = NumberFormat.getCurrencyInstance()
-        currencyFormatter.currency = Currency.getInstance("USD")
-        currencyFormatter.maximumFractionDigits = 2
-        currencyFormatter.format(usdAmount)
-    },
 ) : ViewModel() {
     private val _viewState = MutableStateFlow(WalletViewState())
     val viewState: StateFlow<WalletViewState> = _viewState.asStateFlow()
@@ -157,7 +150,7 @@ class WalletViewModel(
         _viewState.update { currentViewState: WalletViewState ->
             currentViewState.copy(
                 totalBalanceEth = "$ethBalanceEth ETH",
-                totalBalanceUsd = usdFormatter(totalUsdValue),
+                totalBalanceUsd = formatUsdCurrency(totalUsdValue),
                 favoriteTokens = favoriteTokens,
             )
         }
@@ -189,7 +182,7 @@ class WalletViewModel(
             ticker = tokenInfo.name,
             amount = formatTokenAmount(tokenAmount),
             usdValue = tokenUsdValue,
-            usdValueFormatted = tokenUsdValue?.let { usdFormatter(tokenUsdValue) } ?: "N/A",
+            usdValueFormatted = tokenUsdValue?.let { formatUsdCurrency(tokenUsdValue) } ?: "N/A",
         )
     }
 

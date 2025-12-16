@@ -5,9 +5,9 @@ import kotlin.test.assertNotNull
 
 class KoinModuleTest {
     @Test
-    fun checkViewModelsModuleExists() {
-        // Verify viewModelsModule is properly defined
+    fun checkCommonModuleExists() {
+        // Verify commonModule is properly defined (includes ViewModels)
         // Detailed dependency verification is done in integration tests
-        assertNotNull(viewModelsModule)
+        assertNotNull(commonModule)
     }
 }

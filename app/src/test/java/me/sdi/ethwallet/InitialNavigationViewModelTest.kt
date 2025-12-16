@@ -9,7 +9,8 @@ import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.database.entity.WalletEntity
-import me.sdi.ethwallet.ui.navigation.Destination
+import me.sdi.ethwallet.ui.InitialNavigationViewModel
+import me.sdi.ethwallet.ui.InitialRoute
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -42,7 +43,7 @@ class InitialNavigationViewModelTest {
             val state = viewModel.state.first()
             assertEquals(0, state.numberOfWallets)
             assertEquals(false, state.isPinCodeSet)
-            assertEquals(Destination.OnBoardingScreen, state.initialRoute)
+            assertEquals(InitialRoute.OnBoarding, state.initialRoute)
 
             // Backward compatibility check
             assertEquals(0, viewModel.numberOfWallets.first())
@@ -74,7 +75,7 @@ class InitialNavigationViewModelTest {
             val state = viewModel.state.first()
             assertEquals(2, state.numberOfWallets)
             assertEquals(true, state.isPinCodeSet)
-            assertEquals(Destination.VerifyPinCodeScreen, state.initialRoute)
+            assertEquals(InitialRoute.VerifyPinCode, state.initialRoute)
 
             // Backward compatibility check
             assertEquals(2, viewModel.numberOfWallets.first())
@@ -101,7 +102,7 @@ class InitialNavigationViewModelTest {
             val state = viewModel.state.first()
             assertEquals(1, state.numberOfWallets)
             assertEquals(false, state.isPinCodeSet)
-            assertEquals(Destination.SetPinCodeScreen, state.initialRoute)
+            assertEquals(InitialRoute.SetPinCode, state.initialRoute)
         }
 
     @Test
@@ -117,7 +118,7 @@ class InitialNavigationViewModelTest {
             val state = viewModel.state.first()
             assertEquals(0, state.numberOfWallets)
             assertEquals(false, state.isPinCodeSet)
-            assertEquals(Destination.OnBoardingScreen, state.initialRoute)
+            assertEquals(InitialRoute.OnBoarding, state.initialRoute)
 
             // Backward compatibility check
             assertEquals(0, viewModel.numberOfWallets.first())

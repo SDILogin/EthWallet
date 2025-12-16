@@ -23,7 +23,6 @@ import org.junit.Rule
 import org.junit.Test
 import java.math.BigDecimal
 import java.math.BigInteger
-import java.math.RoundingMode
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WalletViewModelTest {
@@ -35,10 +34,6 @@ class WalletViewModelTest {
 
     private val testAddress = EthAddress("0x1234567890123456789012345678901234567890")
     private val testWallet = EthWallet(label = "Test Wallet", address = testAddress)
-
-    private val testUsdFormatter: (BigDecimal) -> String = { amount ->
-        "$${amount.setScale(2, RoundingMode.HALF_UP)}"
-    }
 
     // Flow state holders for mocking providers
     private val balanceFlow = MutableStateFlow<Map<EthAddress, BigInteger>>(emptyMap())
@@ -65,7 +60,6 @@ class WalletViewModelTest {
             walletRepository = walletRepository,
             balanceProvider = balanceProvider,
             fiatRateProvider = fiatRateProvider,
-            usdFormatter = testUsdFormatter,
         )
     }
 

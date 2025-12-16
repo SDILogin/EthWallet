@@ -17,7 +17,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
-import me.sdi.ethwallet.InitialNavigationViewModel
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.navigation.Navigator
@@ -50,7 +49,12 @@ fun EthWallet(
             enter = fadeIn(),
             exit = fadeOut(),
         ) {
-            val startDestination = state.initialRoute ?: Destination.OnBoardingScreen
+            val startDestination: Destination = when (state.initialRoute) {
+                InitialRoute.OnBoarding -> Destination.OnBoardingScreen
+                InitialRoute.SetPinCode -> Destination.SetPinCodeScreen
+                InitialRoute.VerifyPinCode -> Destination.VerifyPinCodeScreen
+                null -> Destination.OnBoardingScreen
+            }
             val navigationState = rememberNavigationState(startDestination)
             val navigator = remember(navigationState) { Navigator(navigationState) }
 

@@ -1,11 +1,7 @@
 package me.sdi.ethwallet.ui.wallet
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,11 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
-import me.sdi.ethwallet.core.FileBasedEthWalletCreator
-import me.sdi.ethwallet.core.security.KeyStoreEncryptor
-import me.sdi.ethwallet.data.AndroidTempFileProvider
 import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.database.DatabaseBuilder
 
 /**
  * UI state representation for the Create Wallet screen.
@@ -91,28 +83,5 @@ class CreateWalletViewModel(
 
             _viewState.update { vs }
         }
-    }
-
-    companion object {
-        val Factory: ViewModelProvider.Factory =
-            viewModelFactory {
-                initializer {
-                    val context = checkNotNull(this[APPLICATION_KEY])
-                    val tempFileProvider = AndroidTempFileProvider(context)
-                    val walletCreator = FileBasedEthWalletCreator(tempFileProvider)
-                    val privateKeyEncryptor = KeyStoreEncryptor()
-                    val database = DatabaseBuilder.getInstance(context)
-                    val walletRepository =
-                        WalletRepository(
-                            walletDao = database.walletDao(),
-                            walletCreator = walletCreator,
-                            privateKeyEncryptor = privateKeyEncryptor,
-                        )
-
-                    CreateWalletViewModel(
-                        walletRepository = walletRepository,
-                    )
-                }
-            }
     }
 }

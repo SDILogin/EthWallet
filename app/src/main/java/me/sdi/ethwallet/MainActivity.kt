@@ -11,6 +11,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.database.DatabaseBuilder
 import me.sdi.ethwallet.ui.EthWallet
+import me.sdi.ethwallet.ui.InitialNavigationViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 

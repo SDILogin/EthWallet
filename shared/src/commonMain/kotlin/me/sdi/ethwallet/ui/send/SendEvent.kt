@@ -9,7 +9,7 @@ sealed interface SendEvent {
 
     data class OnAmountChanged(val amount: String) : SendEvent
 
-    object OnTransferRequested : SendEvent
+    data object OnTransferRequested : SendEvent
 
-    object OnClearForm : SendEvent
+    data object OnClearForm : SendEvent
 }

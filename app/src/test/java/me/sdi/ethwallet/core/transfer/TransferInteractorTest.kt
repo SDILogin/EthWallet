@@ -39,7 +39,7 @@ class TransferInteractorTest {
         walletRepository = mockk()
         keyStoreEncryptor = mockk()
         balanceProvider = mockk()
-        transferInteractor = TransferInteractor(web3j, walletRepository, keyStoreEncryptor, balanceProvider)
+        transferInteractor = Web3jTransferInteractor(web3j, walletRepository, keyStoreEncryptor, balanceProvider)
 
         // Setup common mock behavior
         coEvery { walletRepository.getActiveWallet() } returns testWallet

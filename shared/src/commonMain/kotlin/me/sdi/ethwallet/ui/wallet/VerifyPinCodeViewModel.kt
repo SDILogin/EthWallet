@@ -2,6 +2,7 @@ package me.sdi.ethwallet.ui.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +30,7 @@ class VerifyPinCodeViewModel(
     private val _news = MutableSharedFlow<VerifyPinCodeNews>()
     val news: SharedFlow<VerifyPinCodeNews> = _news.asSharedFlow()
 
-    private var countdownJob: kotlinx.coroutines.Job? = null
+    private var countdownJob: Job? = null
 
     /**
      * Single entry point for handling all events in the ViewModel
@@ -206,4 +207,24 @@ sealed interface VerifyPinCodeNews {
      * Error occurred
      */
     data class Error(val message: String) : VerifyPinCodeNews
+}
+
+/**
+ * Events that can be handled by the VerifyPinCodeViewModel.
+ */
+sealed interface VerifyPinCodeEvent {
+    /**
+     * User clicked a digit button
+     */
+    data class OnDigitClick(val digit: Int) : VerifyPinCodeEvent
+
+    /**
+     * User clicked the delete button
+     */
+    data object OnDeleteClick : VerifyPinCodeEvent
+
+    /**
+     * User clicked the logout button
+     */
+    data object OnLogoutClick : VerifyPinCodeEvent
 }
