@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.library)
+    id("com.android.kotlin.multiplatform.library")
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -29,8 +29,16 @@ compose.resources {
     generateResClass = always
 }
 
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
 kotlin {
-    androidTarget {
+    androidLibrary {
+        namespace = "me.sdi.ethwallet.shared"
+        compileSdk = 36
+        minSdk = 24
+
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
         }
@@ -113,22 +121,4 @@ dependencies {
     add("kspAndroid", libs.androidx.room.compiler)
     add("kspDesktop", libs.androidx.room.compiler)
     add("commonMainApi", platform(libs.koin.bom))
-}
-
-android {
-    namespace = "me.sdi.ethwallet.shared"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 24
-    }
-
-    room {
-        schemaDirectory("$projectDir/schemas")
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
 }

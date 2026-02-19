@@ -1,8 +1,8 @@
+import com.android.build.api.dsl.ApplicationExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -21,7 +21,7 @@ spotless {
     }
 }
 
-android {
+extensions.configure<ApplicationExtension>("android") {
     namespace = "me.sdi.ethwallet"
     compileSdk = 36
 
