@@ -20,12 +20,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.BalanceProvider
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.util.formatUsdCurrency
 import org.web3j.utils.Convert
 import java.math.BigDecimal
@@ -38,8 +40,9 @@ class WalletViewModel(
     private val walletRepository: WalletRepository,
     private val balanceProvider: BalanceProvider,
     private val fiatRateProvider: FiatRateProvider,
+    private val chainConfig: ChainConfig,
 ) : ViewModel() {
-    private val _viewState = MutableStateFlow(WalletViewState())
+    private val _viewState = MutableStateFlow(WalletViewState(chainId = chainConfig.chainId))
     val viewState: StateFlow<WalletViewState> = _viewState.asStateFlow()
 
     private val _news = MutableSharedFlow<WalletNews>(
@@ -159,7 +162,7 @@ class WalletViewModel(
     private fun getFavoriteTokensUiState(
         erc20Balances: Map<EthAddress, BigInteger>,
         fiatRates: Map<EthAddress, BigDecimal>,
-    ): List<FavoriteToken> = KnownTokens.entries.map { tokenInfo ->
+    ): List<FavoriteToken> = supportedKnownTokens(chainConfig.chainId).map { tokenInfo ->
         val tokenBalanceInMinimalUnits = erc20Balances[tokenInfo.ethAddress] ?: BigInteger.ZERO
         // Convert from smallest units to token units using correct decimals
         val tokenAmount = BigDecimal(tokenBalanceInMinimalUnits).divide(

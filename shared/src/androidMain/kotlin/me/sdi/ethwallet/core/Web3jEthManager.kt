@@ -7,7 +7,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.data.repository.EthWallet
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.supportedKnownTokens
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.FunctionReturnDecoder
 import org.web3j.abi.TypeReference
@@ -21,7 +21,10 @@ import org.web3j.protocol.core.methods.request.Transaction
 import org.web3j.protocol.core.methods.response.EthCall
 import java.math.BigInteger
 
-class Web3jEthManager(private val web3j: Web3j) : EthManager {
+class Web3jEthManager(
+    private val web3j: Web3j,
+    private val chainConfig: ChainConfig,
+) : EthManager {
     override suspend fun getBalance(wallet: EthWallet) = coroutineScope {
         val getEthBalanceTask = async {
             try {
@@ -34,7 +37,7 @@ class Web3jEthManager(private val web3j: Web3j) : EthManager {
             }
         }
 
-        val getTrc20TokensBalancesTasks = KnownTokens.values().map { erc20Token ->
+        val getTrc20TokensBalancesTasks = supportedKnownTokens(chainConfig.chainId).map { erc20Token ->
             val tokenContractAddress: EthAddress = erc20Token.ethAddress
             async {
                 try {

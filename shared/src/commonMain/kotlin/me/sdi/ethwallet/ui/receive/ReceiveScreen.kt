@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.resources.Res
@@ -69,9 +71,11 @@ import me.sdi.ethwallet.resources.send_token_usdc
 import me.sdi.ethwallet.resources.send_token_usdt
 import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.ui.icon
+import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,6 +85,8 @@ fun ReceiveScreen(
     modifier: Modifier = Modifier,
     viewModel: ReceiveQrViewModel = koinViewModel(),
 ) {
+    val chainConfig: ChainConfig = koinInject()
+    val chainTokens = remember(chainConfig.chainId) { supportedKnownTokens(chainConfig.chainId) }
     val viewState by viewModel.viewState.collectAsState()
     val toastManager = rememberToastManager()
     val clipboardManager = LocalClipboardManager.current
@@ -103,6 +109,7 @@ fun ReceiveScreen(
     ReceiveScreenContent(
         modifier = modifier,
         viewState = viewState,
+        chainTokens = chainTokens,
         onEvent = { event ->
             when (event) {
                 ReceiveQrEvent.OnBackPressed -> onBackPressed()
@@ -117,6 +124,7 @@ fun ReceiveScreen(
 private fun ReceiveScreenContent(
     modifier: Modifier = Modifier,
     viewState: ReceiveQrViewState,
+    chainTokens: List<KnownTokens>,
     onEvent: (event: ReceiveQrEvent) -> Unit,
 ) {
     Scaffold(
@@ -145,6 +153,7 @@ private fun ReceiveScreenContent(
         ) {
             CurrencyPicker(
                 selectedTokenContract = viewState.selectedTokenContract,
+                chainTokens = chainTokens,
                 onTokenSelected = { onEvent(ReceiveQrEvent.OnTokenSelected(it)) },
             )
 
@@ -167,6 +176,7 @@ private fun ReceiveScreenContent(
 @Composable
 private fun CurrencyPicker(
     selectedTokenContract: EthAddress,
+    chainTokens: List<KnownTokens>,
     onTokenSelected: (EthAddress) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -198,7 +208,7 @@ private fun CurrencyPicker(
             )
 
             // ERC20 Token Chips
-            KnownTokens.entries.forEach { token ->
+            chainTokens.forEach { token ->
                 FilterChip(
                     selected = selectedTokenContract == token.ethAddress,
                     onClick = { onTokenSelected(token.ethAddress) },

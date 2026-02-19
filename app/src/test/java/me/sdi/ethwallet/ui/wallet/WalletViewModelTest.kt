@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.MainDispatcherRule
 import me.sdi.ethwallet.core.BalanceProvider
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
@@ -33,6 +34,11 @@ class WalletViewModelTest {
 
     private val testAddress = EthAddress("0x1234567890123456789012345678901234567890")
     private val testWallet = EthWallet(label = "Test Wallet", address = testAddress)
+    private val chainConfig = ChainConfig(
+        rpcUrl = "https://eth.llamarpc.com",
+        chainId = 1L,
+        explorerBaseUrl = "https://etherscan.io",
+    )
 
     // Flow state holders for mocking providers
     private val balanceFlow = MutableStateFlow<Map<EthAddress, BigInteger>>(emptyMap())
@@ -60,6 +66,7 @@ class WalletViewModelTest {
             walletRepository = walletRepository,
             balanceProvider = balanceProvider,
             fiatRateProvider = fiatRateProvider,
+            chainConfig = chainConfig,
         )
     }
 
@@ -93,6 +100,7 @@ class WalletViewModelTest {
 
         val currentState = viewModel.viewState.first()
         assertFalse("Should not be loading after data is available", currentState.isLoading)
+        assertEquals("Chain ID should be exposed in state", 1L, currentState.chainId)
         assertEquals(
             "ETH balance should be formatted correctly",
             "1 ETH",

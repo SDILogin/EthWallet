@@ -47,7 +47,15 @@ extensions.configure<ApplicationExtension>("android") {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "ETH_RPC_URL", "\"https://ethereum-sepolia-rpc.publicnode.com\"")
+            buildConfigField("long", "ETH_CHAIN_ID", "11155111L")
+            buildConfigField("String", "ETH_EXPLORER_BASE_URL", "\"https://sepolia.etherscan.io\"")
+        }
         release {
+            buildConfigField("String", "ETH_RPC_URL", "\"https://eth.llamarpc.com\"")
+            buildConfigField("long", "ETH_CHAIN_ID", "1L")
+            buildConfigField("String", "ETH_EXPLORER_BASE_URL", "\"https://etherscan.io\"")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -63,6 +71,7 @@ extensions.configure<ApplicationExtension>("android") {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {

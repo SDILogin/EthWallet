@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
 import me.sdi.ethwallet.core.BalanceProvider
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.CryptocompareFiatRateProvider
 import me.sdi.ethwallet.core.EthBalanceProvider
 import me.sdi.ethwallet.core.FiatRateProvider
@@ -29,7 +30,7 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import me.sdi.ethwallet.Logger as WalletLogger
 
-expect fun platformModule(): Module
+expect fun platformModule(chainConfig: ChainConfig): Module
 
 val commonModule = module {
     single<CoroutineScope> { CoroutineScope(SupervisorJob()) }
@@ -83,6 +84,7 @@ val commonModule = module {
             walletRepository = get(),
             balanceProvider = get(),
             fiatRateProvider = get(),
+            chainConfig = get(),
         )
     }
 
@@ -127,4 +129,4 @@ fun createHttpClient(engine: io.ktor.client.engine.HttpClientEngine): HttpClient
     }
 }
 
-fun appModules(): List<Module> = listOf(commonModule, platformModule())
+fun appModules(chainConfig: ChainConfig): List<Module> = listOf(commonModule, platformModule(chainConfig))

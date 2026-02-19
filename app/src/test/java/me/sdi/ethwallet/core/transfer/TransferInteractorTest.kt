@@ -5,6 +5,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.core.BalanceProvider
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.security.KeyStoreEncryptor
@@ -26,6 +27,7 @@ class TransferInteractorTest {
     private lateinit var walletRepository: WalletRepository
     private lateinit var keyStoreEncryptor: KeyStoreEncryptor
     private lateinit var balanceProvider: BalanceProvider
+    private lateinit var chainConfig: ChainConfig
     private lateinit var transferInteractor: TransferInteractor
 
     private val testWalletAddress = EthAddress("0x1234567890123456789012345678901234567890")
@@ -39,7 +41,12 @@ class TransferInteractorTest {
         walletRepository = mockk()
         keyStoreEncryptor = mockk()
         balanceProvider = mockk()
-        transferInteractor = Web3jTransferInteractor(web3j, walletRepository, keyStoreEncryptor, balanceProvider)
+        chainConfig = ChainConfig(
+            rpcUrl = "https://eth.llamarpc.com",
+            chainId = 1L,
+            explorerBaseUrl = "https://etherscan.io",
+        )
+        transferInteractor = Web3jTransferInteractor(web3j, walletRepository, keyStoreEncryptor, balanceProvider, chainConfig)
 
         // Setup common mock behavior
         coEvery { walletRepository.getActiveWallet() } returns testWallet

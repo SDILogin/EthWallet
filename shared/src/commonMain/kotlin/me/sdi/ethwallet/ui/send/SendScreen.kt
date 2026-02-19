@@ -30,11 +30,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.resources.Res
@@ -60,9 +62,11 @@ import me.sdi.ethwallet.resources.send_transaction
 import me.sdi.ethwallet.resources.send_transfer_successful
 import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.ui.icon
+import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,6 +76,8 @@ fun SendScreen(
     viewModel: SendViewModel = koinViewModel(),
     onBackPress: () -> Unit,
 ) {
+    val chainConfig: ChainConfig = koinInject()
+    val chainTokens = remember(chainConfig.chainId) { supportedKnownTokens(chainConfig.chainId) }
     val viewState by viewModel.viewState.collectAsState()
     val toastManager = rememberToastManager()
     val transferSuccessMessage = stringResource(Res.string.send_transfer_successful)
@@ -98,6 +104,7 @@ fun SendScreen(
     SendScreenContent(
         modifier = modifier,
         viewState = viewState,
+        chainTokens = chainTokens,
         onEvent = viewModel::onEvent,
         onBackPress = onBackPress,
     )
@@ -108,6 +115,7 @@ fun SendScreen(
 private fun SendScreenContent(
     modifier: Modifier = Modifier,
     viewState: SendViewState,
+    chainTokens: List<KnownTokens>,
     onEvent: (SendEvent) -> Unit,
     onBackPress: () -> Unit,
 ) {
@@ -137,6 +145,7 @@ private fun SendScreenContent(
         ) {
             TokenSelector(
                 selectedTokenContract = viewState.selectedTokenContractAddress,
+                chainTokens = chainTokens,
                 onTokenSelected = { onEvent(SendEvent.OnTokenSelected(it)) },
             )
 
@@ -171,6 +180,7 @@ private fun SendScreenContent(
 @Composable
 private fun TokenSelector(
     selectedTokenContract: EthAddress,
+    chainTokens: List<KnownTokens>,
     onTokenSelected: (EthAddress) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -202,7 +212,7 @@ private fun TokenSelector(
             )
 
             // ERC20 Token Chips
-            KnownTokens.entries.forEach { token ->
+            chainTokens.forEach { token ->
                 FilterChip(
                     selected = selectedTokenContract == token.ethAddress,
                     onClick = { onTokenSelected(token.ethAddress) },

@@ -37,6 +37,7 @@
     <string name="wallet_manage_wallets">Manage Wallets</string>
     <string name="wallet_receive">Receive</string>
     <string name="wallet_send">Send</string>
+    <string name="wallet_network">Network: %1$s</string>
     <string name="wallet_tokens_erc20">Tokens (ERC-20)</string>
     <string name="wallet_error_format">Error: %1$s</string>
 

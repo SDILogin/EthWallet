@@ -7,22 +7,28 @@ import me.sdi.ethwallet.resources.logo_usdc_56
 import me.sdi.ethwallet.resources.logo_usdt_56
 import org.jetbrains.compose.resources.DrawableResource
 
+const val ETH_MAINNET_CHAIN_ID = 1L
+
 enum class KnownTokens(
+    val chainId: Long,
     val ethAddress: EthAddress,
     val tokenName: String,
     val decimals: Int,
 ) {
     USDT(
+        ETH_MAINNET_CHAIN_ID,
         EthAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7"),
         "Tether USD",
         6,
     ),
     USDC(
+        ETH_MAINNET_CHAIN_ID,
         EthAddress("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"),
         "USD Coin",
         6,
     ),
     DAI(
+        ETH_MAINNET_CHAIN_ID,
         EthAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
         "Dai Stablecoin",
         18,
@@ -35,3 +41,7 @@ val KnownTokens.icon: DrawableResource
         KnownTokens.USDC -> Res.drawable.logo_usdc_56
         KnownTokens.DAI -> Res.drawable.logo_dai_56
     }
+
+fun supportedKnownTokens(chainId: Long): List<KnownTokens> {
+    return KnownTokens.entries.filter { token -> token.chainId == chainId }
+}

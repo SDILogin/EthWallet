@@ -6,12 +6,14 @@ import java.math.BigDecimal
 /**
  * Represents the state of the wallet screen.
  *
+ * @property chainId Active blockchain chain ID.
  * @property totalBalanceUsd The total wallet balance in USD
  * @property totalBalanceEth The total wallet balance in ETH
  * @property favoriteTokens The list of favorite tokens
  * @property isLoading Whether balance data is being loaded
  */
 data class WalletViewState(
+    val chainId: Long = 0L,
     val totalBalanceUsd: String = "",
     val totalBalanceEth: String = "",
     val favoriteTokens: List<FavoriteToken> = emptyList(),

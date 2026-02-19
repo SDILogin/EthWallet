@@ -2,6 +2,7 @@ package me.sdi.ethwallet.di
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.EthWalletCreator
 import me.sdi.ethwallet.core.FileBasedEthWalletCreator
@@ -22,7 +23,7 @@ import org.koin.dsl.module
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
 
-actual fun platformModule(): Module = module {
+actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<AppDatabase> { DesktopDatabaseBuilder.getInstance() }
     single<WalletDao> { get<AppDatabase>().walletDao() }
     single<TokenBalanceDao> { get<AppDatabase>().tokenBalanceDao() }
@@ -32,7 +33,8 @@ actual fun platformModule(): Module = module {
     single<EthWalletCreator> { FileBasedEthWalletCreator(get()) }
     single<PrivateKeyEncryptor> { KeyStoreEncryptor() }
 
-    single { Web3j.build(HttpService("https://eth.llamarpc.com")) }
+    single { chainConfig }
+    single { Web3j.build(HttpService(get<ChainConfig>().rpcUrl)) }
 
     single<HttpClient> { createHttpClient(OkHttp.create()) }
 

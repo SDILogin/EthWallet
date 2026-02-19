@@ -5,6 +5,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.core.BalanceProvider
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
@@ -31,6 +32,7 @@ class Web3jTransferInteractor(
     private val walletRepository: WalletRepository,
     private val privateKeyEncryptor: PrivateKeyEncryptor,
     private val balanceProvider: BalanceProvider,
+    private val chainConfig: ChainConfig,
 ) : TransferInteractor {
     // Mutex to prevent race conditions in nonce management
     private val transferMutex = Mutex()
@@ -219,7 +221,7 @@ class Web3jTransferInteractor(
 
         // Sign the transaction
         val signedMessage = withContext(Dispatchers.Default) {
-            TransactionEncoder.signMessage(rawTransaction, credentials)
+            TransactionEncoder.signMessage(rawTransaction, chainConfig.chainId, credentials)
         }
         val hexValue = Numeric.toHexString(signedMessage)
 
@@ -280,7 +282,7 @@ class Web3jTransferInteractor(
         )
 
         // Sign the transaction
-        val signedMessage = TransactionEncoder.signMessage(rawTransaction, credentials)
+        val signedMessage = TransactionEncoder.signMessage(rawTransaction, chainConfig.chainId, credentials)
         val hexValue = Numeric.toHexString(signedMessage)
 
         // Send the signed transaction

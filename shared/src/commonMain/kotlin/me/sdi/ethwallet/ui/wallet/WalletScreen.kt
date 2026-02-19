@@ -51,6 +51,7 @@ import me.sdi.ethwallet.resources.ic_question_mark_56
 import me.sdi.ethwallet.resources.wallet_manage_wallets
 import me.sdi.ethwallet.resources.wallet_receive
 import me.sdi.ethwallet.resources.wallet_send
+import me.sdi.ethwallet.resources.wallet_network
 import me.sdi.ethwallet.resources.wallet_title
 import me.sdi.ethwallet.resources.wallet_tokens_erc20
 import me.sdi.ethwallet.ui.KnownTokens
@@ -145,6 +146,7 @@ fun WalletScreenContent(
                     TotalFiatBalanceCard(
                         fiatBalance = viewState.totalBalanceUsd,
                         ethBalance = viewState.totalBalanceEth,
+                        chainId = viewState.chainId,
                     )
                 }
 
@@ -262,6 +264,7 @@ private fun CircularButtonWithTitleShimmer() {
 private fun TotalFiatBalanceCard(
     fiatBalance: String,
     ethBalance: String,
+    chainId: Long,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -285,6 +288,20 @@ private fun TotalFiatBalanceCard(
             fontSize = 18.sp,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
         )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(Res.string.wallet_network, chainId.toNetworkName()),
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+        )
+    }
+}
+
+private fun Long.toNetworkName(): String {
+    return if (this == 1L) {
+        "Mainnet"
+    } else {
+        "Testnet"
     }
 }
 
@@ -509,6 +526,7 @@ private fun WalletScreenContentPreview() {
     MaterialTheme {
         WalletScreenContent(
             viewState = WalletViewState(
+                chainId = 11155111L,
                 totalBalanceUsd = "$12,345.67",
                 totalBalanceEth = "5.234 ETH",
                 favoriteTokens = listOf(
