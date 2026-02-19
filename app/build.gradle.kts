@@ -1,3 +1,4 @@
+import androidx.room.gradle.RoomExtension
 import com.android.build.api.dsl.ApplicationExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -21,6 +22,12 @@ spotless {
     }
 }
 
+extensions.configure<RoomExtension> {
+    room {
+        schemaDirectory("$projectDir/schemas")
+    }
+}
+
 extensions.configure<ApplicationExtension>("android") {
     namespace = "me.sdi.ethwallet"
     compileSdk = 36
@@ -34,10 +41,6 @@ extensions.configure<ApplicationExtension>("android") {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
-    }
-
-    room {
-        schemaDirectory("$projectDir/schemas")
     }
 
     testOptions {
