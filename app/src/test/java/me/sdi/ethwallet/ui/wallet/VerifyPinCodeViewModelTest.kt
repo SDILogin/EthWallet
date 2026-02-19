@@ -70,9 +70,24 @@ class VerifyPinCodeViewModelTest {
         )
 
         val finalState = viewModel.viewState.first()
-        assertTrue("Verification flag should be set during PIN check", finalState.isVerifying)
-        assertEquals("Entered PIN should match test PIN", testPin, finalState.enteredPin)
+        assertFalse("Verification flag should be reset after successful PIN", finalState.isVerifying)
+        assertEquals("Entered PIN should be reset after successful PIN", "", finalState.enteredPin)
+        assertEquals("Attempts should be reset after successful PIN", 3, finalState.remainingAttempts)
+        assertFalse("Lock state should be reset after successful PIN", finalState.isLocked)
         assertNull("No error message should be present after successful PIN", finalState.errorMessage)
+    }
+
+    @Test
+    fun `should allow entering PIN again after previous successful verification`() = runTest {
+        collectNews()
+
+        inputPin(testPin)
+
+        viewModel.onEvent(VerifyPinCodeEvent.OnDigitClick(1))
+
+        val state = viewModel.viewState.first()
+        assertEquals("PIN input must accept new digits after previous successful unlock", "1", state.enteredPin)
+        assertFalse("Verification should not be in progress for partial PIN", state.isVerifying)
     }
 
     @Test
