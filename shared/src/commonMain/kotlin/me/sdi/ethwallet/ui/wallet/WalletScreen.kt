@@ -49,9 +49,9 @@ import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.edit
 import me.sdi.ethwallet.resources.ic_question_mark_56
 import me.sdi.ethwallet.resources.wallet_manage_wallets
+import me.sdi.ethwallet.resources.wallet_network
 import me.sdi.ethwallet.resources.wallet_receive
 import me.sdi.ethwallet.resources.wallet_send
-import me.sdi.ethwallet.resources.wallet_network
 import me.sdi.ethwallet.resources.wallet_title
 import me.sdi.ethwallet.resources.wallet_tokens_erc20
 import me.sdi.ethwallet.ui.KnownTokens

@@ -26,7 +26,6 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.util.formatUsdCurrency
 import org.web3j.utils.Convert
