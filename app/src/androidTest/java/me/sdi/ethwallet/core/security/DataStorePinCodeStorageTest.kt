@@ -3,8 +3,12 @@ package me.sdi.ethwallet.core.security
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import me.sdi.ethwallet.data.UserActivityManager
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -16,12 +20,15 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalCoroutinesApi::class)
 class DataStorePinCodeStorageTest {
     private lateinit var dataStorePinCodeStorage: DataStorePinCodeStorage
+    private lateinit var userActivityManager: FakeUserActivityManager
 
     @Before
     fun setUp() {
+        userActivityManager = FakeUserActivityManager()
         dataStorePinCodeStorage = DataStorePinCodeStorage(
-            InstrumentationRegistry.getInstrumentation().targetContext,
-            UnconfinedTestDispatcher(),
+            context = InstrumentationRegistry.getInstrumentation().targetContext,
+            userActivityManager = userActivityManager,
+            dispatcher = UnconfinedTestDispatcher(),
         )
     }
 
@@ -78,4 +85,13 @@ class DataStorePinCodeStorageTest {
         assertFalse("Pin code should be removed after clearing", dataStorePinCodeStorage.hasPinCode())
         assertFalse("Verification should fail after clearing PIN", dataStorePinCodeStorage.verifyPinCode(pinCode))
     }
+}
+
+private class FakeUserActivityManager : UserActivityManager {
+    private val _showLockScreen = MutableStateFlow(false)
+    override val showLockScreen: StateFlow<Boolean> = _showLockScreen.asStateFlow()
+
+    override fun onAnyUserAction() {}
+
+    override fun onAppUnlocked() {}
 }
