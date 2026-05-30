@@ -196,7 +196,9 @@ fun SetPinCodeScreen(
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
             when (news) {
-                is SetPinCodeNews.PinCodeSet -> onPinCodeSet(news.pinCode)
+                is SetPinCodeNews.PinCodeSet -> {
+                    onPinCodeSet(news.pinCode)
+                }
                 is SetPinCodeNews.Error -> {
                     // We're handling errors through the state already
                 }

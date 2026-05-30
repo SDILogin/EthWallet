@@ -87,10 +87,18 @@ class ReceiveQrViewModel(
 
     fun onEvent(event: ReceiveQrEvent) {
         when (event) {
-            is ReceiveQrEvent.OnTokenSelected -> handleTokenSelected(event.tokenContractAddress)
-            is ReceiveQrEvent.OnAmountChanged -> handleAmountChanged(event.amount)
-            ReceiveQrEvent.OnClearAmount -> handleClearAmount()
-            ReceiveQrEvent.OnCopyAddress -> handleCopyAddress()
+            is ReceiveQrEvent.OnTokenSelected -> {
+                handleTokenSelected(event.tokenContractAddress)
+            }
+            is ReceiveQrEvent.OnAmountChanged -> {
+                handleAmountChanged(event.amount)
+            }
+            ReceiveQrEvent.OnClearAmount -> {
+                handleClearAmount()
+            }
+            ReceiveQrEvent.OnCopyAddress -> {
+                handleCopyAddress()
+            }
             ReceiveQrEvent.OnBackPressed -> {
                 // Back navigation is handled in the UI layer
             }

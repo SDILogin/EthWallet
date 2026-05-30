@@ -183,18 +183,24 @@ class SendViewModel(
 
     private fun mapTransferExceptionToUserMessage(exception: TransferException): String {
         return when (exception) {
-            is TransferException.InsufficientBalance ->
+            is TransferException.InsufficientBalance -> {
                 "Insufficient balance. ${exception.message}"
-            is TransferException.InvalidAddress ->
+            }
+            is TransferException.InvalidAddress -> {
                 "Invalid recipient address. Please check and try again."
-            is TransferException.InvalidAmount ->
+            }
+            is TransferException.InvalidAmount -> {
                 "Invalid transfer amount. ${exception.message}"
-            is TransferException.NetworkError ->
+            }
+            is TransferException.NetworkError -> {
                 "Network error occurred. Please check your connection and try again."
-            is TransferException.TransactionFailed ->
+            }
+            is TransferException.TransactionFailed -> {
                 "Transaction failed. ${exception.message}"
-            is TransferException.GasPriceError ->
+            }
+            is TransferException.GasPriceError -> {
                 "Gas price error. ${exception.message}"
+            }
         }
     }
 }

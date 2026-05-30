@@ -140,7 +140,9 @@ private fun CreateWalletScreenContent(
         targetState = viewState::class.qualifiedName,
     ) { target ->
         when (target) {
-            CreateWalletViewState.Loading::class.qualifiedName -> LoadingState()
+            CreateWalletViewState.Loading::class.qualifiedName -> {
+                LoadingState()
+            }
             CreateWalletViewState.Content::class.qualifiedName -> {
                 (viewState as? CreateWalletViewState.Content)?.let { state ->
                     ContentState(
@@ -150,7 +152,6 @@ private fun CreateWalletScreenContent(
                     )
                 }
             }
-
             CreateWalletViewState.Error::class.qualifiedName -> {
                 (viewState as? CreateWalletViewState.Error)?.throwable?.let { throwable ->
                     ErrorState(throwable)

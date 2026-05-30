@@ -70,8 +70,12 @@ fun WalletsListScreen(
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
             when (news) {
-                WalletScreenNews.NavigateToOnBoarding -> navigateToOnboarding()
-                WalletScreenNews.NavigateToWalletDetails -> navigateToWalletDetails()
+                WalletScreenNews.NavigateToOnBoarding -> {
+                    navigateToOnboarding()
+                }
+                WalletScreenNews.NavigateToWalletDetails -> {
+                    navigateToWalletDetails()
+                }
                 is WalletScreenNews.ShowErrorMessage -> {
                     val message = news.error.message?.takeIf { it.isNotBlank() } ?: errorMessage
                     toastManager.showToast(message)

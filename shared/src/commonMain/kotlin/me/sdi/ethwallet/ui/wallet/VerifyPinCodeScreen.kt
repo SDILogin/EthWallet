@@ -52,8 +52,12 @@ fun VerifyPinCodeScreen(
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
             when (news) {
-                is VerifyPinCodeNews.PinVerified -> onPinVerified()
-                is VerifyPinCodeNews.LoggedOut -> onLogout()
+                is VerifyPinCodeNews.PinVerified -> {
+                    onPinVerified()
+                }
+                is VerifyPinCodeNews.LoggedOut -> {
+                    onLogout()
+                }
                 is VerifyPinCodeNews.Error -> {
                     // Error already shown in the UI
                 }
