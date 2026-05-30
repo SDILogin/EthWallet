@@ -45,7 +45,6 @@ compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.re
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "foundation" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "ui" }
 compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIconsExtendedVersion" }
-core = { module = "com.google.zxing:core", version.ref = "core" }
 jetbrains-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "uiToolingPreview" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -69,6 +68,7 @@ lifecycle-viewmodel-navigation3-kmp = { group = "org.jetbrains.androidx.lifecycl
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinSerialization" }
 web3j-core = { group = "org.web3j", name = "core", version.ref = "web3j" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+zxing-core = { module = "com.google.zxing:core", version.ref = "core" }
 
 # Ktor
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }

@@ -107,7 +107,7 @@ kotlin {
                 implementation(libs.androidx.room.ktx)
 
                 // QR Code
-                implementation(libs.core)
+                implementation(libs.zxing.core)
             }
         }
         val desktopMain by getting {
@@ -117,7 +117,7 @@ kotlin {
                 implementation(libs.web3j.core)
 
                 // QR Code
-                implementation(libs.core)
+                implementation(libs.zxing.core)
             }
         }
     }

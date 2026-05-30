@@ -116,7 +116,7 @@ dependencies {
     implementation(libs.koin.androidx.compose)
 
     // ZXing QR Code Generation
-    implementation(libs.core)
+    implementation(libs.zxing.core)
 
     // Room
     implementation(libs.androidx.room.runtime)
