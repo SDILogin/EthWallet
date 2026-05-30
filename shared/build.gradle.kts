@@ -56,13 +56,13 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 // kmp
-                implementation(compose.runtime)
-                implementation(compose.foundation)
-                implementation(compose.material3)
-                implementation(compose.materialIconsExtended)
-                implementation(compose.ui)
-                implementation(compose.components.resources)
-                implementation(compose.components.uiToolingPreview)
+                implementation(libs.compose.runtime)
+                implementation(libs.compose.foundation)
+                implementation(libs.compose.material3)
+                implementation(libs.compose.material.icons.extended)
+                implementation(libs.compose.ui)
+                implementation(libs.compose.resources)
+                implementation(libs.jetbrains.ui.tooling.preview)
 
                 // Ktor
                 implementation(libs.ktor.client.core)
