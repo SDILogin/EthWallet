@@ -30,12 +30,12 @@ extensions.configure<RoomExtension> {
 
 extensions.configure<ApplicationExtension>("android") {
     namespace = "me.sdi.ethwallet"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "me.sdi.ethwallet"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
 
