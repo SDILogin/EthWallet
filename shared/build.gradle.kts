@@ -36,7 +36,7 @@ room {
 kotlin {
     androidLibrary {
         namespace = "me.sdi.ethwallet.shared"
-        compileSdk = 36
+        compileSdk = 37
         minSdk = 24
 
         compilerOptions {
