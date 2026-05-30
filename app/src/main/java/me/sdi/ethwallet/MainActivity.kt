@@ -25,11 +25,10 @@ class MainActivity : ComponentActivity() {
 
         initLogger()
 
+        DatabaseBuilder.getInstance(application)
+
         var lastPrintAt = System.currentTimeMillis()
         splashScreen.setKeepOnScreenCondition {
-            // warmup database
-            DatabaseBuilder.getInstance(application)
-
             (viewModel.state.value.numberOfWallets < 0).also {
                 val now = System.currentTimeMillis()
                 if (now - lastPrintAt > 1000) {
