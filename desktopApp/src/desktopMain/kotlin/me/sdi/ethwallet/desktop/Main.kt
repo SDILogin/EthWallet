@@ -11,6 +11,7 @@ import me.sdi.ethwallet.ui.EthWalletApp
 import me.sdi.ethwallet.ui.InitialNavigationViewModel
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
+import org.koin.dsl.koinConfiguration
 
 fun main() = application {
     val chainConfig = ChainConfig(
@@ -24,10 +25,13 @@ fun main() = application {
         title = "EthWallet",
         state = rememberWindowState(width = 400.dp, height = 600.dp),
     ) {
-        KoinApplication(application = { modules(appModules(chainConfig)) }) {
-            val viewModel: InitialNavigationViewModel = koinInject()
-            val userActivityManager: UserActivityManager = koinInject()
-            EthWalletApp(viewModel, userActivityManager)
-        }
+        KoinApplication(
+            configuration = koinConfiguration(declaration = { modules(appModules(chainConfig)) }),
+            content = {
+                val viewModel: InitialNavigationViewModel = koinInject()
+                val userActivityManager: UserActivityManager = koinInject()
+                EthWalletApp(viewModel, userActivityManager)
+            },
+        )
     }
 }
