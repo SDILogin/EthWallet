@@ -42,6 +42,12 @@ kotlin {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
         }
+
+        // The KMP library plugin disables resource processing by default, which drops
+        // Compose Multiplatform resources (packaged as Android assets) from the AAR/APK.
+        androidResources {
+            enable = true
+        }
     }
 
     jvm("desktop")
