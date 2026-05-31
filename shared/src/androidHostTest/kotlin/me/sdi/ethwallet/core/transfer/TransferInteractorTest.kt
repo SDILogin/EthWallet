@@ -1,31 +1,34 @@
 package me.sdi.ethwallet.core.transfer
 
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
-import me.sdi.ethwallet.core.security.KeyStoreEncryptor
+import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.ui.KnownTokens
-import org.junit.Assert.assertEquals
-import org.junit.Before
-import org.junit.Test
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.Request
 import org.web3j.protocol.core.methods.response.EthGetBalance
 import org.web3j.protocol.core.methods.response.EthGetTransactionCount
 import org.web3j.protocol.core.methods.response.EthSendTransaction
 import java.math.BigInteger
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class TransferInteractorTest {
     private lateinit var web3j: Web3j
     private lateinit var walletRepository: WalletRepository
-    private lateinit var keyStoreEncryptor: KeyStoreEncryptor
+    private lateinit var keyStoreEncryptor: PrivateKeyEncryptor
     private lateinit var balanceProvider: BalanceProvider
     private lateinit var chainConfig: ChainConfig
     private lateinit var transferInteractor: TransferInteractor
@@ -35,7 +38,7 @@ class TransferInteractorTest {
     private val testAmount = BigInteger("1000000000000000000") // 1 ETH in wei
     private val testWallet = EthWallet(label = "Test Wallet", address = testWalletAddress)
 
-    @Before
+    @BeforeTest
     fun setUp() {
         web3j = mockk()
         walletRepository = mockk()
@@ -52,30 +55,34 @@ class TransferInteractorTest {
         coEvery { walletRepository.getActiveWallet() } returns testWallet
     }
 
-    @Test(expected = TransferException.InvalidAmount::class)
-    fun `should validate positive amount`() = runTest {
+    @Test
+    fun should_validate_positive_amount() = runTest {
         val transferData = TransferData(
             destinationAddress = testDestinationAddress,
             amount = BigInteger.ZERO,
             contractAddress = EthContractAddress,
         )
 
-        transferInteractor.transfer(transferData)
+        assertFailsWith<TransferException.InvalidAmount> {
+            transferInteractor.transfer(transferData)
+        }
     }
 
-    @Test(expected = TransferException.InvalidAddress::class)
-    fun `should validate different source and destination addresses`() = runTest {
+    @Test
+    fun should_validate_different_source_and_destination_addresses() = runTest {
         val transferData = TransferData(
             destinationAddress = testWalletAddress, // Same as wallet address
             amount = testAmount,
             contractAddress = EthContractAddress,
         )
 
-        transferInteractor.transfer(transferData)
+        assertFailsWith<TransferException.InvalidAddress> {
+            transferInteractor.transfer(transferData)
+        }
     }
 
-    @Test(expected = TransferException.GasPriceError::class)
-    fun `should validate custom gas price is positive`() = runTest {
+    @Test
+    fun should_validate_custom_gas_price_is_positive() = runTest {
         val transferData = TransferData(
             destinationAddress = testDestinationAddress,
             amount = testAmount,
@@ -86,11 +93,13 @@ class TransferInteractorTest {
             ),
         )
 
-        transferInteractor.transfer(transferData)
+        assertFailsWith<TransferException.GasPriceError> {
+            transferInteractor.transfer(transferData)
+        }
     }
 
-    @Test(expected = TransferException.GasPriceError::class)
-    fun `should validate custom gas limit is positive`() = runTest {
+    @Test
+    fun should_validate_custom_gas_limit_is_positive() = runTest {
         val transferData = TransferData(
             destinationAddress = testDestinationAddress,
             amount = testAmount,
@@ -101,11 +110,13 @@ class TransferInteractorTest {
             ),
         )
 
-        transferInteractor.transfer(transferData)
+        assertFailsWith<TransferException.GasPriceError> {
+            transferInteractor.transfer(transferData)
+        }
     }
 
-    @Test(expected = RuntimeException::class)
-    fun `should handle wallet repository errors`() = runTest {
+    @Test
+    fun should_handle_wallet_repository_errors() = runTest {
         coEvery { walletRepository.getActiveWallet() } throws RuntimeException("Wallet not found")
 
         val transferData = TransferData(
@@ -114,22 +125,26 @@ class TransferInteractorTest {
             contractAddress = EthContractAddress,
         )
 
-        transferInteractor.transfer(transferData)
+        assertFailsWith<RuntimeException> {
+            transferInteractor.transfer(transferData)
+        }
     }
 
-    @Test(expected = TransferException.InvalidAmount::class)
-    fun `should validate negative amount throws exception`() = runTest {
+    @Test
+    fun should_validate_negative_amount_throws_exception() = runTest {
         val transferData = TransferData(
             destinationAddress = testDestinationAddress,
             amount = BigInteger("-1000000000000000000"),
             contractAddress = EthContractAddress,
         )
 
-        transferInteractor.transfer(transferData)
+        assertFailsWith<TransferException.InvalidAmount> {
+            transferInteractor.transfer(transferData)
+        }
     }
 
-    @Test(expected = Exception::class)
-    fun `should validate gas params with different token contracts`() = runTest {
+    @Test
+    fun should_validate_gas_params_with_different_token_contracts() = runTest {
         val transferDataDAI = TransferData(
             destinationAddress = testDestinationAddress,
             amount = BigInteger("200000000000000000000"), // 200 DAI
@@ -142,11 +157,13 @@ class TransferInteractorTest {
 
         // This will fail during balance validation since we haven't mocked the balance provider properly
         // The test validates that gas params validation passes for ERC-20 transfers
-        transferInteractor.transfer(transferDataDAI)
+        assertFailsWith<Exception> {
+            transferInteractor.transfer(transferDataDAI)
+        }
     }
 
     @Test
-    fun `should successfully transfer ETH with sufficient balance`() = runTest {
+    fun should_successfully_transfer_ETH_with_sufficient_balance() = runTest {
         // Mock successful balance check
         val ethBalanceRequest = mockk<Request<*, EthGetBalance>>()
         val ethBalanceResponse = mockk<EthGetBalance>()
@@ -188,7 +205,7 @@ class TransferInteractorTest {
     }
 
     @Test
-    fun `should successfully transfer ERC-20 token with sufficient balance`() = runTest {
+    fun should_successfully_transfer_ERC20_token_with_sufficient_balance() = runTest {
         // Mock successful ETH balance check for gas
         val ethBalanceRequest = mockk<Request<*, EthGetBalance>>()
         val ethBalanceResponse = mockk<EthGetBalance>()

@@ -3,14 +3,14 @@ package me.sdi.ethwallet.utils
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.ui.KnownTokens
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
 import java.math.BigDecimal
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ReceiveUtilsTest {
     @Test
-    fun `generateReceiveQrPayload should generate basic ETH URI without amount`() {
+    fun generateReceiveQrPayload_should_generate_basic_ETH_URI_without_amount() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
 
         val result = ReceiveUtils.generateReceiveQrPayload(
@@ -19,14 +19,14 @@ class ReceiveUtilsTest {
         )
 
         assertEquals(
-            "ETH URI should contain only the receiver address when no amount is specified",
             "ethereum:0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2",
             result,
+            "ETH URI should contain only the receiver address when no amount is specified",
         )
     }
 
     @Test
-    fun `generateReceiveQrPayload should generate ETH URI with amount in wei format`() {
+    fun generateReceiveQrPayload_should_generate_ETH_URI_with_amount_in_wei_format() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
         val amount = BigDecimal("1.5")
 
@@ -37,14 +37,14 @@ class ReceiveUtilsTest {
         )
 
         assertEquals(
-            "ETH URI should include value parameter with wei format",
             "ethereum:0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2?value=1500000000000000000",
             result,
+            "ETH URI should include value parameter with wei format",
         )
     }
 
     @Test
-    fun `generateReceiveQrPayload should handle very small ETH amounts without scientific notation`() {
+    fun generateReceiveQrPayload_should_handle_very_small_ETH_amounts_without_scientific_notation() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
         val amount = BigDecimal("0.000000001")
 
@@ -55,17 +55,17 @@ class ReceiveUtilsTest {
         )
 
         assertTrue(
-            "ETH URI should convert to wei format (1000000000 wei for 0.000000001 ETH)",
             result.contains("value=1000000000"),
+            "ETH URI should convert to wei format (1000000000 wei for 0.000000001 ETH)",
         )
         assertTrue(
-            "Value part should not contain scientific notation",
             !result.substringAfter("value=").contains("E") && !result.substringAfter("value=").contains("+"),
+            "Value part should not contain scientific notation",
         )
     }
 
     @Test
-    fun `generateReceiveQrPayload should generate USDC URI without amount`() {
+    fun generateReceiveQrPayload_should_generate_USDC_URI_without_amount() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
 
         val result = ReceiveUtils.generateReceiveQrPayload(
@@ -74,14 +74,14 @@ class ReceiveUtilsTest {
         )
 
         assertEquals(
-            "USDC URI should follow ERC-20 transfer format without amount parameters",
             "ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/transfer?address=0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2",
             result,
+            "USDC URI should follow ERC-20 transfer format without amount parameters",
         )
     }
 
     @Test
-    fun `generateReceiveQrPayload should generate USDC URI with correct minimal units`() {
+    fun generateReceiveQrPayload_should_generate_USDC_URI_with_correct_minimal_units() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
         val amount = BigDecimal("100.5")
 
@@ -92,14 +92,14 @@ class ReceiveUtilsTest {
         )
 
         assertEquals(
-            "USDC URI should convert 100.5 USDC to 100500000 minimal units (6 decimals)",
             "ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/transfer?address=0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2&uint256=100500000",
             result,
+            "USDC URI should convert 100.5 USDC to 100500000 minimal units (6 decimals)",
         )
     }
 
     @Test
-    fun `generateReceiveQrPayload should generate USDT URI with correct minimal units`() {
+    fun generateReceiveQrPayload_should_generate_USDT_URI_with_correct_minimal_units() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
         val amount = BigDecimal("50.123456")
 
@@ -110,14 +110,14 @@ class ReceiveUtilsTest {
         )
 
         assertEquals(
-            "USDT URI should convert 50.123456 USDT to 50123456 minimal units (6 decimals)",
             "ethereum:0xdAC17F958D2ee523a2206206994597C13D831ec7/transfer?address=0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2&uint256=50123456",
             result,
+            "USDT URI should convert 50.123456 USDT to 50123456 minimal units (6 decimals)",
         )
     }
 
     @Test
-    fun `generateReceiveQrPayload should generate DAI URI with correct minimal units`() {
+    fun generateReceiveQrPayload_should_generate_DAI_URI_with_correct_minimal_units() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
         val amount = BigDecimal("2.5")
 
@@ -128,14 +128,14 @@ class ReceiveUtilsTest {
         )
 
         assertEquals(
-            "DAI URI should convert 2.5 DAI to 2500000000000000000 minimal units (18 decimals)",
             "ethereum:0x6B175474E89094C44Da98b954EedeAC495271d0F/transfer?address=0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2&uint256=2500000000000000000",
             result,
+            "DAI URI should convert 2.5 DAI to 2500000000000000000 minimal units (18 decimals)",
         )
     }
 
     @Test
-    fun `generateReceiveQrPayload should handle fractional amounts with proper rounding for USDC`() {
+    fun generateReceiveQrPayload_should_handle_fractional_amounts_with_proper_rounding_for_USDC() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
         val amount = BigDecimal("1.1234567")
 
@@ -146,13 +146,13 @@ class ReceiveUtilsTest {
         )
 
         assertTrue(
-            "USDC URI should round 1.1234567 to 1123457 minimal units (6 decimals, rounded up)",
             result.contains("uint256=1123457"),
+            "USDC URI should round 1.1234567 to 1123457 minimal units (6 decimals, rounded up)",
         )
     }
 
     @Test
-    fun `generateReceiveQrPayload should handle fractional amounts with proper rounding for USDT`() {
+    fun generateReceiveQrPayload_should_handle_fractional_amounts_with_proper_rounding_for_USDT() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
         val amount = BigDecimal("1.1234564")
 
@@ -163,13 +163,13 @@ class ReceiveUtilsTest {
         )
 
         assertTrue(
-            "USDT URI should round 1.1234564 to 1123456 minimal units (6 decimals, rounded down)",
             result.contains("uint256=1123456"),
+            "USDT URI should round 1.1234564 to 1123456 minimal units (6 decimals, rounded down)",
         )
     }
 
     @Test
-    fun `generateReceiveQrPayload should handle unknown token with default 18 decimals`() {
+    fun generateReceiveQrPayload_should_handle_unknown_token_with_default_18_decimals() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
         val unknownTokenAddress = createTestAddress("0x1234567890123456789012345678901234567890")
         val amount = BigDecimal("1.0")
@@ -181,13 +181,13 @@ class ReceiveUtilsTest {
         )
 
         assertTrue(
-            "Unknown token should default to 18 decimals, converting 1.0 to 1000000000000000000 minimal units",
             result.contains("uint256=1000000000000000000"),
+            "Unknown token should default to 18 decimals, converting 1.0 to 1000000000000000000 minimal units",
         )
     }
 
     @Test
-    fun `generateReceiveQrPayload should handle zero amounts correctly`() {
+    fun generateReceiveQrPayload_should_handle_zero_amounts_correctly() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
         val amount = BigDecimal.ZERO
 
@@ -204,19 +204,19 @@ class ReceiveUtilsTest {
         )
 
         assertEquals(
-            "ETH URI should handle zero amount correctly",
             "ethereum:0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2?value=0",
             ethResult,
+            "ETH URI should handle zero amount correctly",
         )
 
         assertTrue(
-            "USDC URI should handle zero amount correctly",
             usdcResult.contains("uint256=0"),
+            "USDC URI should handle zero amount correctly",
         )
     }
 
     @Test
-    fun `generateReceiveQrPayload should handle very large amounts without overflow`() {
+    fun generateReceiveQrPayload_should_handle_very_large_amounts_without_overflow() {
         val receiverAddress = createTestAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
         val largeAmount = BigDecimal("999999999.999999")
 
@@ -227,13 +227,13 @@ class ReceiveUtilsTest {
         )
 
         assertTrue(
-            "Large USDC amount should be converted correctly to minimal units",
             result.contains("uint256=999999999999999"),
+            "Large USDC amount should be converted correctly to minimal units",
         )
     }
 
     @Test
-    fun `generateReceiveQrPayload should preserve address case correctly`() {
+    fun generateReceiveQrPayload_should_preserve_address_case_correctly() {
         val mixedCaseAddress = createTestAddress("0xaBcDeFaBcDeFaBcDeFaBcDeFaBcDeFaBcDeFaBcD")
 
         val ethResult = ReceiveUtils.generateReceiveQrPayload(
@@ -247,13 +247,13 @@ class ReceiveUtilsTest {
         )
 
         assertTrue(
-            "ETH URI should preserve original address case",
             ethResult.contains("0xaBcDeFaBcDeFaBcDeFaBcDeFaBcDeFaBcDeFaBcD"),
+            "ETH URI should preserve original address case",
         )
 
         assertTrue(
-            "USDC URI should preserve original receiver address case",
             usdcResult.contains("address=0xaBcDeFaBcDeFaBcDeFaBcDeFaBcDeFaBcDeFaBcD"),
+            "USDC URI should preserve original receiver address case",
         )
     }
 

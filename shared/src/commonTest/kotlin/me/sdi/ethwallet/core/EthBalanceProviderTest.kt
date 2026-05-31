@@ -6,10 +6,10 @@ import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.database.dao.InMemoryTokenBalanceDao
 import me.sdi.ethwallet.database.entity.TokenBalanceEntity
 import me.sdi.ethwallet.ui.KnownTokens
-import org.junit.Assert.assertEquals
-import org.junit.Before
-import org.junit.Test
 import java.math.BigInteger
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class EthBalanceProviderTest {
     private val fakeEthManager = object : EthManager {
@@ -32,24 +32,24 @@ class EthBalanceProviderTest {
     private val testWalletAddress = EthAddress("0x1234567890abcdef1234567890abcdef12345678")
     private val testWallet = EthWallet(label = "Test Wallet", address = testWalletAddress)
 
-    @Before
+    @BeforeTest
     fun setUp() {
         inMemoryTokenBalanceDao.clear()
     }
 
     @Test
-    fun `observe returns empty map initially`() = runTest {
+    fun observe_returns_empty_map_initially() = runTest {
         val result = ethBalanceProvider.observe(testWalletAddress).first()
 
         assertEquals(
-            "Should return empty map when no cached balances exist",
             emptyMap<EthAddress, BigInteger>(),
             result,
+            "Should return empty map when no cached balances exist",
         )
     }
 
     @Test
-    fun `forceUpdate saves balances to database and observe returns them`() = runTest {
+    fun forceUpdate_saves_balances_to_database_and_observe_returns_them() = runTest {
         // Mock successful balance retrieval
         val ethBalance = BigInteger("1000000000000000000") // 1 ETH
         val usdtBalance = BigInteger("100000000") // 100 USDT
@@ -67,17 +67,17 @@ class EthBalanceProviderTest {
         // Observe should return the stored balances
         val result = ethBalanceProvider.observe(testWalletAddress).first()
 
-        assertEquals("Should return ETH balance", ethBalance, result[EthContractAddress])
+        assertEquals(ethBalance, result[EthContractAddress], "Should return ETH balance")
         assertEquals(
-            "Should return USDT balance",
             usdtBalance,
             result[EthAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7")],
+            "Should return USDT balance",
         )
-        assertEquals("Should return 2 balances", 2, result.size)
+        assertEquals(2, result.size, "Should return 2 balances")
     }
 
     @Test
-    fun `forceUpdate handles network failure by using database fallback`() = runTest {
+    fun forceUpdate_handles_network_failure_by_using_database_fallback() = runTest {
         // Pre-populate database with some balance
         val previousBalance = BigInteger("500000000000000000") // 0.5 ETH
         inMemoryTokenBalanceDao.insertAll(
@@ -100,24 +100,26 @@ class EthBalanceProviderTest {
             ),
         )
 
+        // Force update should run
         ethBalanceProvider.forceUpdate(testWallet)
 
+        // Observe should fall back
         val result = ethBalanceProvider.observe(testWalletAddress).first()
 
         assertEquals(
-            "Should fallback to previous ETH balance from database",
             previousBalance,
             result[EthContractAddress],
+            "Should fallback to previous ETH balance from database",
         )
         assertEquals(
-            "Should use new token balance",
             tokenBalance,
             result[EthAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7")],
+            "Should use new token balance",
         )
     }
 
     @Test
-    fun `forceUpdate handles complete network failure with no database fallback`() = runTest {
+    fun forceUpdate_handles_complete_network_failure_with_no_database_fallback() = runTest {
         fakeEthManager.setBalance(
             wallet = testWallet,
             balances = mapOf(
@@ -130,11 +132,11 @@ class EthBalanceProviderTest {
 
         val result = ethBalanceProvider.observe(testWalletAddress).first()
 
-        assertEquals("Should default to zero ETH balance", BigInteger.ZERO, result[EthContractAddress])
+        assertEquals(BigInteger.ZERO, result[EthContractAddress], "Should default to zero ETH balance")
         assertEquals(
-            "Should default to zero token balance",
             BigInteger.ZERO,
             result[EthAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7")],
+            "Should default to zero token balance",
         )
     }
 }

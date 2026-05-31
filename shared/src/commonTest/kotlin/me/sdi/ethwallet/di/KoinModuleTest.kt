@@ -1,6 +1,6 @@
 package me.sdi.ethwallet.di
 
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertNotNull
 
 class KoinModuleTest {

@@ -15,33 +15,34 @@ import kotlinx.serialization.json.Json
 import me.sdi.ethwallet.database.dao.InMemoryFiatRateDao
 import me.sdi.ethwallet.database.entity.FiatRateEntity
 import me.sdi.ethwallet.ui.KnownTokens
-import org.junit.Assert.assertEquals
-import org.junit.Before
-import org.junit.Test
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.net.SocketTimeoutException
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class CryptocompareFiatRateProviderTest {
     private val inMemoryFiatRateDao = InMemoryFiatRateDao()
     private val currentTime = 1000000L
 
-    @Before
+    @BeforeTest
     fun setUp() {
         inMemoryFiatRateDao.clear()
     }
 
     @Test
-    fun `observe returns empty map initially`() = runTest {
+    fun observe_returns_empty_map_initially() = runTest {
         val ethPriceProvider = createCryptocompareEthPriceProvider(MockEngine { throw RuntimeException("Should not call network") })
 
         val result = ethPriceProvider.observe().first()
 
-        assertEquals("Should return empty map when no cached rates exist", emptyMap<EthAddress, BigDecimal>(), result)
+        assertEquals(emptyMap<EthAddress, BigDecimal>(), result, "Should return empty map when no cached rates exist")
     }
 
     @Test
-    fun `forceUpdate fetches and stores rates from network`() = runTest {
+    fun forceUpdate_fetches_and_stores_rates_from_network() = runTest {
         val mockEngine = MockEngine {
             respond(
                 content = """{"ETH": 0.0003638, "USDT": 1.0, "USDC": 1.0, "DAI": 1.0}""",
@@ -56,17 +57,17 @@ class CryptocompareFiatRateProviderTest {
         val result = ethPriceProvider.observe().first()
 
         assertEquals(
-            "Should return ETH rate",
             BigDecimal("2748.7630566245"),
             result[EthContractAddress]?.setScale(10, RoundingMode.HALF_UP),
+            "Should return ETH rate",
         )
-        assertEquals("Should return USDT rate", BigDecimal("1.0"), result[KnownTokens.USDT.ethAddress])
-        assertEquals("Should return USDC rate", BigDecimal("1.0"), result[KnownTokens.USDC.ethAddress])
-        assertEquals("Should return DAI rate", BigDecimal("1.0"), result[KnownTokens.DAI.ethAddress])
+        assertEquals(BigDecimal("1.0"), result[KnownTokens.USDT.ethAddress], "Should return USDT rate")
+        assertEquals(BigDecimal("1.0"), result[KnownTokens.USDC.ethAddress], "Should return USDC rate")
+        assertEquals(BigDecimal("1.0"), result[KnownTokens.DAI.ethAddress], "Should return DAI rate")
     }
 
     @Test
-    fun `observe returns cached rates from database`() = runTest {
+    fun observe_returns_cached_rates_from_database() = runTest {
         // Pre-populate database with rates for all known tokens
         val ethRate = BigDecimal("2500.0")
         val usdtRate = BigDecimal("1.0")
@@ -101,14 +102,14 @@ class CryptocompareFiatRateProviderTest {
 
         val result = ethPriceProvider.observe().first()
 
-        assertEquals("Should return cached ETH rate", ethRate, result[EthContractAddress])
-        assertEquals("Should return cached USDT rate", usdtRate, result[KnownTokens.USDT.ethAddress])
-        assertEquals("Should return cached USDC rate", usdcRate, result[KnownTokens.USDC.ethAddress])
-        assertEquals("Should return cached DAI rate", daiRate, result[KnownTokens.DAI.ethAddress])
+        assertEquals(ethRate, result[EthContractAddress], "Should return cached ETH rate")
+        assertEquals(usdtRate, result[KnownTokens.USDT.ethAddress], "Should return cached USDT rate")
+        assertEquals(usdcRate, result[KnownTokens.USDC.ethAddress], "Should return cached USDC rate")
+        assertEquals(daiRate, result[KnownTokens.DAI.ethAddress], "Should return cached DAI rate")
     }
 
-    @Test(expected = JsonConvertException::class)
-    fun `forceUpdate with invalid json throws exception`() = runTest {
+    @Test
+    fun forceUpdate_with_invalid_json_throws_exception() = runTest {
         val mockEngine = MockEngine {
             respond(
                 content = """{"ETH": "invalid"}""",
@@ -118,15 +119,19 @@ class CryptocompareFiatRateProviderTest {
         }
         val ethPriceProvider = createCryptocompareEthPriceProvider(mockEngine)
 
-        ethPriceProvider.forceUpdate()
+        assertFailsWith<JsonConvertException> {
+            ethPriceProvider.forceUpdate()
+        }
     }
 
-    @Test(expected = SocketTimeoutException::class)
-    fun `forceUpdate when device is offline throws exception`() = runTest {
+    @Test
+    fun forceUpdate_when_device_is_offline_throws_exception() = runTest {
         val mockEngine = MockEngine { throw SocketTimeoutException() }
         val ethPriceProvider = createCryptocompareEthPriceProvider(mockEngine)
 
-        ethPriceProvider.forceUpdate()
+        assertFailsWith<SocketTimeoutException> {
+            ethPriceProvider.forceUpdate()
+        }
     }
 
     private fun createCryptocompareEthPriceProvider(mockEngine: MockEngine): CryptocompareFiatRateProvider {

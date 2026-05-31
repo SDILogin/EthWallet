@@ -1,93 +1,93 @@
 package me.sdi.ethwallet.core
 
 import me.sdi.ethwallet.data.TempFileProvider
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
 import org.web3j.crypto.ECKeyPair
 import org.web3j.crypto.Keys
 import java.io.File
 import java.util.Locale
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class FileBasedEthWalletCreatorTest {
     private lateinit var fakeTempFileProvider: FakeTempFileProvider
     private lateinit var walletCreator: FileBasedEthWalletCreator
 
-    @Before
+    @BeforeTest
     fun setUp() {
         fakeTempFileProvider = FakeTempFileProvider()
         walletCreator = FileBasedEthWalletCreator(fakeTempFileProvider)
     }
 
-    @After
+    @AfterTest
     fun tearDown() {
         fakeTempFileProvider.cleanupAll()
     }
 
     @Test
-    fun `createWallet should generate valid Ethereum wallet`() {
+    fun createWallet_should_generate_valid_Ethereum_wallet() {
         val result = walletCreator.createWallet()
 
-        assertNotNull("Address should not be null", result.address)
+        assertNotNull(result.address, "Address should not be null")
         assertTrue(
-            "Address should be a valid Ethereum address",
             result.address.toString().matches(Regex("^0x[0-9a-fA-F]{40}$")),
+            "Address should be a valid Ethereum address",
         )
         assertTrue(
-            "Address should start with 0x",
             result.address.toString().startsWith("0x"),
+            "Address should start with 0x",
         )
 
-        assertNotNull("Private key should not be null", result.privateKey)
+        assertNotNull(result.privateKey, "Private key should not be null")
 
-        assertNotNull("Seed phrase should not be null", result.seedPhrase)
-        assertEquals("Seed phrase should contain 12 words", 12, result.seedPhrase.size)
+        assertNotNull(result.seedPhrase, "Seed phrase should not be null")
+        assertEquals(12, result.seedPhrase.size, "Seed phrase should contain 12 words")
         result.seedPhrase.forEach { word ->
-            assertTrue("Each word in seed phrase should not be empty", word.isNotEmpty())
+            assertTrue(word.isNotEmpty(), "Each word in seed phrase should not be empty")
         }
     }
 
     @Test
-    fun `createWallet should generate different wallets on each call`() {
+    fun createWallet_should_generate_different_wallets_on_each_call() {
         val wallet1 = walletCreator.createWallet()
         val wallet2 = walletCreator.createWallet()
 
         assertFalse(
-            "Two generated wallets should have different addresses",
             wallet1.address.toString() == wallet2.address.toString(),
+            "Two generated wallets should have different addresses",
         )
 
         assertFalse(
-            "Two generated wallets should have different private keys",
             wallet1.privateKey == wallet2.privateKey,
+            "Two generated wallets should have different private keys",
         )
 
         assertFalse(
-            "Two generated wallets should have different seed phrases",
             wallet1.seedPhrase == wallet2.seedPhrase,
+            "Two generated wallets should have different seed phrases",
         )
     }
 
     @Test
-    fun `createWallet should generate wallet with matching address and private key`() {
+    fun createWallet_should_generate_wallet_with_matching_address_and_private_key() {
         val result = walletCreator.createWallet()
 
         val ecKeyPair = ECKeyPair.create(result.privateKey)
         val calculatedAddress = "0x" + Keys.getAddress(ecKeyPair)
 
         assertEquals(
-            "Address should be derived from the private key",
             result.address.toString().lowercase(Locale.getDefault()),
             calculatedAddress.lowercase(Locale.getDefault()),
+            "Address should be derived from the private key",
         )
     }
 
     @Test
-    fun `createWallet should use tempFileProvider for wallet generation`() {
+    fun createWallet_should_use_tempFileProvider_for_wallet_generation() {
         var tempDirUsed = false
 
         val trackingTempProvider =
@@ -102,29 +102,29 @@ class FileBasedEthWalletCreatorTest {
 
         trackedWalletCreator.createWallet()
 
-        assertTrue("Wallet creator should use TempFileProvider", tempDirUsed)
+        assertTrue(tempDirUsed, "Wallet creator should use TempFileProvider")
     }
 
     @Test
-    fun `createWallet should generate valid mnemonic words`() {
+    fun createWallet_should_generate_valid_mnemonic_words() {
         val result = walletCreator.createWallet()
 
         result.seedPhrase.forEach { word ->
             assertTrue(
-                "Seed phrase words should be valid lowercase alphabetic strings",
                 word.all { it.isLetter() && it.isLowerCase() },
+                "Seed phrase words should be valid lowercase alphabetic strings",
             )
         }
 
         val uniqueWords = result.seedPhrase.toSet()
         assertTrue(
-            "Seed phrase should have some diversity in words",
             uniqueWords.size > 5,
+            "Seed phrase should have some diversity in words",
         )
     }
 
     @Test
-    fun `createWallet should properly clean up temporary files`() {
+    fun createWallet_should_properly_clean_up_temporary_files() {
         var dirCreated: File? = null
         var cleanupCalled = false
 
@@ -154,8 +154,8 @@ class FileBasedEthWalletCreatorTest {
 
         trackedWalletCreator.createWallet()
 
-        assertNotNull("Temp directory should have been created", dirCreated)
+        assertNotNull(dirCreated, "Temp directory should have been created")
 
-        assertTrue("Cleanup should have been called", cleanupCalled)
+        assertTrue(cleanupCalled, "Cleanup should have been called")
     }
 }
