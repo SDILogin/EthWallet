@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
@@ -52,7 +53,18 @@ class WalletViewModel(
 
     private var forceUpdateJob: Job? = null
 
+    init {
+        viewState
+            .onEach { Logger.debug(TAG) { "ViewState: $it" } }
+            .launchIn(viewModelScope)
+
+        news
+            .onEach { Logger.debug(TAG) { "News: $it" } }
+            .launchIn(viewModelScope)
+    }
+
     fun onEvent(event: WalletEvent) {
+        Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
             is WalletEvent.Initialize -> startObservingActiveWalletBalanceChanges()
             is WalletEvent.Refresh -> onRefreshRequested()
@@ -81,6 +93,22 @@ class WalletViewModel(
 
                     updateWalletBalanceOrShowError(activeWallet)
                     updateFiatRatesOrShowError()
+                }.also { job ->
+                    job.invokeOnCompletion {
+                        if (it == null) {
+                            Logger.debug(TAG) { "balanceUpdateJob successfully completed" }
+                        } else {
+                            Logger.warn(TAG, it) { "balanceUpdateJob completed with exception" }
+                        }
+                    }
+                }
+            }.also { job ->
+                job.invokeOnCompletion {
+                    if (it == null) {
+                        Logger.debug(TAG) { "refreshJob successfully completed" }
+                    } else {
+                        Logger.warn(TAG, it) { "refreshJob completed with exception" }
+                    }
                 }
             }
         }
@@ -111,6 +139,14 @@ class WalletViewModel(
                     forceUpdateJob = launch(CoroutineName("BalanceUpdate")) {
                         updateWalletBalanceOrShowError(activeWallet)
                         updateFiatRatesOrShowError()
+                    }.also { job ->
+                        job.invokeOnCompletion {
+                            if (it == null) {
+                                Logger.debug(TAG) { "balanceUpdateJob successfully completed" }
+                            } else {
+                                Logger.warn(TAG, it) { "balanceUpdateJob completed with exception" }
+                            }
+                        }
                     }
                 }
                 .onEach {
@@ -121,6 +157,14 @@ class WalletViewModel(
                 .collectLatest { combinedBalance: CombinedBalance ->
                     displayUpdatedBalance(combinedBalance)
                 }
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (it == null) {
+                    Logger.debug(TAG) { "observeBalanceJob successfully completed" }
+                } else {
+                    Logger.warn(TAG, it) { "observeBalanceJob completed with exception" }
+                }
+            }
         }
     }
 

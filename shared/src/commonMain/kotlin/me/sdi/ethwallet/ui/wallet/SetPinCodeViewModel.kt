@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
@@ -76,10 +78,21 @@ class SetPinCodeViewModel(
     private val _news = MutableSharedFlow<SetPinCodeNews>()
     val news: SharedFlow<SetPinCodeNews> = _news.asSharedFlow()
 
+    init {
+        viewState
+            .onEach { Logger.debug(TAG) { "ViewState: $it" } }
+            .launchIn(viewModelScope)
+
+        news
+            .onEach { Logger.debug(TAG) { "News: $it" } }
+            .launchIn(viewModelScope)
+    }
+
     /**
      * Single entry point for handling all events in the ViewModel.
      */
     fun onEvent(event: SetPinCodeEvent) {
+        Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
             is SetPinCodeEvent.OnDigitClick -> handleDigitClick(event.digit)
             is SetPinCodeEvent.OnDeleteClick -> handleDeleteClick()
@@ -106,6 +119,14 @@ class SetPinCodeViewModel(
                     viewModelScope.launch {
                         delay(300) // 300ms delay for animation
                         validatePins()
+                    }.also { job ->
+                        job.invokeOnCompletion {
+                            if (it == null) {
+                                Logger.debug(TAG) { "validatePinsTriggerJob successfully completed" }
+                            } else {
+                                Logger.warn(TAG, it) { "validatePinsTriggerJob completed with exception" }
+                            }
+                        }
                     }
                 }
             }
@@ -119,6 +140,14 @@ class SetPinCodeViewModel(
                         delay(300) // 300ms delay for animation
                         _viewState.update {
                             it.copy(isConfirmationMode = true)
+                        }
+                    }.also { job ->
+                        job.invokeOnCompletion {
+                            if (it == null) {
+                                Logger.debug(TAG) { "confirmationModeDelayJob successfully completed" }
+                            } else {
+                                Logger.warn(TAG, it) { "confirmationModeDelayJob completed with exception" }
+                            }
                         }
                     }
                 }
@@ -188,6 +217,14 @@ class SetPinCodeViewModel(
                         )
                     }
                     _news.emit(SetPinCodeNews.Error(e.message ?: "Unknown error"))
+                }
+            }.also { job ->
+                job.invokeOnCompletion {
+                    if (it == null) {
+                        Logger.debug(TAG) { "storePinCodeJob successfully completed" }
+                    } else {
+                        Logger.warn(TAG, it) { "storePinCodeJob completed with exception" }
+                    }
                 }
             }
         } else {

@@ -6,10 +6,14 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.database.dao.WalletDao
+
+private const val TAG = "InitialNavigationViewModel"
 
 /**
  * Represents the initial route the app should navigate to.
@@ -41,6 +45,10 @@ class InitialNavigationViewModel(
     val numberOfWallets: StateFlow<Int> get() = MutableStateFlow(_state.value.numberOfWallets).asStateFlow()
 
     init {
+        state
+            .onEach { Logger.debug(TAG) { "ViewState: $it" } }
+            .launchIn(viewModelScope)
+
         viewModelScope.launch {
             try {
                 val wallets = walletDao.getAllWallets()
@@ -73,6 +81,14 @@ class InitialNavigationViewModel(
                     isPinCodeSet = false,
                     initialRoute = InitialRoute.OnBoarding,
                 )
+            }
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (it == null) {
+                    Logger.debug(TAG) { "initializationJob successfully completed" }
+                } else {
+                    Logger.warn(TAG, it) { "initializationJob completed with exception" }
+                }
             }
         }
     }

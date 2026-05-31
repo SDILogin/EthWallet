@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
@@ -39,7 +41,18 @@ class SendViewModel(
     )
     val news = _news.asSharedFlow()
 
+    init {
+        viewState
+            .onEach { Logger.debug(TAG) { "ViewState: $it" } }
+            .launchIn(viewModelScope)
+
+        news
+            .onEach { Logger.debug(TAG) { "News: $it" } }
+            .launchIn(viewModelScope)
+    }
+
     fun onEvent(event: SendEvent) {
+        Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
             is SendEvent.OnTokenSelected -> handleTokenSelected(event.contractAddress)
             is SendEvent.OnReceiverAddressChanged -> handleReceiverAddressChanged(event.address)
@@ -154,6 +167,14 @@ class SendViewModel(
                 _news.tryEmit(SendNews.TransferError("An unexpected error occurred. Please try again."))
             } finally {
                 _viewState.update { it.copy(isLoading = false) }
+            }
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (it == null) {
+                    Logger.debug(TAG) { "transferJob successfully completed" }
+                } else {
+                    Logger.warn(TAG, it) { "transferJob completed with exception" }
+                }
             }
         }
     }

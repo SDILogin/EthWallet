@@ -6,6 +6,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
@@ -53,10 +55,17 @@ class CreateWalletViewModel(
     private val _viewState = MutableStateFlow<CreateWalletViewState>(CreateWalletViewState.Loading)
     val viewState: StateFlow<CreateWalletViewState> = _viewState.asStateFlow()
 
+    init {
+        viewState
+            .onEach { Logger.debug(TAG) { "ViewState: $it" } }
+            .launchIn(viewModelScope)
+    }
+
     /**
      * Single entry point for handling all events in the ViewModel.
      */
     fun onEvent(event: CreateWalletEvent) {
+        Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
             is CreateWalletEvent.CreateWallet -> createWallet()
         }
@@ -75,13 +84,25 @@ class CreateWalletViewModel(
                 } catch (e: Exception) {
                     ensureActive()
 
-                    Logger.debug("CreateWalletViewModel") {
+                    Logger.debug(TAG) {
                         "Error creating wallet: ${e.message}"
                     }
                     CreateWalletViewState.Error(e)
                 }
 
             _viewState.update { vs }
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (it == null) {
+                    Logger.debug(TAG) { "createWalletJob successfully completed" }
+                } else {
+                    Logger.warn(TAG, it) { "createWalletJob completed with exception" }
+                }
+            }
         }
+    }
+
+    companion object {
+        private const val TAG = "CreateWalletViewModel"
     }
 }

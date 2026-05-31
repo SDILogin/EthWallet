@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
@@ -56,7 +58,18 @@ class WalletsListViewModel(
         )
     val news: SharedFlow<WalletScreenNews> = _news.asSharedFlow()
 
+    init {
+        uiState
+            .onEach { Logger.debug(TAG) { "ViewState: $it" } }
+            .launchIn(viewModelScope)
+
+        news
+            .onEach { Logger.debug(TAG) { "News: $it" } }
+            .launchIn(viewModelScope)
+    }
+
     fun onEvent(event: WalletsListEvent) {
+        Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
             is WalletsListEvent.Start -> loadWallets()
             is WalletsListEvent.SetActiveWallet -> setActiveWallet(event.address)
@@ -78,6 +91,14 @@ class WalletsListViewModel(
                 }
 
                 _news.emit(WalletScreenNews.ShowErrorMessage(e))
+            }
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (it == null) {
+                    Logger.debug(TAG) { "setActiveWalletJob successfully completed" }
+                } else {
+                    Logger.warn(TAG, it) { "setActiveWalletJob completed with exception" }
+                }
             }
         }
     }
@@ -103,12 +124,28 @@ class WalletsListViewModel(
 
                 _news.emit(WalletScreenNews.ShowErrorMessage(e))
             }
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (it == null) {
+                    Logger.debug(TAG) { "deleteWalletJob successfully completed" }
+                } else {
+                    Logger.warn(TAG, it) { "deleteWalletJob completed with exception" }
+                }
+            }
         }
     }
 
     private fun navigateToWalletDetails() {
         viewModelScope.launch {
             _news.emit(WalletScreenNews.NavigateToWalletDetails)
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (it == null) {
+                    Logger.debug(TAG) { "navigateToWalletDetailsJob successfully completed" }
+                } else {
+                    Logger.warn(TAG, it) { "navigateToWalletDetailsJob completed with exception" }
+                }
+            }
         }
     }
 
@@ -133,6 +170,14 @@ class WalletsListViewModel(
                 _uiState.update { it.copy(isLoading = false) }
 
                 _news.emit(WalletScreenNews.ShowErrorMessage(e))
+            }
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (it == null) {
+                    Logger.debug(TAG) { "loadWalletsJob successfully completed" }
+                } else {
+                    Logger.warn(TAG, it) { "loadWalletsJob completed with exception" }
+                }
             }
         }
     }

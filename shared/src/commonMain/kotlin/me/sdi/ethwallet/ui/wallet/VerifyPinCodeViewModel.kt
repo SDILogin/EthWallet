@@ -10,10 +10,16 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.security.PinCodeStorage
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+
+private const val TAG = "PinVerification"
 
 /**
  * ViewModel for the PIN code verification screen
@@ -32,10 +38,22 @@ class VerifyPinCodeViewModel(
 
     private var countdownJob: Job? = null
 
+    init {
+        viewState
+            .onEach { Logger.debug(TAG) { "ViewState: $it" } }
+            .launchIn(viewModelScope)
+
+        news
+            .onEach { Logger.debug(TAG) { "News: $it" } }
+            .launchIn(viewModelScope)
+    }
+
     /**
      * Single entry point for handling all events in the ViewModel
      */
     fun onEvent(event: VerifyPinCodeEvent) {
+        Logger.debug(TAG) { "onEvent: $event" }
+
         val currentState = _viewState.value
 
         if (currentState.isVerifying || currentState.isLocked) {
@@ -92,7 +110,7 @@ class VerifyPinCodeViewModel(
         _viewState.update { it.copy(isVerifying = true) }
 
         viewModelScope.launch {
-            delay(300) // Small delay for animation
+            delay(300.milliseconds) // Small delay for animation
 
             try {
                 val isValid = pinCodeStorage.verifyPinCode(pin)
@@ -147,10 +165,12 @@ class VerifyPinCodeViewModel(
     }
 
     private fun startLockCountdown() {
-        countdownJob?.cancel()
+        countdownJob?.cancel()?.also {
+            Logger.debug(TAG) { "Previous countdownJob has been cancelled" }
+        }
         countdownJob = viewModelScope.launch {
             while (_viewState.value.lockCountdown > 0) {
-                delay(1000)
+                delay(1.seconds)
                 _viewState.update {
                     it.copy(lockCountdown = it.lockCountdown - 1)
                 }
@@ -161,6 +181,14 @@ class VerifyPinCodeViewModel(
                     remainingAttempts = MAX_ATTEMPTS,
                     errorMessage = null,
                 )
+            }
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (it == null) {
+                    Logger.debug(TAG) { "countdownJob successfully completed" }
+                } else {
+                    Logger.warn(TAG, it) { "countdownJob completed with exception" }
+                }
             }
         }
     }

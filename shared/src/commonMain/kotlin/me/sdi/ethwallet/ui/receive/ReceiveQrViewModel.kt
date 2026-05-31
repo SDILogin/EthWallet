@@ -74,6 +74,14 @@ class ReceiveQrViewModel(
     val news = _news.asSharedFlow()
 
     init {
+        viewState
+            .onEach { Logger.debug(TAG) { "ViewState: $it" } }
+            .launchIn(viewModelScope)
+
+        news
+            .onEach { Logger.debug(TAG) { "News: $it" } }
+            .launchIn(viewModelScope)
+
         qrCodePayload
             .onEach { qrPayload -> _viewState.update { vs -> vs.copy(qrPayload = qrPayload) } }
             .catch { e -> Logger.warn(TAG) { "Failed to generate QR code: ${e.message}" } }
@@ -86,6 +94,7 @@ class ReceiveQrViewModel(
     }
 
     fun onEvent(event: ReceiveQrEvent) {
+        Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
             is ReceiveQrEvent.OnTokenSelected -> {
                 handleTokenSelected(event.tokenContractAddress)
@@ -152,6 +161,14 @@ class ReceiveQrViewModel(
             }
 
             _news.tryEmit(news)
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (it == null) {
+                    Logger.debug(TAG) { "copyAddressJob successfully completed" }
+                } else {
+                    Logger.warn(TAG, it) { "copyAddressJob completed with exception" }
+                }
+            }
         }
     }
 }
