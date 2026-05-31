@@ -8,70 +8,15 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import me.sdi.ethwallet.core.security.PinCodeStorage
-import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.database.entity.WalletEntity
+import me.sdi.ethwallet.fakes.FakePinCodeStorage
+import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.ui.InitialNavigationViewModel
 import me.sdi.ethwallet.ui.InitialRoute
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-
-class FakeWalletDao : WalletDao {
-    var wallets: List<WalletEntity> = emptyList()
-    var shouldThrowException = false
-
-    override suspend fun insertWallet(wallet: WalletEntity) {
-        if (shouldThrowException) throw RuntimeException("Simulated database failure")
-        wallets = wallets + wallet
-    }
-
-    override suspend fun deleteWalletByAddress(address: String) {
-        if (shouldThrowException) throw RuntimeException("Simulated database failure")
-        wallets = wallets.filter { it.address != address }
-    }
-
-    override suspend fun getAllWallets(): List<WalletEntity> {
-        if (shouldThrowException) throw RuntimeException("Simulated database failure")
-        return wallets
-    }
-
-    override suspend fun clearActiveWallets() {
-        if (shouldThrowException) throw RuntimeException("Simulated database failure")
-    }
-
-    override suspend fun setWalletActive(address: String) {
-        if (shouldThrowException) throw RuntimeException("Simulated database failure")
-    }
-}
-
-class FakePinCodeStorage : PinCodeStorage {
-    var storedPin: String? = null
-    var shouldThrowException = false
-    var clearPinCalledCount = 0
-
-    override suspend fun storePinCode(pinCode: String) {
-        if (shouldThrowException) throw Exception("Simulated storage failure")
-        storedPin = pinCode
-    }
-
-    override suspend fun verifyPinCode(pinCode: String): Boolean {
-        if (shouldThrowException) throw Exception("Simulated storage failure")
-        return pinCode == storedPin
-    }
-
-    override suspend fun hasPinCode(): Boolean {
-        if (shouldThrowException) throw Exception("Simulated storage failure")
-        return storedPin != null
-    }
-
-    override suspend fun clearPinCode() {
-        if (shouldThrowException) throw Exception("Simulated storage failure")
-        storedPin = null
-        clearPinCalledCount++
-    }
-}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class InitialNavigationViewModelTest {

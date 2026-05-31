@@ -1,13 +1,14 @@
 package me.sdi.ethwallet.ui.wallet
 
-import io.mockk.coEvery
-import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import me.sdi.ethwallet.MainDispatcherRule
+import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
@@ -15,20 +16,26 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.database.entity.WalletEntity
+import me.sdi.ethwallet.fakes.FakeEthWalletCreator
+import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
+import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.ui.KnownTokens
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
 import java.math.BigDecimal
 import java.math.BigInteger
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WalletViewModelTest {
-    @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
+    private val testDispatcher = StandardTestDispatcher()
 
+    private lateinit var walletDao: FakeWalletDao
+    private lateinit var walletCreator: FakeEthWalletCreator
+    private lateinit var privateKeyEncryptor: FakePrivateKeyEncryptor
     private lateinit var walletRepository: WalletRepository
     private lateinit var viewModel: WalletViewModel
 
@@ -55,10 +62,31 @@ class WalletViewModelTest {
         override suspend fun forceUpdate() = Unit
     }
 
-    @Before
+    @BeforeTest
     fun setUp() {
-        walletRepository = mockk()
-        coEvery { walletRepository.getActiveWallet() } returns testWallet
+        Dispatchers.setMain(testDispatcher)
+        walletDao = FakeWalletDao()
+        walletCreator = FakeEthWalletCreator()
+        privateKeyEncryptor = FakePrivateKeyEncryptor()
+
+        walletDao.wallets = listOf(
+            WalletEntity(
+                address = testAddress.toString(),
+                encryptedPrivateKeyBase64 = "encrypted_key_1",
+                label = "Test Wallet",
+                isActive = true,
+            ),
+        )
+        walletRepository = WalletRepository(
+            walletDao = walletDao,
+            walletCreator = walletCreator,
+            privateKeyEncryptor = privateKeyEncryptor,
+        )
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     private fun createViewModel() {
@@ -71,11 +99,11 @@ class WalletViewModelTest {
     }
 
     private fun advanceUntilIdle() {
-        mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+        testDispatcher.scheduler.advanceUntilIdle()
     }
 
     @Test
-    fun `should observe balance and fiat rate flows and update state correctly`() = runTest {
+    fun should_observe_balance_and_fiat_rate_flows_and_update_state_correctly() = runTest(testDispatcher) {
         val oneEthInWei = BigInteger("1000000000000000000")
         val ethPrice = BigDecimal("2000.00")
 
@@ -99,27 +127,27 @@ class WalletViewModelTest {
         advanceUntilIdle()
 
         val currentState = viewModel.viewState.first()
-        assertFalse("Should not be loading after data is available", currentState.isLoading)
-        assertEquals("Chain ID should be exposed in state", 1L, currentState.chainId)
+        assertFalse(currentState.isLoading, "Should not be loading after data is available")
+        assertEquals(1L, currentState.chainId, "Chain ID should be exposed in state")
         assertEquals(
-            "ETH balance should be formatted correctly",
             "1 ETH",
             currentState.totalBalanceEth,
+            "ETH balance should be formatted correctly",
         )
         assertEquals(
-            "USD value should be calculated correctly",
             "$2,000.00",
             currentState.totalBalanceUsd,
+            "USD value should be calculated correctly",
         )
         assertEquals(
-            "Should have favorite tokens",
             3,
             currentState.favoriteTokens.size,
+            "Should have favorite tokens",
         )
     }
 
     @Test
-    fun `should handle zero balance correctly`() = runTest {
+    fun should_handle_zero_balance_correctly() = runTest(testDispatcher) {
         val zeroWei = BigInteger.ZERO
         val ethPrice = BigDecimal("3000.00")
 
@@ -144,19 +172,19 @@ class WalletViewModelTest {
 
         val currentState = viewModel.viewState.first()
         assertEquals(
-            "Zero ETH balance should be formatted correctly",
             "0 ETH",
             currentState.totalBalanceEth,
+            "Zero ETH balance should be formatted correctly",
         )
         assertEquals(
-            "Zero USD value should be calculated correctly",
             "$0.00",
             currentState.totalBalanceUsd,
+            "Zero USD value should be calculated correctly",
         )
     }
 
     @Test
-    fun `should handle ERC-20 token balances correctly`() = runTest {
+    fun should_handle_ERC20_token_balances_correctly() = runTest(testDispatcher) {
         val oneEthInWei = BigInteger("1000000000000000000")
         val ethPrice = BigDecimal("2000.00")
 
@@ -188,15 +216,15 @@ class WalletViewModelTest {
 
         // ETH: $2000, Tokens: $350 (100+50+200), Total: $2350
         assertEquals(
-            "Total USD should include ETH and token values",
             "$2,350.00",
             currentState.totalBalanceUsd,
+            "Total USD should include ETH and token values",
         )
 
         assertEquals(
-            "Should have 3 favorite tokens",
             3,
             currentState.favoriteTokens.size,
+            "Should have 3 favorite tokens",
         )
 
         val usdtToken = currentState.favoriteTokens.find { it.ticker == "USDT" }

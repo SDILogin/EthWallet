@@ -1,24 +1,22 @@
 package me.sdi.ethwallet.ui.send
 
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
-import io.mockk.slot
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import me.sdi.ethwallet.MainDispatcherRule
+import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.EthContractAddress
-import me.sdi.ethwallet.core.transfer.TransferData
 import me.sdi.ethwallet.core.transfer.TransferException
-import me.sdi.ethwallet.core.transfer.TransferInteractor
+import me.sdi.ethwallet.fakes.FakeTransferInteractor
 import me.sdi.ethwallet.ui.KnownTokens
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -27,10 +25,9 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SendViewModelTest {
-    @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
+    private val testDispatcher = StandardTestDispatcher()
 
-    private lateinit var transferInteractor: TransferInteractor
+    private lateinit var transferInteractor: FakeTransferInteractor
     private lateinit var viewModel: SendViewModel
     private val collectedNews = mutableListOf<SendNews>()
     private val viewStates = mutableListOf<SendViewState>()
@@ -40,14 +37,20 @@ class SendViewModelTest {
     private val invalidAddressWrongLength = "0x742d35cc6634C0532925a3b8d73a726FbCF3eB"
     private val invalidAddressWrongFormat = "0x742d35cc6634C0532925a3b8d73a726FbCF3eB1G"
 
-    @Before
+    @BeforeTest
     fun setUp() {
-        transferInteractor = mockk()
+        Dispatchers.setMain(testDispatcher)
+        transferInteractor = FakeTransferInteractor()
         viewModel = SendViewModel(transferInteractor)
     }
 
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
-    fun `should initialize with default state`() = runTest {
+    fun should_initialize_with_default_state() = runTest(testDispatcher) {
         val initialState = viewModel.viewState.value
 
         assertEquals(EthContractAddress, initialState.selectedTokenContractAddress, "Initial token should be ETH")
@@ -60,7 +63,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should update token selection to native ETH`() = runTest {
+    fun should_update_token_selection_to_native_ETH() = runTest(testDispatcher) {
         viewModel.onEvent(SendEvent.OnTokenSelected(EthContractAddress))
 
         val selectedTokenAddress = viewModel.viewState.value.selectedTokenContractAddress
@@ -68,7 +71,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should update token selection to ERC20 token`() = runTest {
+    fun should_update_token_selection_to_ERC20_token() = runTest(testDispatcher) {
         val usdtAddress = KnownTokens.USDT.ethAddress
         viewModel.onEvent(SendEvent.OnTokenSelected(usdtAddress))
 
@@ -77,7 +80,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should update receiver address with valid address`() = runTest {
+    fun should_update_receiver_address_with_valid_address() = runTest(testDispatcher) {
         viewModel.onEvent(SendEvent.OnReceiverAddressChanged(validEthAddress))
 
         val currentState = viewModel.viewState.value
@@ -87,7 +90,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should validate receiver address without 0x prefix`() = runTest {
+    fun should_validate_receiver_address_without_0x_prefix() = runTest(testDispatcher) {
         viewModel.onEvent(SendEvent.OnReceiverAddressChanged(invalidAddressNoPrefix))
 
         val currentState = viewModel.viewState.value
@@ -105,7 +108,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should validate receiver address with wrong length`() = runTest {
+    fun should_validate_receiver_address_with_wrong_length() = runTest(testDispatcher) {
         viewModel.onEvent(SendEvent.OnReceiverAddressChanged(invalidAddressWrongLength))
 
         val currentState = viewModel.viewState.value
@@ -118,7 +121,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should validate receiver address with invalid format`() = runTest {
+    fun should_validate_receiver_address_with_invalid_format() = runTest(testDispatcher) {
         viewModel.onEvent(SendEvent.OnReceiverAddressChanged(invalidAddressWrongFormat))
 
         val currentState = viewModel.viewState.value
@@ -131,7 +134,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should trim receiver address input`() = runTest {
+    fun should_trim_receiver_address_input() = runTest(testDispatcher) {
         val addressWithSpaces = "  $validEthAddress  "
         viewModel.onEvent(SendEvent.OnReceiverAddressChanged(addressWithSpaces))
 
@@ -141,7 +144,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should update amount with valid value`() = runTest {
+    fun should_update_amount_with_valid_value() = runTest(testDispatcher) {
         val validAmount = "1.5"
         viewModel.onEvent(SendEvent.OnAmountChanged(validAmount))
 
@@ -152,7 +155,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should validate negative amount`() = runTest {
+    fun should_validate_negative_amount() = runTest(testDispatcher) {
         val negativeAmount = "-1.5"
         viewModel.onEvent(SendEvent.OnAmountChanged(negativeAmount))
 
@@ -167,7 +170,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should validate zero amount`() = runTest {
+    fun should_validate_zero_amount() = runTest(testDispatcher) {
         val zeroAmount = "0"
         viewModel.onEvent(SendEvent.OnAmountChanged(zeroAmount))
 
@@ -177,7 +180,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should validate invalid amount format`() = runTest {
+    fun should_validate_invalid_amount_format() = runTest(testDispatcher) {
         val invalidAmount = "abc"
         viewModel.onEvent(SendEvent.OnAmountChanged(invalidAmount))
 
@@ -187,7 +190,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should validate too many decimal places for USDT`() = runTest {
+    fun should_validate_too_many_decimal_places_for_USDT() = runTest(testDispatcher) {
         val amountWithTooManyDecimals = "1.1234567"
 
         viewModel.onEvent(SendEvent.OnTokenSelected(KnownTokens.USDT.ethAddress))
@@ -203,7 +206,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should allow valid decimal places for USDT`() = runTest {
+    fun should_allow_valid_decimal_places_for_USDT() = runTest(testDispatcher) {
         val validUsdtAmount = "1.123456"
 
         viewModel.onEvent(SendEvent.OnTokenSelected(KnownTokens.USDT.ethAddress))
@@ -215,7 +218,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should revalidate amount when token selection changes`() = runTest {
+    fun should_revalidate_amount_when_token_selection_changes() = runTest(testDispatcher) {
         val amountWithManyDecimals = "1.123456789012345678"
         viewModel.onEvent(SendEvent.OnAmountChanged(amountWithManyDecimals))
         val ethError = viewModel.viewState.value.amount.error
@@ -232,7 +235,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should trim amount input`() = runTest {
+    fun should_trim_amount_input() = runTest(testDispatcher) {
         val amountWithSpaces = "  1.5  "
         viewModel.onEvent(SendEvent.OnAmountChanged(amountWithSpaces))
 
@@ -242,7 +245,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should enable transfer when form is valid`() = runTest {
+    fun should_enable_transfer_when_form_is_valid() = runTest(testDispatcher) {
         input1Eth()
 
         val isTransferEnabled = viewModel.viewState.value.isTransferEnabled
@@ -250,7 +253,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should disable transfer when receiver address is invalid`() = runTest {
+    fun should_disable_transfer_when_receiver_address_is_invalid() = runTest(testDispatcher) {
         input1Eth()
         viewModel.onEvent(SendEvent.OnReceiverAddressChanged(invalidAddressNoPrefix))
         viewModel.onEvent(SendEvent.OnAmountChanged("1.0"))
@@ -260,7 +263,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should disable transfer when amount is invalid`() = runTest {
+    fun should_disable_transfer_when_amount_is_invalid() = runTest(testDispatcher) {
         viewModel.onEvent(SendEvent.OnReceiverAddressChanged(validEthAddress))
         viewModel.onEvent(SendEvent.OnAmountChanged("-1.0"))
 
@@ -269,8 +272,8 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should disable transfer when loading`() = runTest {
-        coEvery { transferInteractor.transfer(any()) } returns "0xTransactionHash"
+    fun should_disable_transfer_when_loading() = runTest(testDispatcher) {
+        transferInteractor.transferResult = Result.success("0xTransactionHash")
         collectNews()
         collectViewStates()
 
@@ -283,7 +286,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should emit validation error when transfer requested with invalid form`() = runTest {
+    fun should_emit_validation_error_when_transfer_requested_with_invalid_form() = runTest(testDispatcher) {
         collectNews()
 
         clickSendButton()
@@ -297,15 +300,15 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should perform successful transfer`() = runTest {
+    fun should_perform_successful_transfer() = runTest(testDispatcher) {
         val expectedHash = "0xTransactionHash123"
-        coEvery { transferInteractor.transfer(any()) } returns expectedHash
+        transferInteractor.transferResult = Result.success(expectedHash)
         collectNews()
 
         input1Eth()
         clickSendButton()
 
-        coVerify { transferInteractor.transfer(any()) }
+        assertNotNull(transferInteractor.lastTransferData, "Transfer should be invoked")
         val transactionHash = collectedNews.filterIsInstance<SendNews.TransferSuccess>().first().transactionHash
         assertEquals(expectedHash, transactionHash, "Should have correct transaction hash")
 
@@ -316,9 +319,9 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should handle insufficient balance error`() = runTest {
+    fun should_handle_insufficient_balance_error() = runTest(testDispatcher) {
         val errorMessage = "Not enough ETH"
-        coEvery { transferInteractor.transfer(any()) } throws TransferException.InsufficientBalance(errorMessage)
+        transferInteractor.transferResult = Result.failure(TransferException.InsufficientBalance(errorMessage))
         collectNews()
 
         input1Eth()
@@ -332,11 +335,13 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should handle network error`() = runTest {
+    fun should_handle_network_error() = runTest(testDispatcher) {
         val errorMessage = "Connection timeout"
-        coEvery { transferInteractor.transfer(any()) } throws TransferException.NetworkError(
-            errorMessage,
-            RuntimeException(),
+        transferInteractor.transferResult = Result.failure(
+            TransferException.NetworkError(
+                errorMessage,
+                RuntimeException(),
+            ),
         )
         collectNews()
 
@@ -352,9 +357,9 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should handle transaction failed error`() = runTest {
+    fun should_handle_transaction_failed_error() = runTest(testDispatcher) {
         val errorMessage = "Transaction reverted"
-        coEvery { transferInteractor.transfer(any()) } throws TransferException.TransactionFailed(errorMessage)
+        transferInteractor.transferResult = Result.failure(TransferException.TransactionFailed(errorMessage))
 
         input1Eth()
         collectNews()
@@ -366,8 +371,8 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should handle unexpected error`() = runTest {
-        coEvery { transferInteractor.transfer(any()) } throws RuntimeException("Unexpected error")
+    fun should_handle_unexpected_error() = runTest(testDispatcher) {
+        transferInteractor.transferResult = Result.failure(RuntimeException("Unexpected error"))
         collectNews()
 
         input1Eth()
@@ -382,7 +387,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should clear form when requested`() = runTest {
+    fun should_clear_form_when_requested() = runTest(testDispatcher) {
         input1Eth()
         viewModel.onEvent(SendEvent.OnClearForm)
 
@@ -397,29 +402,28 @@ class SendViewModelTest {
     }
 
     @Test
-    fun `should create correct transfer data for ETH transfer`() = runTest {
+    fun should_create_correct_transfer_data_for_ETH_transfer() = runTest(testDispatcher) {
         val expectedHash = "0xTransactionHash"
-        val transferDataSlot = slot<TransferData>()
-        coEvery { transferInteractor.transfer(capture(transferDataSlot)) } returns expectedHash
+        transferInteractor.transferResult = Result.success(expectedHash)
 
         input1Eth()
         clickSendButton()
 
-        assertTrue(transferDataSlot.isCaptured, "Transfer data should be captured")
+        val captured = transferInteractor.lastTransferData
+        assertNotNull(captured, "Transfer data should be captured")
         assertEquals(
             validEthAddress,
-            transferDataSlot.captured.destinationAddress.toString(),
+            captured.destinationAddress.toString(),
             "Destination address should match",
         )
-        assertEquals(EthContractAddress, transferDataSlot.captured.contractAddress, "Contract address should be ETH")
-        assertNotNull(transferDataSlot.captured.amount, "Amount should not be null")
+        assertEquals(EthContractAddress, captured.contractAddress, "Contract address should be ETH")
+        assertNotNull(captured.amount, "Amount should not be null")
     }
 
     @Test
-    fun `should create correct transfer data for ERC20 transfer`() = runTest {
+    fun should_create_correct_transfer_data_for_ERC20_transfer() = runTest(testDispatcher) {
         val expectedHash = "0xTransactionHash"
-        val transferDataSlot = slot<TransferData>()
-        coEvery { transferInteractor.transfer(capture(transferDataSlot)) } returns expectedHash
+        transferInteractor.transferResult = Result.success(expectedHash)
 
         val usdtAddress = KnownTokens.USDT.ethAddress
         viewModel.onEvent(SendEvent.OnTokenSelected(usdtAddress))
@@ -427,8 +431,9 @@ class SendViewModelTest {
         viewModel.onEvent(SendEvent.OnAmountChanged("10.5"))
         clickSendButton()
 
-        assertTrue(transferDataSlot.isCaptured, "Transfer data should be captured")
-        assertEquals(usdtAddress, transferDataSlot.captured.contractAddress, "Contract address should be USDT")
+        val captured = transferInteractor.lastTransferData
+        assertNotNull(captured, "Transfer data should be captured")
+        assertEquals(usdtAddress, captured.contractAddress, "Contract address should be USDT")
     }
 
     private fun input1Eth() {
