@@ -103,9 +103,6 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
-    // Material Icons Extended
-    implementation(libs.androidx.compose.material.icons.extended)
-
     // DataStore Preferences
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.datastore.preferences.core)

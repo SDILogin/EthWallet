@@ -20,8 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,12 +40,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.backspace_24px
 import me.sdi.ethwallet.resources.delete
 import me.sdi.ethwallet.resources.pin_confirm_subtitle
 import me.sdi.ethwallet.resources.pin_confirm_title
 import me.sdi.ethwallet.resources.pin_create_subtitle
 import me.sdi.ethwallet.resources.pin_create_title
 import me.sdi.ethwallet.resources.pin_reset
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -153,7 +153,7 @@ private fun NumberPad(
                 ),
             ) {
                 Icon(
-                    imageVector = Icons.Default.Clear,
+                    painter = painterResource(Res.drawable.backspace_24px),
                     contentDescription = stringResource(Res.string.delete),
                     modifier = Modifier.size(28.dp),
                 )

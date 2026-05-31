@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,7 +37,9 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.back
+import me.sdi.ethwallet.resources.cancel_24px
 import me.sdi.ethwallet.resources.eth_logo_120w
 import me.sdi.ethwallet.resources.send_address_placeholder
 import me.sdi.ethwallet.resources.send_amount
@@ -127,7 +126,7 @@ private fun SendScreenContent(
                 navigationIcon = {
                     IconButton(onClick = onBackPress) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
                         )
                     }
@@ -263,7 +262,7 @@ private fun ReceiverAddressInput(
                 if (addressState.value.isNotEmpty()) {
                     IconButton(onClick = { onAddressChanged("") }) {
                         Icon(
-                            imageVector = Icons.Default.Clear,
+                            painter = painterResource(Res.drawable.cancel_24px),
                             contentDescription = stringResource(Res.string.send_clear_address),
                         )
                     }
@@ -300,7 +299,7 @@ private fun AmountInput(
                 if (amountState.value.isNotEmpty()) {
                     IconButton(onClick = { onAmountChanged("") }) {
                         Icon(
-                            imageVector = Icons.Default.Clear,
+                            painter = painterResource(Res.drawable.cancel_24px),
                             contentDescription = stringResource(Res.string.send_clear_amount),
                         )
                     }

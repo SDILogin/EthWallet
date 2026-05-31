@@ -21,10 +21,6 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.CopyAll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -56,7 +52,10 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.back
+import me.sdi.ethwallet.resources.cancel_24px
+import me.sdi.ethwallet.resources.copy_all_24px
 import me.sdi.ethwallet.resources.eth_logo_120w
 import me.sdi.ethwallet.resources.receive_address_copied
 import me.sdi.ethwallet.resources.receive_amount_optional
@@ -135,7 +134,7 @@ private fun ReceiveScreenContent(
                 navigationIcon = {
                     IconButton(onClick = { onEvent(ReceiveQrEvent.OnBackPressed) }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
                         )
                     }
@@ -266,7 +265,7 @@ private fun AmountInput(
                         onClick = onClearAmount,
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Clear,
+                            painter = painterResource(Res.drawable.cancel_24px),
                             contentDescription = null,
                         )
                     }
@@ -347,7 +346,7 @@ private fun AddressDisplay(
             ),
         ) {
             Icon(
-                imageVector = Icons.Filled.CopyAll,
+                painter = painterResource(Res.drawable.copy_all_24px),
                 contentDescription = stringResource(Res.string.receive_copy_address),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(16.dp),

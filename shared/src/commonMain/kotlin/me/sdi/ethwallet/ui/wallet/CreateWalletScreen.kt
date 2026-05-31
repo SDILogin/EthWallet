@@ -17,9 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -52,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_confirm_button
 import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_dismiss_button
 import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_message
@@ -65,6 +63,8 @@ import me.sdi.ethwallet.resources.create_wallet_recovery_phrase_title
 import me.sdi.ethwallet.resources.create_wallet_security_warning
 import me.sdi.ethwallet.resources.create_wallet_title
 import me.sdi.ethwallet.resources.create_wallet_unknown_error_message
+import me.sdi.ethwallet.resources.warning_24px
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -90,7 +90,7 @@ fun CreateWalletScreen(
                 navigationIcon = {
                     IconButton(onClick = onUpButtonClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                            painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = null,
                         )
                     }
@@ -307,7 +307,7 @@ private fun SecurityWarning() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Rounded.Warning,
+                painter = painterResource(Res.drawable.warning_24px),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.error,
             )

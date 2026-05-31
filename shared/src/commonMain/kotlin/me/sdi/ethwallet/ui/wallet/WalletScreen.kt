@@ -16,10 +16,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowOutward
-import androidx.compose.material.icons.filled.SwitchAccount
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,14 +36,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.arrow_downward_24px
+import me.sdi.ethwallet.resources.arrow_outward_24px
 import me.sdi.ethwallet.resources.edit
 import me.sdi.ethwallet.resources.ic_question_mark_56
+import me.sdi.ethwallet.resources.switch_account_24px
 import me.sdi.ethwallet.resources.wallet_manage_wallets
 import me.sdi.ethwallet.resources.wallet_network
 import me.sdi.ethwallet.resources.wallet_receive
@@ -61,7 +61,6 @@ import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -120,7 +119,7 @@ fun WalletScreenContent(
                 actions = {
                     IconButton(onClick = onManageWallets) {
                         Icon(
-                            imageVector = Icons.Default.SwitchAccount,
+                            painter = painterResource(Res.drawable.switch_account_24px),
                             contentDescription = stringResource(Res.string.wallet_manage_wallets),
                         )
                     }
@@ -190,7 +189,7 @@ private fun ButtonsPanel(
         } else {
             CircularButtonWithTitle(
                 title = stringResource(Res.string.wallet_receive),
-                icon = Icons.Default.ArrowDownward,
+                icon = painterResource(Res.drawable.arrow_downward_24px),
                 onClick = onReceiveClick,
             )
         }
@@ -202,7 +201,7 @@ private fun ButtonsPanel(
         } else {
             CircularButtonWithTitle(
                 title = stringResource(Res.string.wallet_send),
-                icon = Icons.Default.ArrowOutward,
+                icon = painterResource(Res.drawable.arrow_outward_24px),
                 onClick = onSendButtonClick,
             )
         }
@@ -212,7 +211,7 @@ private fun ButtonsPanel(
 @Composable
 private fun CircularButtonWithTitle(
     title: String,
-    icon: ImageVector,
+    icon: Painter,
     onClick: () -> Unit,
 ) {
     Column(
@@ -226,7 +225,7 @@ private fun CircularButtonWithTitle(
             ),
         ) {
             Icon(
-                imageVector = icon,
+                painter = icon,
                 contentDescription = title,
                 tint = MaterialTheme.colorScheme.onPrimary,
             )

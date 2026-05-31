@@ -38,13 +38,11 @@ composePlugin = "1.11.0"
 composeHotReload = "1.1.1"
 
 [libraries]
-androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "runtime" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "foundation" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "ui" }
-compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIconsExtendedVersion" }
 jetbrains-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "uiToolingPreview" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

@@ -13,8 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,6 +33,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.import_wallet_button
 import me.sdi.ethwallet.resources.import_wallet_enter_recovery_phrase
@@ -43,6 +42,7 @@ import me.sdi.ethwallet.resources.import_wallet_recovery_phrase_label
 import me.sdi.ethwallet.resources.import_wallet_recovery_phrase_placeholder
 import me.sdi.ethwallet.resources.import_wallet_recovery_phrase_supporting
 import me.sdi.ethwallet.resources.import_wallet_title
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,7 +60,7 @@ fun ImportWalletScreen(
                 navigationIcon = {
                     IconButton(onClick = onUpButtonClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                            painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
                         )
                     }

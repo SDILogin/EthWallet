@@ -18,10 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,13 +41,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.back
+import me.sdi.ethwallet.resources.check_24px
+import me.sdi.ethwallet.resources.delete_24px
 import me.sdi.ethwallet.resources.error_something_went_wrong
 import me.sdi.ethwallet.resources.wallets_list_active_wallet_icon
 import me.sdi.ethwallet.resources.wallets_list_delete_wallet
 import me.sdi.ethwallet.resources.wallets_list_no_wallets
 import me.sdi.ethwallet.resources.wallets_list_title
 import me.sdi.ethwallet.util.rememberToastManager
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -105,7 +105,7 @@ private fun WalletsListScreenContent(
                 navigationIcon = {
                     IconButton(onClick = { onEvent(WalletsListEvent.OnBackPress) }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                            painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
                         )
                     }
@@ -215,7 +215,7 @@ private fun WalletCard(
                         exit = fadeOut() + scaleOut(),
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Check,
+                            painter = painterResource(Res.drawable.check_24px),
                             contentDescription = stringResource(Res.string.wallets_list_active_wallet_icon),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp),
@@ -243,7 +243,7 @@ private fun WalletCard(
                 onClick = onDeleteClicked,
             ) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    painter = painterResource(Res.drawable.delete_24px),
                     contentDescription = stringResource(Res.string.wallets_list_delete_wallet),
                     tint = MaterialTheme.colorScheme.error,
                 )
