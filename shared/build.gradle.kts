@@ -48,6 +48,8 @@ kotlin {
         androidResources {
             enable = true
         }
+
+        withHostTest {}
     }
 
     jvm("desktop")
@@ -85,6 +87,18 @@ kotlin {
                 // Navigation 3 KMP
                 implementation(libs.navigation3.ui.kmp)
                 implementation(libs.lifecycle.viewmodel.navigation3.kmp)
+            }
+        }
+        val commonTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+        val androidHostTest by getting {
+            dependencies {
+                implementation(libs.junit)
+                implementation(libs.mockk)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
         val androidMain by getting {
