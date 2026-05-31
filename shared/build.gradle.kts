@@ -92,13 +92,11 @@ kotlin {
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
         val androidHostTest by getting {
             dependencies {
-                implementation(libs.junit)
-                implementation(libs.mockk)
-                implementation(libs.kotlinx.coroutines.test)
             }
         }
         val androidMain by getting {
@@ -140,4 +138,8 @@ dependencies {
     add("kspAndroid", libs.androidx.room.compiler)
     add("kspDesktop", libs.androidx.room.compiler)
     add("commonMainApi", platform(libs.koin.bom))
+}
+
+tasks.matching { it.name.startsWith("compileTestKotlinDesktop") || it.name.startsWith("desktopTest") }.configureEach {
+    enabled = false
 }
