@@ -124,7 +124,7 @@ private fun WalletsListScreenContent(
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
                 )
-            } else if (uiState.otherWallets.isEmpty()) {
+            } else if (uiState.activeWallet == null && uiState.otherWallets.isEmpty()) {
                 Column(
                     modifier =
                         Modifier

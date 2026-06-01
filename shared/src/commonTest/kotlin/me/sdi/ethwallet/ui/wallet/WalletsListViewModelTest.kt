@@ -118,7 +118,8 @@ class WalletsListViewModelTest {
 
         val currentState = viewModel.uiState.first()
         assertFalse(currentState.isLoading, "Loading state should be false after initialization")
-        assertEquals(testWallets, currentState.otherWallets, "Wallet list should be updated with test wallets")
+        assertEquals(testWallet1, currentState.activeWallet, "Active wallet should be updated with test wallet 1")
+        assertEquals(listOf(testWallet2), currentState.otherWallets, "Wallet list otherWallets should be updated and exclude active wallet")
         assertTrue(news.isEmpty(), "Navigation state should remain null")
         job.cancel()
     }
@@ -196,7 +197,8 @@ class WalletsListViewModelTest {
         advanceUntilIdle()
 
         val currentState = viewModel.uiState.first()
-        assertEquals(testWallets, currentState.otherWallets, "Wallet list should not change after error")
+        assertEquals(testWallet1, currentState.activeWallet, "Active wallet should not change after error")
+        assertEquals(listOf(testWallet2), currentState.otherWallets, "otherWallets should not change after error")
         assertFalse(currentState.isLoading, "Loading state should be false after error")
         assertEquals(1, news.size, "There should be 1 error news item")
         assertTrue(news[0] is WalletScreenNews.ShowErrorMessage, "News should contain error message")
@@ -264,7 +266,8 @@ class WalletsListViewModelTest {
         advanceUntilIdle()
 
         val currentState = viewModel.uiState.first()
-        assertEquals(testWallets, currentState.otherWallets, "Wallet list should not change after error")
+        assertEquals(testWallet1, currentState.activeWallet, "Active wallet should not change after error")
+        assertEquals(listOf(testWallet2), currentState.otherWallets, "otherWallets should not change after error")
         assertFalse(currentState.isLoading, "Loading state should be false after error")
         assertTrue(news.none { it is NavigateToOnBoarding || it is NavigateToWalletDetails }, "Navigation state should remain null")
         job.cancel()

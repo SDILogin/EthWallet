@@ -106,14 +106,25 @@ class WalletsListViewModel(
     private fun deleteWallet(address: EthAddress) {
         viewModelScope.launch {
             try {
+                val wasActive = uiState.value.activeWallet?.address == address
                 walletRepository.deleteWallet(address)
 
-                val onScreenWallets = uiState.value.otherWallets.filterNot { it.address == address }
-
-                _uiState.update { vs -> vs.copy(otherWallets = onScreenWallets) }
-
-                if (onScreenWallets.isEmpty()) {
+                val remainingWallets = walletRepository.getAllWallets()
+                if (remainingWallets.isEmpty()) {
+                    _uiState.update {
+                        it.copy(
+                            activeWallet = null,
+                            otherWallets = emptyList(),
+                            isLoading = false,
+                        )
+                    }
                     _news.emit(WalletScreenNews.NavigateToOnBoarding)
+                } else {
+                    if (wasActive) {
+                        val newActiveAddress = remainingWallets.first().address
+                        walletRepository.setActiveWallet(newActiveAddress)
+                    }
+                    loadWallets()
                 }
             } catch (e: Exception) {
                 ensureActive()
@@ -154,10 +165,18 @@ class WalletsListViewModel(
 
         viewModelScope.launch {
             try {
-                val wallets = walletRepository.getAllWallets()
+                val activeWallet = walletRepository.getActiveWallet()
+                val allWallets = walletRepository.getAllWallets()
+                val otherWallets = if (activeWallet != null) {
+                    allWallets.filterNot { it.address == activeWallet.address }
+                } else {
+                    allWallets
+                }
+
                 _uiState.update {
                     it.copy(
-                        otherWallets = wallets,
+                        activeWallet = activeWallet,
+                        otherWallets = otherWallets,
                         isLoading = false,
                     )
                 }

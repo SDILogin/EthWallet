@@ -54,6 +54,11 @@ class VerifyPinCodeViewModel(
     fun onEvent(event: VerifyPinCodeEvent) {
         Logger.debug(TAG) { "onEvent: $event" }
 
+        if (event is VerifyPinCodeEvent.Reset) {
+            handleReset()
+            return
+        }
+
         val currentState = _viewState.value
 
         if (currentState.isVerifying || currentState.isLocked) {
@@ -65,6 +70,12 @@ class VerifyPinCodeViewModel(
             is VerifyPinCodeEvent.OnDeleteClick -> handleDeleteClick()
             is VerifyPinCodeEvent.OnLogoutClick -> handleLogoutClick()
         }
+    }
+
+    private fun handleReset() {
+        countdownJob?.cancel()
+        countdownJob = null
+        _viewState.value = VerifyPinCodeViewState()
     }
 
     private fun handleDigitClick(digit: Int) {
@@ -256,4 +267,9 @@ sealed interface VerifyPinCodeEvent {
      * User clicked the logout button
      */
     data object OnLogoutClick : VerifyPinCodeEvent
+
+    /**
+     * Reset the view state to default empty state
+     */
+    data object Reset : VerifyPinCodeEvent
 }

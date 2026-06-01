@@ -38,6 +38,7 @@ composePlugin = "1.11.0"
 composeHotReload = "1.1.1"
 
 [libraries]
+androidx-compose-ui-test = { module = "androidx.compose.ui:ui-test" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "runtime" }

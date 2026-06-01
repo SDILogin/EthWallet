@@ -194,6 +194,7 @@ fun SetPinCodeScreen(
     val viewState by viewModel.viewState.collectAsState()
 
     LaunchedEffect(Unit) {
+        viewModel.onEvent(SetPinCodeEvent.Reset)
         viewModel.news.collect { news ->
             when (news) {
                 is SetPinCodeNews.PinCodeSet -> {

@@ -61,6 +61,11 @@ sealed interface SetPinCodeEvent {
      * User clicked the reset button
      */
     data object OnResetClick : SetPinCodeEvent
+
+    /**
+     * Reset the view state to default empty state
+     */
+    data object Reset : SetPinCodeEvent
 }
 
 /**
@@ -97,7 +102,12 @@ class SetPinCodeViewModel(
             is SetPinCodeEvent.OnDigitClick -> handleDigitClick(event.digit)
             is SetPinCodeEvent.OnDeleteClick -> handleDeleteClick()
             is SetPinCodeEvent.OnResetClick -> handleResetClick()
+            is SetPinCodeEvent.Reset -> handleFullReset()
         }
+    }
+
+    private fun handleFullReset() {
+        _viewState.value = SetPinCodeViewState()
     }
 
     private fun handleDigitClick(digit: Int) {

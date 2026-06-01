@@ -50,6 +50,7 @@ fun VerifyPinCodeScreen(
     viewModel: VerifyPinCodeViewModel = koinViewModel(),
 ) {
     LaunchedEffect(Unit) {
+        viewModel.onEvent(VerifyPinCodeEvent.Reset)
         viewModel.news.collect { news ->
             when (news) {
                 is VerifyPinCodeNews.PinVerified -> {
