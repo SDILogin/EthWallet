@@ -34,6 +34,9 @@ room {
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-opt-in=androidx.compose.foundation.style.ExperimentalFoundationStyleApi")
+    }
     android {
         namespace = "me.sdi.ethwallet.shared"
         compileSdk = 37
@@ -103,6 +106,10 @@ kotlin {
         }
         val androidMain by getting {
             dependencies {
+                // Previews
+                api(libs.androidx.ui.tooling)
+                api(libs.androidx.ui.tooling.preview)
+
                 // Ktor
                 implementation(libs.ktor.client.okhttp)
 

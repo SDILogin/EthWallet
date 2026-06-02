@@ -1,14 +1,7 @@
 package me.sdi.ethwallet.ui.wallet
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,8 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -32,13 +23,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.backspace_24px
 import me.sdi.ethwallet.resources.delete
@@ -47,47 +43,147 @@ import me.sdi.ethwallet.resources.pin_confirm_title
 import me.sdi.ethwallet.resources.pin_create_subtitle
 import me.sdi.ethwallet.resources.pin_create_title
 import me.sdi.ethwallet.resources.pin_reset
+import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun PinCodeInput(
-    pinCode: String,
+fun SetPinCodeScreen(
+    onPinCodeSet: (String) -> Unit,
     modifier: Modifier = Modifier,
-    maxLength: Int = 6,
+    viewModel: SetPinCodeViewModel = koinViewModel(),
 ) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        repeat(maxLength) { index ->
-            val isActive = index < pinCode.length
-            val color by animateColorAsState(
-                targetValue =
-                    if (isActive) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                    },
-                animationSpec = tween(300),
-                label = "colorAnimation",
-            )
-            val scale by animateFloatAsState(
-                targetValue = if (isActive) 1.2f else 1f,
-                animationSpec = tween(300),
-                label = "scaleAnimation",
-            )
+    val viewState by viewModel.viewState.collectAsState()
 
-            Box(
-                modifier =
-                    Modifier
-                        .size(16.dp)
-                        .scale(scale)
-                        .background(color, CircleShape),
+    LaunchedEffect(Unit) {
+        viewModel.onEvent(SetPinCodeEvent.Reset)
+        viewModel.news.collect { news ->
+            when (news) {
+                is SetPinCodeNews.PinCodeSet -> {
+                    onPinCodeSet(news.pinCode)
+                }
+                is SetPinCodeNews.Error -> {
+                    // We're handling errors through the state already
+                }
+            }
+        }
+    }
+
+    SetPinCodeScreen(viewState, viewModel::onEvent, modifier)
+}
+
+@Composable
+private fun SetPinCodeScreen(
+    viewState: SetPinCodeViewState,
+    onEvent: (SetPinCodeEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val currentPin = if (viewState.isConfirmationMode) viewState.secondPin else viewState.firstPin
+
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Spacer(modifier = Modifier.weight(1f))
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(modifier = Modifier.height(64.dp))
+                Title(isConfirmationMode = viewState.isConfirmationMode)
+                Spacer(modifier = Modifier.height(8.dp))
+                Subtitle(isConfirmationMode = viewState.isConfirmationMode)
+                Spacer(modifier = Modifier.height(32.dp))
+                PinCodeInput(pinCode = currentPin, maxLength = 6)
+                Spacer(modifier = Modifier.height(16.dp))
+                ErrorMessage(viewState.errorMessage)
+                Spacer(modifier = Modifier.height(16.dp))
+                ResetButton(
+                    visible = viewState.isConfirmationMode,
+                    onClick = { onEvent(SetPinCodeEvent.OnResetClick) },
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            NumberPad(
+                onNumberClick = { number -> onEvent(SetPinCodeEvent.OnDigitClick(number)) },
+                onDeleteClick = { onEvent(SetPinCodeEvent.OnDeleteClick) },
+                modifier = Modifier.padding(bottom = 32.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun Title(isConfirmationMode: Boolean) {
+    val textRes = if (isConfirmationMode) {
+        Res.string.pin_confirm_title
+    } else {
+        Res.string.pin_create_title
+    }
+
+    Text(
+        text = stringResource(textRes),
+        style = MaterialTheme.typography.headlineMedium,
+        textAlign = TextAlign.Center,
+    )
+}
+
+@Composable
+private fun Subtitle(isConfirmationMode: Boolean) {
+    val textRes = if (isConfirmationMode) {
+        Res.string.pin_confirm_subtitle
+    } else {
+        Res.string.pin_create_subtitle
+    }
+
+    Text(
+        text = stringResource(textRes),
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+    )
+}
+
+@Composable
+private fun ErrorMessage(errorMessage: String?) {
+    var lastActiveMessage by remember { mutableStateOf("") }
+    LaunchedEffect(errorMessage) {
+        if (errorMessage != null) {
+            lastActiveMessage = errorMessage
+        }
+    }
+
+    val alphaAnim by animateFloatAsState(if (errorMessage == null) 0f else 1f)
+    val slideAnim by animateDpAsState(if (errorMessage == null) 16.dp else 0.dp)
+    val slideAnimPx = with(LocalDensity.current) { slideAnim.toPx() }
+
+    Text(
+        modifier = Modifier.graphicsLayer {
+            alpha = alphaAnim
+            translationY = -slideAnimPx
+        },
+        text = lastActiveMessage,
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyMedium,
+    )
+}
+
+@Composable
+private fun ResetButton(visible: Boolean, onClick: () -> Unit) {
+    val alphaAnim by animateFloatAsState(if (visible) 1f else 0f)
+    TextButton(onClick = onClick, enabled = visible, modifier = Modifier.graphicsLayer { alpha = alphaAnim }) {
+        Text(
+            text = stringResource(Res.string.pin_reset),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.labelLarge,
+        )
     }
 }
 
@@ -162,146 +258,34 @@ private fun NumberPad(
     }
 }
 
-@Composable
-fun NumberButton(
-    number: Int,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    TextButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.size(72.dp),
-        colors = ButtonDefaults.textButtonColors(
-            contentColor = MaterialTheme.colorScheme.onBackground,
+private class SetPinCodeViewStateProvider : PreviewParameterProvider<SetPinCodeViewState> {
+    override val values = sequenceOf(
+        SetPinCodeViewState(
+            firstPin = "123",
         ),
-    ) {
-        Text(
-            text = number.toString(),
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Medium,
+        SetPinCodeViewState(
+            firstPin = "123456",
+            isConfirmationMode = true,
+            secondPin = "12",
+        ),
+        SetPinCodeViewState(
+            firstPin = "123456",
+            secondPin = "123455",
+            isConfirmationMode = true,
+            errorMessage = "Pins do not match",
+        ),
+    )
+}
+
+@Preview
+@Composable
+private fun SetPinCodeScreen_Preview(
+    @PreviewParameter(SetPinCodeViewStateProvider::class) viewState: SetPinCodeViewState,
+) {
+    EthWalletTheme {
+        SetPinCodeScreen(
+            viewState = viewState,
+            onEvent = { },
         )
-    }
-}
-
-@Composable
-fun SetPinCodeScreen(
-    onPinCodeSet: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: SetPinCodeViewModel = koinViewModel(),
-) {
-    val viewState by viewModel.viewState.collectAsState()
-
-    LaunchedEffect(Unit) {
-        viewModel.onEvent(SetPinCodeEvent.Reset)
-        viewModel.news.collect { news ->
-            when (news) {
-                is SetPinCodeNews.PinCodeSet -> {
-                    onPinCodeSet(news.pinCode)
-                }
-                is SetPinCodeNews.Error -> {
-                    // We're handling errors through the state already
-                }
-            }
-        }
-    }
-
-    SetPinCodeScreen(viewState, viewModel::onEvent, modifier)
-}
-
-@Composable
-private fun SetPinCodeScreen(
-    viewState: SetPinCodeViewState,
-    onEvent: (SetPinCodeEvent) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val currentPin = if (viewState.isConfirmationMode) viewState.secondPin else viewState.firstPin
-
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Spacer(modifier = Modifier.height(64.dp))
-
-                Text(
-                    text =
-                        if (viewState.isConfirmationMode) {
-                            stringResource(Res.string.pin_confirm_title)
-                        } else {
-                            stringResource(Res.string.pin_create_title)
-                        },
-                    style = MaterialTheme.typography.headlineMedium,
-                    textAlign = TextAlign.Center,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text =
-                        if (viewState.isConfirmationMode) {
-                            stringResource(Res.string.pin_confirm_subtitle)
-                        } else {
-                            stringResource(Res.string.pin_create_subtitle)
-                        },
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                PinCodeInput(
-                    pinCode = currentPin,
-                    maxLength = 6,
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                AnimatedVisibility(
-                    visible = viewState.errorMessage != null,
-                    enter = fadeIn(animationSpec = tween(300)) + expandVertically(animationSpec = tween(300)),
-                    exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(animationSpec = tween(300)),
-                ) {
-                    viewState.errorMessage?.let { errorMessage ->
-                        Text(
-                            text = errorMessage,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                }
-
-                if (viewState.isConfirmationMode) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(
-                        onClick = { onEvent(SetPinCodeEvent.OnResetClick) },
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.pin_reset),
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
-                }
-            }
-
-            NumberPad(
-                onNumberClick = { number -> onEvent(SetPinCodeEvent.OnDigitClick(number)) },
-                onDeleteClick = { onEvent(SetPinCodeEvent.OnDeleteClick) },
-                modifier = Modifier.padding(bottom = 32.dp),
-            )
-        }
     }
 }

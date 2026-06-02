@@ -39,6 +39,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.sdi.ethwallet.core.EthAddress
@@ -519,60 +521,54 @@ private fun TokenItemShimmer() {
     }
 }
 
-@Preview
-@Composable
-private fun WalletScreenContentPreview() {
-    MaterialTheme {
-        WalletScreenContent(
-            viewState = WalletViewState(
-                chainId = 11155111L,
-                totalBalanceUsd = "$12,345.67",
-                totalBalanceEth = "5.234 ETH",
-                favoriteTokens = listOf(
-                    FavoriteToken(
-                        address = KnownTokens.USDT.ethAddress,
-                        name = "Tether USD",
-                        ticker = "USDT",
-                        amount = "1,250.00",
-                        usdValue = java.math.BigDecimal("1250.00"),
-                        usdValueFormatted = "$1,250.00",
-                    ),
-                    FavoriteToken(
-                        address = KnownTokens.USDC.ethAddress,
-                        name = "USD Coin",
-                        ticker = "USDC",
-                        amount = "500.00",
-                        usdValue = java.math.BigDecimal("500.00"),
-                        usdValueFormatted = "$500.00",
-                    ),
-                    FavoriteToken(
-                        address = KnownTokens.DAI.ethAddress,
-                        name = "Dai Stablecoin",
-                        ticker = "DAI",
-                        amount = "750.50",
-                        usdValue = java.math.BigDecimal("750.50"),
-                        usdValueFormatted = "$750.50",
-                    ),
+private class WalletViewStateProvider : PreviewParameterProvider<WalletViewState> {
+    override val values: Sequence<WalletViewState> = sequenceOf(
+        WalletViewState(
+            chainId = 11155111L,
+            totalBalanceUsd = "$12,345.67",
+            totalBalanceEth = "5.234 ETH",
+            favoriteTokens = listOf(
+                FavoriteToken(
+                    address = KnownTokens.USDT.ethAddress,
+                    name = "Tether USD",
+                    ticker = "USDT",
+                    amount = "1,250.00",
+                    usdValue = java.math.BigDecimal("1250.00"),
+                    usdValueFormatted = "$1,250.00",
                 ),
-                isLoading = false,
+                FavoriteToken(
+                    address = KnownTokens.USDC.ethAddress,
+                    name = "USD Coin",
+                    ticker = "USDC",
+                    amount = "500.00",
+                    usdValue = java.math.BigDecimal("500.00"),
+                    usdValueFormatted = "$500.00",
+                ),
+                FavoriteToken(
+                    address = KnownTokens.DAI.ethAddress,
+                    name = "Dai Stablecoin",
+                    ticker = "DAI",
+                    amount = "750.50",
+                    usdValue = java.math.BigDecimal("750.50"),
+                    usdValueFormatted = "$750.50",
+                ),
             ),
-            onManageWallets = {},
-            onEditButtonClick = {},
-            onTokenClick = {},
-            onReceiveButtonClick = {},
-            onSendButtonClick = {},
-        )
-    }
+            isLoading = false,
+        ),
+        WalletViewState(
+            isLoading = true,
+        ),
+    )
 }
 
 @Preview
 @Composable
-private fun WalletScreenContentShimmerPreview() {
+private fun WalletScreenContentPreview(
+    @PreviewParameter(WalletViewStateProvider::class) viewState: WalletViewState,
+) {
     MaterialTheme {
         WalletScreenContent(
-            viewState = WalletViewState(
-                isLoading = true,
-            ),
+            viewState = viewState,
             onManageWallets = {},
             onEditButtonClick = {},
             onTokenClick = {},

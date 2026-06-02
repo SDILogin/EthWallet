@@ -1,7 +1,5 @@
 package me.sdi.ethwallet.ui.wallet
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -12,9 +10,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.style.ExperimentalFoundationStyleApi
+import androidx.compose.foundation.style.Style
+import androidx.compose.foundation.style.rememberUpdatedStyleState
+import androidx.compose.foundation.style.styleable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -23,7 +22,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -36,21 +34,25 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.mnemonic_content_description
 import me.sdi.ethwallet.resources.mnemonic_long_press_to_copy
+import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.stringResource
 
 /**
  * A card that displays a mnemonic seed phrase with a copy button.
  */
+@OptIn(ExperimentalFoundationStyleApi::class)
 @Composable
 fun MnemonicCard(
     seedPhrase: List<String>,
     modifier: Modifier = Modifier,
     onCopied: () -> Unit = {},
+    style: Style = Style,
 ) {
     val textMeasurer = rememberTextMeasurer()
     val textStyle = MaterialTheme.typography.bodyMedium.copy(
@@ -60,27 +62,22 @@ fun MnemonicCard(
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     val interactionSource = remember { MutableInteractionSource() }
+    val styleState = rememberUpdatedStyleState(interactionSource) {
+        it.isEnabled = true
+    }
     val mnemonicDescription = stringResource(
         Res.string.mnemonic_content_description,
         seedPhrase.size,
         seedPhrase.joinToString(separator = " ") { it },
     )
 
-    Card(
+    Box(
         modifier =
             modifier
                 .semantics {
                     contentDescription = mnemonicDescription
                 }
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(16.dp),
-                )
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(16.dp),
-                )
+                .styleable(styleState, EthWalletTheme.styles.mnemonicCardStyle, style)
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = ripple(),
@@ -91,8 +88,7 @@ fun MnemonicCard(
                             onCopied()
                         }
                     },
-                )
-                .clip(CardDefaults.shape),
+                ),
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.size(16.dp))
@@ -193,4 +189,28 @@ private fun IndexedText(
                     )
                 },
     )
+}
+
+@OptIn(ExperimentalFoundationStyleApi::class)
+@Preview
+@Composable
+private fun MnemonicCardPreview() {
+    EthWalletTheme {
+        MnemonicCard(
+            seedPhrase = listOf(
+                "abandon",
+                "ability",
+                "able",
+                "about",
+                "above",
+                "absent",
+                "absorb",
+                "abstract",
+                "absurd",
+                "abuse",
+                "access",
+                "accident",
+            ),
+        )
+    }
 }
