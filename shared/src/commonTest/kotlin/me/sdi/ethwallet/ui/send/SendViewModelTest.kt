@@ -13,7 +13,7 @@ import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.transfer.TransferException
 import me.sdi.ethwallet.fakes.FakeTransferInteractor
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.usdtOnMainnet
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -72,7 +72,7 @@ class SendViewModelTest {
 
     @Test
     fun should_update_token_selection_to_ERC20_token() = runTest(testDispatcher) {
-        val usdtAddress = KnownTokens.USDT.ethAddress
+        val usdtAddress = usdtOnMainnet.ethAddress
         viewModel.onEvent(SendEvent.OnTokenSelected(usdtAddress))
 
         val currentState = viewModel.viewState.value
@@ -193,7 +193,7 @@ class SendViewModelTest {
     fun should_validate_too_many_decimal_places_for_USDT() = runTest(testDispatcher) {
         val amountWithTooManyDecimals = "1.1234567"
 
-        viewModel.onEvent(SendEvent.OnTokenSelected(KnownTokens.USDT.ethAddress))
+        viewModel.onEvent(SendEvent.OnTokenSelected(usdtOnMainnet.ethAddress))
         viewModel.onEvent(SendEvent.OnAmountChanged(amountWithTooManyDecimals))
 
         val currentState = viewModel.viewState.value
@@ -209,7 +209,7 @@ class SendViewModelTest {
     fun should_allow_valid_decimal_places_for_USDT() = runTest(testDispatcher) {
         val validUsdtAmount = "1.123456"
 
-        viewModel.onEvent(SendEvent.OnTokenSelected(KnownTokens.USDT.ethAddress))
+        viewModel.onEvent(SendEvent.OnTokenSelected(usdtOnMainnet.ethAddress))
         viewModel.onEvent(SendEvent.OnAmountChanged(validUsdtAmount))
 
         val currentState = viewModel.viewState.value
@@ -222,7 +222,7 @@ class SendViewModelTest {
         val amountWithManyDecimals = "1.123456789012345678"
         viewModel.onEvent(SendEvent.OnAmountChanged(amountWithManyDecimals))
         val ethError = viewModel.viewState.value.amount.error
-        viewModel.onEvent(SendEvent.OnTokenSelected(KnownTokens.USDT.ethAddress))
+        viewModel.onEvent(SendEvent.OnTokenSelected(usdtOnMainnet.ethAddress))
         val usdtError = viewModel.viewState.value.amount.error
 
         assertNull(ethError, "ETH amount with many decimals should be valid")
@@ -425,7 +425,7 @@ class SendViewModelTest {
         val expectedHash = "0xTransactionHash"
         transferInteractor.transferResult = Result.success(expectedHash)
 
-        val usdtAddress = KnownTokens.USDT.ethAddress
+        val usdtAddress = usdtOnMainnet.ethAddress
         viewModel.onEvent(SendEvent.OnTokenSelected(usdtAddress))
         viewModel.onEvent(SendEvent.OnReceiverAddressChanged(validEthAddress))
         viewModel.onEvent(SendEvent.OnAmountChanged("10.5"))

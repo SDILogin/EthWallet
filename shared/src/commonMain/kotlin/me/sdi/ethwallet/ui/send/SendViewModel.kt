@@ -18,7 +18,7 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.transfer.TransferData
 import me.sdi.ethwallet.core.transfer.TransferException
 import me.sdi.ethwallet.core.transfer.TransferInteractor
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.findKnownToken
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -66,7 +66,7 @@ class SendViewModel(
         Logger.debug(TAG) {
             val tokenName = when (contractAddress) {
                 EthContractAddress -> "Eth"
-                else -> KnownTokens.entries.find { it.ethAddress == contractAddress }?.tokenName ?: "Unknown Token"
+                else -> findKnownToken(contractAddress)?.tokenName ?: "Unknown Token"
             }
             """
             Token selected: $tokenName
@@ -248,7 +248,7 @@ private fun validateAmount(amount: String, tokenAddress: EthAddress): String? {
 }
 
 private fun getMaxDecimalPlaces(tokenAddress: EthAddress): Int {
-    return KnownTokens.entries.find { it.ethAddress == tokenAddress }?.decimals ?: 18
+    return findKnownToken(tokenAddress)?.decimals ?: 18
 }
 
 private fun amountToBigInteger(amount: String, tokenAddress: EthAddress): BigInteger? {

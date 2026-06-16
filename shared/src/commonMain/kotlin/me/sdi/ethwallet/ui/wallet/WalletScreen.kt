@@ -63,10 +63,12 @@ import me.sdi.ethwallet.resources.wallet_receive
 import me.sdi.ethwallet.resources.wallet_send
 import me.sdi.ethwallet.resources.wallet_title
 import me.sdi.ethwallet.resources.wallet_tokens_erc20
-import me.sdi.ethwallet.ui.KnownTokens
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.components.shimmer
-import me.sdi.ethwallet.ui.icon
+import me.sdi.ethwallet.ui.daiOnSepolia
+import me.sdi.ethwallet.ui.findKnownToken
+import me.sdi.ethwallet.ui.usdcOnSepolia
+import me.sdi.ethwallet.ui.usdtOnSepolia
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
@@ -165,8 +167,7 @@ fun WalletScreenContent(
             Card(
                 modifier = Modifier.padding(16.dp),
             ) {
-                Column(
-                ) {
+                Column {
                     TokensHeader(
                         onEditButtonClick = onEditButtonClick,
                         editButtonEnabled = !viewState.isLoading,
@@ -405,10 +406,7 @@ private fun TokenItem(
     modifier: Modifier = Modifier,
 ) {
     val tokenIcon: DrawableResource = remember(tokenAddress) {
-        val token = KnownTokens.entries.firstOrNull { knownToken ->
-            knownToken.ethAddress == tokenAddress
-        }
-        token?.icon ?: Res.drawable.ic_question_mark_56
+        findKnownToken(tokenAddress)?.iconRes ?: Res.drawable.ic_question_mark_56
     }
 
     Row(
@@ -569,7 +567,7 @@ private class WalletViewStateProvider : PreviewParameterProvider<WalletViewState
             totalBalanceEth = "5.234 ETH",
             favoriteTokens = listOf(
                 FavoriteToken(
-                    address = KnownTokens.USDT.ethAddress,
+                    address = usdtOnSepolia.ethAddress,
                     name = "Tether USD",
                     ticker = "USDT",
                     amount = "1,250.00",
@@ -577,7 +575,7 @@ private class WalletViewStateProvider : PreviewParameterProvider<WalletViewState
                     usdValueFormatted = "$1,250.00",
                 ),
                 FavoriteToken(
-                    address = KnownTokens.USDC.ethAddress,
+                    address = usdcOnSepolia.ethAddress,
                     name = "USD Coin",
                     ticker = "USDC",
                     amount = "500.00",
@@ -585,7 +583,7 @@ private class WalletViewStateProvider : PreviewParameterProvider<WalletViewState
                     usdValueFormatted = "$500.00",
                 ),
                 FavoriteToken(
-                    address = KnownTokens.DAI.ethAddress,
+                    address = daiOnSepolia.ethAddress,
                     name = "Dai Stablecoin",
                     ticker = "DAI",
                     amount = "750.50",

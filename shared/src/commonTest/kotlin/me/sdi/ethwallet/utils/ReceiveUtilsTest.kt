@@ -2,7 +2,9 @@ package me.sdi.ethwallet.utils
 
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.daiOnMainnet
+import me.sdi.ethwallet.ui.usdcOnMainnet
+import me.sdi.ethwallet.ui.usdtOnMainnet
 import java.math.BigDecimal
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -70,7 +72,7 @@ class ReceiveUtilsTest {
 
         val result = ReceiveUtils.generateReceiveQrPayload(
             receiverEthAddress = receiverAddress,
-            contractAddress = KnownTokens.USDC.ethAddress,
+            contractAddress = usdcOnMainnet.ethAddress,
         )
 
         assertEquals(
@@ -87,7 +89,7 @@ class ReceiveUtilsTest {
 
         val result = ReceiveUtils.generateReceiveQrPayload(
             receiverEthAddress = receiverAddress,
-            contractAddress = KnownTokens.USDC.ethAddress,
+            contractAddress = usdcOnMainnet.ethAddress,
             amount = amount,
         )
 
@@ -105,7 +107,7 @@ class ReceiveUtilsTest {
 
         val result = ReceiveUtils.generateReceiveQrPayload(
             receiverEthAddress = receiverAddress,
-            contractAddress = KnownTokens.USDT.ethAddress,
+            contractAddress = usdtOnMainnet.ethAddress,
             amount = amount,
         )
 
@@ -123,7 +125,7 @@ class ReceiveUtilsTest {
 
         val result = ReceiveUtils.generateReceiveQrPayload(
             receiverEthAddress = receiverAddress,
-            contractAddress = KnownTokens.DAI.ethAddress,
+            contractAddress = daiOnMainnet.ethAddress,
             amount = amount,
         )
 
@@ -141,7 +143,7 @@ class ReceiveUtilsTest {
 
         val result = ReceiveUtils.generateReceiveQrPayload(
             receiverEthAddress = receiverAddress,
-            contractAddress = KnownTokens.USDC.ethAddress,
+            contractAddress = usdcOnMainnet.ethAddress,
             amount = amount,
         )
 
@@ -158,7 +160,7 @@ class ReceiveUtilsTest {
 
         val result = ReceiveUtils.generateReceiveQrPayload(
             receiverEthAddress = receiverAddress,
-            contractAddress = KnownTokens.USDT.ethAddress,
+            contractAddress = usdtOnMainnet.ethAddress,
             amount = amount,
         )
 
@@ -199,7 +201,7 @@ class ReceiveUtilsTest {
 
         val usdcResult = ReceiveUtils.generateReceiveQrPayload(
             receiverEthAddress = receiverAddress,
-            contractAddress = KnownTokens.USDC.ethAddress,
+            contractAddress = usdcOnMainnet.ethAddress,
             amount = amount,
         )
 
@@ -222,7 +224,7 @@ class ReceiveUtilsTest {
 
         val result = ReceiveUtils.generateReceiveQrPayload(
             receiverEthAddress = receiverAddress,
-            contractAddress = KnownTokens.USDC.ethAddress,
+            contractAddress = usdcOnMainnet.ethAddress,
             amount = largeAmount,
         )
 
@@ -243,7 +245,7 @@ class ReceiveUtilsTest {
 
         val usdcResult = ReceiveUtils.generateReceiveQrPayload(
             receiverEthAddress = mixedCaseAddress,
-            contractAddress = KnownTokens.USDC.ethAddress,
+            contractAddress = usdcOnMainnet.ethAddress,
         )
 
         assertTrue(

@@ -13,7 +13,8 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.daiOnMainnet
+import me.sdi.ethwallet.ui.usdtOnMainnet
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.Request
 import org.web3j.protocol.core.methods.response.EthGetBalance
@@ -148,7 +149,7 @@ class TransferInteractorTest {
         val transferDataDAI = TransferData(
             destinationAddress = testDestinationAddress,
             amount = BigInteger("200000000000000000000"), // 200 DAI
-            contractAddress = KnownTokens.DAI.ethAddress,
+            contractAddress = daiOnMainnet.ethAddress,
             gasParams = GasParams.Custom(
                 gasPrice = BigInteger("25000000000"), // 25 gwei
                 gasLimit = BigInteger("80000"),
@@ -247,7 +248,7 @@ class TransferInteractorTest {
         val transferData = TransferData(
             destinationAddress = testDestinationAddress,
             amount = BigInteger("100000000000000000000"), // 100 tokens
-            contractAddress = KnownTokens.USDT.ethAddress,
+            contractAddress = usdtOnMainnet.ethAddress,
         )
 
         val result = transferInteractor.transfer(transferData)

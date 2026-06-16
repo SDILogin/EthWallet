@@ -20,7 +20,9 @@ import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.fakes.FakeEthWalletCreator
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.daiOnMainnet
+import me.sdi.ethwallet.ui.usdcOnMainnet
+import me.sdi.ethwallet.ui.usdtOnMainnet
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.test.AfterTest
@@ -110,16 +112,16 @@ class WalletViewModelTest {
         // Set up flow values BEFORE creating the ViewModel
         balanceFlow.value = mapOf(
             EthContractAddress to oneEthInWei,
-            KnownTokens.USDT.ethAddress to BigInteger.ZERO,
-            KnownTokens.USDC.ethAddress to BigInteger.ZERO,
-            KnownTokens.DAI.ethAddress to BigInteger.ZERO,
+            usdtOnMainnet.ethAddress to BigInteger.ZERO,
+            usdcOnMainnet.ethAddress to BigInteger.ZERO,
+            daiOnMainnet.ethAddress to BigInteger.ZERO,
         )
 
         fiatRateFlow.value = mapOf(
             EthContractAddress to ethPrice,
-            KnownTokens.USDT.ethAddress to BigDecimal.ONE,
-            KnownTokens.USDC.ethAddress to BigDecimal.ONE,
-            KnownTokens.DAI.ethAddress to BigDecimal.ONE,
+            usdtOnMainnet.ethAddress to BigDecimal.ONE,
+            usdcOnMainnet.ethAddress to BigDecimal.ONE,
+            daiOnMainnet.ethAddress to BigDecimal.ONE,
         )
 
         createViewModel()
@@ -154,16 +156,16 @@ class WalletViewModelTest {
         // Set up flow values BEFORE creating the ViewModel
         balanceFlow.value = mapOf(
             EthContractAddress to zeroWei,
-            KnownTokens.USDT.ethAddress to BigInteger.ZERO,
-            KnownTokens.USDC.ethAddress to BigInteger.ZERO,
-            KnownTokens.DAI.ethAddress to BigInteger.ZERO,
+            usdtOnMainnet.ethAddress to BigInteger.ZERO,
+            usdcOnMainnet.ethAddress to BigInteger.ZERO,
+            daiOnMainnet.ethAddress to BigInteger.ZERO,
         )
 
         fiatRateFlow.value = mapOf(
             EthContractAddress to ethPrice,
-            KnownTokens.USDT.ethAddress to BigDecimal.ONE,
-            KnownTokens.USDC.ethAddress to BigDecimal.ONE,
-            KnownTokens.DAI.ethAddress to BigDecimal.ONE,
+            usdtOnMainnet.ethAddress to BigDecimal.ONE,
+            usdcOnMainnet.ethAddress to BigDecimal.ONE,
+            daiOnMainnet.ethAddress to BigDecimal.ONE,
         )
 
         createViewModel()
@@ -196,16 +198,16 @@ class WalletViewModelTest {
         // Set up flow values BEFORE creating the ViewModel
         balanceFlow.value = mapOf(
             EthContractAddress to oneEthInWei,
-            KnownTokens.USDT.ethAddress to usdtBalance,
-            KnownTokens.USDC.ethAddress to usdcBalance,
-            KnownTokens.DAI.ethAddress to daiBalance,
+            usdtOnMainnet.ethAddress to usdtBalance,
+            usdcOnMainnet.ethAddress to usdcBalance,
+            daiOnMainnet.ethAddress to daiBalance,
         )
 
         fiatRateFlow.value = mapOf(
             EthContractAddress to ethPrice,
-            KnownTokens.USDT.ethAddress to BigDecimal.ONE,
-            KnownTokens.USDC.ethAddress to BigDecimal.ONE,
-            KnownTokens.DAI.ethAddress to BigDecimal.ONE,
+            usdtOnMainnet.ethAddress to BigDecimal.ONE,
+            usdcOnMainnet.ethAddress to BigDecimal.ONE,
+            daiOnMainnet.ethAddress to BigDecimal.ONE,
         )
 
         createViewModel()

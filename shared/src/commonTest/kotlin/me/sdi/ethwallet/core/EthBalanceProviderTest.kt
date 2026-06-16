@@ -5,7 +5,7 @@ import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.database.dao.InMemoryTokenBalanceDao
 import me.sdi.ethwallet.database.entity.TokenBalanceEntity
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.usdtOnMainnet
 import java.math.BigInteger
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -57,7 +57,7 @@ class EthBalanceProviderTest {
             wallet = testWallet,
             balances = mapOf(
                 EthContractAddress to Result.success(ethBalance),
-                KnownTokens.USDT.ethAddress to Result.success(usdtBalance),
+                usdtOnMainnet.ethAddress to Result.success(usdtBalance),
             ),
         )
 

@@ -2,7 +2,7 @@ package me.sdi.ethwallet.utils
 
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.findKnownToken
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.math.RoundingMode
@@ -59,10 +59,7 @@ object ReceiveUtils {
     }
 
     private fun getTokenDecimals(contractAddress: EthAddress): Int {
-        return KnownTokens.entries
-            .find { it.ethAddress == contractAddress }
-            ?.decimals
-            ?: 18 // Default to 18 decimals for unknown tokens
+        return findKnownToken(contractAddress)?.decimals ?: 18 // Default to 18 decimals for unknown tokens
     }
 
     private fun convertToMinimalUnits(amount: BigDecimal, decimals: Int): BigInteger {

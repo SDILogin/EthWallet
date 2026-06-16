@@ -22,7 +22,7 @@ import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.findKnownToken
 import me.sdi.ethwallet.utils.ReceiveUtils
 import java.math.BigDecimal
 
@@ -118,7 +118,7 @@ class ReceiveQrViewModel(
         Logger.debug(TAG) {
             val selectedTokenName = when (contractAddress) {
                 EthContractAddress -> "Eth"
-                else -> KnownTokens.entries.find { it.ethAddress == contractAddress }?.name ?: "Unknown"
+                else -> findKnownToken(contractAddress)?.symbol ?: "Unknown"
             }
 
             "Selected $selectedTokenName"

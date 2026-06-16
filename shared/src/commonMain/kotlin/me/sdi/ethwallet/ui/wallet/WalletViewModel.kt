@@ -219,13 +219,13 @@ class WalletViewModel(
         }
         if (tokenUsdValue == null) {
             Logger.warn(TAG) {
-                "No fiat rate found for token ${tokenInfo.name}"
+                "No fiat rate found for token ${tokenInfo.symbol}"
             }
         }
         FavoriteToken(
             address = tokenInfo.ethAddress,
             name = tokenInfo.tokenName,
-            ticker = tokenInfo.name,
+            ticker = tokenInfo.symbol,
             amount = formatTokenAmount(tokenAmount),
             usdValue = tokenUsdValue,
             usdValueFormatted = tokenUsdValue?.let { formatUsdCurrency(tokenUsdValue) } ?: "N/A",

@@ -24,7 +24,9 @@ import me.sdi.ethwallet.flow.pageobjects.OnboardingPage
 import me.sdi.ethwallet.flow.pageobjects.SetPinCodePage
 import me.sdi.ethwallet.flow.pageobjects.WalletPage
 import me.sdi.ethwallet.flow.pageobjects.WalletsListPage
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.daiOnSepolia
+import me.sdi.ethwallet.ui.usdcOnSepolia
+import me.sdi.ethwallet.ui.usdtOnSepolia
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -122,9 +124,9 @@ class WalletFlowTest : KoinTest {
                     flowOf(
                         mapOf(
                             EthContractAddress to BigInteger.ZERO,
-                            KnownTokens.USDT.ethAddress to BigInteger.ZERO,
-                            KnownTokens.USDC.ethAddress to BigInteger.ZERO,
-                            KnownTokens.DAI.ethAddress to BigInteger.ZERO,
+                            usdtOnSepolia.ethAddress to BigInteger.ZERO,
+                            usdcOnSepolia.ethAddress to BigInteger.ZERO,
+                            daiOnSepolia.ethAddress to BigInteger.ZERO,
                         ),
                     )
 
@@ -137,9 +139,9 @@ class WalletFlowTest : KoinTest {
                     flowOf(
                         mapOf(
                             EthContractAddress to BigDecimal.ZERO,
-                            KnownTokens.USDT.ethAddress to BigDecimal.ONE,
-                            KnownTokens.USDC.ethAddress to BigDecimal.ONE,
-                            KnownTokens.DAI.ethAddress to BigDecimal.ONE,
+                            usdtOnSepolia.ethAddress to BigDecimal.ONE,
+                            usdcOnSepolia.ethAddress to BigDecimal.ONE,
+                            daiOnSepolia.ethAddress to BigDecimal.ONE,
                         ),
                     )
 

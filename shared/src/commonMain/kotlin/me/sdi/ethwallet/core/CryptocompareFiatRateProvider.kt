@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.map
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.entity.FiatRateEntity
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.allKnownTokens
 import java.math.BigDecimal
 
 private const val PRICE_URL = "https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms="
@@ -21,7 +21,7 @@ class CryptocompareFiatRateProvider(
     private val now: () -> Long = { kotlin.time.TimeSource.Monotonic.markNow().elapsedNow().inWholeMilliseconds },
 ) : FiatRateProvider {
     override suspend fun forceUpdate() {
-        val tokenAddresses = listOf(EthContractAddress) + KnownTokens.entries.map { it.ethAddress }
+        val tokenAddresses = listOf(EthContractAddress) + allKnownTokens.map { it.ethAddress }
         Logger.debug(TAG) {
             "Forcing update of fiat rates for ${tokenAddresses.size} tokens"
         }
@@ -43,7 +43,7 @@ class CryptocompareFiatRateProvider(
     }
 
     override fun observe(): Flow<Map<EthAddress, BigDecimal>> {
-        val tokenAddresses = listOf(EthContractAddress) + KnownTokens.entries.map { it.ethAddress }
+        val tokenAddresses = listOf(EthContractAddress) + allKnownTokens.map { it.ethAddress }
         return fiatRateDao.observeAll(tokenAddresses.map { it.toString() }).map { fiatRateEntities ->
             Logger.debug(TAG) {
                 "Observing fiat rates for ${tokenAddresses.size} tokens, found ${fiatRateEntities.size} entries"
@@ -79,22 +79,21 @@ class CryptocompareFiatRateProvider(
     private suspend fun loadRatesFromNetwork(
         erc20ContractAddresses: List<EthAddress>,
     ): Map<EthAddress, BigDecimal> {
-        val targetErc20TokenNames = KnownTokens
-            .entries
+        val targetErc20TokenNames = allKnownTokens
             .filter { it.ethAddress in erc20ContractAddresses }
-            .map { it.name }
+            .map { it.symbol }
+            .distinct()
         val toSymString = createToSymString(targetErc20TokenNames + "ETH")
 
         val response: Map<String, Double> = httpClient.get(PRICE_URL + toSymString).body()
-        return response.map { (tokenSymbol, value) ->
-            val erc20ContractAddress: EthAddress? = KnownTokens
-                .entries
-                .firstOrNull { token -> token.name.equals(tokenSymbol, ignoreCase = true) }
-                ?.ethAddress
+        return response.flatMap { (tokenSymbol, value) ->
+            val rate = BigDecimal.valueOf(1.0 / value)
+            val matchingAddresses = allKnownTokens
+                .filter { it.symbol.equals(tokenSymbol, ignoreCase = true) }
+                .map { it.ethAddress }
+                .ifEmpty { listOf(EthContractAddress) }
 
-            val ethAddress: EthAddress = erc20ContractAddress ?: EthContractAddress
-
-            ethAddress to BigDecimal.valueOf(1.0 / value)
+            matchingAddresses.map { it to rate }
         }.toMap()
     }
 

@@ -18,7 +18,8 @@ import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.fakes.FakeEthWalletCreator
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.daiOnMainnet
+import me.sdi.ethwallet.ui.usdcOnMainnet
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -123,12 +124,12 @@ class ReceiveQrViewModelTest {
             viewModel.viewState.collect { collector.add(it) }
         }
 
-        viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(KnownTokens.USDC.ethAddress))
+        viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(usdcOnMainnet.ethAddress))
         testScheduler.advanceUntilIdle()
         job.cancel()
 
         val finalState = collector.last()
-        assertEquals(KnownTokens.USDC.ethAddress, finalState.selectedTokenContract, "Selected token should be USDC")
+        assertEquals(usdcOnMainnet.ethAddress, finalState.selectedTokenContract, "Selected token should be USDC")
         assertNull(finalState.amountError, "Amount error should remain null")
     }
 
@@ -182,7 +183,7 @@ class ReceiveQrViewModelTest {
 
     @Test
     fun onAmountChanged_should_validate_excessive_decimal_places_for_USDC() = runTest(testDispatcher) {
-        viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(KnownTokens.USDC.ethAddress))
+        viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(usdcOnMainnet.ethAddress))
 
         val collector = mutableListOf<ReceiveQrViewState>()
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -200,7 +201,7 @@ class ReceiveQrViewModelTest {
 
     @Test
     fun onAmountChanged_should_accept_valid_decimal_places_for_USDC() = runTest(testDispatcher) {
-        viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(KnownTokens.USDC.ethAddress))
+        viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(usdcOnMainnet.ethAddress))
 
         val collector = mutableListOf<ReceiveQrViewState>()
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
@@ -286,14 +287,14 @@ class ReceiveQrViewModelTest {
             viewModel.viewState.collect { collector.add(it) }
         }
 
-        viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(KnownTokens.USDC.ethAddress))
+        viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(usdcOnMainnet.ethAddress))
         viewModel.onEvent(ReceiveQrEvent.OnAmountChanged("100.5"))
 
         testScheduler.advanceUntilIdle()
         job.cancel()
 
         val finalState = collector.last()
-        assertEquals(KnownTokens.USDC.ethAddress, finalState.selectedTokenContract, "Token should be USDC")
+        assertEquals(usdcOnMainnet.ethAddress, finalState.selectedTokenContract, "Token should be USDC")
         assertEquals("100.5", finalState.amount, "Amount should be set")
         assertNull(finalState.amountError, "Amount should be valid for USDC")
         assertTrue(finalState.qrPayload?.isNotEmpty() == true, "QR code should be generated")
@@ -364,15 +365,15 @@ class ReceiveQrViewModelTest {
             viewModel.viewState.collect { collector.add(it) }
         }
 
-        viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(KnownTokens.USDC.ethAddress))
+        viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(usdcOnMainnet.ethAddress))
 
         testScheduler.advanceUntilIdle()
         job.cancel()
 
         val finalState = collector.last()
-        assertEquals(KnownTokens.USDC.ethAddress, finalState.selectedTokenContract, "Selected token should be updated")
+        assertEquals(usdcOnMainnet.ethAddress, finalState.selectedTokenContract, "Selected token should be updated")
         assertTrue(
-            finalState.qrPayload?.contains(KnownTokens.USDC.ethAddress.toString()) == true,
+            finalState.qrPayload?.contains(usdcOnMainnet.ethAddress.toString()) == true,
             "QR code should be updated for new token",
         )
     }
@@ -396,7 +397,7 @@ class ReceiveQrViewModelTest {
 
     @Test
     fun should_handle_different_token_decimal_precision_correctly() = runTest(testDispatcher) {
-        viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(KnownTokens.DAI.ethAddress))
+        viewModel.onEvent(ReceiveQrEvent.OnTokenSelected(daiOnMainnet.ethAddress))
 
         val collector = mutableListOf<ReceiveQrViewState>()
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {

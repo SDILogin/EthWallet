@@ -14,7 +14,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import me.sdi.ethwallet.database.dao.InMemoryFiatRateDao
 import me.sdi.ethwallet.database.entity.FiatRateEntity
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.daiOnMainnet
+import me.sdi.ethwallet.ui.usdcOnMainnet
+import me.sdi.ethwallet.ui.usdtOnMainnet
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.net.SocketTimeoutException
@@ -61,9 +63,9 @@ class CryptocompareFiatRateProviderTest {
             result[EthContractAddress]?.setScale(10, RoundingMode.HALF_UP),
             "Should return ETH rate",
         )
-        assertEquals(BigDecimal("1.0"), result[KnownTokens.USDT.ethAddress], "Should return USDT rate")
-        assertEquals(BigDecimal("1.0"), result[KnownTokens.USDC.ethAddress], "Should return USDC rate")
-        assertEquals(BigDecimal("1.0"), result[KnownTokens.DAI.ethAddress], "Should return DAI rate")
+        assertEquals(BigDecimal("1.0"), result[usdtOnMainnet.ethAddress], "Should return USDT rate")
+        assertEquals(BigDecimal("1.0"), result[usdcOnMainnet.ethAddress], "Should return USDC rate")
+        assertEquals(BigDecimal("1.0"), result[daiOnMainnet.ethAddress], "Should return DAI rate")
     }
 
     @Test
@@ -81,17 +83,17 @@ class CryptocompareFiatRateProviderTest {
                     lastUpdatedTimestamp = currentTime,
                 ),
                 FiatRateEntity(
-                    tokenAddress = KnownTokens.USDT.ethAddress.toString(),
+                    tokenAddress = usdtOnMainnet.ethAddress.toString(),
                     rate = usdtRate.toString(),
                     lastUpdatedTimestamp = currentTime,
                 ),
                 FiatRateEntity(
-                    tokenAddress = KnownTokens.USDC.ethAddress.toString(),
+                    tokenAddress = usdcOnMainnet.ethAddress.toString(),
                     rate = usdcRate.toString(),
                     lastUpdatedTimestamp = currentTime,
                 ),
                 FiatRateEntity(
-                    tokenAddress = KnownTokens.DAI.ethAddress.toString(),
+                    tokenAddress = daiOnMainnet.ethAddress.toString(),
                     rate = daiRate.toString(),
                     lastUpdatedTimestamp = currentTime,
                 ),
@@ -103,9 +105,9 @@ class CryptocompareFiatRateProviderTest {
         val result = ethPriceProvider.observe().first()
 
         assertEquals(ethRate, result[EthContractAddress], "Should return cached ETH rate")
-        assertEquals(usdtRate, result[KnownTokens.USDT.ethAddress], "Should return cached USDT rate")
-        assertEquals(usdcRate, result[KnownTokens.USDC.ethAddress], "Should return cached USDC rate")
-        assertEquals(daiRate, result[KnownTokens.DAI.ethAddress], "Should return cached DAI rate")
+        assertEquals(usdtRate, result[usdtOnMainnet.ethAddress], "Should return cached USDT rate")
+        assertEquals(usdcRate, result[usdcOnMainnet.ethAddress], "Should return cached USDC rate")
+        assertEquals(daiRate, result[daiOnMainnet.ethAddress], "Should return cached DAI rate")
     }
 
     @Test

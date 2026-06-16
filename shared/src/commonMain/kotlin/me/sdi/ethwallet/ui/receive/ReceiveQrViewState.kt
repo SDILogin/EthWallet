@@ -2,7 +2,7 @@ package me.sdi.ethwallet.ui.receive
 
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
-import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.findKnownToken
 import java.math.BigDecimal
 
 data class ReceiveQrViewState(
@@ -29,8 +29,5 @@ private fun getAmountError(selectedTokenContractAddress: EthAddress, rawAmount: 
 }
 
 private fun getMaxDecimalPlaces(selectedTokenAddress: EthAddress): Int {
-    return KnownTokens
-        .entries
-        .find { it.ethAddress == selectedTokenAddress }
-        ?.decimals ?: 18
+    return findKnownToken(selectedTokenAddress)?.decimals ?: 18
 }

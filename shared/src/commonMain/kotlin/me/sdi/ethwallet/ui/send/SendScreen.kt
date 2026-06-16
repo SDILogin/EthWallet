@@ -59,8 +59,7 @@ import me.sdi.ethwallet.resources.send_token_usdc
 import me.sdi.ethwallet.resources.send_token_usdt
 import me.sdi.ethwallet.resources.send_transaction
 import me.sdi.ethwallet.resources.send_transfer_successful
-import me.sdi.ethwallet.ui.KnownTokens
-import me.sdi.ethwallet.ui.icon
+import me.sdi.ethwallet.ui.KnownToken
 import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
@@ -114,7 +113,7 @@ fun SendScreen(
 private fun SendScreenContent(
     modifier: Modifier = Modifier,
     viewState: SendViewState,
-    chainTokens: List<KnownTokens>,
+    chainTokens: List<KnownToken>,
     onEvent: (SendEvent) -> Unit,
     onBackPress: () -> Unit,
 ) {
@@ -179,7 +178,7 @@ private fun SendScreenContent(
 @Composable
 private fun TokenSelector(
     selectedTokenContract: EthAddress,
-    chainTokens: List<KnownTokens>,
+    chainTokens: List<KnownToken>,
     onTokenSelected: (EthAddress) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -216,16 +215,17 @@ private fun TokenSelector(
                     selected = selectedTokenContract == token.ethAddress,
                     onClick = { onTokenSelected(token.ethAddress) },
                     label = {
-                        val nameRes = when (token) {
-                            KnownTokens.USDT -> Res.string.send_token_usdt
-                            KnownTokens.USDC -> Res.string.send_token_usdc
-                            KnownTokens.DAI -> Res.string.send_token_dai
+                        val nameRes = when (token.symbol) {
+                            "USDT" -> Res.string.send_token_usdt
+                            "USDC" -> Res.string.send_token_usdc
+                            "DAI" -> Res.string.send_token_dai
+                            else -> null
                         }
-                        Text(stringResource(nameRes))
+                        Text(nameRes?.let { stringResource(it) } ?: token.symbol)
                     },
                     leadingIcon = {
                         Icon(
-                            painter = painterResource(token.icon),
+                            painter = painterResource(token.iconRes),
                             tint = Color.Unspecified,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
