@@ -25,13 +25,14 @@ data class Shimmer(
 )
 
 @Composable
-fun rememberShimmer(
-    shimmerColors: List<Color>,
-    durationMillis: Int = 1000,
-): Shimmer {
-    return remember(shimmerColors, durationMillis) {
+fun rememberShimmer(durationMillis: Int = 1000): Shimmer {
+    return remember(durationMillis) {
         Shimmer(
-            colors = shimmerColors,
+            colors = listOf(
+                Color.LightGray.copy(alpha = 0.6f),
+                Color.LightGray.copy(alpha = 0.2f),
+                Color.LightGray.copy(alpha = 0.6f),
+            ),
             duration = durationMillis,
         )
     }
@@ -40,14 +41,7 @@ fun rememberShimmer(
 fun Modifier.shimmer(
     customShimmer: Shimmer? = null,
 ): Modifier = composed {
-    val shimmer = customShimmer ?: rememberShimmer(
-        shimmerColors = listOf(
-            Color.LightGray.copy(alpha = 0.6f),
-            Color.LightGray.copy(alpha = 0.2f),
-            Color.LightGray.copy(alpha = 0.6f),
-        ),
-    )
-
+    val shimmer = customShimmer ?: rememberShimmer()
     val transition = rememberInfiniteTransition(label = "ShimmerTransition")
     val translateAnimation by transition.animateFloat(
         initialValue = 0f,
