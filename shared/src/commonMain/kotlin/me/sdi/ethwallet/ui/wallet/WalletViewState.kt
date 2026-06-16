@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui.wallet
 
+import androidx.compose.runtime.Immutable
 import me.sdi.ethwallet.core.EthAddress
 import java.math.BigDecimal
 
@@ -12,6 +13,7 @@ import java.math.BigDecimal
  * @property favoriteTokens The list of favorite tokens
  * @property isLoading Whether balance data is being loaded
  */
+@Immutable
 data class WalletViewState(
     val chainId: Long = 0L,
     val totalBalanceUsd: String = "",

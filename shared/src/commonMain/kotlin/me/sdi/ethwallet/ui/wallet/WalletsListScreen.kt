@@ -16,8 +16,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
@@ -50,6 +52,7 @@ import me.sdi.ethwallet.resources.wallets_list_active_wallet_icon
 import me.sdi.ethwallet.resources.wallets_list_delete_wallet
 import me.sdi.ethwallet.resources.wallets_list_no_wallets
 import me.sdi.ethwallet.resources.wallets_list_title
+import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -144,12 +147,14 @@ private fun WalletsListScreenContent(
                         (listOfNotNull(uiState.activeWallet) + uiState.otherWallets).sortedBy { it.label }
                     }
                 }
-                LazyColumn(
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(300.dp),
                     modifier =
                         Modifier
                             .fillMaxSize()
                             .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(
                         items = allWallets,
@@ -249,5 +254,24 @@ private fun WalletCard(
                 )
             }
         }
+    }
+}
+
+@FormFactorPreviews
+@Composable
+private fun WalletsListScreenPreview() {
+    MaterialTheme {
+        WalletsListScreenContent(
+            modifier = Modifier.fillMaxSize(),
+            uiState = WalletsListUiState(
+                activeWallet = EthWallet("Personal Wallet", EthAddress("0x1234567890123456789012345678901234567890")),
+                otherWallets = listOf(
+                    EthWallet("Business Wallet", EthAddress("0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef")),
+                    EthWallet("Savings Wallet", EthAddress("0x9876543210987654321098765432109876543210")),
+                ),
+                isLoading = false,
+            ),
+            onEvent = {},
+        )
     }
 }

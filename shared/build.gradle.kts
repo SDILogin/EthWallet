@@ -90,6 +90,12 @@ kotlin {
                 // Navigation 3 KMP
                 implementation(libs.navigation3.ui.kmp)
                 implementation(libs.lifecycle.viewmodel.navigation3.kmp)
+
+                // Adaptive Layouts
+                implementation(libs.compose.adaptive)
+                implementation(libs.compose.adaptive.layout)
+                implementation(libs.compose.adaptive.navigation)
+                implementation(libs.compose.adaptive.navigation3)
             }
         }
         val commonTest by getting {

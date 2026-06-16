@@ -1,17 +1,21 @@
 package me.sdi.ethwallet.ui.wallet
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -27,6 +31,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,11 +40,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
@@ -57,6 +64,7 @@ import me.sdi.ethwallet.resources.wallet_send
 import me.sdi.ethwallet.resources.wallet_title
 import me.sdi.ethwallet.resources.wallet_tokens_erc20
 import me.sdi.ethwallet.ui.KnownTokens
+import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.components.shimmer
 import me.sdi.ethwallet.ui.icon
 import me.sdi.ethwallet.util.rememberToastManager
@@ -65,6 +73,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun WalletScreen(
     onManageWallets: () -> Unit,
@@ -113,8 +122,11 @@ fun WalletScreenContent(
     onSendButtonClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.wallet_title)) },
@@ -126,52 +138,131 @@ fun WalletScreenContent(
                         )
                     }
                 },
+                scrollBehavior = scrollBehavior,
             )
         },
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+        Column(
+            modifier = Modifier.padding(innerPadding),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-            ) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (viewState.isLoading) {
-                    TotalBalanceShimmer()
-                } else {
-                    TotalFiatBalanceCard(
-                        fiatBalance = viewState.totalBalanceUsd,
-                        ethBalance = viewState.totalBalanceEth,
-                        chainId = viewState.chainId,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                ButtonsPanel(
-                    isLoading = viewState.isLoading,
-                    onReceiveClick = onReceiveButtonClick,
-                    onSendButtonClick = onSendButtonClick,
+            if (viewState.isLoading) {
+                TotalBalanceShimmer()
+            } else {
+                TotalFiatBalanceCard(
+                    fiatBalance = viewState.totalBalanceUsd,
+                    ethBalance = viewState.totalBalanceEth,
+                    chainId = viewState.chainId,
                 )
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            ButtonsPanel(
+                isLoading = viewState.isLoading,
+                onReceiveClick = onReceiveButtonClick,
+                onSendButtonClick = onSendButtonClick,
+            )
 
-                if (viewState.isLoading) {
-                    TokensCardShimmer()
-                } else if (viewState.favoriteTokens.isNotEmpty()) {
-                    TokensCard(
-                        favoriteTokens = viewState.favoriteTokens,
+            Card(
+                modifier = Modifier.padding(16.dp),
+            ) {
+                Column(
+                ) {
+                    TokensHeader(
                         onEditButtonClick = onEditButtonClick,
-                        onTokenClick = onTokenClick,
+                        editButtonEnabled = !viewState.isLoading,
+                        modifier = Modifier.padding(16.dp),
                     )
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(300.dp),
+                        modifier = Modifier.consumeWindowInsets(innerPadding),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        if (viewState.isLoading) {
+                            repeat(10) {
+                                item {
+                                    TokenItemShimmer()
+                                }
+                            }
+                        } else if (viewState.favoriteTokens.isNotEmpty()) {
+                            items(
+                                items = viewState.favoriteTokens,
+                                key = { it.address.toString() },
+                            ) { token ->
+                                TokenCard(
+                                    token = token,
+                                    onTokenClick = onTokenClick,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TokensHeader(
+    onEditButtonClick: () -> Unit,
+    editButtonEnabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.weight(1f)) {
+            BasicText(
+                text = stringResource(Res.string.wallet_tokens_erc20),
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = 12.sp,
+                    maxFontSize = 20.sp,
+                ),
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                ),
+                maxLines = 1,
+            )
+        }
+
+        TextButton(
+            enabled = editButtonEnabled,
+            onClick = { onEditButtonClick() },
+        ) {
+            Text(
+                stringResource(Res.string.edit),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TokenCard(
+    token: FavoriteToken,
+    onTokenClick: (tokenAddress: EthAddress) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        onClick = { onTokenClick(token.address) },
+    ) {
+        TokenItem(
+            tokenAddress = token.address,
+            tokenName = token.name,
+            tokenSymbol = token.ticker,
+            tokenBalance = token.amount,
+            modifier = Modifier.padding(16.dp),
+        )
     }
 }
 
@@ -182,7 +273,6 @@ private fun ButtonsPanel(
     onSendButtonClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
@@ -269,7 +359,7 @@ private fun TotalFiatBalanceCard(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         BasicText(
@@ -303,71 +393,6 @@ private fun Long.toNetworkName(): String {
         "Mainnet"
     } else {
         "Testnet"
-    }
-}
-
-@Composable
-private fun TokensCard(
-    favoriteTokens: List<FavoriteToken>,
-    onEditButtonClick: () -> Unit,
-    onTokenClick: (tokenAddress: EthAddress) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(8.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(Modifier.weight(1f)) {
-                    BasicText(
-                        text = stringResource(Res.string.wallet_tokens_erc20),
-                        autoSize = TextAutoSize.StepBased(
-                            minFontSize = 12.sp,
-                            maxFontSize = 20.sp,
-                        ),
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                        maxLines = 1,
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
-
-                TextButton(
-                    onClick = { onEditButtonClick() },
-                ) {
-                    Text(
-                        stringResource(Res.string.edit),
-                    )
-                }
-            }
-
-            favoriteTokens.forEach { token ->
-                TokenItem(
-                    tokenAddress = token.address,
-                    tokenName = token.name,
-                    tokenSymbol = token.ticker,
-                    tokenBalance = token.amount,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onTokenClick(token.address) }
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-        }
     }
 }
 
@@ -432,19 +457,32 @@ private fun TotalBalanceShimmer(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.6f)
                 .clip(RoundedCornerShape(8.dp))
                 .height(56.dp)
                 .shimmer(),
-        )
+        ) {
+            Text(
+                modifier = Modifier.alpha(0f),
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = 12.sp,
+                    maxFontSize = 48.sp,
+                ),
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                ),
+                text = "100$",
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.4f)
                 .clip(RoundedCornerShape(8.dp))
                 .height(24.dp)
                 .shimmer(),
-        )
+        ) {
+            Text(modifier = Modifier.alpha(0f), text = "0.001 ETH")
+        }
     }
 }
 
@@ -479,45 +517,47 @@ private fun TokensCardShimmer() {
 
 @Composable
 private fun TokenItemShimmer() {
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .shimmer(),
-        )
-
-        Spacer(modifier = Modifier.padding(horizontal = 8.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
+        Row(modifier = Modifier.padding(8.dp)) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.7f)
-                    .height(20.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(48.dp)
+                    .clip(CircleShape)
                     .shimmer(),
             )
-            Spacer(modifier = Modifier.height(4.dp))
+
+            Spacer(modifier = Modifier.padding(horizontal = 8.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f)
+                        .height(20.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .shimmer(),
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.4f)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .shimmer(),
+                )
+            }
+
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.4f)
-                    .height(16.dp)
+                    .size(width = 80.dp, height = 20.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .shimmer(),
             )
         }
-
-        Box(
-            modifier = Modifier
-                .size(width = 80.dp, height = 20.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .shimmer(),
-        )
     }
 }
 
@@ -561,7 +601,7 @@ private class WalletViewStateProvider : PreviewParameterProvider<WalletViewState
     )
 }
 
-@Preview
+@FormFactorPreviews
 @Composable
 private fun WalletScreenContentPreview(
     @PreviewParameter(WalletViewStateProvider::class) viewState: WalletViewState,

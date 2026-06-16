@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -32,7 +34,7 @@ import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun EthWalletApp(
     viewModel: InitialNavigationViewModel,
@@ -56,6 +58,7 @@ fun EthWalletApp(
             }
             val navigationState = rememberNavigationState(startDestination)
             val navigator = remember(navigationState) { Navigator(navigationState) }
+            val listDetailSceneStrategy = rememberListDetailSceneStrategy<Destination>()
 
             if (showLockScreen) {
                 LaunchedEffect(Unit) {
@@ -174,6 +177,7 @@ fun EthWalletApp(
                         .padding(innerPadding),
                     backStack = navigationState.backStack,
                     entryProvider = entryProvider,
+                    sceneStrategies = listOf(listDetailSceneStrategy),
                     onBack = { navigator.goBack() },
                 )
             }
