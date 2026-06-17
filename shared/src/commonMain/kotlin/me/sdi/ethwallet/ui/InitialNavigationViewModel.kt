@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -69,9 +68,15 @@ class InitialNavigationViewModel(
                 )
             } catch (e: Exception) {
                 ensureActive()
-                Logger.warn("Db") { e.stackTraceToString() }
+                Logger.warn("Db", e) { "Failed to check auth state" }
 
-                runCatching { pinCodeStorage.clearPinCode() }
+                try {
+                    pinCodeStorage.clearPinCode()
+                } catch (e: Exception) {
+                    ensureActive()
+
+                    Logger.warn("Db", e) { "Failed to clear pin code after auth state check failure" }
+                }
 
                 state.value = InitialNavigationState(
                     numberOfWallets = 0,
