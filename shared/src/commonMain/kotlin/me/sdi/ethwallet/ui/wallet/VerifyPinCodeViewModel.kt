@@ -18,6 +18,9 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 private const val TAG = "PinVerification"
+private const val PIN_MAX_LENGTH = 6
+private const val MAX_ATTEMPTS = 3
+private const val LOCK_TIMEOUT_SECONDS = 30
 
 /**
  * ViewModel for the PIN code verification screen
@@ -205,13 +208,6 @@ class VerifyPinCodeViewModel(
     override fun onCleared() {
         super.onCleared()
         countdownJob?.cancel()
-    }
-
-    companion object {
-        private const val TAG = "VerifyPinCodeViewModel"
-        private const val PIN_MAX_LENGTH = 6
-        private const val MAX_ATTEMPTS = 3
-        private const val LOCK_TIMEOUT_SECONDS = 30
     }
 }
 
