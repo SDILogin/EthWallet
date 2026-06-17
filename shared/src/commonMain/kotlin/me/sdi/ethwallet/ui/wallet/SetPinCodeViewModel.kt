@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.security.PinCodeStorage
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * UI state for the Set Pin Code screen.
@@ -125,7 +126,7 @@ class SetPinCodeViewModel(
                 viewState.update { it.copy(secondPin = updatedPin) }
                 if (updatedPin.length == PIN_MAX_LENGTH) {
                     viewModelScope.launch {
-                        delay(300) // 300ms delay for animation
+                        delay(300.milliseconds) // 300ms delay for animation
                         validatePins()
                     }.also { job ->
                         job.invokeOnCompletion {
@@ -145,7 +146,7 @@ class SetPinCodeViewModel(
                 viewState.update { it.copy(firstPin = updatedPin) }
                 if (updatedPin.length == PIN_MAX_LENGTH) {
                     viewModelScope.launch {
-                        delay(300) // 300ms delay for animation
+                        delay(300.milliseconds) // 300ms delay for animation
                         viewState.update {
                             it.copy(isConfirmationMode = true)
                         }
