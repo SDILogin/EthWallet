@@ -36,6 +36,8 @@ room {
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-opt-in=androidx.compose.foundation.style.ExperimentalFoundationStyleApi")
+        freeCompilerArgs.add("-Xreturn-value-checker=check")
+        freeCompilerArgs.add("-Xexplicit-backing-fields")
     }
     android {
         namespace = "me.sdi.ethwallet.shared"
