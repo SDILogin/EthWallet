@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -52,8 +51,8 @@ sealed interface CreateWalletEvent {
 class CreateWalletViewModel(
     private val walletRepository: WalletRepository,
 ) : ViewModel() {
-    private val _viewState = MutableStateFlow<CreateWalletViewState>(CreateWalletViewState.Loading)
-    val viewState: StateFlow<CreateWalletViewState> = _viewState.asStateFlow()
+    val viewState: StateFlow<CreateWalletViewState>
+        field = MutableStateFlow<CreateWalletViewState>(CreateWalletViewState.Loading)
 
     init {
         viewState
@@ -72,7 +71,7 @@ class CreateWalletViewModel(
     }
 
     private fun createWallet() {
-        _viewState.update { CreateWalletViewState.Loading }
+        viewState.update { CreateWalletViewState.Loading }
 
         viewModelScope.launch {
             val vs: CreateWalletViewState =
@@ -90,7 +89,7 @@ class CreateWalletViewModel(
                     CreateWalletViewState.Error(e)
                 }
 
-            _viewState.update { vs }
+            viewState.update { vs }
         }.also { job ->
             job.invokeOnCompletion {
                 if (it == null) {

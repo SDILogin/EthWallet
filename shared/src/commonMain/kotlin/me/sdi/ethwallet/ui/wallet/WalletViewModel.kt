@@ -10,8 +10,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
@@ -42,14 +40,14 @@ class WalletViewModel(
     private val fiatRateProvider: FiatRateProvider,
     private val chainConfig: ChainConfig,
 ) : ViewModel() {
-    private val _viewState = MutableStateFlow(WalletViewState(chainId = chainConfig.chainId))
-    val viewState: StateFlow<WalletViewState> = _viewState.asStateFlow()
+    val viewState: StateFlow<WalletViewState>
+        field = MutableStateFlow(WalletViewState(chainId = chainConfig.chainId))
 
-    private val _news = MutableSharedFlow<WalletNews>(
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
-    val news: SharedFlow<WalletNews> = _news.asSharedFlow()
+    val news: SharedFlow<WalletNews>
+        field = MutableSharedFlow<WalletNews>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
 
     private var forceUpdateJob: Job? = null
 
@@ -115,7 +113,7 @@ class WalletViewModel(
     }
 
     private fun startObservingActiveWalletBalanceChanges() {
-        _viewState.update { it.copy(isLoading = true) }
+        viewState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
             val activeWallet: EthWallet? = getActiveWalletOrShowError()
@@ -169,13 +167,13 @@ class WalletViewModel(
     }
 
     private fun displayUpdatedBalance(combinedBalance: CombinedBalance) {
-        _viewState.update { it.copy(isLoading = false) }
+        viewState.update { it.copy(isLoading = false) }
 
         val balance = combinedBalance.balance
         val fiatRates = combinedBalance.fiatRates
         val ethBalanceWei = balance[EthContractAddress] ?: BigInteger.ZERO
         val ethBalanceEth: BigDecimal = Convert.fromWei(ethBalanceWei.toString(), Convert.Unit.ETHER)
-        _viewState.update {
+        viewState.update {
             it.copy(
                 totalBalanceEth = "${ethBalanceEth.toPlainString()} ETH",
             )
@@ -193,7 +191,7 @@ class WalletViewModel(
             "Balance update: ETH=$ethBalanceEth ($$ethUsdValue), Tokens=$$totalErc20TokensUsdValue, Total=$$totalUsdValue"
         }
 
-        _viewState.update { currentViewState: WalletViewState ->
+        viewState.update { currentViewState: WalletViewState ->
             currentViewState.copy(
                 totalBalanceEth = "$ethBalanceEth ETH",
                 totalBalanceUsd = formatUsdCurrency(totalUsdValue),
@@ -242,7 +240,7 @@ class WalletViewModel(
                 "Error loading active wallet\n ${e.stackTraceToString()}"
             }
 
-            _news.emit(WalletNews.ShowErrorMessage(e))
+            news.emit(WalletNews.ShowErrorMessage(e))
 
             null
         }
@@ -258,7 +256,7 @@ class WalletViewModel(
                 "Failed to force update fiat rates: ${e.message}"
             }
 
-            _news.emit(WalletNews.ShowErrorMessage(e))
+            news.emit(WalletNews.ShowErrorMessage(e))
         }
     }
 
@@ -272,7 +270,7 @@ class WalletViewModel(
                 "Failed to force update balance for ${wallet.address}: ${e.message}"
             }
 
-            _news.emit(WalletNews.ShowErrorMessage(e))
+            news.emit(WalletNews.ShowErrorMessage(e))
         }
     }
 

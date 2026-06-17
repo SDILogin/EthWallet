@@ -8,8 +8,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -48,15 +46,14 @@ sealed interface WalletsListEvent {
 class WalletsListViewModel(
     private val walletRepository: WalletRepository,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(WalletsListUiState(isLoading = true))
-    val uiState: StateFlow<WalletsListUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<WalletsListUiState>
+        field = MutableStateFlow(WalletsListUiState(isLoading = true))
 
-    private val _news =
-        MutableSharedFlow<WalletScreenNews>(
+    val news: SharedFlow<WalletScreenNews>
+        field = MutableSharedFlow<WalletScreenNews>(
             extraBufferCapacity = 1,
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
-    val news: SharedFlow<WalletScreenNews> = _news.asSharedFlow()
 
     init {
         uiState
@@ -90,7 +87,7 @@ class WalletsListViewModel(
                     "Error setting active wallet\n ${e.printStackTrace()}"
                 }
 
-                _news.emit(WalletScreenNews.ShowErrorMessage(e))
+                news.emit(WalletScreenNews.ShowErrorMessage(e))
             }
         }.also { job ->
             job.invokeOnCompletion {
@@ -111,14 +108,14 @@ class WalletsListViewModel(
 
                 val remainingWallets = walletRepository.getAllWallets()
                 if (remainingWallets.isEmpty()) {
-                    _uiState.update {
+                    uiState.update {
                         it.copy(
                             activeWallet = null,
                             otherWallets = emptyList(),
                             isLoading = false,
                         )
                     }
-                    _news.emit(WalletScreenNews.NavigateToOnBoarding)
+                    news.emit(WalletScreenNews.NavigateToOnBoarding)
                 } else {
                     if (wasActive) {
                         val newActiveAddress = remainingWallets.first().address
@@ -133,7 +130,7 @@ class WalletsListViewModel(
                     "Error deleting wallet\n ${e.printStackTrace()}"
                 }
 
-                _news.emit(WalletScreenNews.ShowErrorMessage(e))
+                news.emit(WalletScreenNews.ShowErrorMessage(e))
             }
         }.also { job ->
             job.invokeOnCompletion {
@@ -148,7 +145,7 @@ class WalletsListViewModel(
 
     private fun navigateToWalletDetails() {
         viewModelScope.launch {
-            _news.emit(WalletScreenNews.NavigateToWalletDetails)
+            news.emit(WalletScreenNews.NavigateToWalletDetails)
         }.also { job ->
             job.invokeOnCompletion {
                 if (it == null) {
@@ -161,7 +158,7 @@ class WalletsListViewModel(
     }
 
     private fun loadWallets() {
-        _uiState.update { it.copy(isLoading = true) }
+        uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
             try {
@@ -173,7 +170,7 @@ class WalletsListViewModel(
                     allWallets
                 }
 
-                _uiState.update {
+                uiState.update {
                     it.copy(
                         activeWallet = activeWallet,
                         otherWallets = otherWallets,
@@ -186,9 +183,9 @@ class WalletsListViewModel(
                 Logger.warn(TAG) {
                     "Error loading wallets\n ${e.printStackTrace()}"
                 }
-                _uiState.update { it.copy(isLoading = false) }
+                uiState.update { it.copy(isLoading = false) }
 
-                _news.emit(WalletScreenNews.ShowErrorMessage(e))
+                news.emit(WalletScreenNews.ShowErrorMessage(e))
             }
         }.also { job ->
             job.invokeOnCompletion {

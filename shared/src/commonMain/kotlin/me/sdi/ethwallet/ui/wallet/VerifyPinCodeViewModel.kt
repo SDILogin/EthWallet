@@ -8,8 +8,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -30,11 +28,11 @@ private const val TAG = "PinVerification"
 class VerifyPinCodeViewModel(
     private val pinCodeStorage: PinCodeStorage,
 ) : ViewModel() {
-    private val _viewState = MutableStateFlow(VerifyPinCodeViewState())
-    val viewState: StateFlow<VerifyPinCodeViewState> = _viewState.asStateFlow()
+    val viewState: StateFlow<VerifyPinCodeViewState>
+        field = MutableStateFlow(VerifyPinCodeViewState())
 
-    private val _news = MutableSharedFlow<VerifyPinCodeNews>()
-    val news: SharedFlow<VerifyPinCodeNews> = _news.asSharedFlow()
+    val news: SharedFlow<VerifyPinCodeNews>
+        field = MutableSharedFlow<VerifyPinCodeNews>()
 
     private var countdownJob: Job? = null
 
@@ -59,7 +57,7 @@ class VerifyPinCodeViewModel(
             return
         }
 
-        val currentState = _viewState.value
+        val currentState = viewState.value
 
         if (currentState.isVerifying || currentState.isLocked) {
             return
@@ -75,20 +73,20 @@ class VerifyPinCodeViewModel(
     private fun handleReset() {
         countdownJob?.cancel()
         countdownJob = null
-        _viewState.value = VerifyPinCodeViewState()
+        viewState.value = VerifyPinCodeViewState()
     }
 
     private fun handleDigitClick(digit: Int) {
-        val currentState = _viewState.value
+        val currentState = viewState.value
         val enteredPin = currentState.enteredPin
 
         if (currentState.errorMessage != null) {
-            _viewState.update { it.copy(errorMessage = null) }
+            viewState.update { it.copy(errorMessage = null) }
         }
 
         if (enteredPin.length < PIN_MAX_LENGTH) {
             val updatedPin = enteredPin + digit.toString()
-            _viewState.update { it.copy(enteredPin = updatedPin) }
+            viewState.update { it.copy(enteredPin = updatedPin) }
 
             // If PIN is complete, verify it
             if (updatedPin.length == PIN_MAX_LENGTH) {
@@ -98,27 +96,27 @@ class VerifyPinCodeViewModel(
     }
 
     private fun handleDeleteClick() {
-        val currentState = _viewState.value
+        val currentState = viewState.value
         val enteredPin = currentState.enteredPin
 
         if (currentState.errorMessage != null) {
-            _viewState.update { it.copy(errorMessage = null) }
+            viewState.update { it.copy(errorMessage = null) }
         }
 
         if (enteredPin.isNotEmpty()) {
-            _viewState.update { it.copy(enteredPin = enteredPin.dropLast(1)) }
+            viewState.update { it.copy(enteredPin = enteredPin.dropLast(1)) }
         }
     }
 
     private fun handleLogoutClick() {
         viewModelScope.launch {
             pinCodeStorage.clearPinCode()
-            _news.emit(VerifyPinCodeNews.LoggedOut)
+            news.emit(VerifyPinCodeNews.LoggedOut)
         }
     }
 
     private fun verifyPin(pin: String) {
-        _viewState.update { it.copy(isVerifying = true) }
+        viewState.update { it.copy(isVerifying = true) }
 
         viewModelScope.launch {
             delay(300.milliseconds) // Small delay for animation
@@ -127,31 +125,31 @@ class VerifyPinCodeViewModel(
                 val isValid = pinCodeStorage.verifyPinCode(pin)
 
                 if (isValid) {
-                    _viewState.value = VerifyPinCodeViewState()
-                    _news.emit(VerifyPinCodeNews.PinVerified)
+                    viewState.value = VerifyPinCodeViewState()
+                    news.emit(VerifyPinCodeNews.PinVerified)
                 } else {
                     handleInvalidPin()
                 }
             } catch (e: Exception) {
                 Logger.debug(TAG) { "Error verifying PIN: ${e.message}" }
-                _viewState.update {
+                viewState.update {
                     it.copy(
                         errorMessage = "Error: ${e.message}",
                         isVerifying = false,
                     )
                 }
-                _news.emit(VerifyPinCodeNews.Error(e.message ?: "Unknown error"))
+                news.emit(VerifyPinCodeNews.Error(e.message ?: "Unknown error"))
             }
         }
     }
 
     private fun handleInvalidPin() {
-        val currentState = _viewState.value
+        val currentState = viewState.value
         val newAttempts = currentState.remainingAttempts - 1
 
         if (newAttempts <= 0) {
             // No attempts left, lock the screen
-            _viewState.update {
+            viewState.update {
                 it.copy(
                     enteredPin = "",
                     errorMessage = "Too many failed attempts",
@@ -164,7 +162,7 @@ class VerifyPinCodeViewModel(
             startLockCountdown()
         } else {
             // Still have attempts left
-            _viewState.update {
+            viewState.update {
                 it.copy(
                     enteredPin = "",
                     errorMessage = "Incorrect PIN code",
@@ -180,13 +178,13 @@ class VerifyPinCodeViewModel(
             Logger.debug(TAG) { "Previous countdownJob has been cancelled" }
         }
         countdownJob = viewModelScope.launch {
-            while (_viewState.value.lockCountdown > 0) {
+            while (viewState.value.lockCountdown > 0) {
                 delay(1.seconds)
-                _viewState.update {
+                viewState.update {
                     it.copy(lockCountdown = it.lockCountdown - 1)
                 }
             }
-            _viewState.update {
+            viewState.update {
                 it.copy(
                     isLocked = false,
                     remainingAttempts = MAX_ATTEMPTS,

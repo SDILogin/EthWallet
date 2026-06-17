@@ -6,8 +6,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -32,14 +32,14 @@ private const val AMOUNT_MAX_LENGTH = 50
 class SendViewModel(
     private val transferInteractor: TransferInteractor,
 ) : ViewModel() {
-    private val _viewState = MutableStateFlow(SendViewState())
-    val viewState = _viewState.asStateFlow()
+    val viewState: StateFlow<SendViewState>
+        field = MutableStateFlow(SendViewState())
 
-    private val _news = MutableSharedFlow<SendNews>(
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
-    val news = _news.asSharedFlow()
+    val news: SharedFlow<SendNews>
+        field = MutableSharedFlow<SendNews>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
 
     init {
         viewState
@@ -73,7 +73,7 @@ class SendViewModel(
             """.trimIndent()
         }
 
-        _viewState.update { currentState ->
+        viewState.update { currentState ->
             currentState.copy(
                 selectedTokenContractAddress = contractAddress,
                 // Re-validate amount with new token selection
@@ -90,7 +90,7 @@ class SendViewModel(
         val trimmedAddress = rawReceiverWalletAddress.trim().take(ETH_ADDRESS_LENGTH)
         val error: String? = validateAddress(trimmedAddress)
 
-        _viewState.update { currentState ->
+        viewState.update { currentState ->
             currentState.copy(
                 receiverAddress = AddressInputState(
                     value = trimmedAddress,
@@ -111,10 +111,10 @@ class SendViewModel(
             trimmedAmount
         }
 
-        val currentToken = _viewState.value.selectedTokenContractAddress
+        val currentToken = viewState.value.selectedTokenContractAddress
         val error = validateAmount(formattedAmount, currentToken)
 
-        _viewState.update { currentState ->
+        viewState.update { currentState ->
             currentState.copy(
                 amount = AmountInputState(
                     value = formattedAmount,
@@ -127,11 +127,11 @@ class SendViewModel(
     private fun handleTransferRequested() {
         Logger.debug(TAG) { "Transfer requested" }
 
-        val currentState = _viewState.value
+        val currentState = viewState.value
 
         if (!currentState.isTransferEnabled) {
             Logger.warn(TAG) { "Transfer requested but form is not valid" }
-            _news.tryEmit(SendNews.ValidationError("Please fix all validation errors before proceeding"))
+            news.tryEmit(SendNews.ValidationError("Please fix all validation errors before proceeding"))
             return
         }
 
@@ -140,11 +140,11 @@ class SendViewModel(
         val amountValidation = validateAmount(currentState.amount.value, currentState.selectedTokenContractAddress)
 
         if (receiverAddressValidation != null || amountValidation != null) {
-            _news.tryEmit(SendNews.ValidationError("Please fix all validation errors before proceeding"))
+            news.tryEmit(SendNews.ValidationError("Please fix all validation errors before proceeding"))
             return
         }
 
-        _viewState.update { it.copy(isLoading = true) }
+        viewState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
             try {
@@ -152,21 +152,21 @@ class SendViewModel(
                 val transactionHash = transferInteractor.transfer(transferData)
 
                 Logger.debug(TAG) { "Transfer successful: $transactionHash" }
-                _news.tryEmit(SendNews.TransferSuccess(transactionHash))
+                news.tryEmit(SendNews.TransferSuccess(transactionHash))
 
                 // Clear form after successful transfer
-                _viewState.update { SendViewState() }
+                viewState.update { SendViewState() }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: TransferException) {
                 Logger.warn(TAG) { "Transfer failed: ${e.message}" }
                 val userFriendlyMessage = mapTransferExceptionToUserMessage(e)
-                _news.tryEmit(SendNews.TransferError(userFriendlyMessage))
+                news.tryEmit(SendNews.TransferError(userFriendlyMessage))
             } catch (e: Exception) {
                 Logger.warn(TAG) { "Unexpected error during transfer: ${e.message}" }
-                _news.tryEmit(SendNews.TransferError("An unexpected error occurred. Please try again."))
+                news.tryEmit(SendNews.TransferError("An unexpected error occurred. Please try again."))
             } finally {
-                _viewState.update { it.copy(isLoading = false) }
+                viewState.update { it.copy(isLoading = false) }
             }
         }.also { job ->
             job.invokeOnCompletion {
@@ -181,7 +181,7 @@ class SendViewModel(
 
     private fun handleClearForm() {
         Logger.debug(TAG) { "Clear form requested" }
-        _viewState.update { SendViewState() }
+        viewState.update { SendViewState() }
     }
 
     private fun createTransferData(state: SendViewState): TransferData {

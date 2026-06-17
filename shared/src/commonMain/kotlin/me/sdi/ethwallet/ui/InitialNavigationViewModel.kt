@@ -38,11 +38,8 @@ class InitialNavigationViewModel(
     private val walletDao: WalletDao,
     private val pinCodeStorage: PinCodeStorage,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(InitialNavigationState())
-    val state: StateFlow<InitialNavigationState> = _state.asStateFlow()
-
-    // For backward compatibility
-    val numberOfWallets: StateFlow<Int> get() = MutableStateFlow(_state.value.numberOfWallets).asStateFlow()
+    val state: StateFlow<InitialNavigationState>
+        field = MutableStateFlow(InitialNavigationState())
 
     init {
         state
@@ -65,7 +62,7 @@ class InitialNavigationViewModel(
                     InitialRoute.OnBoarding
                 }
 
-                _state.value = InitialNavigationState(
+                state.value = InitialNavigationState(
                     numberOfWallets = wallets.size,
                     isPinCodeSet = initialRoute == InitialRoute.VerifyPinCode,
                     initialRoute = initialRoute,
@@ -76,7 +73,7 @@ class InitialNavigationViewModel(
 
                 runCatching { pinCodeStorage.clearPinCode() }
 
-                _state.value = InitialNavigationState(
+                state.value = InitialNavigationState(
                     numberOfWallets = 0,
                     isPinCodeSet = false,
                     initialRoute = InitialRoute.OnBoarding,

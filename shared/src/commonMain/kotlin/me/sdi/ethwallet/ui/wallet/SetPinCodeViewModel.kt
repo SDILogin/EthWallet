@@ -8,8 +8,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -77,11 +75,11 @@ sealed interface SetPinCodeEvent {
 class SetPinCodeViewModel(
     private val pinCodeStorage: PinCodeStorage,
 ) : ViewModel() {
-    private val _viewState = MutableStateFlow(SetPinCodeViewState())
-    val viewState: StateFlow<SetPinCodeViewState> = _viewState.asStateFlow()
+    val viewState: StateFlow<SetPinCodeViewState>
+        field = MutableStateFlow(SetPinCodeViewState())
 
-    private val _news = MutableSharedFlow<SetPinCodeNews>()
-    val news: SharedFlow<SetPinCodeNews> = _news.asSharedFlow()
+    val news: SharedFlow<SetPinCodeNews>
+        field = MutableSharedFlow<SetPinCodeNews>()
 
     init {
         viewState
@@ -107,24 +105,24 @@ class SetPinCodeViewModel(
     }
 
     private fun handleFullReset() {
-        _viewState.value = SetPinCodeViewState()
+        viewState.value = SetPinCodeViewState()
     }
 
     private fun handleDigitClick(digit: Int) {
-        val currentState = _viewState.value
+        val currentState = viewState.value
         if (currentState.isSaving) {
             return
         }
 
         if (currentState.errorMessage != null) {
-            _viewState.update { it.copy(errorMessage = null) }
+            viewState.update { it.copy(errorMessage = null) }
         }
 
         if (currentState.isConfirmationMode) {
             val secondPin = currentState.secondPin
             if (secondPin.length < PIN_MAX_LENGTH) {
                 val updatedPin = secondPin + digit.toString()
-                _viewState.update { it.copy(secondPin = updatedPin) }
+                viewState.update { it.copy(secondPin = updatedPin) }
                 if (updatedPin.length == PIN_MAX_LENGTH) {
                     viewModelScope.launch {
                         delay(300) // 300ms delay for animation
@@ -144,11 +142,11 @@ class SetPinCodeViewModel(
             val firstPin = currentState.firstPin
             if (firstPin.length < PIN_MAX_LENGTH) {
                 val updatedPin = firstPin + digit.toString()
-                _viewState.update { it.copy(firstPin = updatedPin) }
+                viewState.update { it.copy(firstPin = updatedPin) }
                 if (updatedPin.length == PIN_MAX_LENGTH) {
                     viewModelScope.launch {
                         delay(300) // 300ms delay for animation
-                        _viewState.update {
+                        viewState.update {
                             it.copy(isConfirmationMode = true)
                         }
                     }.also { job ->
@@ -166,31 +164,31 @@ class SetPinCodeViewModel(
     }
 
     private fun handleDeleteClick() {
-        val currentState = _viewState.value
+        val currentState = viewState.value
 
         if (currentState.isSaving) {
             return
         }
 
         if (currentState.errorMessage != null) {
-            _viewState.update { it.copy(errorMessage = null) }
+            viewState.update { it.copy(errorMessage = null) }
         }
 
         if (currentState.isConfirmationMode) {
             val secondPin = currentState.secondPin
             if (secondPin.isNotEmpty()) {
-                _viewState.update { it.copy(secondPin = secondPin.dropLast(1)) }
+                viewState.update { it.copy(secondPin = secondPin.dropLast(1)) }
             }
         } else {
             val firstPin = currentState.firstPin
             if (firstPin.isNotEmpty()) {
-                _viewState.update { it.copy(firstPin = firstPin.dropLast(1)) }
+                viewState.update { it.copy(firstPin = firstPin.dropLast(1)) }
             }
         }
     }
 
     private fun handleResetClick() {
-        _viewState.update {
+        viewState.update {
             it.copy(
                 isConfirmationMode = false,
                 secondPin = "",
@@ -200,12 +198,12 @@ class SetPinCodeViewModel(
     }
 
     private fun validatePins() {
-        val currentState = _viewState.value
+        val currentState = viewState.value
         val firstPin = currentState.firstPin
         val secondPin = currentState.secondPin
 
         if (firstPin == secondPin) {
-            _viewState.update { it.copy(isSaving = true) }
+            viewState.update { it.copy(isSaving = true) }
 
             viewModelScope.launch {
                 try {
@@ -213,20 +211,20 @@ class SetPinCodeViewModel(
                         Logger.debug(TAG) { "PIN code stored successfully" }
                     }
 
-                    _viewState.update { it.copy(isSaving = false) }
+                    viewState.update { it.copy(isSaving = false) }
 
-                    _news.emit(SetPinCodeNews.PinCodeSet(firstPin))
+                    news.emit(SetPinCodeNews.PinCodeSet(firstPin))
                 } catch (e: Exception) {
                     ensureActive()
 
                     Logger.debug(TAG) { "Error storing PIN code: ${e.message}" }
-                    _viewState.update {
+                    viewState.update {
                         it.copy(
                             errorMessage = "Error: ${e.message}",
                             isSaving = false,
                         )
                     }
-                    _news.emit(SetPinCodeNews.Error(e.message ?: "Unknown error"))
+                    news.emit(SetPinCodeNews.Error(e.message ?: "Unknown error"))
                 }
             }.also { job ->
                 job.invokeOnCompletion {
@@ -238,7 +236,7 @@ class SetPinCodeViewModel(
                 }
             }
         } else {
-            _viewState.update {
+            viewState.update {
                 it.copy(
                     errorMessage = "PINs don't match. Try again.",
                     isConfirmationMode = false,

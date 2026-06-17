@@ -6,7 +6,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
@@ -55,11 +54,11 @@ class ProcessLifetimeUserActivityManager(
 ) : UserActivityManager {
     private var timerJob: Job? = null
 
-    private val _showLockScreen = MutableStateFlow(false)
-    override val showLockScreen: StateFlow<Boolean> = _showLockScreen.asStateFlow()
+    override val showLockScreen: StateFlow<Boolean>
+        field = MutableStateFlow(false)
 
     override fun onAnyUserAction() {
-        if (_showLockScreen.value) {
+        if (showLockScreen.value) {
             // If the lock screen is already showing, do nothing
             return
         }
@@ -68,7 +67,7 @@ class ProcessLifetimeUserActivityManager(
     }
 
     override fun onAppUnlocked() {
-        _showLockScreen.update { false }
+        showLockScreen.update { false }
 
         restartTimer()
     }
@@ -93,7 +92,7 @@ class ProcessLifetimeUserActivityManager(
             }
 
             if (hasWallets) {
-                _showLockScreen.update { true }
+                showLockScreen.update { true }
             } else {
                 Logger.debug("") {
                     "No wallets found, not showing lock screen"

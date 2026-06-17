@@ -6,8 +6,8 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -34,8 +34,8 @@ private const val AMOUNT_MAX_LENGTH = 50
 class ReceiveQrViewModel(
     private val walletRepository: WalletRepository,
 ) : ViewModel() {
-    private val _viewState = MutableStateFlow(ReceiveQrViewState())
-    val viewState = _viewState.asStateFlow()
+    val viewState: StateFlow<ReceiveQrViewState>
+        field = MutableStateFlow(ReceiveQrViewState())
 
     private val receiverAddress: Flow<EthAddress> = flow {
         emit(checkNotNull(walletRepository.getActiveWallet()?.address))
@@ -67,11 +67,11 @@ class ReceiveQrViewModel(
         Logger.debug(TAG) { "(flow) QR code payload: $it" }
     }
 
-    private val _news = MutableSharedFlow<ReceiveQrNews>(
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
-    val news = _news.asSharedFlow()
+    val news: SharedFlow<ReceiveQrNews>
+        field = MutableSharedFlow<ReceiveQrNews>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
 
     init {
         viewState
@@ -83,12 +83,12 @@ class ReceiveQrViewModel(
             .launchIn(viewModelScope)
 
         qrCodePayload
-            .onEach { qrPayload -> _viewState.update { vs -> vs.copy(qrPayload = qrPayload) } }
+            .onEach { qrPayload -> viewState.update { vs -> vs.copy(qrPayload = qrPayload) } }
             .catch { e -> Logger.warn(TAG) { "Failed to generate QR code: ${e.message}" } }
             .launchIn(viewModelScope)
 
         receiverAddress
-            .onEach { address -> _viewState.update { vs -> vs.copy(walletAddress = address) } }
+            .onEach { address -> viewState.update { vs -> vs.copy(walletAddress = address) } }
             .catch { e -> Logger.warn(TAG) { "Failed to load wallet address: ${e.message}" } }
             .launchIn(viewModelScope)
     }
@@ -124,7 +124,7 @@ class ReceiveQrViewModel(
             "Selected $selectedTokenName"
         }
 
-        _viewState.update { it.copy(selectedTokenContract = contractAddress) }
+        viewState.update { it.copy(selectedTokenContract = contractAddress) }
     }
 
     private fun handleAmountChanged(amount: String) {
@@ -138,15 +138,15 @@ class ReceiveQrViewModel(
             trimmedAmount
         }
 
-        _viewState.update { viewState ->
-            viewState.copy(amount = formattedAmount)
+        viewState.update { vs ->
+            vs.copy(amount = formattedAmount)
         }
     }
 
     private fun handleClearAmount() {
         Logger.debug(TAG) { "Clear amount requested" }
 
-        _viewState.update { it.copy(amount = "") }
+        viewState.update { it.copy(amount = "") }
     }
 
     private fun handleCopyAddress() {
@@ -154,13 +154,13 @@ class ReceiveQrViewModel(
 
         viewModelScope.launch {
             val address: String? = walletRepository.getActiveWallet()?.address?.toString()
-            val news: ReceiveQrNews = if (address == null) {
+            val newsToEmit = if (address == null) {
                 ReceiveQrNews.ShowToast("Address not available")
             } else {
                 ReceiveQrNews.CopyToClipboard(address)
             }
 
-            _news.tryEmit(news)
+            news.emit(newsToEmit)
         }.also { job ->
             job.invokeOnCompletion {
                 if (it == null) {

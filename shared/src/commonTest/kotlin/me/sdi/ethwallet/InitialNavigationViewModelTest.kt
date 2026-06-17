@@ -52,9 +52,6 @@ class InitialNavigationViewModelTest {
             assertEquals(InitialRoute.OnBoarding, state.initialRoute)
 
             assertEquals(1, pinCodeStorage.clearPinCalledCount)
-
-            // Backward compatibility check
-            assertEquals(0, viewModel.numberOfWallets.first())
         }
 
     @Test
@@ -84,9 +81,6 @@ class InitialNavigationViewModelTest {
             assertEquals(2, state.numberOfWallets)
             assertEquals(true, state.isPinCodeSet)
             assertEquals(InitialRoute.VerifyPinCode, state.initialRoute)
-
-            // Backward compatibility check
-            assertEquals(2, viewModel.numberOfWallets.first())
         }
 
     @Test
@@ -127,8 +121,5 @@ class InitialNavigationViewModelTest {
             assertEquals(InitialRoute.OnBoarding, state.initialRoute)
 
             assertEquals(1, pinCodeStorage.clearPinCalledCount)
-
-            // Backward compatibility check
-            assertEquals(0, viewModel.numberOfWallets.first())
         }
 }
