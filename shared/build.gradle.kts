@@ -64,7 +64,7 @@ kotlin {
     }
 
     sourceSets {
-        val commonMain by getting {
+        val commonMain = getByName("commonMain") {
             dependencies {
                 // kmp
                 implementation(libs.compose.runtime)
@@ -106,19 +106,19 @@ kotlin {
                 implementation(libs.web3j.core)
             }
         }
-        val commonTest by getting {
+        val commonTest = getByName("commonTest") {
             dependencies {
                 implementation(kotlin("test"))
                 implementation(libs.kotlinx.coroutines.test)
                 implementation(libs.ktor.client.mock)
             }
         }
-        val androidHostTest by getting {
+        val androidHostTest = getByName("androidHostTest") {
             dependencies {
                 implementation(libs.mockk)
             }
         }
-        val androidMain by getting {
+        val androidMain = getByName("androidMain") {
             dependencies {
                 // Previews
                 api(libs.androidx.ui.tooling)
@@ -141,7 +141,7 @@ kotlin {
                 implementation(libs.zxing.core)
             }
         }
-        val desktopMain by getting {
+        val desktopMain = getByName("desktopMain") {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.ktor.client.okhttp)
