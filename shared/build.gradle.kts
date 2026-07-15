@@ -45,7 +45,7 @@ kotlin {
         minSdk = 24
 
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_17)
         }
 
         // The KMP library plugin disables resource processing by default, which drops
@@ -57,7 +57,11 @@ kotlin {
         withHostTest {}
     }
 
-    jvm("desktop")
+    jvm("desktop") {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
+    }
 
     sourceSets {
         val commonMain by getting {
@@ -83,7 +87,6 @@ kotlin {
 
                 // Room
                 implementation(libs.androidx.room.runtime)
-                implementation(libs.androidx.room.ktx)
                 implementation(libs.androidx.datastore.preferences.core)
 
                 // Serialization
@@ -98,6 +101,9 @@ kotlin {
                 implementation(libs.compose.adaptive.layout)
                 implementation(libs.compose.adaptive.navigation)
                 implementation(libs.compose.adaptive.navigation3)
+
+                // Web3j
+                implementation(libs.web3j.core)
             }
         }
         val commonTest by getting {
@@ -124,9 +130,6 @@ kotlin {
                 // Koin
                 implementation(libs.koin.android)
 
-                // Web3j
-                implementation(libs.web3j.core)
-
                 // DataStore
                 implementation(libs.androidx.datastore.preferences)
 
@@ -142,7 +145,6 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.ktor.client.okhttp)
-                implementation(libs.web3j.core)
 
                 // QR Code
                 implementation(libs.zxing.core)

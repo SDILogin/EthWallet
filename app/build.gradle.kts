@@ -64,12 +64,12 @@ extensions.configure<ApplicationExtension>("android") {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlin {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_17)
         }
     }
     buildFeatures {
@@ -84,6 +84,7 @@ extensions.configure<ApplicationExtension>("android") {
                 "META-INF/FastDoubleParser-LICENSE",
                 "META-INF/FastDoubleParser-NOTICE",
                 "META-INF/io.netty.versions.properties",
+                "META-INF/thirdparty-LICENSE",
             )
         }
     }
@@ -140,6 +141,7 @@ dependencies {
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
