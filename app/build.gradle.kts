@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.jetbrains.compose)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -56,10 +57,13 @@ extensions.configure<ApplicationExtension>("android") {
             buildConfigField("String", "ETH_EXPLORER_BASE_URL", "\"https://sepolia.etherscan.io\"")
         }
         release {
-            buildConfigField("String", "ETH_RPC_URL", "\"https://eth.llamarpc.com\"")
+            isMinifyEnabled = true
+            isShrinkResources = true
+
+            buildConfigField("String", "ETH_RPC_URL", "\"https://ethereum-rpc.publicnode.com\"")
             buildConfigField("long", "ETH_CHAIN_ID", "1L")
             buildConfigField("String", "ETH_EXPLORER_BASE_URL", "\"https://etherscan.io\"")
-            isMinifyEnabled = false
+
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
