@@ -40,7 +40,7 @@ import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.cancel_24px
-import me.sdi.ethwallet.resources.eth_logo_120w
+import me.sdi.ethwallet.resources.ic_eth_logo
 import me.sdi.ethwallet.resources.send_address_placeholder
 import me.sdi.ethwallet.resources.send_amount
 import me.sdi.ethwallet.resources.send_amount_placeholder
@@ -201,7 +201,7 @@ private fun TokenSelector(
                 label = { Text(stringResource(Res.string.send_token_eth)) },
                 leadingIcon = {
                     Icon(
-                        painter = painterResource(Res.drawable.eth_logo_120w),
+                        painter = painterResource(Res.drawable.ic_eth_logo),
                         tint = Color.Unspecified,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),

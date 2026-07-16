@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
-import me.sdi.ethwallet.resources.eth_logo_120w
+import me.sdi.ethwallet.resources.ic_eth_logo
 import me.sdi.ethwallet.resources.onboarding_create_wallet
 import me.sdi.ethwallet.resources.onboarding_import_wallet
 import me.sdi.ethwallet.resources.onboarding_title
@@ -45,7 +45,7 @@ fun OnboardingScreen(
 
             Spacer(Modifier.height(16.dp))
             Icon(
-                painter = painterResource(Res.drawable.eth_logo_120w),
+                painter = painterResource(Res.drawable.ic_eth_logo),
                 tint = Color.Unspecified,
                 contentDescription = null,
                 modifier = Modifier.width(100.dp),

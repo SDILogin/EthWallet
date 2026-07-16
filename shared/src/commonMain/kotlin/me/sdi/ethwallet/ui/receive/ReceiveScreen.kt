@@ -56,7 +56,7 @@ import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.cancel_24px
 import me.sdi.ethwallet.resources.copy_all_24px
-import me.sdi.ethwallet.resources.eth_logo_120w
+import me.sdi.ethwallet.resources.ic_eth_logo
 import me.sdi.ethwallet.resources.receive_address_copied
 import me.sdi.ethwallet.resources.receive_amount_optional
 import me.sdi.ethwallet.resources.receive_copy_address
@@ -197,7 +197,7 @@ private fun CurrencyPicker(
                 label = { Text(stringResource(Res.string.send_token_eth)) },
                 leadingIcon = {
                     Icon(
-                        painter = painterResource(Res.drawable.eth_logo_120w),
+                        painter = painterResource(Res.drawable.ic_eth_logo),
                         tint = Color.Unspecified,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
