@@ -3,42 +3,10 @@ package me.sdi.ethwallet.core
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.core.transfer.GasParams
 import me.sdi.ethwallet.core.transfer.TransferData
-import me.sdi.ethwallet.data.TempFileProvider
 import me.sdi.ethwallet.data.repository.EthWallet
-import org.web3j.crypto.WalletUtils
 import org.web3j.protocol.Web3j
 import java.math.BigDecimal
 import java.math.BigInteger
-import java.security.SecureRandom
-
-class FileBasedEthWalletCreator(private val tempFileProvider: TempFileProvider) : EthWalletCreator {
-    companion object {
-        private const val PASSWORD_LENGTH = 16
-        private const val WALLET_TEMP_DIR_PREFIX = "eth_wallet"
-    }
-
-    override fun createWallet(): EthCreationResult {
-        return tempFileProvider.withTempDirectory(WALLET_TEMP_DIR_PREFIX) { tempDir ->
-            val password = generateRandomPassword()
-            val bip39Wallet = WalletUtils.generateBip39Wallet(password, tempDir)
-            val seedPhrase = bip39Wallet.mnemonic.split(" ").map { it.trim() }
-            val credentials = WalletUtils.loadBip39Credentials(password, bip39Wallet.mnemonic)
-            EthCreationResult(
-                address = EthAddress(credentials.address),
-                privateKey = credentials.ecKeyPair.privateKey,
-                seedPhrase = seedPhrase,
-            )
-        }
-    }
-
-    private fun generateRandomPassword(): String {
-        val allowedChars = ('A'..'Z') + ('a'..'z') + ('0'..'9') + "!@#$%^&*()_-+=<>?"
-        val secureRandom = SecureRandom()
-        return (1..PASSWORD_LENGTH)
-            .map { allowedChars[secureRandom.nextInt(allowedChars.size)] }
-            .joinToString("")
-    }
-}
 
 class Web3jEthManager(private val web3j: Web3j) : EthManager {
     override suspend fun getBalance(wallet: EthWallet): Map<EthAddress, Result<BigInteger>> {

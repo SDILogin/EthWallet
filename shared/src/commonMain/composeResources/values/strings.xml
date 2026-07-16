@@ -90,6 +90,7 @@
     <string name="import_wallet_recovery_phrase_placeholder">Enter 12 words separated by spaces</string>
     <string name="import_wallet_recovery_phrase_supporting">Example: word1 word2 word3 …</string>
     <string name="import_wallet_button">Import Wallet</string>
+    <string name="import_wallet_invalid_recovery_phrase">Invalid recovery phrase. Please check your words and try again.</string>
 
     <!-- Mnemonic Card -->
     <string name="mnemonic_content_description">%1$d words mnemonic. %2$s</string>

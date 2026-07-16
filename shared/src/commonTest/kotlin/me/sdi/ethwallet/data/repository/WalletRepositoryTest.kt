@@ -42,6 +42,13 @@ class WalletRepositoryTest {
     private val testEncryptedKey = "encrypted_13aaf504e4bc1e62173f87a4378c37b49c8ccff196ce3f0ad2"
     private val testLabel = "Test Wallet"
 
+    private val testMnemonic =
+        "abandon abandon abandon abandon abandon abandon " +
+            "abandon abandon abandon abandon abandon about"
+    private val testImportAddress = "0x9858effd232b4033e47d90003d41ec34ecaeda94"
+    private val testImportPrivateKey = BigInteger("987654321098765432109876543210987654321098765432109876543210")
+    private val testImportEncryptedKey = "encrypted_" + testImportPrivateKey.toString(16)
+
     @BeforeTest
     fun setUp() {
         walletDao = FakeWalletDao()
@@ -51,6 +58,11 @@ class WalletRepositoryTest {
         walletCreator.creationResult = EthCreationResult(
             address = EthAddress(testAddress),
             privateKey = testPrivateKey,
+            seedPhrase = testSeedPhrase,
+        )
+        walletCreator.importResult = EthCreationResult(
+            address = EthAddress(testImportAddress),
+            privateKey = testImportPrivateKey,
             seedPhrase = testSeedPhrase,
         )
 
@@ -75,28 +87,11 @@ class WalletRepositoryTest {
     }
 
     @Test
-    fun createWallet_should_use_default_label_when_not_provided() = runTest {
-        walletRepository.createWallet()
-
-        val capturedEntity = walletDao.wallets.first()
-        assertEquals("My Wallet", capturedEntity.label, "Label should be the default")
-        assertEquals(true, capturedEntity.isActive, "isActive should be true by default")
-    }
-
-    @Test
-    fun createWallet_should_set_isActive_to_false_when_specified() = runTest {
-        walletRepository.createWallet(setAsActive = false)
-
-        val capturedEntity = walletDao.wallets.first()
-        assertEquals(false, capturedEntity.isActive, "isActive should be false")
-    }
-
-    @Test
     fun createWallet_should_propagate_exceptions_from_wallet_creator() = runTest {
         walletCreator.shouldThrowException = true
 
         assertFailsWith<Exception> {
-            walletRepository.createWallet()
+            walletRepository.createWallet("My wallet")
         }
     }
 
@@ -105,7 +100,7 @@ class WalletRepositoryTest {
         privateKeyEncryptor.shouldThrowException = true
 
         assertFailsWith<Exception> {
-            walletRepository.createWallet()
+            walletRepository.createWallet("My wallet")
         }
     }
 
@@ -114,7 +109,73 @@ class WalletRepositoryTest {
         walletDao.shouldThrowException = true
 
         assertFailsWith<Exception> {
-            walletRepository.createWallet()
+            walletRepository.createWallet("My wallet")
+        }
+    }
+
+    @Test
+    fun importWallet_should_derive_encrypt_and_store_the_wallet_as_active() = runTest {
+        walletRepository.importWallet(testMnemonic, testLabel)
+
+        assertEquals(testMnemonic, walletCreator.lastImportedMnemonic, "Mnemonic should be forwarded to the creator")
+        assertEquals(1, walletDao.wallets.size)
+        val capturedEntity = walletDao.wallets.first()
+        assertEquals(testImportAddress, capturedEntity.address, "Address should match the imported wallet")
+        assertEquals(testImportEncryptedKey, capturedEntity.encryptedPrivateKeyBase64, "Encrypted key should match")
+        assertEquals(testLabel, capturedEntity.label, "Label should match")
+        assertEquals(true, capturedEntity.isActive, "Imported wallet should be active")
+    }
+
+    @Test
+    fun importWallet_should_clear_previously_active_wallets() = runTest {
+        val previousAddress = "0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF"
+        walletDao.wallets = listOf(
+            WalletEntity(
+                address = previousAddress,
+                encryptedPrivateKeyBase64 = "",
+                label = "Old Wallet",
+                isActive = true,
+            ),
+        )
+
+        walletRepository.importWallet(testMnemonic, testLabel)
+
+        assertEquals(
+            false,
+            walletDao.wallets.find { it.address == previousAddress }?.isActive,
+            "Previously active wallet should be deactivated",
+        )
+        assertEquals(
+            true,
+            walletDao.wallets.find { it.address == testImportAddress }?.isActive,
+            "Imported wallet should be active",
+        )
+    }
+
+    @Test
+    fun importWallet_should_propagate_exceptions_from_wallet_creator() = runTest {
+        walletCreator.shouldThrowException = true
+
+        assertFailsWith<Exception> {
+            walletRepository.importWallet(testMnemonic, testLabel)
+        }
+    }
+
+    @Test
+    fun importWallet_should_propagate_exceptions_from_encryptor() = runTest {
+        privateKeyEncryptor.shouldThrowException = true
+
+        assertFailsWith<Exception> {
+            walletRepository.importWallet(testMnemonic, testLabel)
+        }
+    }
+
+    @Test
+    fun importWallet_should_propagate_exceptions_from_database() = runTest {
+        walletDao.shouldThrowException = true
+
+        assertFailsWith<Exception> {
+            walletRepository.importWallet(testMnemonic, testLabel)
         }
     }
 

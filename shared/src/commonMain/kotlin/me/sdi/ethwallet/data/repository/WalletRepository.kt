@@ -22,10 +22,9 @@ class WalletRepository(
      * Creates a new wallet, encrypts the private key, and saves it to the database.
      *
      * @param label Optional friendly name for the wallet
-     * @param setAsActive Whether to set this wallet as the active wallet
      * @return The mnemonic phrase (seed phrase) for the created wallet
      */
-    suspend fun createWallet(label: String = "My Wallet", setAsActive: Boolean = true): List<String> {
+    suspend fun createWallet(label: String): List<String> {
         Logger.debug(TAG) { "Creating new wallet" }
 
         val creationResult: EthCreationResult = walletCreator.createWallet()
@@ -38,16 +37,14 @@ class WalletRepository(
 
         Logger.debug(TAG) { "Saving wallet with address $ethAddress and label $label" }
 
-        if (setAsActive) {
-            walletDao.clearActiveWallets()
-        }
+        walletDao.clearActiveWallets()
 
         val walletEntity =
             WalletEntity(
                 address = ethAddress,
                 encryptedPrivateKeyBase64 = encryptedKeyBase64,
                 label = label,
-                isActive = setAsActive,
+                isActive = true,
             )
 
         walletDao.insertWallet(walletEntity)
@@ -55,6 +52,42 @@ class WalletRepository(
         Logger.debug(TAG) { "Wallet created and saved with address: $ethAddress" }
 
         return creationResult.seedPhrase
+    }
+
+    /**
+     * Restores a wallet from an existing mnemonic, encrypts the private key, and saves it
+     * to the database as the active wallet.
+     *
+     * @param mnemonic The recovery phrase to import
+     * @param label Optional friendly name for the wallet
+     * @throws IllegalArgumentException if the mnemonic is not a valid BIP-39 phrase
+     */
+    suspend fun importWallet(mnemonic: String, label: String) {
+        Logger.debug(TAG) { "Importing wallet" }
+
+        val creationResult: EthCreationResult = walletCreator.importWallet(mnemonic)
+        val ethAddress: String = creationResult.address.toString()
+        val encryptedKeyBase64 =
+            privateKeyEncryptor.encryptPrivateKey(
+                privateKey = creationResult.privateKey,
+                address = ethAddress,
+            )
+
+        Logger.debug(TAG) { "Saving imported wallet with address $ethAddress and label $label" }
+
+        walletDao.clearActiveWallets()
+
+        val walletEntity =
+            WalletEntity(
+                address = ethAddress,
+                encryptedPrivateKeyBase64 = encryptedKeyBase64,
+                label = label,
+                isActive = true,
+            )
+
+        walletDao.insertWallet(walletEntity)
+
+        Logger.debug(TAG) { "Wallet imported and saved with address: $ethAddress" }
     }
 
     /**

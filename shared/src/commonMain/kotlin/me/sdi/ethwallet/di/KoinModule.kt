@@ -10,9 +10,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
 import me.sdi.ethwallet.core.BalanceProvider
+import me.sdi.ethwallet.core.Bip44EthWalletCreator
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.CryptocompareFiatRateProvider
 import me.sdi.ethwallet.core.EthBalanceProvider
+import me.sdi.ethwallet.core.EthWalletCreator
 import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
 import me.sdi.ethwallet.data.UserActivityManager
@@ -21,6 +23,7 @@ import me.sdi.ethwallet.ui.InitialNavigationViewModel
 import me.sdi.ethwallet.ui.receive.ReceiveQrViewModel
 import me.sdi.ethwallet.ui.send.SendViewModel
 import me.sdi.ethwallet.ui.wallet.CreateWalletViewModel
+import me.sdi.ethwallet.ui.wallet.ImportWalletViewModel
 import me.sdi.ethwallet.ui.wallet.SetPinCodeViewModel
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeViewModel
 import me.sdi.ethwallet.ui.wallet.WalletViewModel
@@ -34,6 +37,8 @@ expect fun platformModule(chainConfig: ChainConfig): Module
 
 val commonModule = module {
     single<CoroutineScope> { CoroutineScope(SupervisorJob()) }
+
+    single<EthWalletCreator> { Bip44EthWalletCreator() }
 
     single<WalletRepository> {
         WalletRepository(
@@ -75,6 +80,12 @@ val commonModule = module {
 
     viewModel<CreateWalletViewModel> {
         CreateWalletViewModel(
+            walletRepository = get(),
+        )
+    }
+
+    viewModel<ImportWalletViewModel> {
+        ImportWalletViewModel(
             walletRepository = get(),
         )
     }

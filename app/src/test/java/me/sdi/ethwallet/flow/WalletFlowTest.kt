@@ -84,6 +84,8 @@ class WalletFlowTest : KoinTest {
                         ),
                     )
                 }
+
+                override fun importWallet(mnemonic: String): EthCreationResult = createWallet()
             }
         }
         single<PinCodeStorage> {

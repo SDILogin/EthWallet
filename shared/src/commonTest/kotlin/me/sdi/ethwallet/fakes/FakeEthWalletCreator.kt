@@ -24,12 +24,25 @@ class FakeEthWalletCreator : EthWalletCreator {
             "accident",
         ),
     )
+    var importResult = EthCreationResult(
+        address = EthAddress("0x9858effd232b4033e47d90003d41ec34ecaeda94"),
+        privateKey = BigInteger.TWO,
+        seedPhrase = List(12) { "abandon" },
+    )
     var shouldThrowException = false
     var exceptionToThrow: Throwable? = null
+    var lastImportedMnemonic: String? = null
 
     override fun createWallet(): EthCreationResult {
         exceptionToThrow?.let { throw it }
         if (shouldThrowException) throw RuntimeException("Wallet creation failed")
         return creationResult
+    }
+
+    override fun importWallet(mnemonic: String): EthCreationResult {
+        lastImportedMnemonic = mnemonic
+        exceptionToThrow?.let { throw it }
+        if (shouldThrowException) throw RuntimeException("Wallet import failed")
+        return importResult
     }
 }

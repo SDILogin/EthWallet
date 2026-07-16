@@ -4,15 +4,11 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthManager
-import me.sdi.ethwallet.core.EthWalletCreator
-import me.sdi.ethwallet.core.FileBasedEthWalletCreator
 import me.sdi.ethwallet.core.KeyStoreEncryptor
 import me.sdi.ethwallet.core.TransferInteractor
 import me.sdi.ethwallet.core.Web3jEthManager
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
-import me.sdi.ethwallet.data.DesktopTempFileProvider
-import me.sdi.ethwallet.data.TempFileProvider
 import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.database.DesktopDatabaseBuilder
 import me.sdi.ethwallet.database.dao.FiatRateDao
@@ -29,8 +25,6 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<TokenBalanceDao> { get<AppDatabase>().tokenBalanceDao() }
     single<FiatRateDao> { get<AppDatabase>().fiatRateDao() }
 
-    single<TempFileProvider> { DesktopTempFileProvider() }
-    single<EthWalletCreator> { FileBasedEthWalletCreator(get()) }
     single<PrivateKeyEncryptor> { KeyStoreEncryptor() }
 
     single { chainConfig }
