@@ -25,7 +25,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class CryptocompareFiatRateProviderTest {
+class FiatRateProviderBinanceTest {
     private val inMemoryFiatRateDao = InMemoryFiatRateDao()
     private val currentTime = 1000000L
 
@@ -47,7 +47,7 @@ class CryptocompareFiatRateProviderTest {
     fun forceUpdate_fetches_and_stores_rates_from_network() = runTest {
         val mockEngine = MockEngine {
             respond(
-                content = """{"ETH": 0.0003638, "USDT": 1.0, "USDC": 1.0, "DAI": 1.0}""",
+                content = """{"symbol":"ETHUSDT","price":"1893.58000000"}""",
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
@@ -59,8 +59,8 @@ class CryptocompareFiatRateProviderTest {
         val result = ethPriceProvider.observe().first()
 
         assertEquals(
-            BigDecimal("2748.7630566245"),
-            result[EthContractAddress]?.setScale(10, RoundingMode.HALF_UP),
+            BigDecimal("1893.58000000").stripTrailingZeros(),
+            result[EthContractAddress]?.setScale(10, RoundingMode.HALF_UP)?.stripTrailingZeros(),
             "Should return ETH rate",
         )
         assertEquals(BigDecimal("1.0"), result[usdtOnMainnet.ethAddress], "Should return USDT rate")
@@ -136,7 +136,7 @@ class CryptocompareFiatRateProviderTest {
         }
     }
 
-    private fun createCryptocompareEthPriceProvider(mockEngine: MockEngine): CryptocompareFiatRateProvider {
+    private fun createCryptocompareEthPriceProvider(mockEngine: MockEngine): FiatRateProviderBinance {
         val httpClient = HttpClient(mockEngine) {
             install(ContentNegotiation) {
                 json(
@@ -148,6 +148,6 @@ class CryptocompareFiatRateProviderTest {
                 )
             }
         }
-        return CryptocompareFiatRateProvider(httpClient, inMemoryFiatRateDao, now = { currentTime })
+        return FiatRateProviderBinance(httpClient, inMemoryFiatRateDao, now = { currentTime })
     }
 }

@@ -12,10 +12,10 @@ import kotlinx.serialization.json.Json
 import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.Bip44EthWalletCreator
 import me.sdi.ethwallet.core.ChainConfig
-import me.sdi.ethwallet.core.CryptocompareFiatRateProvider
 import me.sdi.ethwallet.core.EthBalanceProvider
 import me.sdi.ethwallet.core.EthWalletCreator
 import me.sdi.ethwallet.core.FiatRateProvider
+import me.sdi.ethwallet.core.FiatRateProviderBinance
 import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.data.repository.WalletRepository
@@ -56,7 +56,7 @@ val commonModule = module {
     }
 
     factory<BalanceProvider> { EthBalanceProvider(get(), get()) }
-    factory<FiatRateProvider> { CryptocompareFiatRateProvider(get(), get()) }
+    factory<FiatRateProvider> { FiatRateProviderBinance(get(), get()) }
 
     // ViewModels
     viewModel<InitialNavigationViewModel> {
