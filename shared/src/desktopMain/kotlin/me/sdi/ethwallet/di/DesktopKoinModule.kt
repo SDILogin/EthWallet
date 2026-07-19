@@ -5,7 +5,6 @@ import io.ktor.client.engine.okhttp.OkHttp
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.KeyStoreEncryptor
-import me.sdi.ethwallet.core.TransferInteractor
 import me.sdi.ethwallet.core.Web3jEthManager
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
@@ -33,7 +32,6 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<HttpClient> { createHttpClient(OkHttp.create()) }
 
     factory<EthManager> { Web3jEthManager(get()) }
-    factory<TransferInteractor> { TransferInteractor(get(), get(), get(), get()) }
 
     single<PinCodeStorage> { DesktopPinCodeStorage() }
 }
