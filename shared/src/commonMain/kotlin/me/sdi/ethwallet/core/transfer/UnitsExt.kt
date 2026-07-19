@@ -19,3 +19,5 @@ fun Eth.toWei(): Wei = Convert.toWei(value, Convert.Unit.ETHER).toWei()
 fun Eth.toUsd(rate: BigDecimal): Usd = Usd(value.multiply(rate))
 
 val Number.eth: Eth get() = Eth(toString().toBigDecimal())
+
+val Number.gwei : Gwei get() = Gwei(toString().toBigDecimal())
