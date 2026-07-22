@@ -13,4 +13,11 @@ interface TransferInteractor {
      * @throws TransferException if the transfer fails
      */
     suspend fun transfer(transferData: TransferData): String
+
+    /**
+     * Fetches the current EIP-1559 fee suggestion from the network.
+     *
+     * @throws Exception if the fee suggestion cannot be retrieved.
+     */
+    suspend fun fetchFeeSuggestion(): FeeSuggestion
 }

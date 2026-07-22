@@ -1,18 +1,17 @@
 package me.sdi.ethwallet.core.transfer
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.ChainConfig
-import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import org.web3j.abi.FunctionEncoder
-import org.web3j.abi.FunctionReturnDecoder
 import org.web3j.abi.datatypes.Address
 import org.web3j.abi.datatypes.Function
 import org.web3j.abi.datatypes.generated.Uint256
@@ -21,9 +20,7 @@ import org.web3j.crypto.RawTransaction
 import org.web3j.crypto.TransactionEncoder
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameterName
-import org.web3j.protocol.core.methods.request.Transaction
 import org.web3j.protocol.core.methods.response.EthSendTransaction
-import org.web3j.tx.gas.DefaultGasProvider
 import org.web3j.utils.Numeric
 import java.math.BigInteger
 
@@ -34,7 +31,6 @@ class Web3jTransferInteractor(
     private val balanceProvider: BalanceProvider,
     private val chainConfig: ChainConfig,
 ) : TransferInteractor {
-    // Mutex to prevent race conditions in nonce management
     private val transferMutex = Mutex()
 
     override suspend fun transfer(transferData: TransferData): String {
@@ -44,7 +40,9 @@ class Web3jTransferInteractor(
             }
 
             validateTransferData(transferData, wallet)
-            validateSufficientBalance(transferData, wallet)
+
+            val gasCost = transferData.maxFeePerGas.value.multiply(transferData.gasUnits)
+            validateSufficientBalance(transferData, wallet, gasCost)
             val credentials = getCredentials(wallet)
 
             if (transferData.contractAddress == EthContractAddress) {
@@ -53,6 +51,18 @@ class Web3jTransferInteractor(
                 transferErc20(transferData, credentials, wallet)
             }
         }
+    }
+
+    override suspend fun fetchFeeSuggestion(): FeeSuggestion = withContext(Dispatchers.IO) {
+        val block = web3j.ethGetBlockByNumber(DefaultBlockParameterName.LATEST, false).send().block
+        val baseFee = block?.baseFeePerGas?.let { Numeric.decodeQuantity(it) }
+            ?: throw RuntimeException("Base fee unavailable for the latest block")
+
+        val gasPriceResponse = web3j.ethGasPrice().send()
+        if (gasPriceResponse.hasError()) throw RuntimeException(gasPriceResponse.error.message)
+
+        val priorityFee = gasPriceResponse.gasPrice.subtract(baseFee).max(BigInteger.ZERO)
+        FeeSuggestion(baseFee = baseFee.toWei(), priorityFee = priorityFee.toWei())
     }
 
     private fun validateTransferData(transferData: TransferData, wallet: EthWallet) {
@@ -64,47 +74,34 @@ class Web3jTransferInteractor(
             throw TransferException.InvalidAddress("Source and destination addresses must be different")
         }
 
-        when (val gasParams = transferData.gasParams) {
-            is GasParams.Custom -> {
-                if (gasParams.gasPrice <= BigInteger.ZERO) {
-                    throw TransferException.GasPriceError("Gas price must be positive")
-                }
-                if (gasParams.gasLimit <= BigInteger.ZERO) {
-                    throw TransferException.GasPriceError("Gas limit must be positive")
-                }
-            }
-            is GasParams.Default -> {
-                // No additional validation needed for default gas params
-            }
+        if (transferData.maxFeePerGas.value.signum() <= 0) {
+            throw TransferException.GasPriceError("Max fee per gas must be positive")
+        }
+
+        if (transferData.maxPriorityFeePerGas.value.signum() < 0) {
+            throw TransferException.GasPriceError("Max priority fee per gas must not be negative")
+        }
+
+        if (transferData.maxPriorityFeePerGas.value > transferData.maxFeePerGas.value) {
+            throw TransferException.GasPriceError("Max priority fee per gas must not exceed max fee per gas")
+        }
+
+        if (transferData.gasUnits < ETH_TRANSFER_GAS_UNITS) {
+            throw TransferException.GasPriceError("Gas units must be at least $ETH_TRANSFER_GAS_UNITS")
         }
     }
 
-    private suspend fun validateSufficientBalance(transferData: TransferData, wallet: EthWallet) {
-        // Force update to get latest balances
+    private suspend fun validateSufficientBalance(
+        transferData: TransferData,
+        wallet: EthWallet,
+        gasCost: BigInteger,
+    ) {
         balanceProvider.forceUpdate(wallet)
-
-        // Get current balances - this returns a flow, so we need to get the latest value
-        // For now, we'll use a simplified approach and call the blockchain directly
-        val ethBalance = withContext(Dispatchers.IO) {
-            web3j.ethGetBalance(
-                wallet.address.toString(),
-                DefaultBlockParameterName.LATEST,
-            ).send().balance
-        }
-
-        // Calculate gas cost
-        val gasPrice = when (val gasParams = transferData.gasParams) {
-            is GasParams.Custom -> gasParams.gasPrice
-            is GasParams.Default -> DefaultGasProvider.GAS_PRICE
-        }
-        val gasLimit = when (val gasParams = transferData.gasParams) {
-            is GasParams.Custom -> gasParams.gasLimit
-            is GasParams.Default -> DefaultGasProvider.GAS_LIMIT
-        }
-        val gasCost = gasPrice.multiply(gasLimit)
+        val balances = balanceProvider.observe(wallet.address).first()
+        val ethBalance = balances[EthContractAddress]
+            ?: throw TransferException.NetworkError("ETH balance unavailable")
 
         if (transferData.contractAddress == EthContractAddress) {
-            // ETH transfer: need enough ETH for amount + gas
             val totalRequired = transferData.amount.add(gasCost)
             if (ethBalance < totalRequired) {
                 throw TransferException.InsufficientBalance(
@@ -112,65 +109,20 @@ class Web3jTransferInteractor(
                 )
             }
         } else {
-            // ERC-20 transfer: need enough ETH for gas, and enough tokens for transfer
             if (ethBalance < gasCost) {
                 throw TransferException.InsufficientBalance(
                     "Insufficient ETH balance for gas fees. Required: $gasCost wei, Available: $ethBalance wei",
                 )
             }
 
-            // Check token balance - simplified approach using direct contract call
-            val tokenBalance = try {
-                getErc20Balance(transferData.contractAddress, wallet.address)
-            } catch (e: Exception) {
-                throw TransferException.NetworkError("Failed to get token balance: ${e.message}", e)
-            }
+            val tokenBalance = balances[transferData.contractAddress]
+                ?: throw TransferException.NetworkError("Token balance unavailable")
 
             if (tokenBalance < transferData.amount) {
                 throw TransferException.InsufficientBalance(
                     "Insufficient token balance. Required: ${transferData.amount}, Available: $tokenBalance",
                 )
             }
-        }
-    }
-
-    private suspend fun getErc20Balance(contractAddress: EthAddress, walletAddress: EthAddress): BigInteger {
-        val balanceOfFunction = Function(
-            "balanceOf",
-            listOf(Address(walletAddress.toString())),
-            listOf(object : org.web3j.abi.TypeReference<Uint256>() {}),
-        )
-
-        val encodedFunction = FunctionEncoder.encode(balanceOfFunction)
-        val response = withContext(Dispatchers.IO) {
-            web3j.ethCall(
-                Transaction.createEthCallTransaction(
-                    walletAddress.toString(),
-                    contractAddress.toString(),
-                    encodedFunction,
-                ),
-                DefaultBlockParameterName.LATEST,
-            ).send()
-        }
-
-        if (response.hasError()) {
-            throw TransferException.NetworkError(
-                "Failed to get token balance: ${response.error.message}",
-                RuntimeException(response.error.message),
-            )
-        }
-
-        val result = withContext(Dispatchers.IO) {
-            FunctionReturnDecoder.decode(
-                response.value,
-                balanceOfFunction.outputParameters,
-            )
-        }
-
-        return if (result.isNotEmpty()) {
-            result[0].value as BigInteger
-        } else {
-            BigInteger.ZERO
         }
     }
 
@@ -190,17 +142,6 @@ class Web3jTransferInteractor(
         credentials: Credentials,
         wallet: EthWallet,
     ): String {
-        val gasPrice = when (val gasParams = transferData.gasParams) {
-            is GasParams.Custom -> gasParams.gasPrice
-            is GasParams.Default -> DefaultGasProvider.GAS_PRICE
-        }
-
-        val gasLimit = when (val gasParams = transferData.gasParams) {
-            is GasParams.Custom -> gasParams.gasLimit
-            is GasParams.Default -> DefaultGasProvider.GAS_LIMIT
-        }
-
-        // Get current nonce for the wallet that will sign the transaction
         val nonce = withContext(Dispatchers.IO) {
             web3j.ethGetTransactionCount(
                 wallet.address.toString(),
@@ -208,24 +149,23 @@ class Web3jTransferInteractor(
             ).send().transactionCount
         }
 
-        // Create raw transaction
         val rawTransaction = withContext(Dispatchers.Default) {
             RawTransaction.createEtherTransaction(
+                chainConfig.chainId,
                 nonce,
-                gasPrice,
-                gasLimit,
+                transferData.gasUnits,
                 transferData.destinationAddress.toString(),
                 transferData.amount,
+                transferData.maxPriorityFeePerGas.value,
+                transferData.maxFeePerGas.value,
             )
         }
 
-        // Sign the transaction
         val signedMessage = withContext(Dispatchers.Default) {
-            TransactionEncoder.signMessage(rawTransaction, chainConfig.chainId, credentials)
+            TransactionEncoder.signMessage(rawTransaction, credentials)
         }
         val hexValue = Numeric.toHexString(signedMessage)
 
-        // Send the signed transaction
         val response: EthSendTransaction = withContext(Dispatchers.IO) {
             web3j.ethSendRawTransaction(hexValue).send()
         }
@@ -253,17 +193,6 @@ class Web3jTransferInteractor(
 
         val encodedFunction = FunctionEncoder.encode(transferFunction)
 
-        val gasPrice = when (val gasParams = transferData.gasParams) {
-            is GasParams.Custom -> gasParams.gasPrice
-            is GasParams.Default -> DefaultGasProvider.GAS_PRICE
-        }
-
-        val gasLimit = when (val gasParams = transferData.gasParams) {
-            is GasParams.Custom -> gasParams.gasLimit
-            is GasParams.Default -> DefaultGasProvider.GAS_LIMIT
-        }
-
-        // Get current nonce for the wallet that will sign the transaction
         val nonce = withContext(Dispatchers.IO) {
             web3j.ethGetTransactionCount(
                 wallet.address.toString(),
@@ -271,21 +200,20 @@ class Web3jTransferInteractor(
             ).send().transactionCount
         }
 
-        // Create raw transaction
         val rawTransaction = RawTransaction.createTransaction(
+            chainConfig.chainId,
             nonce,
-            gasPrice,
-            gasLimit,
+            transferData.gasUnits,
             transferData.contractAddress.toString(),
-            BigInteger.ZERO, // value is 0 for ERC-20 transfers
+            BigInteger.ZERO,
             encodedFunction,
+            transferData.maxPriorityFeePerGas.value,
+            transferData.maxFeePerGas.value,
         )
 
-        // Sign the transaction
-        val signedMessage = TransactionEncoder.signMessage(rawTransaction, chainConfig.chainId, credentials)
+        val signedMessage = TransactionEncoder.signMessage(rawTransaction, credentials)
         val hexValue = Numeric.toHexString(signedMessage)
 
-        // Send the signed transaction
         val response: EthSendTransaction = web3j.ethSendRawTransaction(hexValue).send()
 
         if (response.hasError()) {

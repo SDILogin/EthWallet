@@ -17,8 +17,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.ui.navigation.Destination
@@ -177,6 +179,10 @@ fun EthWalletApp(
                         .padding(innerPadding),
                     backStack = navigationState.backStack,
                     entryProvider = entryProvider,
+                    entryDecorators = listOf(
+                        rememberSaveableStateHolderNavEntryDecorator(),
+                        rememberViewModelStoreNavEntryDecorator(),
+                    ),
                     sceneStrategies = listOf(listDetailSceneStrategy),
                     onBack = { navigator.goBack() },
                 )

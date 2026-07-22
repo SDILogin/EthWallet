@@ -58,7 +58,6 @@ val commonModule = module {
     factory<BalanceProvider> { EthBalanceProvider(get(), get()) }
     factory<FiatRateProvider> { FiatRateProviderBinance(get(), get()) }
 
-    // ViewModels
     viewModel<InitialNavigationViewModel> {
         InitialNavigationViewModel(
             walletDao = get(),
@@ -108,6 +107,8 @@ val commonModule = module {
     viewModel<SendViewModel> {
         SendViewModel(
             transferInteractor = get(),
+            fiatRateProvider = get(),
+            savedStateHandle = get(),
         )
     }
 

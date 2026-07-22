@@ -5,7 +5,5 @@ sealed interface SendNews {
 
     data class TransferError(val message: String) : SendNews
 
-    data class ValidationError(val message: String) : SendNews
-
     data object NavigateBack : SendNews
 }

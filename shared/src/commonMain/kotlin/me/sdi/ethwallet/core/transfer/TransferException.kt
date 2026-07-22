@@ -7,7 +7,7 @@ sealed class TransferException(message: String, cause: Throwable? = null) : Exce
 
     class InvalidAmount(message: String) : TransferException(message)
 
-    class NetworkError(message: String, cause: Throwable) : TransferException(message, cause)
+    class NetworkError(message: String, cause: Throwable? = null) : TransferException(message, cause)
 
     class TransactionFailed(message: String) : TransferException(message)
 

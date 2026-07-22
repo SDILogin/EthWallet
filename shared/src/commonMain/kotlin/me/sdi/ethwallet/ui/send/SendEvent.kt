@@ -7,9 +7,17 @@ sealed interface SendEvent {
 
     data class OnReceiverAddressChanged(val address: String) : SendEvent
 
-    data class OnAmountChanged(val amount: String) : SendEvent
+    data class OnTransferAmountChanged(val amount: String) : SendEvent
 
-    data object OnTransferRequested : SendEvent
+    data class OnGasOptionSelected(val option: GasOption) : SendEvent
 
-    data object OnClearForm : SendEvent
+    data class OnBaseFeeChanged(val value: String) : SendEvent
+
+    data class OnPriorityFeeChanged(val value: String) : SendEvent
+
+    data class OnGasUnitsChanged(val value: String) : SendEvent
+
+    data object OnSendClick : SendEvent
+
+    data object OnClearFormClick : SendEvent
 }

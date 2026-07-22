@@ -7,5 +7,7 @@ data class TransferData(
     val destinationAddress: EthAddress,
     val amount: BigInteger,
     val contractAddress: EthAddress,
-    val gasParams: GasParams = GasParams.Default,
+    val maxFeePerGas: Wei,
+    val maxPriorityFeePerGas: Wei,
+    val gasUnits: BigInteger,
 )
