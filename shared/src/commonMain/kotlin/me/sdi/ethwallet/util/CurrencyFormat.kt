@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.util
 
+import me.sdi.ethwallet.core.transfer.Usd
 import java.math.BigDecimal
 
 /**
@@ -10,3 +11,5 @@ import java.math.BigDecimal
  * @return Formatted currency string (e.g., "$1,234.56")
  */
 expect fun formatUsdCurrency(amount: BigDecimal): String
+
+expect fun formatUsdCurrency(usd: Usd): String
