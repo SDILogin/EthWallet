@@ -4,7 +4,7 @@
 
 EthWallet is a Kotlin Multiplatform Ethereum wallet for Android and Desktop.
 
-Keep answers exact and clear. The project owner is an experienced Android developer, so avoid explaining basic Android SDK concepts unless asked.
+Keep answers exact and clear. Be concise and give minimal full answers (e.g., in code reviews list only findings without fluff like "Key Strengths"). The project owner is an experienced Android developer, so avoid explaining basic Android SDK concepts unless asked.
 
 ## Modules
 
@@ -33,7 +33,7 @@ Keep answers exact and clear. The project owner is an experienced Android develo
 - ViewModels use Events/State/News:
   - `onEvent(Event)` for user actions.
   - `viewState: StateFlow` for screen state.
-  - `news: SharedFlow` for one-time effects such as navigation and toasts.
+  - `news: Channel` (exposed as `Flow`) over `SharedFlow` for one-time effects such as navigation and toasts to prevent potential event loss.
 - Put platform-independent logic in `:shared` when practical.
 - Keep Android-only APIs in `:app` or `shared/src/androidMain`.
 - Keep Desktop-only APIs in `:desktopApp` or `shared/src/desktopMain`.
