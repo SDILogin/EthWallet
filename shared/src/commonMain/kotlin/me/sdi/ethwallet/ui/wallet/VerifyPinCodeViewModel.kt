@@ -128,7 +128,6 @@ class VerifyPinCodeViewModel(
                 val isValid = pinCodeStorage.verifyPinCode(pin)
 
                 if (isValid) {
-                    viewState.value = VerifyPinCodeViewState()
                     news.emit(VerifyPinCodeNews.PinVerified)
                 } else {
                     handleInvalidPin()
