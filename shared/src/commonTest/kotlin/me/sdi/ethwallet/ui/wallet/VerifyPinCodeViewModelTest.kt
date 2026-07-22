@@ -2,6 +2,7 @@ package me.sdi.ethwallet.ui.wallet
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -12,8 +13,10 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -73,15 +76,15 @@ class VerifyPinCodeViewModelTest {
         )
 
         val finalState = viewModel.viewState.first()
-        assertFalse(finalState.isVerifying, "Verification flag should be reset after successful PIN")
-        assertEquals("", finalState.enteredPin, "Entered PIN should be reset after successful PIN")
-        assertEquals(3, finalState.remainingAttempts, "Attempts should be reset after successful PIN")
-        assertFalse(finalState.isLocked, "Lock state should be reset after successful PIN")
+        assertTrue(finalState.isVerifying, "Verification flag should remain set until navigation")
+        assertEquals(testPin, finalState.enteredPin, "Entered PIN should remain complete until navigation")
+        assertEquals(3, finalState.remainingAttempts, "Successful verification should not change attempts")
+        assertFalse(finalState.isLocked, "Successful verification should not lock the screen")
         assertNull(finalState.errorMessage, "No error message should be present after successful PIN")
     }
 
     @Test
-    fun should_allow_entering_PIN_again_after_previous_successful_verification() = runTest(testDispatcher) {
+    fun should_ignore_input_after_successful_verification_until_reset() = runTest(testDispatcher) {
         pinCodeStorage.storePinCode(testPin)
         collectNews()
 
@@ -90,8 +93,23 @@ class VerifyPinCodeViewModelTest {
         viewModel.onEvent(VerifyPinCodeEvent.OnDigitClick(1))
 
         val state = viewModel.viewState.first()
-        assertEquals("1", state.enteredPin, "PIN input must accept new digits after previous successful unlock")
-        assertFalse(state.isVerifying, "Verification should not be in progress for partial PIN")
+        assertEquals(testPin, state.enteredPin, "PIN input should remain unchanged until navigation")
+        assertTrue(state.isVerifying, "Verification should remain in progress until navigation")
+    }
+
+    @Test
+    fun reset_should_restore_state_after_successful_verification() = runTest(testDispatcher) {
+        pinCodeStorage.storePinCode(testPin)
+        collectNews()
+
+        inputPin(testPin)
+
+        viewModel.onEvent(VerifyPinCodeEvent.Reset)
+        viewModel.onEvent(VerifyPinCodeEvent.OnDigitClick(1))
+
+        val state = viewModel.viewState.first()
+        assertEquals("1", state.enteredPin, "PIN input should accept digits after reset")
+        assertFalse(state.isVerifying, "Reset should clear the verification flag")
     }
 
     @Test
@@ -178,6 +196,20 @@ class VerifyPinCodeViewModelTest {
     }
 
     @Test
+    fun should_emit_Error_news_when_logout_fails() = runTest(testDispatcher) {
+        pinCodeStorage.shouldThrowException = true
+        collectNews()
+
+        viewModel.onEvent(VerifyPinCodeEvent.OnLogoutClick)
+        advanceUntilIdle()
+
+        val state = viewModel.viewState.first()
+        assertEquals("Error: Simulated clear failure", state.errorMessage)
+        assertTrue(collectedNews.single() is VerifyPinCodeNews.Error)
+        assertTrue(collectedNews.none { it is VerifyPinCodeNews.LoggedOut })
+    }
+
+    @Test
     fun account_should_lock_and_unlock_with_correct_attempt_counts() = runTest(testDispatcher) {
         pinCodeStorage.storePinCode(testPin)
         val states = mutableListOf<VerifyPinCodeViewState>()
@@ -203,6 +235,32 @@ class VerifyPinCodeViewModelTest {
     }
 
     @Test
+    fun reset_should_preserve_active_lock_and_countdown() = runTest(testDispatcher) {
+        pinCodeStorage.storePinCode(testPin)
+
+        inputPin(wrongPin)
+        inputPin(wrongPin)
+        inputPin(wrongPin)
+
+        val lockedState = viewModel.viewState.first()
+        assertTrue(lockedState.isLocked)
+
+        viewModel.onEvent(VerifyPinCodeEvent.Reset)
+
+        assertEquals(lockedState, viewModel.viewState.first())
+
+        advanceTimeBy(1_000)
+        runCurrent()
+
+        val countdownState = viewModel.viewState.first()
+        assertTrue(countdownState.isLocked)
+        assertEquals(lockedState.lockCountdown - 1, countdownState.lockCountdown)
+
+        advanceTimeBy(31_000)
+        advanceUntilIdle()
+    }
+
+    @Test
     fun should_handle_errors_during_verification() = runTest(testDispatcher) {
         pinCodeStorage.storePinCode(testPin)
         pinCodeStorage.shouldThrowException = true
@@ -219,6 +277,33 @@ class VerifyPinCodeViewModelTest {
             collectedNews.first() is VerifyPinCodeNews.Error,
             "Error news should be emitted on verification failure",
         )
+    }
+
+    @Test
+    fun reset_should_cancel_verification_without_emitting_error() = runTest(testDispatcher) {
+        var verificationStarted = false
+        val blockingStorage = object : PinCodeStorage by pinCodeStorage {
+            override suspend fun verifyPinCode(pinCode: String): Boolean {
+                verificationStarted = true
+                awaitCancellation()
+            }
+        }
+        viewModel = VerifyPinCodeViewModel(blockingStorage)
+        collectNews()
+
+        testPin.forEach { digit ->
+            viewModel.onEvent(VerifyPinCodeEvent.OnDigitClick(digit.digitToInt()))
+        }
+        advanceTimeBy(301)
+        runCurrent()
+
+        assertTrue(verificationStarted)
+
+        viewModel.onEvent(VerifyPinCodeEvent.Reset)
+        runCurrent()
+
+        assertEquals(VerifyPinCodeViewState(), viewModel.viewState.first())
+        assertTrue(collectedNews.isEmpty())
     }
 
     private fun TestScope.inputPin(pin: String) {

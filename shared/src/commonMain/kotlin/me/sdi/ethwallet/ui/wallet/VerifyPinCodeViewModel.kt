@@ -3,13 +3,15 @@ package me.sdi.ethwallet.ui.wallet
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
@@ -34,18 +36,17 @@ class VerifyPinCodeViewModel(
     val viewState: StateFlow<VerifyPinCodeViewState>
         field = MutableStateFlow(VerifyPinCodeViewState())
 
-    val news: SharedFlow<VerifyPinCodeNews>
-        field = MutableSharedFlow<VerifyPinCodeNews>()
+    private val newsChannel = Channel<VerifyPinCodeNews>(Channel.BUFFERED)
+
+    val news: Flow<VerifyPinCodeNews> =
+        newsChannel.receiveAsFlow().onEach { Logger.debug(TAG) { "News: $it" } }
 
     private var countdownJob: Job? = null
+    private var verificationJob: Job? = null
 
     init {
         viewState
             .onEach { Logger.debug(TAG) { "ViewState: $it" } }
-            .launchIn(viewModelScope)
-
-        news
-            .onEach { Logger.debug(TAG) { "News: $it" } }
             .launchIn(viewModelScope)
     }
 
@@ -74,6 +75,12 @@ class VerifyPinCodeViewModel(
     }
 
     private fun handleReset() {
+        if (viewState.value.isLocked) {
+            return
+        }
+
+        verificationJob?.cancel()
+        verificationJob = null
         countdownJob?.cancel()
         countdownJob = null
         viewState.value = VerifyPinCodeViewState()
@@ -113,34 +120,49 @@ class VerifyPinCodeViewModel(
 
     private fun handleLogoutClick() {
         viewModelScope.launch {
-            pinCodeStorage.clearPinCode()
-            news.emit(VerifyPinCodeNews.LoggedOut)
+            try {
+                pinCodeStorage.clearPinCode()
+                newsChannel.send(VerifyPinCodeNews.LoggedOut)
+            } catch (e: Exception) {
+                ensureActive()
+
+                val errorMessage = e.message ?: "Unknown error"
+                Logger.debug(TAG) { "Error clearing PIN: $errorMessage" }
+                viewState.update {
+                    it.copy(errorMessage = "Error: $errorMessage")
+                }
+                newsChannel.send(VerifyPinCodeNews.Error(errorMessage))
+            }
         }
     }
 
     private fun verifyPin(pin: String) {
         viewState.update { it.copy(isVerifying = true) }
 
-        viewModelScope.launch {
-            delay(300.milliseconds) // Small delay for animation
-
+        verificationJob = viewModelScope.launch {
             try {
+                delay(300.milliseconds) // Small delay for animation
+
                 val isValid = pinCodeStorage.verifyPinCode(pin)
+                ensureActive()
 
                 if (isValid) {
-                    news.emit(VerifyPinCodeNews.PinVerified)
+                    newsChannel.send(VerifyPinCodeNews.PinVerified)
                 } else {
                     handleInvalidPin()
                 }
             } catch (e: Exception) {
-                Logger.debug(TAG) { "Error verifying PIN: ${e.message}" }
+                ensureActive()
+
+                val errorMessage = e.message ?: "Unknown error"
+                Logger.debug(TAG) { "Error verifying PIN: $errorMessage" }
                 viewState.update {
                     it.copy(
-                        errorMessage = "Error: ${e.message}",
+                        errorMessage = "Error: $errorMessage",
                         isVerifying = false,
                     )
                 }
-                news.emit(VerifyPinCodeNews.Error(e.message ?: "Unknown error"))
+                newsChannel.send(VerifyPinCodeNews.Error(errorMessage))
             }
         }
     }
@@ -206,6 +228,7 @@ class VerifyPinCodeViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        verificationJob?.cancel()
         countdownJob?.cancel()
     }
 }
