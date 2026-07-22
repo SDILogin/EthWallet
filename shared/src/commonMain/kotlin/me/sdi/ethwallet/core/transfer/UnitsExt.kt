@@ -20,4 +20,6 @@ fun Eth.toUsd(rate: BigDecimal): Usd = Usd(value.multiply(rate))
 
 val Number.eth: Eth get() = Eth(toString().toBigDecimal())
 
-val Number.gwei : Gwei get() = Gwei(toString().toBigDecimal())
+val String.gwei: Gwei get() = Gwei(toBigDecimal())
+
+val String.wei: Wei get() = Wei(toBigInteger())

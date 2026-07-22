@@ -115,6 +115,15 @@ class UnitsTest {
     }
 
     @Test
+    fun `string gwei builds gwei amount`() {
+        assertEquals(
+            Gwei(BigDecimal("12.5")),
+            "12.5".gwei,
+            "\"12.5\".gwei should build a 12.5 gwei amount",
+        )
+    }
+
+    @Test
     fun `eth to usd applies rate`() {
         assertEquals(
             0,
