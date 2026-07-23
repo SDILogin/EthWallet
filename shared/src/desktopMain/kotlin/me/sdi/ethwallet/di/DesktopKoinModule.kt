@@ -6,6 +6,8 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.KeyStoreEncryptor
 import me.sdi.ethwallet.core.Web3jEthManager
+import me.sdi.ethwallet.core.security.DataCleaner
+import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.database.AppDatabase
@@ -26,6 +28,8 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
 
     single<PrivateKeyEncryptor> { KeyStoreEncryptor() }
 
+    factory<DataCleaner> { DataCleanerComposite(emptyList()) }
+
     single { chainConfig }
     single { Web3j.build(HttpService(get<ChainConfig>().rpcUrl)) }
 
@@ -37,9 +41,7 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
 }
 
 private class DesktopPinCodeStorage : PinCodeStorage {
-    override suspend fun storePinCode(pinCode: String) {
-        // Desktop implementation placeholder
-    }
+    override suspend fun storePinCode(pinCode: String) = Unit
 
     override suspend fun verifyPinCode(pinCode: String): Boolean {
         return true
@@ -49,7 +51,5 @@ private class DesktopPinCodeStorage : PinCodeStorage {
         return false
     }
 
-    override suspend fun clearPinCode() {
-        // Desktop implementation placeholder
-    }
+    override suspend fun clearPinCode() = Unit
 }

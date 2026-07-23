@@ -6,7 +6,6 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -15,6 +14,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.data.UserActivityManager
+import me.sdi.ethwallet.util.preferencesDataStore
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import java.security.MessageDigest
@@ -47,7 +47,7 @@ class DataStorePinCodeStorage(
         private val ENCRYPTED_PIN = stringPreferencesKey("encrypted_pin")
     }
 
-    val dataStore = context.pinDataStore
+    private val dataStore = context.preferencesDataStore
 
     override suspend fun storePinCode(pinCode: String) {
         val hashedPin = hashPinCode(pinCode)
@@ -188,6 +188,3 @@ class DataStorePinCodeStorage(
             Base64.encodeToString(combined, Base64.DEFAULT)
         }
 }
-
-private const val DATASTORE_NAME = "secure_pin_preferences"
-private val Context.pinDataStore by preferencesDataStore(name = DATASTORE_NAME)

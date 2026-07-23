@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,6 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -33,6 +37,10 @@ import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.backspace_24px
 import me.sdi.ethwallet.resources.delete
+import me.sdi.ethwallet.resources.logout_dialog_confirm
+import me.sdi.ethwallet.resources.logout_dialog_dismiss
+import me.sdi.ethwallet.resources.logout_dialog_message
+import me.sdi.ethwallet.resources.logout_dialog_title
 import me.sdi.ethwallet.resources.pin_attempts_remaining
 import me.sdi.ethwallet.resources.pin_enter_subtitle
 import me.sdi.ethwallet.resources.pin_enter_title
@@ -49,8 +57,9 @@ fun VerifyPinCodeScreen(
     modifier: Modifier = Modifier,
     viewModel: VerifyPinCodeViewModel = koinViewModel(),
 ) {
+    val showLogoutDialog = remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
-        viewModel.onEvent(VerifyPinCodeEvent.Reset)
         viewModel.news.collect { news ->
             when (news) {
                 is VerifyPinCodeNews.PinVerified -> {
@@ -70,7 +79,46 @@ fun VerifyPinCodeScreen(
     VerifyPinCodeScreen(
         viewState = viewState,
         onEvent = viewModel::onEvent,
+        onForgotPinClick = { showLogoutDialog.value = true },
         modifier = modifier,
+    )
+
+    if (showLogoutDialog.value) {
+        LogoutConfirmationDialog(
+            onConfirm = {
+                showLogoutDialog.value = false
+                viewModel.onEvent(VerifyPinCodeEvent.Reset)
+            },
+            onDismiss = {
+                showLogoutDialog.value = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun LogoutConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(stringResource(Res.string.logout_dialog_title))
+        },
+        text = {
+            Text(stringResource(Res.string.logout_dialog_message))
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(Res.string.logout_dialog_confirm))
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.logout_dialog_dismiss))
+            }
+        },
     )
 }
 
@@ -78,6 +126,7 @@ fun VerifyPinCodeScreen(
 private fun VerifyPinCodeScreen(
     viewState: VerifyPinCodeViewState,
     onEvent: (VerifyPinCodeEvent) -> Unit,
+    onForgotPinClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -158,8 +207,9 @@ private fun VerifyPinCodeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 TextButton(
-                    onClick = { onEvent(VerifyPinCodeEvent.OnLogoutClick) },
+                    onClick = onForgotPinClick,
                     modifier = Modifier.fillMaxWidth(0.8f),
+                    enabled = !viewState.isVerifying && !viewState.isLoggingOut,
                 ) {
                     Text(
                         text = stringResource(Res.string.pin_forgot),

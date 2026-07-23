@@ -14,6 +14,9 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.EthCreationResult
 import me.sdi.ethwallet.core.EthWalletCreator
 import me.sdi.ethwallet.core.FiatRateProvider
+import me.sdi.ethwallet.core.security.DataCleaner
+import me.sdi.ethwallet.core.security.DataCleanerComposite
+import me.sdi.ethwallet.core.security.DataCleanerRoomDb
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.data.repository.EthWallet
@@ -43,6 +46,8 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.math.BigDecimal
 import java.math.BigInteger
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Build.VERSION_CODES.P])
@@ -53,13 +58,32 @@ class WalletFlowTest : KoinTest {
     private lateinit var scenario: ActivityScenario<MainActivity>
 
     private val appDatabase: AppDatabase by inject()
-    private val pinCodeStorage: PinCodeStorage by inject()
 
     private val onboardingPage = OnboardingPage(composeTestRule)
     private val createWalletPage = CreateWalletPage(composeTestRule)
     private val setPinCodePage = SetPinCodePage(composeTestRule)
     private val walletPage = WalletPage(composeTestRule)
     private val walletsListPage = WalletsListPage(composeTestRule)
+
+    private val pinCodeStorage = object : PinCodeStorage {
+        var storedPin: String? = null
+
+        override suspend fun storePinCode(pinCode: String) {
+            storedPin = pinCode
+        }
+
+        override suspend fun verifyPinCode(pinCode: String): Boolean {
+            return storedPin == pinCode
+        }
+
+        override suspend fun hasPinCode(): Boolean {
+            return storedPin != null
+        }
+
+        override suspend fun clearPinCode() {
+            storedPin = null
+        }
+    }
 
     private val mockModule = module {
         single<EthWalletCreator> {
@@ -88,27 +112,7 @@ class WalletFlowTest : KoinTest {
                 override fun importWallet(mnemonic: String): EthCreationResult = createWallet()
             }
         }
-        single<PinCodeStorage> {
-            object : PinCodeStorage {
-                private var storedPin: String? = null
-
-                override suspend fun storePinCode(pinCode: String) {
-                    storedPin = pinCode
-                }
-
-                override suspend fun verifyPinCode(pinCode: String): Boolean {
-                    return storedPin == pinCode
-                }
-
-                override suspend fun hasPinCode(): Boolean {
-                    return storedPin != null
-                }
-
-                override suspend fun clearPinCode() {
-                    storedPin = null
-                }
-            }
-        }
+        single<PinCodeStorage> { pinCodeStorage }
         single<PrivateKeyEncryptor> {
             object : PrivateKeyEncryptor {
                 override fun encryptPrivateKey(privateKey: BigInteger, address: String): String {
@@ -119,6 +123,18 @@ class WalletFlowTest : KoinTest {
                     return BigInteger(encryptedBase64, 16)
                 }
             }
+        }
+        single<DataCleaner> {
+            DataCleanerComposite(
+                listOf(
+                    DataCleanerRoomDb(get()),
+                    object : DataCleaner {
+                        override suspend fun clean() {
+                            pinCodeStorage.clearPinCode()
+                        }
+                    },
+                ),
+            )
         }
         factory<BalanceProvider> {
             object : BalanceProvider {
@@ -199,6 +215,35 @@ class WalletFlowTest : KoinTest {
         // Step 5: Repeat flow (verifies that screen viewmodel state is clean/reset and wallets are not duplicated)
         runAccountCreationAndPinSetupFlow()
         runLogoutAndDeletionFlow()
+    }
+
+    @Test
+    fun forgot_pin_logout_requires_confirmation_and_clears_local_data() {
+        runAccountCreationAndPinSetupFlow()
+
+        scenario.close()
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+
+        composeTestRule.assertTextExists("Forgot PIN Code?")
+        composeTestRule.clickText("Forgot PIN Code?")
+        composeTestRule.assertTextExists("Log out and remove local data?")
+        composeTestRule.assertTextExists("Confirm logout")
+        composeTestRule.assertTextExists("Dismiss")
+
+        composeTestRule.clickText("Dismiss")
+        runBlocking {
+            assertTrue(appDatabase.walletDao().getAllWallets().isNotEmpty())
+            assertTrue(pinCodeStorage.hasPinCode())
+        }
+
+        composeTestRule.clickText("Forgot PIN Code?")
+        composeTestRule.clickText("Confirm logout")
+
+        composeTestRule.assertTextExists("Create new wallet")
+        runBlocking {
+            assertTrue(appDatabase.walletDao().getAllWallets().isEmpty())
+            assertFalse(pinCodeStorage.hasPinCode())
+        }
     }
 
     private fun runAccountCreationAndPinSetupFlow() {

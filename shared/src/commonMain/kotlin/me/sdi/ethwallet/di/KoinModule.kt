@@ -74,6 +74,7 @@ val commonModule = module {
     viewModel<VerifyPinCodeViewModel> {
         VerifyPinCodeViewModel(
             pinCodeStorage = get(),
+            dataCleaner = get(),
         )
     }
 

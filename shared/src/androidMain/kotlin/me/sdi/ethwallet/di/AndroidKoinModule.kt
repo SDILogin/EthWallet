@@ -1,10 +1,16 @@
 package me.sdi.ethwallet.di
 
+import android.content.Context
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.Web3jEthManager
+import me.sdi.ethwallet.core.security.DataCleaner
+import me.sdi.ethwallet.core.security.DataCleanerAndroidKeyStore
+import me.sdi.ethwallet.core.security.DataCleanerComposite
+import me.sdi.ethwallet.core.security.DataCleanerDataStore
+import me.sdi.ethwallet.core.security.DataCleanerRoomDb
 import me.sdi.ethwallet.core.security.DataStorePinCodeStorage
 import me.sdi.ethwallet.core.security.KeyStoreEncryptor
 import me.sdi.ethwallet.core.security.PinCodeStorage
@@ -29,6 +35,16 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<FiatRateDao> { get<AppDatabase>().fiatRateDao() }
 
     single<PrivateKeyEncryptor> { KeyStoreEncryptor() }
+
+    factory<DataCleaner> {
+        DataCleanerComposite(
+            listOf(
+                DataCleanerRoomDb(get<AppDatabase>()),
+                DataCleanerDataStore(get<Context>()),
+                DataCleanerAndroidKeyStore(),
+            ),
+        )
+    }
 
     single { chainConfig }
     single { Web3j.build(HttpService(get<ChainConfig>().rpcUrl)) }

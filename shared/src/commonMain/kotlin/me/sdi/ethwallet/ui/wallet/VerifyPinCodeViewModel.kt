@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -32,6 +33,7 @@ private const val LOCK_TIMEOUT_SECONDS = 30
  */
 class VerifyPinCodeViewModel(
     private val pinCodeStorage: PinCodeStorage,
+    private val dataCleaner: DataCleaner,
 ) : ViewModel() {
     val viewState: StateFlow<VerifyPinCodeViewState>
         field = MutableStateFlow(VerifyPinCodeViewState())
@@ -57,7 +59,7 @@ class VerifyPinCodeViewModel(
         Logger.debug(TAG) { "onEvent: $event" }
 
         if (event is VerifyPinCodeEvent.Reset) {
-            handleReset()
+            handleLogout()
             return
         }
 
@@ -70,12 +72,11 @@ class VerifyPinCodeViewModel(
         when (event) {
             is VerifyPinCodeEvent.OnDigitClick -> handleDigitClick(event.digit)
             is VerifyPinCodeEvent.OnDeleteClick -> handleDeleteClick()
-            is VerifyPinCodeEvent.OnLogoutClick -> handleLogoutClick()
         }
     }
 
-    private fun handleReset() {
-        if (viewState.value.isLocked) {
+    private fun handleLogout() {
+        if (viewState.value.isLoggingOut) {
             return
         }
 
@@ -83,7 +84,32 @@ class VerifyPinCodeViewModel(
         verificationJob = null
         countdownJob?.cancel()
         countdownJob = null
-        viewState.value = VerifyPinCodeViewState()
+        viewState.update {
+            it.copy(
+                errorMessage = null,
+                isVerifying = false,
+                isLoggingOut = true,
+            )
+        }
+
+        viewModelScope.launch {
+            try {
+                dataCleaner.clean()
+                newsChannel.send(VerifyPinCodeNews.LoggedOut)
+            } catch (e: Exception) {
+                ensureActive()
+
+                val errorMessage = e.message ?: "Unknown error"
+                Logger.debug(TAG) { "Error clearing local wallet data: $errorMessage" }
+                viewState.update {
+                    it.copy(
+                        errorMessage = "Error: $errorMessage",
+                        isLoggingOut = false,
+                    )
+                }
+                newsChannel.send(VerifyPinCodeNews.Error(errorMessage))
+            }
+        }
     }
 
     private fun handleDigitClick(digit: Int) {
@@ -115,24 +141,6 @@ class VerifyPinCodeViewModel(
 
         if (enteredPin.isNotEmpty()) {
             viewState.update { it.copy(enteredPin = enteredPin.dropLast(1)) }
-        }
-    }
-
-    private fun handleLogoutClick() {
-        viewModelScope.launch {
-            try {
-                pinCodeStorage.clearPinCode()
-                newsChannel.send(VerifyPinCodeNews.LoggedOut)
-            } catch (e: Exception) {
-                ensureActive()
-
-                val errorMessage = e.message ?: "Unknown error"
-                Logger.debug(TAG) { "Error clearing PIN: $errorMessage" }
-                viewState.update {
-                    it.copy(errorMessage = "Error: $errorMessage")
-                }
-                newsChannel.send(VerifyPinCodeNews.Error(errorMessage))
-            }
         }
     }
 
@@ -241,6 +249,7 @@ data class VerifyPinCodeViewState(
     val errorMessage: String? = null,
     val remainingAttempts: Int = 3,
     val isVerifying: Boolean = false,
+    val isLoggingOut: Boolean = false,
     val isLocked: Boolean = false,
     val lockCountdown: Int = 0,
 )
@@ -280,12 +289,7 @@ sealed interface VerifyPinCodeEvent {
     data object OnDeleteClick : VerifyPinCodeEvent
 
     /**
-     * User clicked the logout button
-     */
-    data object OnLogoutClick : VerifyPinCodeEvent
-
-    /**
-     * Reset the view state to default empty state
+     * Confirm local data cleanup and logout.
      */
     data object Reset : VerifyPinCodeEvent
 }

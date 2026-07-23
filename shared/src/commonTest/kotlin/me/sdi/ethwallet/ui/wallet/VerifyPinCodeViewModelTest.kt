@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.fakes.FakeDataCleaner
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -33,6 +34,7 @@ class VerifyPinCodeViewModelTest {
 
     private lateinit var viewModel: VerifyPinCodeViewModel
     private lateinit var pinCodeStorage: FakePinCodeStorage
+    private lateinit var dataCleaner: FakeDataCleaner
     private val testPin = "123456"
     private val wrongPin = "000000"
 
@@ -42,7 +44,8 @@ class VerifyPinCodeViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         pinCodeStorage = FakePinCodeStorage()
-        viewModel = VerifyPinCodeViewModel(pinCodeStorage)
+        dataCleaner = FakeDataCleaner()
+        viewModel = VerifyPinCodeViewModel(pinCodeStorage, dataCleaner)
     }
 
     @AfterTest
@@ -58,6 +61,7 @@ class VerifyPinCodeViewModelTest {
         assertNull(initialState.errorMessage, "No error message should be present initially")
         assertEquals(3, initialState.remainingAttempts, "Initial attempts should be set to MAX_ATTEMPTS (3)")
         assertFalse(initialState.isVerifying, "Verification should not be in progress initially")
+        assertFalse(initialState.isLoggingOut, "Logout should not be in progress")
         assertFalse(initialState.isLocked, "Lock state should be inactive initially")
         assertEquals(0, initialState.lockCountdown, "Lock countdown should be zero initially")
     }
@@ -98,18 +102,20 @@ class VerifyPinCodeViewModelTest {
     }
 
     @Test
-    fun reset_should_restore_state_after_successful_verification() = runTest(testDispatcher) {
+    fun reset_should_logout_after_successful_verification() = runTest(testDispatcher) {
         pinCodeStorage.storePinCode(testPin)
         collectNews()
 
         inputPin(testPin)
 
         viewModel.onEvent(VerifyPinCodeEvent.Reset)
+        advanceUntilIdle()
         viewModel.onEvent(VerifyPinCodeEvent.OnDigitClick(1))
 
         val state = viewModel.viewState.first()
-        assertEquals("1", state.enteredPin, "PIN input should accept digits after reset")
-        assertFalse(state.isVerifying, "Reset should clear the verification flag")
+        assertEquals(testPin, state.enteredPin, "PIN input should remain disabled during logout")
+        assertTrue(state.isLoggingOut, "Reset should start logout")
+        assertEquals(VerifyPinCodeNews.LoggedOut, collectedNews.last())
     }
 
     @Test
@@ -182,10 +188,11 @@ class VerifyPinCodeViewModelTest {
     }
 
     @Test
-    fun should_emit_LoggedOut_news_when_logout_is_clicked() = runTest(testDispatcher) {
+    fun should_emit_LoggedOut_news_when_logout_is_confirmed() = runTest(testDispatcher) {
+        pinCodeStorage.storePinCode(testPin)
         collectNews()
 
-        viewModel.onEvent(VerifyPinCodeEvent.OnLogoutClick)
+        viewModel.onEvent(VerifyPinCodeEvent.Reset)
         advanceUntilIdle()
 
         assertEquals(
@@ -193,18 +200,19 @@ class VerifyPinCodeViewModelTest {
             collectedNews.firstOrNull(),
             "Logout click should emit LoggedOut news",
         )
+        assertEquals(1, dataCleaner.cleanCalledCount)
     }
 
     @Test
     fun should_emit_Error_news_when_logout_fails() = runTest(testDispatcher) {
-        pinCodeStorage.shouldThrowException = true
+        dataCleaner.shouldThrowException = true
         collectNews()
 
-        viewModel.onEvent(VerifyPinCodeEvent.OnLogoutClick)
+        viewModel.onEvent(VerifyPinCodeEvent.Reset)
         advanceUntilIdle()
 
         val state = viewModel.viewState.first()
-        assertEquals("Error: Simulated clear failure", state.errorMessage)
+        assertEquals("Error: Simulated data cleanup failure", state.errorMessage)
         assertTrue(collectedNews.single() is VerifyPinCodeNews.Error)
         assertTrue(collectedNews.none { it is VerifyPinCodeNews.LoggedOut })
     }
@@ -235,8 +243,9 @@ class VerifyPinCodeViewModelTest {
     }
 
     @Test
-    fun reset_should_preserve_active_lock_and_countdown() = runTest(testDispatcher) {
+    fun reset_should_logout_when_pin_screen_is_locked() = runTest(testDispatcher) {
         pinCodeStorage.storePinCode(testPin)
+        collectNews()
 
         inputPin(wrongPin)
         inputPin(wrongPin)
@@ -246,18 +255,10 @@ class VerifyPinCodeViewModelTest {
         assertTrue(lockedState.isLocked)
 
         viewModel.onEvent(VerifyPinCodeEvent.Reset)
-
-        assertEquals(lockedState, viewModel.viewState.first())
-
-        advanceTimeBy(1_000)
-        runCurrent()
-
-        val countdownState = viewModel.viewState.first()
-        assertTrue(countdownState.isLocked)
-        assertEquals(lockedState.lockCountdown - 1, countdownState.lockCountdown)
-
-        advanceTimeBy(31_000)
         advanceUntilIdle()
+
+        assertEquals(VerifyPinCodeNews.LoggedOut, collectedNews.last())
+        assertTrue(viewModel.viewState.first().isLoggingOut)
     }
 
     @Test
@@ -280,7 +281,7 @@ class VerifyPinCodeViewModelTest {
     }
 
     @Test
-    fun reset_should_cancel_verification_without_emitting_error() = runTest(testDispatcher) {
+    fun reset_should_cancel_verification_and_logout() = runTest(testDispatcher) {
         var verificationStarted = false
         val blockingStorage = object : PinCodeStorage by pinCodeStorage {
             override suspend fun verifyPinCode(pinCode: String): Boolean {
@@ -288,7 +289,7 @@ class VerifyPinCodeViewModelTest {
                 awaitCancellation()
             }
         }
-        viewModel = VerifyPinCodeViewModel(blockingStorage)
+        viewModel = VerifyPinCodeViewModel(blockingStorage, dataCleaner)
         collectNews()
 
         testPin.forEach { digit ->
@@ -300,10 +301,10 @@ class VerifyPinCodeViewModelTest {
         assertTrue(verificationStarted)
 
         viewModel.onEvent(VerifyPinCodeEvent.Reset)
-        runCurrent()
+        advanceUntilIdle()
 
-        assertEquals(VerifyPinCodeViewState(), viewModel.viewState.first())
-        assertTrue(collectedNews.isEmpty())
+        assertTrue(viewModel.viewState.first().isLoggingOut)
+        assertEquals(VerifyPinCodeNews.LoggedOut, collectedNews.last())
     }
 
     private fun TestScope.inputPin(pin: String) {
