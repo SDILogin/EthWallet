@@ -69,7 +69,7 @@ fun VerifyPinCodeScreen(
                     onLogout()
                 }
                 is VerifyPinCodeNews.Error -> {
-                    // Error already shown in the UI
+                    Unit
                 }
             }
         }
@@ -169,6 +169,8 @@ private fun VerifyPinCodeScreen(
                 PinCodeInput(
                     pinCode = viewState.enteredPin,
                     maxLength = 6,
+                    isError = viewState.errorMessage != null,
+                    shakeTrigger = viewState.failedAttemptId,
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -280,9 +282,7 @@ private fun VerifyNumberPad(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            Box(modifier = Modifier.size(72.dp)) {
-                // Empty space for layout balance
-            }
+            Box(modifier = Modifier.size(72.dp))
 
             NumberButton(number = 0, onClick = { onNumberClick(0) }, enabled = enabled)
 

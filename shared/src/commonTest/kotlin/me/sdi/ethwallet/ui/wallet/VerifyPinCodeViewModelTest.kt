@@ -148,6 +148,7 @@ class VerifyPinCodeViewModelTest {
     fun invalid_PIN_verification_should_decrement_remaining_attempts() = runTest(testDispatcher) {
         pinCodeStorage.storePinCode(testPin)
         inputPin(wrongPin)
+        advanceUntilIdle()
 
         val state = viewModel.viewState.first()
         assertEquals("", state.enteredPin, "Pin must be reset after wrong attempt")
@@ -155,6 +156,92 @@ class VerifyPinCodeViewModelTest {
         assertEquals(2, state.remainingAttempts, "remainingAttempts must change after wrong pin input")
         assertFalse(state.isVerifying, "Flag isVerifying must be reset after pin check to unlock numpad")
         assertFalse(state.isLocked, "User must be able to input pin again when there are 2 more attempts left")
+    }
+
+    @Test
+    fun entered_pin_should_remain_visible_immediately_after_wrong_attempt() = runTest(testDispatcher) {
+        pinCodeStorage.storePinCode(testPin)
+        inputPin(wrongPin)
+
+        val state = viewModel.viewState.first()
+        assertEquals(1, state.failedAttemptId, "First wrong attempt should set failedAttemptId to 1")
+        assertNotNull(state.errorMessage, "Error message should be present after wrong PIN")
+        assertEquals(2, state.remainingAttempts, "First wrong attempt should reduce attempts to 2")
+        assertEquals(wrongPin, state.enteredPin, "Entered PIN should stay visible for the shake animation")
+    }
+
+    @Test
+    fun storage_exception_should_clear_entered_pin_immediately() = runTest(testDispatcher) {
+        pinCodeStorage.storePinCode(testPin)
+        pinCodeStorage.shouldThrowException = true
+        inputPin(testPin)
+
+        val state = viewModel.viewState.first()
+        assertNotNull(state.errorMessage, "Error message should be present when verification fails")
+        assertEquals("", state.enteredPin, "Entered PIN should clear immediately on storage errors")
+        assertEquals(0, state.failedAttemptId, "Storage errors are not wrong-PIN attempts")
+    }
+
+    @Test
+    fun entered_pin_should_clear_after_error_delay() = runTest(testDispatcher) {
+        pinCodeStorage.storePinCode(testPin)
+        inputPin(wrongPin)
+        advanceUntilIdle()
+
+        val state = viewModel.viewState.first()
+        assertEquals("", state.enteredPin, "Entered PIN should clear once the error delay elapses")
+        assertNotNull(state.errorMessage, "Error message should remain visible after the PIN clears")
+    }
+
+    @Test
+    fun second_wrong_pin_should_increment_failedAttemptId() = runTest(testDispatcher) {
+        pinCodeStorage.storePinCode(testPin)
+        inputPin(wrongPin)
+        inputPin(wrongPin)
+
+        val state = viewModel.viewState.first()
+        assertEquals(2, state.failedAttemptId, "Second wrong attempt should bump failedAttemptId to 2")
+    }
+
+    @Test
+    fun digit_click_during_error_window_should_replace_stale_pin() = runTest(testDispatcher) {
+        pinCodeStorage.storePinCode(testPin)
+        inputPin(wrongPin)
+
+        viewModel.onEvent(VerifyPinCodeEvent.OnDigitClick(5))
+
+        val state = viewModel.viewState.first()
+        assertEquals("5", state.enteredPin, "A fresh digit should replace the stale failed PIN")
+        assertNull(state.errorMessage, "Error message should clear when starting a fresh attempt")
+    }
+
+    @Test
+    fun delete_click_during_error_window_should_clear_stale_pin() = runTest(testDispatcher) {
+        pinCodeStorage.storePinCode(testPin)
+        inputPin(wrongPin)
+
+        viewModel.onEvent(VerifyPinCodeEvent.OnDeleteClick)
+
+        val state = viewModel.viewState.first()
+        assertEquals("", state.enteredPin, "Delete should clear the stale failed PIN")
+        assertNull(state.errorMessage, "Error message should clear when deleting the stale PIN")
+    }
+
+    @Test
+    fun third_wrong_pin_should_lock_and_clear_pin_after_delay() = runTest(testDispatcher) {
+        pinCodeStorage.storePinCode(testPin)
+        inputPin(wrongPin)
+        inputPin(wrongPin)
+        inputPin(wrongPin)
+
+        val lockedState = viewModel.viewState.first()
+        assertTrue(lockedState.isLocked, "Third wrong attempt should lock the screen")
+        assertEquals(3, lockedState.failedAttemptId, "Third wrong attempt should bump failedAttemptId to 3")
+
+        advanceUntilIdle()
+
+        val clearedState = viewModel.viewState.first()
+        assertEquals("", clearedState.enteredPin, "Entered PIN should clear after the lock-branch delay too")
     }
 
     @Test

@@ -95,6 +95,7 @@
     <string name="pin_confirm_subtitle">Enter the same PIN again to confirm</string>
     <string name="pin_locked_subtitle">Too many attempts. Try again in %1$d seconds</string>
     <string name="pin_attempts_remaining">Attempts remaining: %1$d</string>
+    <string name="pin_digits_entered">%1$d of %2$d digits entered</string>
     <string name="pin_forgot">Forgot PIN Code?</string>
     <string name="pin_reset">Reset PIN</string>
     <string name="logout_dialog_title">Log out and remove local data?</string>
