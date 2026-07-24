@@ -2,15 +2,6 @@
 
 Kotlin Multiplatform Ethereum wallet for Android and Desktop.
 
-## Structure
-
-- `shared/` - Common code (UI, ViewModels, business logic)
-  - `commonMain/` - Cross-platform code
-  - `androidMain/` - Android implementations
-  - `desktopMain/` - Desktop implementations
-- `app/` - Android entry point
-- `desktopApp/` - Desktop entry point
-
 ## Stack
 
 - Jetpack Compose Multiplatform
