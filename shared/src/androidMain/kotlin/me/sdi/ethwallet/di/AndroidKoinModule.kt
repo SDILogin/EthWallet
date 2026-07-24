@@ -11,12 +11,15 @@ import me.sdi.ethwallet.core.security.DataCleanerAndroidKeyStore
 import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.DataCleanerDataStore
 import me.sdi.ethwallet.core.security.DataCleanerRoomDb
-import me.sdi.ethwallet.core.security.DataStorePinCodeStorage
+import me.sdi.ethwallet.core.security.PinCodeStorageDataStore
 import me.sdi.ethwallet.core.security.KeyStoreEncryptor
+import me.sdi.ethwallet.core.security.KeyStorePinAttemptsGuard
+import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.security.PinSessionDataCleaner
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
+import me.sdi.ethwallet.core.transfer.EthTransferInteractor
 import me.sdi.ethwallet.core.transfer.TransferInteractor
-import me.sdi.ethwallet.core.transfer.Web3jTransferInteractor
 import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.database.DatabaseBuilder
 import me.sdi.ethwallet.database.dao.FiatRateDao
@@ -25,8 +28,6 @@ import me.sdi.ethwallet.database.dao.WalletDao
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
 import org.koin.dsl.module
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.http.HttpService
 
 actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<AppDatabase> { DatabaseBuilder.getInstance(androidContext()) }
@@ -34,7 +35,7 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<TokenBalanceDao> { get<AppDatabase>().tokenBalanceDao() }
     single<FiatRateDao> { get<AppDatabase>().fiatRateDao() }
 
-    single<PrivateKeyEncryptor> { KeyStoreEncryptor() }
+    single<PrivateKeyEncryptor> { KeyStoreEncryptor(pinSession = get()) }
 
     factory<DataCleaner> {
         DataCleanerComposite(
@@ -42,22 +43,26 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
                 DataCleanerRoomDb(get<AppDatabase>()),
                 DataCleanerDataStore(get<Context>()),
                 DataCleanerAndroidKeyStore(),
+                PinSessionDataCleaner(get()),
             ),
         )
     }
 
     single { chainConfig }
-    single { Web3j.build(HttpService(get<ChainConfig>().rpcUrl)) }
 
     single<HttpClient> { createHttpClient(OkHttp.create()) }
 
-    factory<EthManager> { Web3jEthManager(get(), get()) }
-    factory<TransferInteractor> { Web3jTransferInteractor(get(), get(), get(), get(), get()) }
+    single<EthManager> { Web3jEthManager.create(get()) }
+    factory<TransferInteractor> { EthTransferInteractor(get(), get(), get(), get()) }
+
+    single<PinAttemptsGuard> { KeyStorePinAttemptsGuard(context = androidContext()) }
 
     single<PinCodeStorage> {
-        DataStorePinCodeStorage(
+        PinCodeStorageDataStore(
             context = androidContext(),
             userActivityManager = get(),
+            pinAttemptsGuard = get(),
+            pinSession = get(),
         )
     }
 }

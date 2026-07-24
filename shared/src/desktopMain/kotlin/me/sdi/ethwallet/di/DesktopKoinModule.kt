@@ -8,7 +8,10 @@ import me.sdi.ethwallet.core.KeyStoreEncryptor
 import me.sdi.ethwallet.core.Web3jEthManager
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
+import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.security.PinLockPolicy
+import me.sdi.ethwallet.core.security.PinLockState
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.database.DesktopDatabaseBuilder
@@ -17,8 +20,7 @@ import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.dao.WalletDao
 import org.koin.core.module.Module
 import org.koin.dsl.module
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.http.HttpService
+import kotlin.time.Duration
 
 actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<AppDatabase> { DesktopDatabaseBuilder.getInstance() }
@@ -31,13 +33,13 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     factory<DataCleaner> { DataCleanerComposite(emptyList()) }
 
     single { chainConfig }
-    single { Web3j.build(HttpService(get<ChainConfig>().rpcUrl)) }
 
     single<HttpClient> { createHttpClient(OkHttp.create()) }
 
-    factory<EthManager> { Web3jEthManager(get()) }
+    single<EthManager> { Web3jEthManager.create(get()) }
 
     single<PinCodeStorage> { DesktopPinCodeStorage() }
+    single<PinAttemptsGuard> { DesktopPinAttemptsGuard() }
 }
 
 private class DesktopPinCodeStorage : PinCodeStorage {
@@ -52,4 +54,23 @@ private class DesktopPinCodeStorage : PinCodeStorage {
     }
 
     override suspend fun clearPinCode() = Unit
+}
+
+private class DesktopPinAttemptsGuard : PinAttemptsGuard {
+    private val unlocked =
+        PinLockState.Active(
+            totalFailures = 0,
+            remainingInWindow = PinLockPolicy.ATTEMPTS_PER_WINDOW,
+            lockRemaining = Duration.ZERO,
+        )
+
+    override suspend fun bootstrap() = Unit
+
+    override suspend fun status(): PinLockState = unlocked
+
+    override suspend fun onFailedAttempt(): PinLockState = unlocked
+
+    override suspend fun onSuccess() = Unit
+
+    override suspend fun clear() = Unit
 }

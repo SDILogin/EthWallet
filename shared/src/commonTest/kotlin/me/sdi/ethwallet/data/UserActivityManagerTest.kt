@@ -14,12 +14,14 @@ import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.database.entity.WalletEntity
-import me.sdi.ethwallet.fakes.FakeEthWalletCreator
+import me.sdi.ethwallet.fakes.FakeEthManager
+import me.sdi.ethwallet.fakes.FakePinSession
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
@@ -30,9 +32,10 @@ class UserActivityManagerTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var walletDao: FakeWalletDao
-    private lateinit var walletCreator: FakeEthWalletCreator
+    private lateinit var ethManager: FakeEthManager
     private lateinit var privateKeyEncryptor: FakePrivateKeyEncryptor
     private lateinit var walletRepository: WalletRepository
+    private lateinit var pinSession: FakePinSession
     private lateinit var testScope: TestScope
     private lateinit var userActivityManager: ProcessLifetimeUserActivityManager
 
@@ -45,19 +48,21 @@ class UserActivityManagerTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         walletDao = FakeWalletDao()
-        walletCreator = FakeEthWalletCreator()
+        ethManager = FakeEthManager()
         privateKeyEncryptor = FakePrivateKeyEncryptor()
 
         walletRepository = WalletRepository(
             walletDao = walletDao,
-            walletCreator = walletCreator,
+            ethManager = ethManager,
             privateKeyEncryptor = privateKeyEncryptor,
         )
 
+        pinSession = FakePinSession()
         testScope = TestScope(testDispatcher)
         userActivityManager = ProcessLifetimeUserActivityManager(
             walletRepository = walletRepository,
             applicationScope = testScope,
+            pinSession = pinSession,
             inactivityTimeout = 1.seconds,
         )
     }
@@ -219,17 +224,10 @@ class UserActivityManagerTest {
 
     @Test
     fun should_rethrow_CancellationException_from_wallet_repository() = runTest(testDispatcher) {
-        // Force FakeWalletDao to throw CancellationException on getAllWallets
         walletDao.wallets = emptyList()
-        // We can throw cancellation exception using a mock exception if we add support,
-        // or we can simulate it in our FakeWalletDao by adding an exception field:
         walletDao.exceptionToThrow = CancellationException("Cancelled")
 
         userActivityManager.onAnyUserAction()
-
-        // When CancellationException is thrown from walletRepository.getAllWallets(),
-        // it should be rethrown and the timer coroutine should be cancelled.
-        // This means the lock screen state should not change from its initial false state
         advanceTimeBy(2.seconds.inWholeMilliseconds)
 
         val showLockScreen = userActivityManager.showLockScreen.first()
@@ -252,9 +250,6 @@ class UserActivityManagerTest {
         userActivityManager.onAnyUserAction()
         advanceTimeBy(2.seconds.inWholeMilliseconds)
 
-        // The wallets query should only resolve once the final timer fires
-        // Under our fake, since each action starts a new coroutine job and cancels the previous one,
-        // we can observe the side effects.
         val showLockScreen = userActivityManager.showLockScreen.first()
         assertTrue(showLockScreen)
     }
@@ -265,6 +260,7 @@ class UserActivityManagerTest {
         val customUserActivityManager = ProcessLifetimeUserActivityManager(
             walletRepository = walletRepository,
             applicationScope = testScope,
+            pinSession = pinSession,
             inactivityTimeout = customTimeout,
         )
         walletDao.wallets = listOf(
@@ -350,5 +346,50 @@ class UserActivityManagerTest {
 
         val showLockScreen = userActivityManager.showLockScreen.first()
         assertFalse(showLockScreen, "Lock screen should not be shown with mixed actions keeping timer active")
+    }
+
+    @Test
+    fun should_clear_pin_session_after_inactivity_timeout_when_wallets_exist() = runTest(testDispatcher) {
+        walletDao.wallets = listOf(
+            WalletEntity(
+                address = testWallet.address.toString(),
+                encryptedPrivateKeyBase64 = "",
+                label = "Test Wallet",
+            ),
+        )
+
+        userActivityManager.onAnyUserAction()
+        advanceTimeBy(2.seconds.inWholeMilliseconds)
+
+        assertEquals(
+            1,
+            pinSession.clearCallCount,
+            "PIN session should be cleared after inactivity timeout when wallets exist",
+        )
+    }
+
+    @Test
+    fun should_not_clear_pin_session_after_inactivity_timeout_when_no_wallets_exist() = runTest(testDispatcher) {
+        walletDao.wallets = emptyList()
+
+        userActivityManager.onAnyUserAction()
+        advanceTimeBy(2.seconds.inWholeMilliseconds)
+
+        assertEquals(0, pinSession.clearCallCount, "PIN session should not be cleared when no wallets exist")
+    }
+
+    @Test
+    fun should_not_clear_pin_session_on_app_unlocked() = runTest(testDispatcher) {
+        walletDao.wallets = listOf(
+            WalletEntity(
+                address = testWallet.address.toString(),
+                encryptedPrivateKeyBase64 = "",
+                label = "Test Wallet",
+            ),
+        )
+
+        userActivityManager.onAppUnlocked()
+
+        assertEquals(0, pinSession.clearCallCount, "onAppUnlocked() must not clear the PIN session")
     }
 }

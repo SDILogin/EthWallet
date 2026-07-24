@@ -2,8 +2,11 @@ package me.sdi.ethwallet.ui.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
@@ -16,25 +19,28 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.security.DataCleaner
+import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.security.PinLockState
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 private const val TAG = "PinVerification"
 private const val PIN_MAX_LENGTH = 6
-private const val MAX_ATTEMPTS = 3
-private const val LOCK_TIMEOUT_SECONDS = 30
 private const val ERROR_CLEAR_DELAY_MS = 500
 
 /**
- * ViewModel for the PIN code verification screen
- * Handles PIN verification, attempts counting, and timeouts
+ * ViewModel for the PIN code verification screen.
  *
- * @param pinCodeStorage Storage implementation for verifying PIN codes
+ * Verifies entered PIN codes and delegates failure counting and lockout timing to
+ * [PinAttemptsGuard], whose [PinLockState] results are the single source of truth for the
+ * remaining attempts and lock countdown shown on screen.
  */
 class VerifyPinCodeViewModel(
     private val pinCodeStorage: PinCodeStorage,
     private val dataCleaner: DataCleaner,
+    private val pinAttemptsGuard: PinAttemptsGuard,
 ) : ViewModel() {
     val viewState: StateFlow<VerifyPinCodeViewState>
         field = MutableStateFlow(VerifyPinCodeViewState())
@@ -52,6 +58,34 @@ class VerifyPinCodeViewModel(
         viewState
             .onEach { Logger.debug(TAG) { "ViewState: $it" } }
             .launchIn(viewModelScope)
+
+        viewModelScope.launch {
+            when (val status = pinAttemptsGuard.status()) {
+                is PinLockState.Tampered -> {
+                    handleTamperDetected()
+                }
+                is PinLockState.Active -> {
+                    if (status.lockRemaining > Duration.ZERO) {
+                        viewState.update {
+                            it.copy(
+                                isInitializing = false,
+                                isLocked = true,
+                                lockCountdown = status.lockRemaining.inWholeSeconds.toInt(),
+                                remainingAttempts = status.remainingInWindow,
+                            )
+                        }
+                        startLockCountdown()
+                    } else {
+                        viewState.update {
+                            it.copy(
+                                isInitializing = false,
+                                remainingAttempts = status.remainingInWindow,
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -67,7 +101,11 @@ class VerifyPinCodeViewModel(
 
         val currentState = viewState.value
 
-        if (currentState.isVerifying || currentState.isLocked || currentState.isLoggingOut) {
+        if (currentState.isInitializing ||
+            currentState.isVerifying ||
+            currentState.isLocked ||
+            currentState.isLoggingOut
+        ) {
             return
         }
 
@@ -75,6 +113,11 @@ class VerifyPinCodeViewModel(
             is VerifyPinCodeEvent.OnDigitClick -> handleDigitClick(event.digit)
             is VerifyPinCodeEvent.OnDeleteClick -> handleDeleteClick()
         }
+    }
+
+    private fun handleTamperDetected() {
+        Logger.warn(TAG) { "PIN guard reported tampering; wiping local data" }
+        handleLogout()
     }
 
     private fun handleLogout() {
@@ -150,12 +193,15 @@ class VerifyPinCodeViewModel(
 
         verificationJob = viewModelScope.launch {
             try {
-                delay(300.milliseconds)
-
-                val isValid = pinCodeStorage.verifyPinCode(pin)
+                val isValid = coroutineScope {
+                    launch(CoroutineName("IndicatorAnimation")) { delay(300.milliseconds) }
+                    val verification = async(CoroutineName("KeyVerification")) { pinCodeStorage.verifyPinCode(pin) }
+                    verification.await()
+                }
                 ensureActive()
 
                 if (isValid) {
+                    pinAttemptsGuard.onSuccess()
                     newsChannel.send(VerifyPinCodeNews.PinVerified)
                 } else {
                     handleInvalidPin()
@@ -177,34 +223,29 @@ class VerifyPinCodeViewModel(
         }
     }
 
-    private fun handleInvalidPin() {
-        val currentState = viewState.value
-        val newAttempts = currentState.remainingAttempts - 1
-
-        if (newAttempts <= 0) {
-            viewState.update {
-                it.copy(
-                    errorMessage = "Too many failed attempts",
-                    remainingAttempts = 0,
-                    isVerifying = false,
-                    isLocked = true,
-                    lockCountdown = LOCK_TIMEOUT_SECONDS,
-                    failedAttemptId = it.failedAttemptId + 1,
-                )
+    private suspend fun handleInvalidPin() {
+        when (val result = pinAttemptsGuard.onFailedAttempt()) {
+            is PinLockState.Tampered -> {
+                handleTamperDetected()
             }
-            startLockCountdown()
-        } else {
-            viewState.update {
-                it.copy(
-                    errorMessage = "Incorrect PIN code",
-                    remainingAttempts = newAttempts,
-                    isVerifying = false,
-                    failedAttemptId = it.failedAttemptId + 1,
-                )
+            is PinLockState.Active -> {
+                val locked = result.lockRemaining > Duration.ZERO
+                viewState.update {
+                    it.copy(
+                        errorMessage = if (locked) "Too many failed attempts" else "Incorrect PIN code",
+                        remainingAttempts = result.remainingInWindow,
+                        isVerifying = false,
+                        isLocked = locked,
+                        lockCountdown = if (locked) result.lockRemaining.inWholeSeconds.toInt() else it.lockCountdown,
+                        failedAttemptId = it.failedAttemptId + 1,
+                    )
+                }
+                if (locked) {
+                    startLockCountdown()
+                }
+                scheduleErrorClear()
             }
         }
-
-        scheduleErrorClear()
     }
 
     private fun scheduleErrorClear() {
@@ -220,18 +261,34 @@ class VerifyPinCodeViewModel(
             Logger.debug(TAG) { "Previous countdownJob has been cancelled" }
         }
         countdownJob = viewModelScope.launch {
-            while (viewState.value.lockCountdown > 0) {
-                delay(1.seconds)
-                viewState.update {
-                    it.copy(lockCountdown = it.lockCountdown - 1)
+            var active = true
+            while (active) {
+                while (viewState.value.lockCountdown > 0) {
+                    delay(1.seconds)
+                    viewState.update { it.copy(lockCountdown = it.lockCountdown - 1) }
                 }
-            }
-            viewState.update {
-                it.copy(
-                    isLocked = false,
-                    remainingAttempts = MAX_ATTEMPTS,
-                    errorMessage = null,
-                )
+                when (val status = pinAttemptsGuard.status()) {
+                    is PinLockState.Tampered -> {
+                        handleTamperDetected()
+                        active = false
+                    }
+                    is PinLockState.Active -> {
+                        if (status.lockRemaining > Duration.ZERO) {
+                            viewState.update {
+                                it.copy(lockCountdown = status.lockRemaining.inWholeSeconds.toInt())
+                            }
+                        } else {
+                            viewState.update {
+                                it.copy(
+                                    isLocked = false,
+                                    remainingAttempts = status.remainingInWindow,
+                                    errorMessage = null,
+                                )
+                            }
+                            active = false
+                        }
+                    }
+                }
             }
         }.also { job ->
             job.invokeOnCompletion {
@@ -264,6 +321,7 @@ data class VerifyPinCodeViewState(
     val isLocked: Boolean = false,
     val lockCountdown: Int = 0,
     val failedAttemptId: Int = 0,
+    val isInitializing: Boolean = true,
 )
 
 /**

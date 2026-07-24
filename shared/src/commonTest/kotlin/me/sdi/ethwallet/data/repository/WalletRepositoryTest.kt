@@ -5,7 +5,7 @@ import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthCreationResult
 import me.sdi.ethwallet.database.entity.WalletEntity
-import me.sdi.ethwallet.fakes.FakeEthWalletCreator
+import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
 import java.math.BigInteger
@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class WalletRepositoryTest {
     private lateinit var walletDao: FakeWalletDao
-    private lateinit var walletCreator: FakeEthWalletCreator
+    private lateinit var ethManager: FakeEthManager
     private lateinit var privateKeyEncryptor: FakePrivateKeyEncryptor
     private lateinit var walletRepository: WalletRepository
 
@@ -52,15 +52,15 @@ class WalletRepositoryTest {
     @BeforeTest
     fun setUp() {
         walletDao = FakeWalletDao()
-        walletCreator = FakeEthWalletCreator()
+        ethManager = FakeEthManager()
         privateKeyEncryptor = FakePrivateKeyEncryptor()
 
-        walletCreator.creationResult = EthCreationResult(
+        ethManager.creationResult = EthCreationResult(
             address = EthAddress(testAddress),
             privateKey = testPrivateKey,
             seedPhrase = testSeedPhrase,
         )
-        walletCreator.importResult = EthCreationResult(
+        ethManager.importResult = EthCreationResult(
             address = EthAddress(testImportAddress),
             privateKey = testImportPrivateKey,
             seedPhrase = testSeedPhrase,
@@ -68,57 +68,73 @@ class WalletRepositoryTest {
 
         walletRepository = WalletRepository(
             walletDao = walletDao,
-            walletCreator = walletCreator,
+            ethManager = ethManager,
             privateKeyEncryptor = privateKeyEncryptor,
         )
     }
 
     @Test
-    fun createWallet_should_generate_wallet_encrypt_private_key_save_to_database_and_return_seed_phrase() = runTest {
+    fun createWallet_should_generate_wallet_and_return_seed_phrase_without_persisting() = runTest {
         val result = walletRepository.createWallet(testLabel)
 
-        assertEquals(testSeedPhrase, result, "Seed phrase should match the one from wallet creator")
-        assertEquals(1, walletDao.wallets.size)
+        assertEquals(testSeedPhrase, result, "Seed phrase should match the one from EthManager")
+        assertTrue(walletDao.wallets.isEmpty(), "createWallet should not insert into the database")
+    }
+
+    @Test
+    fun createWallet_should_propagate_exceptions_from_EthManager() = runTest {
+        ethManager.shouldThrowException = true
+
+        assertFailsWith<Exception> {
+            walletRepository.createWallet("My wallet")
+        }
+    }
+
+    @Test
+    fun importWallet_should_derive_wallet_without_persisting() = runTest {
+        walletRepository.importWallet(testMnemonic, testLabel)
+
+        assertEquals(testMnemonic, ethManager.lastImportedMnemonic, "Mnemonic should be forwarded to EthManager")
+        assertTrue(walletDao.wallets.isEmpty(), "importWallet should not insert into the database")
+    }
+
+    @Test
+    fun importWallet_should_propagate_exceptions_from_EthManager() = runTest {
+        ethManager.shouldThrowException = true
+
+        assertFailsWith<Exception> {
+            walletRepository.importWallet(testMnemonic, testLabel)
+        }
+    }
+
+    @Test
+    fun persistPendingWallet_should_throw_when_nothing_is_pending() = runTest {
+        assertFailsWith<IllegalStateException> {
+            walletRepository.persistPendingWallet()
+        }
+    }
+
+    @Test
+    fun persistPendingWallet_should_encrypt_and_insert_the_pending_created_wallet_as_active() = runTest {
+        walletRepository.createWallet(testLabel)
+
+        walletRepository.persistPendingWallet()
+
+        assertEquals(1, walletDao.wallets.size, "Pending wallet should be inserted")
         val capturedEntity = walletDao.wallets.first()
         assertEquals(testAddress, capturedEntity.address, "Address should match")
         assertEquals(testEncryptedKey, capturedEntity.encryptedPrivateKeyBase64, "Encrypted key should match")
         assertEquals(testLabel, capturedEntity.label, "Label should match")
-        assertEquals(true, capturedEntity.isActive, "isActive should be true by default")
+        assertEquals(true, capturedEntity.isActive, "Persisted wallet should be active")
     }
 
     @Test
-    fun createWallet_should_propagate_exceptions_from_wallet_creator() = runTest {
-        walletCreator.shouldThrowException = true
-
-        assertFailsWith<Exception> {
-            walletRepository.createWallet("My wallet")
-        }
-    }
-
-    @Test
-    fun createWallet_should_propagate_exceptions_from_encryptor() = runTest {
-        privateKeyEncryptor.shouldThrowException = true
-
-        assertFailsWith<Exception> {
-            walletRepository.createWallet("My wallet")
-        }
-    }
-
-    @Test
-    fun createWallet_should_propagate_exceptions_from_database() = runTest {
-        walletDao.shouldThrowException = true
-
-        assertFailsWith<Exception> {
-            walletRepository.createWallet("My wallet")
-        }
-    }
-
-    @Test
-    fun importWallet_should_derive_encrypt_and_store_the_wallet_as_active() = runTest {
+    fun persistPendingWallet_should_encrypt_and_insert_the_pending_imported_wallet_as_active() = runTest {
         walletRepository.importWallet(testMnemonic, testLabel)
 
-        assertEquals(testMnemonic, walletCreator.lastImportedMnemonic, "Mnemonic should be forwarded to the creator")
-        assertEquals(1, walletDao.wallets.size)
+        walletRepository.persistPendingWallet()
+
+        assertEquals(1, walletDao.wallets.size, "Pending wallet should be inserted")
         val capturedEntity = walletDao.wallets.first()
         assertEquals(testImportAddress, capturedEntity.address, "Address should match the imported wallet")
         assertEquals(testImportEncryptedKey, capturedEntity.encryptedPrivateKeyBase64, "Encrypted key should match")
@@ -127,7 +143,7 @@ class WalletRepositoryTest {
     }
 
     @Test
-    fun importWallet_should_clear_previously_active_wallets() = runTest {
+    fun persistPendingWallet_should_clear_previously_active_wallets() = runTest {
         val previousAddress = "0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF"
         walletDao.wallets = listOf(
             WalletEntity(
@@ -137,8 +153,9 @@ class WalletRepositoryTest {
                 isActive = true,
             ),
         )
-
         walletRepository.importWallet(testMnemonic, testLabel)
+
+        walletRepository.persistPendingWallet()
 
         assertEquals(
             false,
@@ -153,29 +170,54 @@ class WalletRepositoryTest {
     }
 
     @Test
-    fun importWallet_should_propagate_exceptions_from_wallet_creator() = runTest {
-        walletCreator.shouldThrowException = true
+    fun persistPendingWallet_should_clear_the_pending_state_after_persisting() = runTest {
+        walletRepository.createWallet(testLabel)
+        walletRepository.persistPendingWallet()
 
-        assertFailsWith<Exception> {
-            walletRepository.importWallet(testMnemonic, testLabel)
+        assertFailsWith<IllegalStateException>("Nothing should be pending after a successful persist") {
+            walletRepository.persistPendingWallet()
         }
     }
 
     @Test
-    fun importWallet_should_propagate_exceptions_from_encryptor() = runTest {
+    fun a_second_createWallet_should_replace_the_pending_wallet() = runTest {
+        walletRepository.createWallet(testLabel)
+        ethManager.creationResult = EthCreationResult(
+            address = EthAddress(testImportAddress),
+            privateKey = testImportPrivateKey,
+            seedPhrase = testSeedPhrase,
+        )
+
+        walletRepository.createWallet("Second Wallet")
+        walletRepository.persistPendingWallet()
+
+        assertEquals(1, walletDao.wallets.size, "Only the latest pending wallet should be persisted")
+        val capturedEntity = walletDao.wallets.first()
+        assertEquals(
+            testImportAddress,
+            capturedEntity.address,
+            "Second createWallet should replace the first pending wallet",
+        )
+        assertEquals("Second Wallet", capturedEntity.label, "Label should match the second createWallet call")
+    }
+
+    @Test
+    fun persistPendingWallet_should_propagate_exceptions_from_encryptor() = runTest {
+        walletRepository.createWallet(testLabel)
         privateKeyEncryptor.shouldThrowException = true
 
         assertFailsWith<Exception> {
-            walletRepository.importWallet(testMnemonic, testLabel)
+            walletRepository.persistPendingWallet()
         }
     }
 
     @Test
-    fun importWallet_should_propagate_exceptions_from_database() = runTest {
+    fun persistPendingWallet_should_propagate_exceptions_from_database() = runTest {
+        walletRepository.createWallet(testLabel)
         walletDao.shouldThrowException = true
 
         assertFailsWith<Exception> {
-            walletRepository.importWallet(testMnemonic, testLabel)
+            walletRepository.persistPendingWallet()
         }
     }
 

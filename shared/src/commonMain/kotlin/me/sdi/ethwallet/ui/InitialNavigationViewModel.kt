@@ -8,7 +8,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.database.dao.WalletDao
 
@@ -36,6 +38,7 @@ data class InitialNavigationState(
 class InitialNavigationViewModel(
     private val walletDao: WalletDao,
     private val pinCodeStorage: PinCodeStorage,
+    private val dataCleaner: DataCleaner,
 ) : ViewModel() {
     val state: StateFlow<InitialNavigationState>
         field = MutableStateFlow(InitialNavigationState())
@@ -50,14 +53,12 @@ class InitialNavigationViewModel(
                 val wallets = walletDao.getAllWallets()
 
                 val initialRoute = if (wallets.isEmpty()) {
-                    // No wallets - clear any stale PIN and show onboarding
-                    pinCodeStorage.clearPinCode()
+                    cleanQuietly()
                     InitialRoute.OnBoarding
                 } else if (pinCodeStorage.hasPinCode()) {
-                    // Wallets exist and PIN is set - show unlock screen
                     InitialRoute.VerifyPinCode
                 } else {
-                    // Wallets exist but no PIN - invalid state, clear and restart
+                    cleanQuietly()
                     InitialRoute.OnBoarding
                 }
 
@@ -70,13 +71,7 @@ class InitialNavigationViewModel(
                 ensureActive()
                 Logger.warn("Db", e) { "Failed to check auth state" }
 
-                try {
-                    pinCodeStorage.clearPinCode()
-                } catch (e: Exception) {
-                    ensureActive()
-
-                    Logger.warn("Db", e) { "Failed to clear pin code after auth state check failure" }
-                }
+                cleanQuietly()
 
                 state.value = InitialNavigationState(
                     numberOfWallets = 0,
@@ -92,6 +87,16 @@ class InitialNavigationViewModel(
                     Logger.warn(TAG, it) { "initializationJob completed with exception" }
                 }
             }
+        }
+    }
+
+    private suspend fun cleanQuietly() {
+        try {
+            dataCleaner.clean()
+        } catch (e: Exception) {
+            yield()
+
+            Logger.warn("Db", e) { "Failed to clean local data" }
         }
     }
 }

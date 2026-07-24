@@ -12,13 +12,16 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.EthCreationResult
-import me.sdi.ethwallet.core.EthWalletCreator
+import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.DataCleanerRoomDb
+import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.security.PinLockState
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
+import me.sdi.ethwallet.core.transfer.FeeSuggestion
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.di.appModules
@@ -48,6 +51,7 @@ import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Build.VERSION_CODES.P])
@@ -86,8 +90,60 @@ class WalletFlowTest : KoinTest {
     }
 
     private val mockModule = module {
-        single<EthWalletCreator> {
-            object : EthWalletCreator {
+        single<PinAttemptsGuard> {
+            object : PinAttemptsGuard {
+                private var pinLockState = PinLockState.Active(
+                    totalFailures = 0,
+                    remainingInWindow = 0,
+                    lockRemaining = Duration.ZERO,
+                )
+
+                override suspend fun bootstrap() = Unit
+
+                override suspend fun status() = pinLockState
+
+                override suspend fun onFailedAttempt(): PinLockState {
+                    pinLockState = PinLockState.Active(
+                        totalFailures = 1,
+                        remainingInWindow = 0,
+                        lockRemaining = Duration.ZERO,
+                    )
+                    return pinLockState
+                }
+
+                override suspend fun onSuccess() {
+                    pinLockState = PinLockState.Active(
+                        totalFailures = 0,
+                        remainingInWindow = 0,
+                        lockRemaining = Duration.ZERO,
+                    )
+                }
+
+                override suspend fun clear() {
+                    pinLockState = PinLockState.Active(
+                        totalFailures = 0,
+                        remainingInWindow = 0,
+                        lockRemaining = Duration.ZERO,
+                    )
+                }
+            }
+        }
+        single<EthManager> {
+            object : EthManager {
+                override suspend fun getBalance(wallet: EthWallet): Map<EthAddress, Result<BigInteger>> = emptyMap()
+
+                override suspend fun fetchFeeSuggestion(): FeeSuggestion = throw NotImplementedError()
+
+                override suspend fun sendTransfer(
+                    privateKey: BigInteger,
+                    contractAddress: EthAddress,
+                    destinationAddress: EthAddress,
+                    amount: BigInteger,
+                    gasUnits: BigInteger,
+                    maxPriorityFeePerGas: BigInteger,
+                    maxFeePerGas: BigInteger,
+                ): String = throw NotImplementedError()
+
                 override fun createWallet(): EthCreationResult {
                     return EthCreationResult(
                         address = EthAddress("0x71C7656EC7ab88b098defB751B7401B5f6d8976F"),

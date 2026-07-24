@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.data.repository.WalletRepository
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -50,6 +51,7 @@ interface UserActivityManager {
 class ProcessLifetimeUserActivityManager(
     private val walletRepository: WalletRepository,
     private val applicationScope: CoroutineScope,
+    private val pinSession: PinSession,
     private val inactivityTimeout: Duration = 10.minutes,
 ) : UserActivityManager {
     private var timerJob: Job? = null
@@ -59,7 +61,6 @@ class ProcessLifetimeUserActivityManager(
 
     override fun onAnyUserAction() {
         if (showLockScreen.value) {
-            // If the lock screen is already showing, do nothing
             return
         }
 
@@ -92,6 +93,7 @@ class ProcessLifetimeUserActivityManager(
             }
 
             if (hasWallets) {
+                pinSession.clear()
                 showLockScreen.update { true }
             } else {
                 Logger.debug("") {

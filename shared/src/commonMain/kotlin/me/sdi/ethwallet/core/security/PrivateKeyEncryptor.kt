@@ -6,7 +6,7 @@ import java.math.BigInteger
  * Interface for safely encrypting/decrypting private keys.
  */
 interface PrivateKeyEncryptor {
-    fun encryptPrivateKey(privateKey: BigInteger, address: String): String
+    suspend fun encryptPrivateKey(privateKey: BigInteger, address: String): String
 
-    fun decryptPrivateKey(encryptedBase64: String, address: String): BigInteger
+    suspend fun decryptPrivateKey(encryptedBase64: String, address: String): BigInteger
 }

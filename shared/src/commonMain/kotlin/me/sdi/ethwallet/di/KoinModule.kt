@@ -10,12 +10,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
 import me.sdi.ethwallet.core.BalanceProvider
-import me.sdi.ethwallet.core.Bip44EthWalletCreator
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthBalanceProvider
-import me.sdi.ethwallet.core.EthWalletCreator
 import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.core.FiatRateProviderBinance
+import me.sdi.ethwallet.core.security.InMemoryPinSession
+import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.data.repository.WalletRepository
@@ -38,20 +38,21 @@ expect fun platformModule(chainConfig: ChainConfig): Module
 val commonModule = module {
     single<CoroutineScope> { CoroutineScope(SupervisorJob()) }
 
-    single<EthWalletCreator> { Bip44EthWalletCreator() }
-
     single<WalletRepository> {
         WalletRepository(
             walletDao = get(),
-            walletCreator = get(),
+            ethManager = get(),
             privateKeyEncryptor = get(),
         )
     }
+
+    single<PinSession> { InMemoryPinSession() }
 
     single<UserActivityManager> {
         ProcessLifetimeUserActivityManager(
             walletRepository = get(),
             applicationScope = get(),
+            pinSession = get(),
         )
     }
 
@@ -62,12 +63,14 @@ val commonModule = module {
         InitialNavigationViewModel(
             walletDao = get(),
             pinCodeStorage = get(),
+            dataCleaner = get(),
         )
     }
 
     viewModel<SetPinCodeViewModel> {
         SetPinCodeViewModel(
             pinCodeStorage = get(),
+            walletRepository = get(),
         )
     }
 
@@ -75,6 +78,7 @@ val commonModule = module {
         VerifyPinCodeViewModel(
             pinCodeStorage = get(),
             dataCleaner = get(),
+            pinAttemptsGuard = get(),
         )
     }
 

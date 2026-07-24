@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.data.repository.WalletRepository
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -34,7 +35,7 @@ sealed interface SetPinCodeNews {
     /**
      * Pin code has been successfully set
      */
-    data class PinCodeSet(val pinCode: String) : SetPinCodeNews
+    data object PinCodeSet : SetPinCodeNews
 
     /**
      * Error has occurred
@@ -72,9 +73,11 @@ sealed interface SetPinCodeEvent {
  * Handles PIN code setting and validation using Unidirectional Data Flow pattern.
  *
  * @param pinCodeStorage The storage implementation for saving and verifying PIN codes
+ * @param walletRepository Persists the pending wallet once the PIN has been stored
  */
 class SetPinCodeViewModel(
     private val pinCodeStorage: PinCodeStorage,
+    private val walletRepository: WalletRepository,
 ) : ViewModel() {
     val viewState: StateFlow<SetPinCodeViewState>
         field = MutableStateFlow(SetPinCodeViewState())
@@ -126,7 +129,7 @@ class SetPinCodeViewModel(
                 viewState.update { it.copy(secondPin = updatedPin) }
                 if (updatedPin.length == PIN_MAX_LENGTH) {
                     viewModelScope.launch {
-                        delay(300.milliseconds) // 300ms delay for animation
+                        delay(300.milliseconds)
                         validatePins()
                     }.also { job ->
                         job.invokeOnCompletion {
@@ -146,7 +149,7 @@ class SetPinCodeViewModel(
                 viewState.update { it.copy(firstPin = updatedPin) }
                 if (updatedPin.length == PIN_MAX_LENGTH) {
                     viewModelScope.launch {
-                        delay(300.milliseconds) // 300ms delay for animation
+                        delay(300.milliseconds)
                         viewState.update {
                             it.copy(isConfirmationMode = true)
                         }
@@ -212,9 +215,11 @@ class SetPinCodeViewModel(
                         Logger.debug(TAG) { "PIN code stored successfully" }
                     }
 
+                    walletRepository.persistPendingWallet()
+
                     viewState.update { it.copy(isSaving = false) }
 
-                    news.emit(SetPinCodeNews.PinCodeSet(firstPin))
+                    news.emit(SetPinCodeNews.PinCodeSet)
                 } catch (e: Exception) {
                     ensureActive()
 

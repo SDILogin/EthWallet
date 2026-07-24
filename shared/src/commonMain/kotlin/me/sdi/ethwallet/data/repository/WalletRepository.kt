@@ -3,10 +3,11 @@ package me.sdi.ethwallet.data.repository
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthCreationResult
-import me.sdi.ethwallet.core.EthWalletCreator
+import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.database.entity.WalletEntity
+import java.math.BigInteger
 
 private const val TAG = "WalletRepository"
 
@@ -15,11 +16,14 @@ private const val TAG = "WalletRepository"
  */
 class WalletRepository(
     private val walletDao: WalletDao,
-    private val walletCreator: EthWalletCreator,
+    private val ethManager: EthManager,
     private val privateKeyEncryptor: PrivateKeyEncryptor,
 ) {
+    private var pendingWallet: PendingWallet? = null
+
     /**
-     * Creates a new wallet, encrypts the private key, and saves it to the database.
+     * Creates a new wallet and holds its private key in memory until the PIN is set.
+     * Nothing is encrypted or persisted here; call [persistPendingWallet] once the PIN exists.
      *
      * @param label Optional friendly name for the wallet
      * @return The mnemonic phrase (seed phrase) for the created wallet
@@ -27,36 +31,20 @@ class WalletRepository(
     suspend fun createWallet(label: String): List<String> {
         Logger.debug(TAG) { "Creating new wallet" }
 
-        val creationResult: EthCreationResult = walletCreator.createWallet()
-        val ethAddress: String = creationResult.address.toString()
-        val encryptedKeyBase64 =
-            privateKeyEncryptor.encryptPrivateKey(
-                privateKey = creationResult.privateKey,
-                address = ethAddress,
-            )
-
-        Logger.debug(TAG) { "Saving wallet with address $ethAddress and label $label" }
-
-        walletDao.clearActiveWallets()
-
-        val walletEntity =
-            WalletEntity(
-                address = ethAddress,
-                encryptedPrivateKeyBase64 = encryptedKeyBase64,
-                label = label,
-                isActive = true,
-            )
-
-        walletDao.insertWallet(walletEntity)
-
-        Logger.debug(TAG) { "Wallet created and saved with address: $ethAddress" }
+        val creationResult: EthCreationResult = ethManager.createWallet()
+        pendingWallet = PendingWallet(
+            address = creationResult.address.toString(),
+            privateKey = creationResult.privateKey,
+            label = label,
+        )
 
         return creationResult.seedPhrase
     }
 
     /**
-     * Restores a wallet from an existing mnemonic, encrypts the private key, and saves it
-     * to the database as the active wallet.
+     * Restores a wallet from an existing mnemonic and holds its private key in memory until the
+     * PIN is set. Nothing is encrypted or persisted here; call [persistPendingWallet] once the
+     * PIN exists.
      *
      * @param mnemonic The recovery phrase to import
      * @param label Optional friendly name for the wallet
@@ -65,29 +53,44 @@ class WalletRepository(
     suspend fun importWallet(mnemonic: String, label: String) {
         Logger.debug(TAG) { "Importing wallet" }
 
-        val creationResult: EthCreationResult = walletCreator.importWallet(mnemonic)
-        val ethAddress: String = creationResult.address.toString()
-        val encryptedKeyBase64 =
-            privateKeyEncryptor.encryptPrivateKey(
-                privateKey = creationResult.privateKey,
-                address = ethAddress,
-            )
+        val creationResult: EthCreationResult = ethManager.importWallet(mnemonic)
+        pendingWallet = PendingWallet(
+            address = creationResult.address.toString(),
+            privateKey = creationResult.privateKey,
+            label = label,
+        )
+    }
 
-        Logger.debug(TAG) { "Saving imported wallet with address $ethAddress and label $label" }
+    /**
+     * Encrypts the pending wallet's private key and persists it as the active wallet, then clears
+     * the pending state.
+     *
+     * @throws IllegalStateException if no wallet is pending
+     */
+    suspend fun persistPendingWallet() {
+        val pending = checkNotNull(pendingWallet) { "No pending wallet to persist" }
+
+        Logger.debug(TAG) { "Persisting pending wallet with address ${pending.address}" }
+
+        val encryptedKeyBase64 = privateKeyEncryptor.encryptPrivateKey(
+            privateKey = pending.privateKey,
+            address = pending.address,
+        )
 
         walletDao.clearActiveWallets()
 
-        val walletEntity =
+        walletDao.insertWallet(
             WalletEntity(
-                address = ethAddress,
+                address = pending.address,
                 encryptedPrivateKeyBase64 = encryptedKeyBase64,
-                label = label,
+                label = pending.label,
                 isActive = true,
-            )
+            ),
+        )
 
-        walletDao.insertWallet(walletEntity)
+        pendingWallet = null
 
-        Logger.debug(TAG) { "Wallet imported and saved with address: $ethAddress" }
+        Logger.debug(TAG) { "Pending wallet persisted with address: ${pending.address}" }
     }
 
     /**
@@ -158,4 +161,10 @@ class WalletRepository(
 
         return wallet.encryptedPrivateKeyBase64
     }
+
+    private data class PendingWallet(
+        val address: String,
+        val privateKey: BigInteger,
+        val label: String,
+    )
 }

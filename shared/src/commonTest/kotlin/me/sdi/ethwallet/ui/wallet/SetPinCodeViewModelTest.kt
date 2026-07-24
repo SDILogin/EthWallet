@@ -10,7 +10,11 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
+import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
+import me.sdi.ethwallet.fakes.FakeWalletDao
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -25,12 +29,18 @@ class SetPinCodeViewModelTest {
 
     private lateinit var viewModel: SetPinCodeViewModel
     private lateinit var pinCodeStorage: FakePinCodeStorage
+    private lateinit var walletRepository: WalletRepository
 
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         pinCodeStorage = FakePinCodeStorage()
-        viewModel = SetPinCodeViewModel(pinCodeStorage)
+        walletRepository = WalletRepository(
+            walletDao = FakeWalletDao(),
+            ethManager = FakeEthManager(),
+            privateKeyEncryptor = FakePrivateKeyEncryptor(),
+        )
+        viewModel = SetPinCodeViewModel(pinCodeStorage, walletRepository)
     }
 
     @AfterTest
@@ -135,6 +145,8 @@ class SetPinCodeViewModelTest {
 
     @Test
     fun should_emit_PinCodeSet_news_when_PINs_match() = runTest(testDispatcher) {
+        walletRepository.createWallet("Test Wallet")
+
         val collector = mutableListOf<SetPinCodeNews>()
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.news.collect {
@@ -154,9 +166,9 @@ class SetPinCodeViewModelTest {
         job.cancel()
 
         assertEquals(
-            SetPinCodeNews.PinCodeSet("111111"),
+            SetPinCodeNews.PinCodeSet,
             collector.single(),
-            "Should emit PinCodeSet news with correct PIN",
+            "Should emit PinCodeSet news",
         )
     }
 

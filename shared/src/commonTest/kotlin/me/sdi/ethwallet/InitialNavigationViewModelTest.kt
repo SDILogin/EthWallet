@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.database.entity.WalletEntity
+import me.sdi.ethwallet.fakes.FakeDataCleaner
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
 import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.ui.InitialNavigationViewModel
@@ -24,6 +25,7 @@ class InitialNavigationViewModelTest {
 
     private lateinit var walletDao: FakeWalletDao
     private lateinit var pinCodeStorage: FakePinCodeStorage
+    private lateinit var dataCleaner: FakeDataCleaner
     private lateinit var viewModel: InitialNavigationViewModel
 
     @BeforeTest
@@ -31,6 +33,7 @@ class InitialNavigationViewModelTest {
         Dispatchers.setMain(testDispatcher)
         walletDao = FakeWalletDao()
         pinCodeStorage = FakePinCodeStorage()
+        dataCleaner = FakeDataCleaner()
     }
 
     @AfterTest
@@ -39,11 +42,11 @@ class InitialNavigationViewModelTest {
     }
 
     @Test
-    fun should_clear_pin_and_show_onboarding_when_no_wallets() =
+    fun should_clean_data_and_show_onboarding_when_no_wallets() =
         runTest(testDispatcher) {
             walletDao.wallets = emptyList()
 
-            viewModel = InitialNavigationViewModel(walletDao, pinCodeStorage)
+            viewModel = InitialNavigationViewModel(walletDao, pinCodeStorage, dataCleaner)
             advanceUntilIdle()
 
             val state = viewModel.state.first()
@@ -51,7 +54,7 @@ class InitialNavigationViewModelTest {
             assertEquals(false, state.isPinCodeSet)
             assertEquals(InitialRoute.OnBoarding, state.initialRoute)
 
-            assertEquals(1, pinCodeStorage.clearPinCalledCount)
+            assertEquals(1, dataCleaner.cleanCalledCount, "No wallets should trigger a data cleanup")
         }
 
     @Test
@@ -74,17 +77,18 @@ class InitialNavigationViewModelTest {
             walletDao.wallets = wallets
             pinCodeStorage.storedPin = "123456"
 
-            viewModel = InitialNavigationViewModel(walletDao, pinCodeStorage)
+            viewModel = InitialNavigationViewModel(walletDao, pinCodeStorage, dataCleaner)
             advanceUntilIdle()
 
             val state = viewModel.state.first()
             assertEquals(2, state.numberOfWallets)
             assertEquals(true, state.isPinCodeSet)
             assertEquals(InitialRoute.VerifyPinCode, state.initialRoute)
+            assertEquals(0, dataCleaner.cleanCalledCount, "Wallets with a PIN set should not trigger a data cleanup")
         }
 
     @Test
-    fun should_show_onboarding_when_wallets_exist_but_no_pin_invalid_state() =
+    fun should_clean_data_and_show_onboarding_when_wallets_exist_but_no_pin_invalid_state() =
         runTest(testDispatcher) {
             val wallets =
                 listOf(
@@ -98,21 +102,22 @@ class InitialNavigationViewModelTest {
             walletDao.wallets = wallets
             pinCodeStorage.storedPin = null
 
-            viewModel = InitialNavigationViewModel(walletDao, pinCodeStorage)
+            viewModel = InitialNavigationViewModel(walletDao, pinCodeStorage, dataCleaner)
             advanceUntilIdle()
 
             val state = viewModel.state.first()
             assertEquals(1, state.numberOfWallets)
             assertEquals(false, state.isPinCodeSet)
             assertEquals(InitialRoute.OnBoarding, state.initialRoute)
+            assertEquals(1, dataCleaner.cleanCalledCount, "Wallets without a PIN should trigger a data cleanup")
         }
 
     @Test
-    fun should_handle_exceptions_clear_pin_and_set_onboarding_route() =
+    fun should_handle_exceptions_clean_data_and_set_onboarding_route() =
         runTest(testDispatcher) {
             walletDao.shouldThrowException = true
 
-            viewModel = InitialNavigationViewModel(walletDao, pinCodeStorage)
+            viewModel = InitialNavigationViewModel(walletDao, pinCodeStorage, dataCleaner)
             advanceUntilIdle()
 
             val state = viewModel.state.first()
@@ -120,6 +125,25 @@ class InitialNavigationViewModelTest {
             assertEquals(false, state.isPinCodeSet)
             assertEquals(InitialRoute.OnBoarding, state.initialRoute)
 
-            assertEquals(1, pinCodeStorage.clearPinCalledCount)
+            assertEquals(1, dataCleaner.cleanCalledCount, "A wallet lookup failure should trigger a data cleanup")
+        }
+
+    @Test
+    fun should_show_onboarding_when_wallet_lookup_and_cleanup_both_fail() =
+        runTest(testDispatcher) {
+            walletDao.shouldThrowException = true
+            dataCleaner.shouldThrowException = true
+
+            viewModel = InitialNavigationViewModel(walletDao, pinCodeStorage, dataCleaner)
+            advanceUntilIdle()
+
+            val state = viewModel.state.first()
+            assertEquals(0, state.numberOfWallets)
+            assertEquals(false, state.isPinCodeSet)
+            assertEquals(
+                InitialRoute.OnBoarding,
+                state.initialRoute,
+                "Onboarding should still be reached when cleanup itself fails",
+            )
         }
 }

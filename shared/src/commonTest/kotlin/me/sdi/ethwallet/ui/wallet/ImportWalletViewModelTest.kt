@@ -11,7 +11,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.fakes.FakeEthWalletCreator
+import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
 import kotlin.test.AfterTest
@@ -26,7 +26,7 @@ class ImportWalletViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var walletDao: FakeWalletDao
-    private lateinit var walletCreator: FakeEthWalletCreator
+    private lateinit var ethManager: FakeEthManager
     private lateinit var privateKeyEncryptor: FakePrivateKeyEncryptor
     private lateinit var walletRepository: WalletRepository
     private lateinit var viewModel: ImportWalletViewModel
@@ -39,12 +39,12 @@ class ImportWalletViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         walletDao = FakeWalletDao()
-        walletCreator = FakeEthWalletCreator()
+        ethManager = FakeEthManager()
         privateKeyEncryptor = FakePrivateKeyEncryptor()
 
         walletRepository = WalletRepository(
             walletDao = walletDao,
-            walletCreator = walletCreator,
+            ethManager = ethManager,
             privateKeyEncryptor = privateKeyEncryptor,
         )
         viewModel = ImportWalletViewModel(walletRepository = walletRepository)
@@ -82,15 +82,14 @@ class ImportWalletViewModelTest {
         advanceUntilIdle()
         job.cancel()
 
-        assertEquals(1, walletDao.wallets.size, "Imported wallet should be stored")
-        assertEquals("My Wallet", walletDao.wallets.first().label, "Wallet label should be 'My Wallet'")
+        assertTrue(walletDao.wallets.isEmpty(), "importWallet should not persist to the DAO yet")
         assertTrue(news.contains(ImportWalletNews.WalletImported), "WalletImported news should be emitted")
         assertFalse(viewModel.viewState.value.isError, "State should not be an error on success")
     }
 
     @Test
     fun import_failure_should_set_error_state_and_not_emit_news() = runTest(testDispatcher) {
-        walletCreator.exceptionToThrow = IllegalArgumentException("Invalid recovery phrase")
+        ethManager.exceptionToThrow = IllegalArgumentException("Invalid recovery phrase")
         val news = mutableListOf<ImportWalletNews>()
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.news.collect { news.add(it) }
@@ -113,7 +112,7 @@ class ImportWalletViewModelTest {
 
     @Test
     fun import_should_rethrow_CancellationException_without_showing_an_error() = runTest(testDispatcher) {
-        walletCreator.exceptionToThrow = CancellationException("cancelled")
+        ethManager.exceptionToThrow = CancellationException("cancelled")
 
         viewModel.onEvent(ImportWalletEvent.MnemonicChanged(validMnemonic))
         viewModel.onEvent(ImportWalletEvent.ImportClicked)

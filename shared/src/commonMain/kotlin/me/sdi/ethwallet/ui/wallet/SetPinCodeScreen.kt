@@ -50,7 +50,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun SetPinCodeScreen(
-    onPinCodeSet: (String) -> Unit,
+    onPinCodeSet: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SetPinCodeViewModel = koinViewModel(),
 ) {
@@ -60,12 +60,8 @@ fun SetPinCodeScreen(
         viewModel.onEvent(SetPinCodeEvent.Reset)
         viewModel.news.collect { news ->
             when (news) {
-                is SetPinCodeNews.PinCodeSet -> {
-                    onPinCodeSet(news.pinCode)
-                }
-                is SetPinCodeNews.Error -> {
-                    // We're handling errors through the state already
-                }
+                is SetPinCodeNews.PinCodeSet -> onPinCodeSet()
+                is SetPinCodeNews.Error -> Unit
             }
         }
     }
@@ -234,9 +230,7 @@ private fun NumberPad(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            Box(modifier = Modifier.size(72.dp)) {
-                // Empty space for layout balance
-            }
+            Box(modifier = Modifier.size(72.dp)) {}
 
             NumberButton(number = 0, enabled = true, onClick = { onNumberClick(0) })
 
