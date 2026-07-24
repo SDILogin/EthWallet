@@ -23,11 +23,12 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
+import me.sdi.ethwallet.core.transfer.Wei
+import me.sdi.ethwallet.core.transfer.toEth
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.util.formatUsdCurrency
-import org.web3j.utils.Convert
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.math.RoundingMode
@@ -172,7 +173,7 @@ class WalletViewModel(
         val balance = combinedBalance.balance
         val fiatRates = combinedBalance.fiatRates
         val ethBalanceWei = balance[EthContractAddress] ?: BigInteger.ZERO
-        val ethBalanceEth: BigDecimal = Convert.fromWei(ethBalanceWei.toString(), Convert.Unit.ETHER)
+        val ethBalanceEth: BigDecimal = Wei(ethBalanceWei).toEth().value
         viewState.update {
             it.copy(
                 totalBalanceEth = "${ethBalanceEth.toPlainString()} ETH",
@@ -205,7 +206,6 @@ class WalletViewModel(
         fiatRates: Map<EthAddress, BigDecimal>,
     ): List<FavoriteToken> = supportedKnownTokens(chainConfig.chainId).map { tokenInfo ->
         val tokenBalanceInMinimalUnits = erc20Balances[tokenInfo.ethAddress] ?: BigInteger.ZERO
-        // Convert from smallest units to token units using correct decimals
         val tokenAmount = BigDecimal(tokenBalanceInMinimalUnits).divide(
             BigDecimal.TEN.pow(tokenInfo.decimals),
             tokenInfo.decimals,

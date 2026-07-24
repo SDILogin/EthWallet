@@ -17,7 +17,7 @@ import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.database.entity.WalletEntity
-import me.sdi.ethwallet.fakes.FakeEthWalletCreator
+import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.ui.daiOnMainnet
@@ -36,7 +36,7 @@ class WalletViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var walletDao: FakeWalletDao
-    private lateinit var walletCreator: FakeEthWalletCreator
+    private lateinit var ethManager: FakeEthManager
     private lateinit var privateKeyEncryptor: FakePrivateKeyEncryptor
     private lateinit var walletRepository: WalletRepository
     private lateinit var viewModel: WalletViewModel
@@ -68,7 +68,7 @@ class WalletViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         walletDao = FakeWalletDao()
-        walletCreator = FakeEthWalletCreator()
+        ethManager = FakeEthManager()
         privateKeyEncryptor = FakePrivateKeyEncryptor()
 
         walletDao.wallets = listOf(
@@ -81,7 +81,7 @@ class WalletViewModelTest {
         )
         walletRepository = WalletRepository(
             walletDao = walletDao,
-            walletCreator = walletCreator,
+            ethManager = ethManager,
             privateKeyEncryptor = privateKeyEncryptor,
         )
     }

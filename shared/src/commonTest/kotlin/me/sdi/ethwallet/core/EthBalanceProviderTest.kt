@@ -17,6 +17,22 @@ class EthBalanceProviderTest {
 
         override suspend fun getBalance(wallet: EthWallet) = balance.getValue(wallet)
 
+        override suspend fun fetchFeeSuggestion() = throw NotImplementedError()
+
+        override suspend fun sendTransfer(
+            privateKey: BigInteger,
+            contractAddress: EthAddress,
+            destinationAddress: EthAddress,
+            amount: BigInteger,
+            gasUnits: BigInteger,
+            maxPriorityFeePerGas: BigInteger,
+            maxFeePerGas: BigInteger,
+        ) = throw NotImplementedError()
+
+        override fun createWallet() = throw NotImplementedError()
+
+        override fun importWallet(mnemonic: String) = throw NotImplementedError()
+
         fun setBalance(wallet: EthWallet, balances: Map<EthAddress, Result<BigInteger>>) {
             balance[wallet] = balances
         }
@@ -50,9 +66,8 @@ class EthBalanceProviderTest {
 
     @Test
     fun forceUpdate_saves_balances_to_database_and_observe_returns_them() = runTest {
-        // Mock successful balance retrieval
-        val ethBalance = BigInteger("1000000000000000000") // 1 ETH
-        val usdtBalance = BigInteger("100000000") // 100 USDT
+        val ethBalance = BigInteger("1000000000000000000")
+        val usdtBalance = BigInteger("100000000")
         fakeEthManager.setBalance(
             wallet = testWallet,
             balances = mapOf(
@@ -61,10 +76,8 @@ class EthBalanceProviderTest {
             ),
         )
 
-        // Force update should fetch and store balances
         ethBalanceProvider.forceUpdate(testWallet)
 
-        // Observe should return the stored balances
         val result = ethBalanceProvider.observe(testWalletAddress).first()
 
         assertEquals(ethBalance, result[EthContractAddress], "Should return ETH balance")
@@ -78,8 +91,7 @@ class EthBalanceProviderTest {
 
     @Test
     fun forceUpdate_handles_network_failure_by_using_database_fallback() = runTest {
-        // Pre-populate database with some balance
-        val previousBalance = BigInteger("500000000000000000") // 0.5 ETH
+        val previousBalance = BigInteger("500000000000000000")
         inMemoryTokenBalanceDao.insertAll(
             listOf(
                 TokenBalanceEntity(
@@ -91,7 +103,7 @@ class EthBalanceProviderTest {
             ),
         )
 
-        val tokenBalance = BigInteger("50000000") // 50 USDT
+        val tokenBalance = BigInteger("50000000")
         fakeEthManager.setBalance(
             wallet = testWallet,
             balances = mapOf(
@@ -100,10 +112,8 @@ class EthBalanceProviderTest {
             ),
         )
 
-        // Force update should run
         ethBalanceProvider.forceUpdate(testWallet)
 
-        // Observe should fall back
         val result = ethBalanceProvider.observe(testWalletAddress).first()
 
         assertEquals(

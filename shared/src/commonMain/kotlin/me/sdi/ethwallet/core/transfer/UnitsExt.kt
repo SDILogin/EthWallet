@@ -1,20 +1,22 @@
 package me.sdi.ethwallet.core.transfer
 
-import org.web3j.utils.Convert
 import java.math.BigDecimal
 import java.math.BigInteger
 
-fun Gwei.toWei(): Wei = Wei(Convert.toWei(value, Convert.Unit.GWEI).toBigInteger())
+private val WEI_PER_GWEI = BigDecimal.TEN.pow(9)
+private val WEI_PER_ETHER = BigDecimal.TEN.pow(18)
 
-fun Wei.toGwei(): Gwei = Gwei(Convert.fromWei(value.toBigDecimal(), Convert.Unit.GWEI).stripTrailingZeros())
+fun Gwei.toWei(): Wei = Wei(value.multiply(WEI_PER_GWEI).toBigInteger())
+
+fun Wei.toGwei(): Gwei = Gwei(value.toBigDecimal().divide(WEI_PER_GWEI).stripTrailingZeros())
 
 fun BigInteger.toWei(): Wei = Wei(this)
 
 fun BigDecimal.toWei(): Wei = Wei(toBigInteger())
 
-fun Wei.toEth(): Eth = Eth(Convert.fromWei(value.toBigDecimal(), Convert.Unit.ETHER))
+fun Wei.toEth(): Eth = Eth(value.toBigDecimal().divide(WEI_PER_ETHER))
 
-fun Eth.toWei(): Wei = Convert.toWei(value, Convert.Unit.ETHER).toWei()
+fun Eth.toWei(): Wei = Wei(value.multiply(WEI_PER_ETHER).toBigInteger())
 
 fun Eth.toUsd(rate: BigDecimal): Usd = Usd(value.multiply(rate))
 

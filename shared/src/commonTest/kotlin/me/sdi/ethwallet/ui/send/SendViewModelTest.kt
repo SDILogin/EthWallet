@@ -19,11 +19,11 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
 import me.sdi.ethwallet.core.transfer.TransferException
 import me.sdi.ethwallet.core.transfer.Wei
+import me.sdi.ethwallet.core.transfer.toEth
 import me.sdi.ethwallet.fakes.FakeFiatRateProvider
 import me.sdi.ethwallet.fakes.FakeTransferInteractor
 import me.sdi.ethwallet.ui.usdtOnMainnet
 import me.sdi.ethwallet.util.formatUsdCurrency
-import org.web3j.utils.Convert
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.test.AfterTest
@@ -933,7 +933,7 @@ class SendViewModelTest {
 
     private fun expectedFeeUsd(maxFeeWei: BigInteger, gasUnits: Long): String {
         val totalWei = maxFeeWei.multiply(BigInteger.valueOf(gasUnits))
-        val feeEth = Convert.fromWei(totalWei.toString(), Convert.Unit.ETHER)
+        val feeEth = Wei(totalWei).toEth().value
         return formatUsdCurrency(feeEth.multiply(ethRate))
     }
 
