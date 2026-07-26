@@ -3,6 +3,7 @@ package me.sdi.ethwallet
 import android.app.Application
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.di.appModules
+import me.sdi.ethwallet.util.AppForegroundTracker
 import me.sdi.ethwallet.util.CurrentActivityHolder
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -24,5 +25,6 @@ class EthWalletApplication : Application() {
         }
 
         registerActivityLifecycleCallbacks(koinApplication.koin.get<CurrentActivityHolder>())
+        registerActivityLifecycleCallbacks(koinApplication.koin.get<AppForegroundTracker>())
     }
 }

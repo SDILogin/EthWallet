@@ -7,7 +7,6 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.Web3jEthManager
 import me.sdi.ethwallet.core.security.AndroidBiometricUnlock
-import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerAndroidKeyStore
 import me.sdi.ethwallet.core.security.DataCleanerComposite
@@ -20,6 +19,7 @@ import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PinCodeStorageDataStore
 import me.sdi.ethwallet.core.security.PinSessionDataCleaner
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
+import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.core.transfer.EthTransferInteractor
 import me.sdi.ethwallet.core.transfer.TransferInteractor
 import me.sdi.ethwallet.database.AppDatabase
@@ -27,6 +27,7 @@ import me.sdi.ethwallet.database.DatabaseBuilder
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.dao.WalletDao
+import me.sdi.ethwallet.util.AppForegroundTracker
 import me.sdi.ethwallet.util.CurrentActivityHolder
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
@@ -70,6 +71,8 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     }
 
     single { CurrentActivityHolder() }
+
+    single { AppForegroundTracker(userActivityManager = get()) }
 
     single<BiometricUnlock> {
         AndroidBiometricUnlock(

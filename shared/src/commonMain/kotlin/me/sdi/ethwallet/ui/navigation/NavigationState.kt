@@ -14,6 +14,11 @@ class NavigationState(
         mutableStateListOf(*initialBackStack.toTypedArray())
 
     companion object {
+        /**
+         * A restored back stack is never trusted to decide whether the app is unlocked: the PIN
+         * screen is an overlay driven by the session key, not a destination, so a stack saved while
+         * it was on screen restores to the wallet behind the lock.
+         */
         fun saver(): Saver<NavigationState, Any> = listSaver(
             save = { state ->
                 state.backStack.map { destination ->
@@ -24,7 +29,6 @@ class NavigationState(
                         Destination.WalletScreen -> "WalletScreen"
                         Destination.WalletsListScreen -> "WalletsListScreen"
                         Destination.SetPinCodeScreen -> "SetPinCodeScreen"
-                        Destination.VerifyPinCodeScreen -> "VerifyPinCodeScreen"
                         Destination.ReceiveQrScreen -> "ReceiveQrScreen"
                         Destination.SendScreen -> "SendScreen"
                         Destination.SettingsScreen -> "SettingsScreen"
@@ -43,7 +47,7 @@ class NavigationState(
                             "WalletScreen" -> Destination.WalletScreen
                             "WalletsListScreen" -> Destination.WalletsListScreen
                             "SetPinCodeScreen" -> Destination.SetPinCodeScreen
-                            "VerifyPinCodeScreen" -> Destination.VerifyPinCodeScreen
+                            "VerifyPinCodeScreen" -> Destination.WalletScreen
                             "ReceiveQrScreen" -> Destination.ReceiveQrScreen
                             "SendScreen" -> Destination.SendScreen
                             "SettingsScreen" -> Destination.SettingsScreen

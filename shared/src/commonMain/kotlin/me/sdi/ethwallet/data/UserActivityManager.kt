@@ -1,66 +1,59 @@
 package me.sdi.ethwallet.data
 
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.security.PinSession
-import me.sdi.ethwallet.data.repository.WalletRepository
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
+
+private const val TAG = "UserActivity"
 
 /**
- * Interface for managing Lock Screen visibility based on user activity.
+ * Decides when an idle app must drop the master key held by [PinSession].
  *
- * This interface provides a mechanism to track user interactions and determine
- * whether a lock screen should be displayed. It exposes a StateFlow to observe
- * the lock screen visibility state and provides methods to signal user actions
- * and app unlock events.
+ * It only clears the key; whether the lock screen is shown is derived from [PinSession.isUnlocked]
+ * by the UI, so a process restart also counts as locked.
  */
 interface UserActivityManager {
     /**
-     * A [StateFlow] that emits `true` if the lock screen should be shown, `false` otherwise.
-     * The lock screen should be shown if the user has been inactive for a certain period of time.
-     */
-    val showLockScreen: StateFlow<Boolean>
-
-    /**
-     * Should be called when a user performs any action in the app.
-     *
-     * This method updates the last interaction time and determines if the lock screen should be shown.
-     * If the lock screen is already showing, this method does nothing.
-     * Otherwise, it checks if the time since the last interaction exceeds a predefined threshold (FIVE_MINUTES).
-     * If it does, the `showLockScreen` state is updated to true, indicating the lock screen should be displayed.
-     *
-     * It must be enough to call this method only from `Activity#onUserInteraction()`
+     * Should be called when a user performs any action in the app; it postpones the inactivity
+     * timeout. It must be enough to call this method only from `Activity#onUserInteraction()`.
      */
     fun onAnyUserAction()
 
     /**
      * Call this function when the app has been unlocked (e.g., after the user enters their PIN).
-     * This will hide the lock screen.
      */
     fun onAppUnlocked()
+
+    /**
+     * Call this function when the app leaves the foreground, so the time spent in the background
+     * counts towards the inactivity timeout even when the process is frozen and timers stall.
+     */
+    fun onAppBackgrounded()
+
+    /**
+     * Call this function when the app returns to the foreground.
+     */
+    fun onAppForegrounded()
 }
 
 class ProcessLifetimeUserActivityManager(
-    private val walletRepository: WalletRepository,
-    private val applicationScope: CoroutineScope,
     private val pinSession: PinSession,
+    private val applicationScope: CoroutineScope,
+    private val timeSource: TimeSource = TimeSource.Monotonic,
     private val inactivityTimeout: Duration = 10.minutes,
 ) : UserActivityManager {
     private var timerJob: Job? = null
-
-    override val showLockScreen: StateFlow<Boolean>
-        field = MutableStateFlow(false)
+    private var backgroundedAt: TimeMark? = null
 
     override fun onAnyUserAction() {
-        if (showLockScreen.value) {
+        if (!pinSession.isUnlocked.value) {
             return
         }
 
@@ -68,9 +61,26 @@ class ProcessLifetimeUserActivityManager(
     }
 
     override fun onAppUnlocked() {
-        showLockScreen.update { false }
-
         restartTimer()
+    }
+
+    override fun onAppBackgrounded() {
+        backgroundedAt = timeSource.markNow()
+    }
+
+    override fun onAppForegrounded() {
+        val backgroundedAt = backgroundedAt ?: return
+        this.backgroundedAt = null
+
+        if (backgroundedAt.elapsedNow() >= inactivityTimeout) {
+            Logger.debug(TAG) { "Spent longer than the inactivity timeout in the background, clearing the PIN session" }
+
+            timerJob?.cancel()
+            timerJob = null
+            pinSession.clear()
+        } else if (pinSession.isUnlocked.value) {
+            restartTimer()
+        }
     }
 
     private fun restartTimer() {
@@ -78,28 +88,9 @@ class ProcessLifetimeUserActivityManager(
         timerJob = applicationScope.launch {
             delay(inactivityTimeout)
 
-            Logger.debug("Navigation") {
-                "Inactivity timeout reached, showing lock screen"
-            }
+            Logger.debug(TAG) { "Inactivity timeout reached, clearing the PIN session" }
 
-            val hasWallets = try {
-                walletRepository.getAllWallets().isNotEmpty()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-
-                Logger.warn("Navigation") { "Failed to fetch wallets: ${e.stackTraceToString()}" }
-
-                false
-            }
-
-            if (hasWallets) {
-                pinSession.clear()
-                showLockScreen.update { true }
-            } else {
-                Logger.debug("") {
-                    "No wallets found, not showing lock screen"
-                }
-            }
+            pinSession.clear()
         }
     }
 }

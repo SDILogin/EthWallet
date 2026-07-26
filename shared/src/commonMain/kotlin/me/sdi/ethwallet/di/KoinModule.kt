@@ -51,9 +51,8 @@ val commonModule = module {
 
     single<UserActivityManager> {
         ProcessLifetimeUserActivityManager(
-            walletRepository = get(),
-            applicationScope = get(),
             pinSession = get(),
+            applicationScope = get(),
         )
     }
 
@@ -65,6 +64,7 @@ val commonModule = module {
             walletDao = get(),
             pinCodeStorage = get(),
             dataCleaner = get(),
+            pinSession = get(),
         )
     }
 

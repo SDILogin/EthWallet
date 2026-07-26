@@ -12,7 +12,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -22,7 +21,6 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.navigation.Navigator
 import me.sdi.ethwallet.ui.navigation.rememberNavigationState
@@ -39,14 +37,9 @@ import me.sdi.ethwallet.ui.wallet.WalletsListScreen
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3AdaptiveApi::class)
 @Composable
-fun EthWalletApp(
-    viewModel: InitialNavigationViewModel,
-    userActivityManager: UserActivityManager,
-) {
+fun EthWalletApp(viewModel: InitialNavigationViewModel) {
     EthWalletTheme {
         val state by viewModel.state.collectAsState()
-
-        val showLockScreen by userActivityManager.showLockScreen.collectAsState()
 
         AnimatedVisibility(
             modifier = Modifier.fillMaxSize(),
@@ -56,17 +49,25 @@ fun EthWalletApp(
         ) {
             val startDestination: Destination = when (state.initialRoute) {
                 InitialRoute.OnBoarding -> Destination.OnBoardingScreen
-                InitialRoute.VerifyPinCode -> Destination.VerifyPinCodeScreen
+                InitialRoute.Wallet -> Destination.WalletScreen
                 null -> Destination.OnBoardingScreen
             }
             val navigationState = rememberNavigationState(startDestination)
             val navigator = remember(navigationState) { Navigator(navigationState) }
             val listDetailSceneStrategy = rememberListDetailSceneStrategy<Destination>()
 
-            if (showLockScreen) {
-                LaunchedEffect(Unit) {
-                    navigator.navigateAndClearStack(Destination.VerifyPinCodeScreen)
-                }
+            if (state.isLocked) {
+                VerifyPinCodeScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onLogout = {
+                        viewModel.onEvent(InitialNavigationEvent.WalletsCleared)
+                        navigator.navigateAndClearStack(Destination.OnBoardingScreen)
+                    },
+                    onPinVerified = {
+                        navigator.navigateAndClearStack(Destination.WalletScreen)
+                    },
+                )
+                return@AnimatedVisibility
             }
 
             Scaffold(
@@ -147,6 +148,7 @@ fun EthWalletApp(
                         WalletsListScreen(
                             modifier = Modifier.fillMaxSize(),
                             navigateToOnboarding = {
+                                viewModel.onEvent(InitialNavigationEvent.WalletsCleared)
                                 navigator.navigateAndClearStack(Destination.OnBoardingScreen)
                             },
                             navigateToWalletDetails = {
@@ -161,18 +163,6 @@ fun EthWalletApp(
                             onPinCodeSet = {
                                 navigator.navigateAndClearStack(Destination.WalletScreen)
                             },
-                        )
-                    }
-
-                    entry<Destination.VerifyPinCodeScreen> {
-                        VerifyPinCodeScreen(
-                            onLogout = {
-                                navigator.navigateAndClearStack(Destination.OnBoardingScreen)
-                            },
-                            onPinVerified = {
-                                navigator.navigateAndClearStack(Destination.WalletScreen)
-                            },
-                            modifier = Modifier.fillMaxSize(),
                         )
                     }
 
