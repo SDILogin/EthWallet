@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -261,14 +260,11 @@ class VerifyPinCodeViewModel(
             try {
                 val isValid = coroutineScope {
                     launch(CoroutineName("IndicatorAnimation")) { delay(300.milliseconds) }
-                    val verification = async(CoroutineName("KeyVerification")) {
-                        pinCodeStorage.verifyPinCode(pin).also { isValid ->
-                            if (isValid) {
-                                forgetFailedAttempts()
-                            }
+                    pinCodeStorage.verifyPinCode(pin).also { isValid ->
+                        if (isValid) {
+                            forgetFailedAttempts()
                         }
                     }
-                    verification.await()
                 }
                 ensureActive()
 
