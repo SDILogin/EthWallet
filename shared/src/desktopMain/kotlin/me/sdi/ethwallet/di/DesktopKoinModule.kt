@@ -4,15 +4,18 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthManager
-import me.sdi.ethwallet.core.KeyStoreEncryptor
 import me.sdi.ethwallet.core.Web3jEthManager
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
+import me.sdi.ethwallet.core.security.DataCleanerPinFile
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.security.PinCodeStorageFile
 import me.sdi.ethwallet.core.security.PinLockPolicy
 import me.sdi.ethwallet.core.security.PinLockState
+import me.sdi.ethwallet.core.security.PinSessionDataCleaner
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
+import me.sdi.ethwallet.core.security.SoftwarePrivateKeyEncryptor
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
@@ -23,6 +26,7 @@ import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.dao.WalletDao
 import org.koin.core.module.Module
 import org.koin.dsl.module
+import java.io.File
 import kotlin.time.Duration
 
 actual fun platformModule(chainConfig: ChainConfig): Module = module {
@@ -31,9 +35,16 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<TokenBalanceDao> { get<AppDatabase>().tokenBalanceDao() }
     single<FiatRateDao> { get<AppDatabase>().fiatRateDao() }
 
-    single<PrivateKeyEncryptor> { KeyStoreEncryptor() }
+    single<PrivateKeyEncryptor> { SoftwarePrivateKeyEncryptor(pinSession = get()) }
 
-    factory<DataCleaner> { DataCleanerComposite(emptyList()) }
+    factory<DataCleaner> {
+        DataCleanerComposite(
+            listOf(
+                DataCleanerPinFile(pinArtifactsFile()),
+                PinSessionDataCleaner(get()),
+            ),
+        )
+    }
 
     single { chainConfig }
 
@@ -41,24 +52,20 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
 
     single<EthManager> { Web3jEthManager.create(get()) }
 
-    single<PinCodeStorage> { DesktopPinCodeStorage() }
+    single<PinCodeStorage> {
+        PinCodeStorageFile(
+            artifactsFile = pinArtifactsFile(),
+            userActivityManager = get(),
+            pinAttemptsGuard = get(),
+            pinSession = get(),
+        )
+    }
     single<PinAttemptsGuard> { DesktopPinAttemptsGuard() }
     single<BiometricUnlock> { DesktopBiometricUnlock() }
 }
 
-private class DesktopPinCodeStorage : PinCodeStorage {
-    override suspend fun storePinCode(pinCode: String) = Unit
-
-    override suspend fun verifyPinCode(pinCode: String): Boolean {
-        return true
-    }
-
-    override suspend fun hasPinCode(): Boolean {
-        return false
-    }
-
-    override suspend fun clearPinCode() = Unit
-}
+private fun pinArtifactsFile(): File =
+    File(System.getProperty("user.home"), ".ethwallet/pin.properties")
 
 private class DesktopPinAttemptsGuard : PinAttemptsGuard {
     private val unlocked =
