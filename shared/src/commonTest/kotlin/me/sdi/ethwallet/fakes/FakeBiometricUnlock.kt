@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.fakes
 
+import kotlinx.coroutines.CompletableDeferred
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
@@ -13,7 +14,15 @@ class FakeBiometricUnlock : BiometricUnlock {
     var disableCallCount = 0
     var unlockCallCount = 0
 
-    override suspend fun status(): BiometricStatus = currentStatus
+    /**
+     * Holds [status] suspended until completed, so tests can act while a caller awaits the result.
+     */
+    var statusGate: CompletableDeferred<Unit>? = null
+
+    override suspend fun status(): BiometricStatus {
+        statusGate?.await()
+        return currentStatus
+    }
 
     override suspend fun enable(): BiometricResult {
         enableCallCount++

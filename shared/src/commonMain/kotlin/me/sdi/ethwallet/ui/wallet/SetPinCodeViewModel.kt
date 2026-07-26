@@ -252,7 +252,8 @@ class SetPinCodeViewModel(
 
     /**
      * Stores the PIN once both entries match. Storing mints a fresh master KEK, so any biometric
-     * envelope still wrapping the previous one is destroyed before the offer is re-evaluated.
+     * envelope still wrapping the previous one is destroyed before the offer is re-evaluated. The
+     * saving lock is held until that decision lands, so the keypad cannot trigger a second store.
      */
     private fun validatePins() {
         val currentState = viewState.value
@@ -270,13 +271,13 @@ class SetPinCodeViewModel(
 
                     walletRepository.persistPendingWallet()
 
-                    viewState.update { it.copy(isSaving = false) }
-
                     biometricUnlock.disable()
 
-                    if (biometricUnlock.status() == BiometricStatus.NotSetUp) {
-                        viewState.update { it.copy(showBiometricOffer = true) }
-                    } else {
+                    val showBiometricOffer = biometricUnlock.status() == BiometricStatus.NotSetUp
+
+                    viewState.update { it.copy(isSaving = false, showBiometricOffer = showBiometricOffer) }
+
+                    if (!showBiometricOffer) {
                         news.emit(SetPinCodeNews.PinCodeSet)
                     }
                 } catch (e: Exception) {

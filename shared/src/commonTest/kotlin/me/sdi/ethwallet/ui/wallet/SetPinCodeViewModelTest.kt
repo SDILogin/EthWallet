@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui.wallet
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -385,6 +386,29 @@ class SetPinCodeViewModelTest {
         assertEquals(0, biometricUnlock.enableCallCount, "Skipping the offer should not call enable")
         assertFalse(viewModel.viewState.first().showBiometricOffer, "Offer should be dismissed after skipping")
         assertEquals(SetPinCodeNews.PinCodeSet, collector.single(), "Should emit PinCodeSet news after skipping")
+    }
+
+    @Test
+    fun keypad_should_stay_locked_until_the_biometric_status_check_resolves() = runTest(testDispatcher) {
+        walletRepository.createWallet("Test Wallet")
+        biometricUnlock.currentStatus = BiometricStatus.Ready
+        val statusGate = CompletableDeferred<Unit>()
+        biometricUnlock.statusGate = statusGate
+
+        enterMatchingPins()
+
+        viewModel.onEvent(SetPinCodeEvent.OnDeleteClick)
+        viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
+        advanceUntilIdle()
+
+        statusGate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            pinCodeStorage.storePinCalledCount,
+            "Editing the PIN while the biometric status check is in flight must not store a second PIN",
+        )
     }
 
     @Test
