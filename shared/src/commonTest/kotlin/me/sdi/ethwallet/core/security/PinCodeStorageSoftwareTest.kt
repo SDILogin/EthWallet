@@ -1,5 +1,8 @@
 package me.sdi.ethwallet.core.security
 
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.fakes.FakePinAttemptsGuard
@@ -9,20 +12,21 @@ import java.io.File
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermissions
-import java.util.Properties
 import kotlin.io.encoding.Base64
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class PinCodeStorageFileTest {
+class PinCodeStorageSoftwareTest {
     private val artifactsDirectory =
         File(System.getProperty("java.io.tmpdir"), "eth-wallet-pin-${System.nanoTime()}")
-    private val artifactsFile = File(artifactsDirectory, "pin.properties")
+    private val artifactsFile = File(artifactsDirectory, ARTIFACTS_FILE_NAME)
+    private val dataStore = pinArtifactsDataStore(artifactsDirectory)
 
     @AfterTest
     fun deleteArtifacts() {
@@ -112,11 +116,15 @@ class PinCodeStorageFileTest {
         val pinSession = FakePinSession()
         val storage = newStorage(pinSession)
         storage.storePinCode(PIN)
+        val storedKek = assertNotNull(dataStore.data.first()[PIN_WRAPPED_KEK])
 
         storage.clearPinCode()
 
         assertFalse(storage.hasPinCode(), "A cleared PIN must not be reported as present")
-        assertFalse(artifactsFile.exists(), "Clearing the PIN should delete the artifacts file")
+        assertFalse(
+            persistedArtifacts().contains(storedKek),
+            "Clearing the PIN should leave no wrapped KEK on disk",
+        )
         assertNull(pinSession.lastKek, "Clearing the PIN should lock the session")
         assertFalse(
             newStorage(FakePinSession()).verifyPinCode(PIN),
@@ -125,7 +133,7 @@ class PinCodeStorageFileTest {
     }
 
     @Test
-    fun the_artifacts_file_is_readable_only_by_its_owner() = runTest {
+    fun the_artifacts_directory_is_enterable_only_by_its_owner() = runTest {
         if (!FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
             return@runTest
         }
@@ -133,9 +141,9 @@ class PinCodeStorageFileTest {
         newStorage().storePinCode(PIN)
 
         assertEquals(
-            PosixFilePermissions.fromString("rw-------"),
-            Files.getPosixFilePermissions(artifactsFile.toPath()),
-            "The PIN artifacts file must never be readable by other users",
+            PosixFilePermissions.fromString("rwx------"),
+            Files.getPosixFilePermissions(artifactsDirectory.toPath()),
+            "No other user may enter the directory holding the PIN artifacts",
         )
     }
 
@@ -157,30 +165,37 @@ class PinCodeStorageFileTest {
     fun the_stored_artifacts_never_contain_the_pin() = runTest {
         newStorage().storePinCode(PIN)
 
-        val artifacts = artifactsFile.readText()
-
-        assertFalse(artifacts.contains(PIN), "The PIN must never be persisted")
+        assertFalse(persistedArtifacts().contains(PIN), "The PIN must never be persisted")
     }
 
     private fun newStorage(
         pinSession: PinSession = FakePinSession(),
         userActivityManager: UserActivityManager = FakeUserActivityManager(),
-    ) = PinCodeStorageFile(
-        artifactsFile = artifactsFile,
+    ) = PinCodeStorageSoftware(
+        dataStore = dataStore,
         userActivityManager = userActivityManager,
         pinAttemptsGuard = FakePinAttemptsGuard(),
         pinSession = pinSession,
     )
 
-    private fun rewriteWrappedKek(wrappedKek: ByteArray) {
-        val properties = Properties()
-        artifactsFile.inputStream().use(properties::load)
-        properties.setProperty("pin_wrapped_kek", Base64.encode(wrappedKek))
-        artifactsFile.outputStream().use { properties.store(it, null) }
+    private suspend fun rewriteWrappedKek(wrappedKek: ByteArray) {
+        dataStore.edit { preferences ->
+            preferences[PIN_WRAPPED_KEK] = Base64.encode(wrappedKek)
+        }
     }
+
+    /**
+     * The stored file is protobuf, so it is read back as Latin-1: every byte maps to one character
+     * and a search over the result is a search over the raw bytes.
+     */
+    private fun persistedArtifacts(): String =
+        String(artifactsFile.readBytes(), Charsets.ISO_8859_1)
 
     private companion object {
         private const val PIN = "123456"
         private const val NEW_PIN = "999999"
+        private const val ARTIFACTS_FILE_NAME = "secure_pin_preferences.preferences_pb"
+
+        private val PIN_WRAPPED_KEK = stringPreferencesKey("pin_wrapped_kek")
     }
 }
