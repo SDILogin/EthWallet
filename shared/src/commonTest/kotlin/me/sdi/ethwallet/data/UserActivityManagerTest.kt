@@ -167,6 +167,16 @@ class UserActivityManagerTest {
     }
 
     @Test
+    fun should_not_clear_pin_session_on_app_unlocked() = runTest(testDispatcher) {
+        pinSession.set(byteArrayOf(1, 2, 3, 4))
+
+        userActivityManager.onAppUnlocked()
+
+        assertEquals(0, pinSession.clearCallCount, "onAppUnlocked() must not clear the PIN session")
+        assertTrue(pinSession.isUnlocked.value, "onAppUnlocked() must leave the app unlocked")
+    }
+
+    @Test
     fun should_restart_the_timer_when_the_app_is_unlocked_again() = runTest(testDispatcher) {
         unlock()
         advanceTimeBy(2.seconds.inWholeMilliseconds)

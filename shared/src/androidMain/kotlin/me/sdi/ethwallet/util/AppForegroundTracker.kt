@@ -12,6 +12,10 @@ import me.sdi.ethwallet.data.UserActivityManager
  * Registered as [Application.ActivityLifecycleCallbacks]. Wall-clock measurement across those
  * transitions is what locks a wallet the system froze in the background, where in-process timers
  * stop firing.
+ *
+ * A rotation tears the activity down and builds it again, which reads as a background trip by the
+ * count alone; [Activity.isChangingConfigurations] tells those two apart so rotating does not pass
+ * for activity and postpone the lock.
  */
 class AppForegroundTracker(
     private val userActivityManager: UserActivityManager,
@@ -33,7 +37,7 @@ class AppForegroundTracker(
 
     override fun onActivityStopped(activity: Activity) {
         startedActivities--
-        if (startedActivities == 0) {
+        if (startedActivities == 0 && !activity.isChangingConfigurations) {
             userActivityManager.onAppBackgrounded()
         }
     }

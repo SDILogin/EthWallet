@@ -20,6 +20,7 @@ import me.sdi.ethwallet.core.security.DataCleanerRoomDb
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PinLockState
+import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
@@ -72,15 +73,27 @@ class WalletFlowTest : KoinTest {
     private val walletPage = WalletPage(composeTestRule)
     private val walletsListPage = WalletsListPage(composeTestRule)
 
+    private val pinSession: PinSession by inject()
+
+    /**
+     * Mirrors the real storage on the one point the lock depends on: storing or verifying a PIN
+     * publishes the master key to the session, and clearing the PIN drops it.
+     */
     private val pinCodeStorage = object : PinCodeStorage {
         var storedPin: String? = null
 
         override suspend fun storePinCode(pinCode: String) {
             storedPin = pinCode
+            pinSession.set(ByteArray(32) { 7 })
         }
 
         override suspend fun verifyPinCode(pinCode: String): Boolean {
-            return storedPin == pinCode
+            if (storedPin != pinCode) {
+                return false
+            }
+
+            pinSession.set(ByteArray(32) { 7 })
+            return true
         }
 
         override suspend fun hasPinCode(): Boolean {
@@ -89,6 +102,7 @@ class WalletFlowTest : KoinTest {
 
         override suspend fun clearPinCode() {
             storedPin = null
+            pinSession.clear()
         }
     }
 
@@ -291,8 +305,7 @@ class WalletFlowTest : KoinTest {
     fun forgot_pin_logout_requires_confirmation_and_clears_local_data() {
         runAccountCreationAndPinSetupFlow()
 
-        scenario.close()
-        scenario = ActivityScenario.launch(MainActivity::class.java)
+        restartProcess()
 
         composeTestRule.assertTextExists("Forgot PIN Code?")
         composeTestRule.clickText("Forgot PIN Code?")
@@ -316,6 +329,39 @@ class WalletFlowTest : KoinTest {
         }
     }
 
+    @Test
+    fun lock_screen_still_accepts_the_pin_after_a_logout_and_a_new_wallet() {
+        runAccountCreationAndPinSetupFlow()
+
+        lockApp()
+        composeTestRule.clickText("Forgot PIN Code?")
+        composeTestRule.clickText("Confirm logout")
+        composeTestRule.assertTextExists("Create new wallet")
+
+        runAccountCreationAndPinSetupFlow()
+
+        lockApp()
+        setPinCodePage.enterPin(PIN)
+
+        walletPage.awaitVisible()
+    }
+
+    /**
+     * Drops the in-memory master key the way process death does, which is the only thing that
+     * decides whether the app is locked.
+     */
+    private fun lockApp() {
+        walletPage.awaitVisible()
+        composeTestRule.runOnUiThread { pinSession.clear() }
+        composeTestRule.waitUntilTextExists("Forgot PIN Code?")
+    }
+
+    private fun restartProcess() {
+        scenario.close()
+        pinSession.clear()
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+    }
+
     private fun runAccountCreationAndPinSetupFlow() {
         // 1. Click "Registration" (Create new wallet) button
         onboardingPage.clickCreateNewWallet()
@@ -327,10 +373,10 @@ class WalletFlowTest : KoinTest {
         createWalletPage.clickConfirm()
 
         // 4. Setup Pin Code (Set 112233)
-        setPinCodePage.enterPin("112233")
+        setPinCodePage.enterPin(PIN)
 
         // 5. Confirm Pin Code (Confirm 112233)
-        setPinCodePage.enterPin("112233")
+        setPinCodePage.enterPin(PIN)
     }
 
     private fun runLogoutAndDeletionFlow() {
@@ -347,3 +393,5 @@ class WalletFlowTest : KoinTest {
         walletsListPage.deleteActiveWallet()
     }
 }
+
+private const val PIN = "112233"

@@ -12,10 +12,18 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.entryProvider
@@ -56,17 +64,24 @@ fun EthWalletApp(viewModel: InitialNavigationViewModel) {
             val navigator = remember(navigationState) { Navigator(navigationState) }
             val listDetailSceneStrategy = rememberListDetailSceneStrategy<Destination>()
 
+            var wasLocked by remember { mutableStateOf(state.isLocked) }
+            LaunchedEffect(state.isLocked) {
+                if (wasLocked && !state.isLocked && state.isPinCodeSet) {
+                    navigator.navigateAndClearStack(Destination.WalletScreen)
+                }
+                wasLocked = state.isLocked
+            }
+
             if (state.isLocked) {
-                VerifyPinCodeScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    onLogout = {
-                        viewModel.onEvent(InitialNavigationEvent.WalletsCleared)
-                        navigator.navigateAndClearStack(Destination.OnBoardingScreen)
-                    },
-                    onPinVerified = {
-                        navigator.navigateAndClearStack(Destination.WalletScreen)
-                    },
-                )
+                FreshViewModelStoreOwner {
+                    VerifyPinCodeScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onLogout = {
+                            viewModel.onEvent(InitialNavigationEvent.WalletsCleared)
+                            navigator.navigateAndClearStack(Destination.OnBoardingScreen)
+                        },
+                    )
+                }
                 return@AnimatedVisibility
             }
 
@@ -190,4 +205,25 @@ fun EthWalletApp(viewModel: InitialNavigationViewModel) {
             }
         }
     }
+}
+
+/**
+ * Runs [content] against a [ViewModelStore] that lives exactly as long as this composable stays in
+ * the composition. The lock screen is shown once per lock, so its ViewModel must not survive into
+ * the next one carrying the entered digits, the logout flag, or a stale attempt and biometric
+ * status read at init.
+ */
+@Composable
+private fun FreshViewModelStoreOwner(content: @Composable () -> Unit) {
+    val viewModelStoreOwner = remember {
+        object : ViewModelStoreOwner {
+            override val viewModelStore = ViewModelStore()
+        }
+    }
+
+    DisposableEffect(viewModelStoreOwner) {
+        onDispose { viewModelStoreOwner.viewModelStore.clear() }
+    }
+
+    CompositionLocalProvider(LocalViewModelStoreOwner provides viewModelStoreOwner, content = content)
 }
