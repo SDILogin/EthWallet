@@ -6,6 +6,9 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.KeyStoreEncryptor
 import me.sdi.ethwallet.core.Web3jEthManager
+import me.sdi.ethwallet.core.security.biometry.BiometricResult
+import me.sdi.ethwallet.core.security.biometry.BiometricStatus
+import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
@@ -40,6 +43,7 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
 
     single<PinCodeStorage> { DesktopPinCodeStorage() }
     single<PinAttemptsGuard> { DesktopPinAttemptsGuard() }
+    single<BiometricUnlock> { DesktopBiometricUnlock() }
 }
 
 private class DesktopPinCodeStorage : PinCodeStorage {
@@ -73,4 +77,14 @@ private class DesktopPinAttemptsGuard : PinAttemptsGuard {
     override suspend fun onSuccess() = Unit
 
     override suspend fun clear() = Unit
+}
+
+private class DesktopBiometricUnlock : BiometricUnlock {
+    override suspend fun status(): BiometricStatus = BiometricStatus.NotSupported
+
+    override suspend fun enable(): BiometricResult = BiometricResult.Error("Biometrics are not supported")
+
+    override suspend fun disable() = Unit
+
+    override suspend fun unlock(): BiometricResult = BiometricResult.Error("Biometrics are not supported")
 }

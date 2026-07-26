@@ -63,7 +63,13 @@ class KeyStoreEncryptor(
 
             val combined = ByteArray(iv.size + privateKeyEncryptedWithHardwareSecureModule.size)
             System.arraycopy(iv, 0, combined, 0, iv.size)
-            System.arraycopy(privateKeyEncryptedWithHardwareSecureModule, 0, combined, iv.size, privateKeyEncryptedWithHardwareSecureModule.size)
+            System.arraycopy(
+                privateKeyEncryptedWithHardwareSecureModule,
+                0,
+                combined,
+                iv.size,
+                privateKeyEncryptedWithHardwareSecureModule.size,
+            )
 
             Base64.encodeToString(combined, Base64.DEFAULT)
         }

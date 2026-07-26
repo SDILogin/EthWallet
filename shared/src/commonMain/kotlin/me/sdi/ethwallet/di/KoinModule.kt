@@ -22,6 +22,7 @@ import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.ui.InitialNavigationViewModel
 import me.sdi.ethwallet.ui.receive.ReceiveQrViewModel
 import me.sdi.ethwallet.ui.send.SendViewModel
+import me.sdi.ethwallet.ui.settings.SettingsViewModel
 import me.sdi.ethwallet.ui.wallet.CreateWalletViewModel
 import me.sdi.ethwallet.ui.wallet.ImportWalletViewModel
 import me.sdi.ethwallet.ui.wallet.SetPinCodeViewModel
@@ -71,6 +72,7 @@ val commonModule = module {
         SetPinCodeViewModel(
             pinCodeStorage = get(),
             walletRepository = get(),
+            biometricUnlock = get(),
         )
     }
 
@@ -79,6 +81,13 @@ val commonModule = module {
             pinCodeStorage = get(),
             dataCleaner = get(),
             pinAttemptsGuard = get(),
+            biometricUnlock = get(),
+        )
+    }
+
+    viewModel<SettingsViewModel> {
+        SettingsViewModel(
+            biometricUnlock = get(),
         )
     }
 

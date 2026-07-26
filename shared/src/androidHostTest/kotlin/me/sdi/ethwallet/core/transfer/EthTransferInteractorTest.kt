@@ -253,7 +253,7 @@ class EthTransferInteractorTest {
         every { balanceProvider.observe(testWalletAddress) } returns flowOf(mapOf(EthContractAddress to 2.eth.toWei().value))
         coEvery { balanceProvider.forceUpdate(any()) } returns Unit
         coEvery { walletRepository.getEncryptedPrivateKey(testWalletAddress) } returns "encrypted_key"
-        every { privateKeyEncryptor.decryptPrivateKey("encrypted_key", testWalletAddress.toString()) } returns BigInteger("123456789")
+        coEvery { privateKeyEncryptor.decryptPrivateKey("encrypted_key", testWalletAddress.toString()) } returns BigInteger("123456789")
     }
 
     private fun setUpErc20TransferMocks() {
@@ -265,7 +265,7 @@ class EthTransferInteractorTest {
         )
         coEvery { balanceProvider.forceUpdate(any()) } returns Unit
         coEvery { walletRepository.getEncryptedPrivateKey(testWalletAddress) } returns "encrypted_key"
-        every { privateKeyEncryptor.decryptPrivateKey("encrypted_key", testWalletAddress.toString()) } returns BigInteger("123456789")
+        coEvery { privateKeyEncryptor.decryptPrivateKey("encrypted_key", testWalletAddress.toString()) } returns BigInteger("123456789")
         coEvery {
             ethManager.sendTransfer(any(), usdtOnMainnet.ethAddress, testDestinationAddress, any(), any(), any(), any())
         } returns "0xdef456abc789"

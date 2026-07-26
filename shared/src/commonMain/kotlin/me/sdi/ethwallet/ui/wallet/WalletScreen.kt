@@ -56,11 +56,13 @@ import me.sdi.ethwallet.resources.arrow_downward_24px
 import me.sdi.ethwallet.resources.arrow_outward_24px
 import me.sdi.ethwallet.resources.edit
 import me.sdi.ethwallet.resources.ic_question_mark_56
+import me.sdi.ethwallet.resources.settings_24px
 import me.sdi.ethwallet.resources.switch_account_24px
 import me.sdi.ethwallet.resources.wallet_manage_wallets
 import me.sdi.ethwallet.resources.wallet_network
 import me.sdi.ethwallet.resources.wallet_receive
 import me.sdi.ethwallet.resources.wallet_send
+import me.sdi.ethwallet.resources.wallet_settings
 import me.sdi.ethwallet.resources.wallet_title
 import me.sdi.ethwallet.resources.wallet_tokens_erc20
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
@@ -83,6 +85,7 @@ fun WalletScreen(
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
     onReceiveButtonClick: () -> Unit,
     onSendButtonClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: WalletViewModel = koinViewModel<WalletViewModel>(),
 ) {
@@ -109,6 +112,7 @@ fun WalletScreen(
         onTokenClick = onTokenClick,
         onReceiveButtonClick = onReceiveButtonClick,
         onSendButtonClick = onSendButtonClick,
+        onSettingsClick = onSettingsClick,
         modifier = modifier,
     )
 }
@@ -122,6 +126,7 @@ fun WalletScreenContent(
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
     onReceiveButtonClick: () -> Unit,
     onSendButtonClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -137,6 +142,12 @@ fun WalletScreenContent(
                         Icon(
                             painter = painterResource(Res.drawable.switch_account_24px),
                             contentDescription = stringResource(Res.string.wallet_manage_wallets),
+                        )
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            painter = painterResource(Res.drawable.settings_24px),
+                            contentDescription = stringResource(Res.string.wallet_settings),
                         )
                     }
                 },
@@ -612,6 +623,7 @@ private fun WalletScreenContentPreview(
             onTokenClick = {},
             onReceiveButtonClick = {},
             onSendButtonClick = {},
+            onSettingsClick = {},
         )
     }
 }

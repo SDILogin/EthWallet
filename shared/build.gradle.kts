@@ -137,6 +137,8 @@ kotlin {
                 implementation(libs.androidx.room.runtime)
                 implementation(libs.androidx.room.ktx)
 
+                implementation(libs.androidx.biometric)
+
                 // QR Code
                 implementation(libs.zxing.core)
             }

@@ -5,12 +5,16 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import me.sdi.ethwallet.core.security.biometry.BiometricResult
+import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.fakes.FakeBiometricUnlock
 import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
@@ -30,6 +34,7 @@ class SetPinCodeViewModelTest {
     private lateinit var viewModel: SetPinCodeViewModel
     private lateinit var pinCodeStorage: FakePinCodeStorage
     private lateinit var walletRepository: WalletRepository
+    private lateinit var biometricUnlock: FakeBiometricUnlock
 
     @BeforeTest
     fun setUp() {
@@ -40,7 +45,8 @@ class SetPinCodeViewModelTest {
             ethManager = FakeEthManager(),
             privateKeyEncryptor = FakePrivateKeyEncryptor(),
         )
-        viewModel = SetPinCodeViewModel(pinCodeStorage, walletRepository)
+        biometricUnlock = FakeBiometricUnlock()
+        viewModel = SetPinCodeViewModel(pinCodeStorage, walletRepository, biometricUnlock)
     }
 
     @AfterTest
@@ -188,5 +194,199 @@ class SetPinCodeViewModelTest {
         assertEquals("", state.secondPin, "Second PIN should be cleared")
         assertFalse(state.isConfirmationMode, "Should not be in confirmation mode")
         assertEquals("PINs don't match. Try again.", state.errorMessage, "Should show error message")
+    }
+
+    @Test
+    fun biometric_status_NotSetUp_should_show_offer_and_withhold_PinCodeSet() = runTest(testDispatcher) {
+        walletRepository.createWallet("Test Wallet")
+        biometricUnlock.currentStatus = BiometricStatus.NotSetUp
+
+        val collector = mutableListOf<SetPinCodeNews>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.news.collect { collector.add(it) }
+        }
+
+        enterMatchingPins()
+        job.cancel()
+
+        val state = viewModel.viewState.first()
+        assertTrue(state.showBiometricOffer, "NotSetUp biometric status should show the biometric offer")
+        assertTrue(
+            collector.isEmpty(),
+            "PinCodeSet should not be emitted before the biometric offer is resolved",
+        )
+    }
+
+    @Test
+    fun biometric_status_NotSupported_should_emit_PinCodeSet_without_offer() = runTest(testDispatcher) {
+        walletRepository.createWallet("Test Wallet")
+        biometricUnlock.currentStatus = BiometricStatus.NotSupported
+
+        val collector = mutableListOf<SetPinCodeNews>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.news.collect { collector.add(it) }
+        }
+
+        enterMatchingPins()
+        job.cancel()
+
+        assertEquals(SetPinCodeNews.PinCodeSet, collector.single(), "Should emit PinCodeSet news")
+        assertFalse(
+            viewModel.viewState.first().showBiometricOffer,
+            "NotSupported biometric status should never show the offer",
+        )
+    }
+
+    @Test
+    fun biometric_status_Ready_should_emit_PinCodeSet_without_offer() = runTest(testDispatcher) {
+        walletRepository.createWallet("Test Wallet")
+        biometricUnlock.currentStatus = BiometricStatus.Ready
+
+        val collector = mutableListOf<SetPinCodeNews>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.news.collect { collector.add(it) }
+        }
+
+        enterMatchingPins()
+        job.cancel()
+
+        assertEquals(SetPinCodeNews.PinCodeSet, collector.single(), "Should emit PinCodeSet news")
+        assertFalse(
+            viewModel.viewState.first().showBiometricOffer,
+            "Ready biometric status should never show the offer",
+        )
+    }
+
+    @Test
+    fun accepting_biometric_offer_should_enable_biometrics_and_emit_PinCodeSet() = runTest(testDispatcher) {
+        walletRepository.createWallet("Test Wallet")
+        biometricUnlock.currentStatus = BiometricStatus.NotSetUp
+
+        val collector = mutableListOf<SetPinCodeNews>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.news.collect { collector.add(it) }
+        }
+
+        enterMatchingPins()
+        assertTrue(viewModel.viewState.first().showBiometricOffer, "Offer should be showing before it is accepted")
+
+        viewModel.onEvent(SetPinCodeEvent.OnBiometricOfferAccept)
+        advanceUntilIdle()
+        job.cancel()
+
+        assertEquals(1, biometricUnlock.enableCallCount, "Accepting the offer should call enable once")
+        assertFalse(viewModel.viewState.first().showBiometricOffer, "Offer should be dismissed after accepting")
+        assertEquals(SetPinCodeNews.PinCodeSet, collector.single(), "Should emit PinCodeSet news after accepting")
+    }
+
+    @Test
+    fun double_accepting_biometric_offer_should_enable_biometrics_once() = runTest(testDispatcher) {
+        walletRepository.createWallet("Test Wallet")
+        biometricUnlock.currentStatus = BiometricStatus.NotSetUp
+
+        val collector = mutableListOf<SetPinCodeNews>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.news.collect { collector.add(it) }
+        }
+
+        enterMatchingPins()
+        assertTrue(viewModel.viewState.first().showBiometricOffer, "Offer should be showing before it is accepted")
+
+        viewModel.onEvent(SetPinCodeEvent.OnBiometricOfferAccept)
+        viewModel.onEvent(SetPinCodeEvent.OnBiometricOfferAccept)
+        advanceUntilIdle()
+        job.cancel()
+
+        assertEquals(1, biometricUnlock.enableCallCount, "Double tapping the offer should call enable once")
+        assertEquals(
+            SetPinCodeNews.PinCodeSet,
+            collector.single(),
+            "Should emit PinCodeSet exactly once after a double tap",
+        )
+    }
+
+    @Test
+    fun accepting_biometric_offer_with_cancelled_enable_should_still_emit_PinCodeSet() = runTest(testDispatcher) {
+        walletRepository.createWallet("Test Wallet")
+        biometricUnlock.currentStatus = BiometricStatus.NotSetUp
+        biometricUnlock.enableResult = BiometricResult.Cancelled
+
+        val collector = mutableListOf<SetPinCodeNews>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.news.collect { collector.add(it) }
+        }
+
+        enterMatchingPins()
+        viewModel.onEvent(SetPinCodeEvent.OnBiometricOfferAccept)
+        advanceUntilIdle()
+        job.cancel()
+
+        assertFalse(
+            viewModel.viewState.first().showBiometricOffer,
+            "Offer should be dismissed even when enable is cancelled",
+        )
+        assertEquals(
+            SetPinCodeNews.PinCodeSet,
+            collector.single(),
+            "Should still emit PinCodeSet after a cancelled enable",
+        )
+    }
+
+    @Test
+    fun accepting_biometric_offer_with_enable_error_should_still_emit_PinCodeSet() = runTest(testDispatcher) {
+        walletRepository.createWallet("Test Wallet")
+        biometricUnlock.currentStatus = BiometricStatus.NotSetUp
+        biometricUnlock.enableResult = BiometricResult.Error("boom")
+
+        val collector = mutableListOf<SetPinCodeNews>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.news.collect { collector.add(it) }
+        }
+
+        enterMatchingPins()
+        viewModel.onEvent(SetPinCodeEvent.OnBiometricOfferAccept)
+        advanceUntilIdle()
+        job.cancel()
+
+        assertFalse(
+            viewModel.viewState.first().showBiometricOffer,
+            "Offer should be dismissed even when enable errors",
+        )
+        assertEquals(
+            SetPinCodeNews.PinCodeSet,
+            collector.single(),
+            "Should still emit PinCodeSet after a failed enable",
+        )
+    }
+
+    @Test
+    fun skipping_biometric_offer_should_not_enable_biometrics_and_should_emit_PinCodeSet() = runTest(testDispatcher) {
+        walletRepository.createWallet("Test Wallet")
+        biometricUnlock.currentStatus = BiometricStatus.NotSetUp
+
+        val collector = mutableListOf<SetPinCodeNews>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.news.collect { collector.add(it) }
+        }
+
+        enterMatchingPins()
+        viewModel.onEvent(SetPinCodeEvent.OnBiometricOfferSkip)
+        advanceUntilIdle()
+        job.cancel()
+
+        assertEquals(0, biometricUnlock.enableCallCount, "Skipping the offer should not call enable")
+        assertFalse(viewModel.viewState.first().showBiometricOffer, "Offer should be dismissed after skipping")
+        assertEquals(SetPinCodeNews.PinCodeSet, collector.single(), "Should emit PinCodeSet news after skipping")
+    }
+
+    private fun TestScope.enterMatchingPins() {
+        repeat(6) {
+            viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
+        }
+        advanceUntilIdle()
+        repeat(6) {
+            viewModel.onEvent(SetPinCodeEvent.OnDigitClick(1))
+        }
+        advanceUntilIdle()
     }
 }

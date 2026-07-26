@@ -18,6 +18,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.biometry.BiometricResult
+import me.sdi.ethwallet.core.security.biometry.BiometricStatus
+import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
@@ -29,6 +32,8 @@ import kotlin.time.Duration.Companion.seconds
 private const val TAG = "PinVerification"
 private const val PIN_MAX_LENGTH = 6
 private const val ERROR_CLEAR_DELAY_MS = 500
+private const val BIOMETRIC_INVALIDATED_MESSAGE = "Biometrics changed. Biometric unlock was reset."
+private const val BIOMETRIC_ERROR_MESSAGE = "Biometric unlock failed. Use your PIN."
 
 /**
  * ViewModel for the PIN code verification screen.
@@ -41,6 +46,7 @@ class VerifyPinCodeViewModel(
     private val pinCodeStorage: PinCodeStorage,
     private val dataCleaner: DataCleaner,
     private val pinAttemptsGuard: PinAttemptsGuard,
+    private val biometricUnlock: BiometricUnlock,
 ) : ViewModel() {
     val viewState: StateFlow<VerifyPinCodeViewState>
         field = MutableStateFlow(VerifyPinCodeViewState())
@@ -53,6 +59,7 @@ class VerifyPinCodeViewModel(
     private var countdownJob: Job? = null
     private var verificationJob: Job? = null
     private var errorClearJob: Job? = null
+    private var biometricJob: Job? = null
 
     init {
         viewState
@@ -65,6 +72,7 @@ class VerifyPinCodeViewModel(
                     handleTamperDetected()
                 }
                 is PinLockState.Active -> {
+                    val isBiometricAvailable = biometricUnlock.status() == BiometricStatus.Ready
                     if (status.lockRemaining > Duration.ZERO) {
                         viewState.update {
                             it.copy(
@@ -72,6 +80,7 @@ class VerifyPinCodeViewModel(
                                 isLocked = true,
                                 lockCountdown = status.lockRemaining.inWholeSeconds.toInt(),
                                 remainingAttempts = status.remainingInWindow,
+                                isBiometricAvailable = isBiometricAvailable,
                             )
                         }
                         startLockCountdown()
@@ -80,6 +89,7 @@ class VerifyPinCodeViewModel(
                             it.copy(
                                 isInitializing = false,
                                 remainingAttempts = status.remainingInWindow,
+                                isBiometricAvailable = isBiometricAvailable,
                             )
                         }
                     }
@@ -101,17 +111,14 @@ class VerifyPinCodeViewModel(
 
         val currentState = viewState.value
 
-        if (currentState.isInitializing ||
-            currentState.isVerifying ||
-            currentState.isLocked ||
-            currentState.isLoggingOut
-        ) {
+        if (currentState.isInitializing || currentState.isVerifying || currentState.isLoggingOut) {
             return
         }
 
         when (event) {
-            is VerifyPinCodeEvent.OnDigitClick -> handleDigitClick(event.digit)
-            is VerifyPinCodeEvent.OnDeleteClick -> handleDeleteClick()
+            is VerifyPinCodeEvent.OnDigitClick -> if (!currentState.isLocked) handleDigitClick(event.digit)
+            is VerifyPinCodeEvent.OnDeleteClick -> if (!currentState.isLocked) handleDeleteClick()
+            is VerifyPinCodeEvent.OnBiometricClick -> handleBiometricClick()
         }
     }
 
@@ -131,6 +138,8 @@ class VerifyPinCodeViewModel(
         countdownJob = null
         errorClearJob?.cancel()
         errorClearJob = null
+        biometricJob?.cancel()
+        biometricJob = null
         viewState.update {
             it.copy(
                 errorMessage = null,
@@ -151,6 +160,7 @@ class VerifyPinCodeViewModel(
                 viewState.update {
                     it.copy(
                         errorMessage = "Error: $errorMessage",
+                        showRemainingAttempts = false,
                         isLoggingOut = false,
                     )
                 }
@@ -188,6 +198,61 @@ class VerifyPinCodeViewModel(
         viewState.update { it.copy(enteredPin = enteredPin.dropLast(1), errorMessage = null) }
     }
 
+    private fun handleBiometricClick() {
+        viewState.update { it.copy(isVerifying = true) }
+
+        biometricJob = viewModelScope.launch {
+            try {
+                val result = biometricUnlock.unlock()
+                ensureActive()
+
+                viewState.update { it.copy(isVerifying = false) }
+
+                when (result) {
+                    is BiometricResult.Success -> {
+                        pinAttemptsGuard.onSuccess()
+                        newsChannel.send(VerifyPinCodeNews.PinVerified)
+                    }
+                    is BiometricResult.Cancelled -> {
+                        Unit
+                    }
+                    is BiometricResult.Invalidated -> {
+                        viewState.update {
+                            it.copy(
+                                errorMessage = BIOMETRIC_INVALIDATED_MESSAGE,
+                                showRemainingAttempts = false,
+                                isBiometricAvailable = false,
+                            )
+                        }
+                        scheduleErrorClear()
+                    }
+                    is BiometricResult.Error -> {
+                        Logger.debug(TAG) { "Biometric unlock failed: ${result.message}" }
+                        viewState.update {
+                            it.copy(
+                                errorMessage = BIOMETRIC_ERROR_MESSAGE,
+                                showRemainingAttempts = false,
+                            )
+                        }
+                        scheduleErrorClear()
+                    }
+                }
+            } catch (e: Exception) {
+                ensureActive()
+
+                Logger.warn(TAG, e) { "Biometric unlock failed unexpectedly" }
+                viewState.update {
+                    it.copy(
+                        errorMessage = BIOMETRIC_ERROR_MESSAGE,
+                        showRemainingAttempts = false,
+                        isVerifying = false,
+                    )
+                }
+                scheduleErrorClear()
+            }
+        }
+    }
+
     private fun verifyPin(pin: String) {
         viewState.update { it.copy(isVerifying = true) }
 
@@ -215,6 +280,7 @@ class VerifyPinCodeViewModel(
                     it.copy(
                         enteredPin = "",
                         errorMessage = "Error: $errorMessage",
+                        showRemainingAttempts = false,
                         isVerifying = false,
                     )
                 }
@@ -233,6 +299,7 @@ class VerifyPinCodeViewModel(
                 viewState.update {
                     it.copy(
                         errorMessage = if (locked) "Too many failed attempts" else "Incorrect PIN code",
+                        showRemainingAttempts = true,
                         remainingAttempts = result.remainingInWindow,
                         isVerifying = false,
                         isLocked = locked,
@@ -306,6 +373,7 @@ class VerifyPinCodeViewModel(
         verificationJob?.cancel()
         countdownJob?.cancel()
         errorClearJob?.cancel()
+        biometricJob?.cancel()
     }
 }
 
@@ -322,6 +390,8 @@ data class VerifyPinCodeViewState(
     val lockCountdown: Int = 0,
     val failedAttemptId: Int = 0,
     val isInitializing: Boolean = true,
+    val isBiometricAvailable: Boolean = false,
+    val showRemainingAttempts: Boolean = false,
 )
 
 /**
@@ -357,6 +427,11 @@ sealed interface VerifyPinCodeEvent {
      * User clicked the delete button
      */
     data object OnDeleteClick : VerifyPinCodeEvent
+
+    /**
+     * User clicked the biometric unlock button
+     */
+    data object OnBiometricClick : VerifyPinCodeEvent
 
     /**
      * Confirm local data cleanup and logout.

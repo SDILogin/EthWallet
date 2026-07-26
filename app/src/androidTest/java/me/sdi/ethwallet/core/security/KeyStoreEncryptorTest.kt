@@ -2,6 +2,8 @@ package me.sdi.ethwallet.core.security
 
 import android.util.Base64
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -14,6 +16,7 @@ import java.math.BigInteger
 import java.security.GeneralSecurityException
 import java.security.KeyStore
 import java.security.SecureRandom
+import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
@@ -27,7 +30,7 @@ class KeyStoreEncryptorTest {
     fun tearDown() = deleteWalletAliases()
 
     @Test
-    fun roundTripsPrivateKeyThroughTwoLayers() {
+    fun roundTripsPrivateKeyThroughTwoLayers() = runTest {
         val session = InMemoryPinSession().apply { set(randomKek()) }
         val encryptor = KeyStoreEncryptor(pinSession = session)
 
@@ -48,12 +51,12 @@ class KeyStoreEncryptorTest {
         val encryptor = KeyStoreEncryptor(pinSession = InMemoryPinSession())
 
         assertThrows(IllegalStateException::class.java) {
-            encryptor.encryptPrivateKey(PRIVATE_KEY, ADDRESS)
+            runBlocking { encryptor.encryptPrivateKey(PRIVATE_KEY, ADDRESS) }
         }
     }
 
     @Test
-    fun clearedSessionBlocksDecrypt() {
+    fun clearedSessionBlocksDecrypt() = runTest {
         val session = InMemoryPinSession().apply { set(randomKek()) }
         val encryptor = KeyStoreEncryptor(pinSession = session)
         val cipherText = encryptor.encryptPrivateKey(PRIVATE_KEY, ADDRESS)
@@ -61,23 +64,23 @@ class KeyStoreEncryptorTest {
         session.clear()
 
         assertThrows(IllegalStateException::class.java) {
-            encryptor.decryptPrivateKey(cipherText, ADDRESS)
+            runBlocking { encryptor.decryptPrivateKey(cipherText, ADDRESS) }
         }
     }
 
     @Test
-    fun wrongKekFailsGcmAuthentication() {
+    fun wrongKekFailsGcmAuthentication() = runTest {
         val cipherText = KeyStoreEncryptor(pinSession = InMemoryPinSession().apply { set(randomKek()) })
             .encryptPrivateKey(PRIVATE_KEY, ADDRESS)
 
         val wrongSessionEncryptor = KeyStoreEncryptor(pinSession = InMemoryPinSession().apply { set(randomKek()) })
 
-        val error = assertThrows(SecurityException::class.java) {
-            wrongSessionEncryptor.decryptPrivateKey(cipherText, ADDRESS)
+        val error = assertThrows(GeneralSecurityException::class.java) {
+            runBlocking { wrongSessionEncryptor.decryptPrivateKey(cipherText, ADDRESS) }
         }
         assertTrue(
-            "Inner GCM tag mismatch must surface as a GeneralSecurityException cause, actual: ${error.cause}",
-            error.cause is GeneralSecurityException,
+            "Inner GCM tag mismatch must surface as an AEAD authentication failure, actual: $error",
+            error is AEADBadTagException,
         )
     }
 

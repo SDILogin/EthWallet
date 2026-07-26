@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,6 +39,10 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.backspace_24px
+import me.sdi.ethwallet.resources.biometric_offer_enable
+import me.sdi.ethwallet.resources.biometric_offer_message
+import me.sdi.ethwallet.resources.biometric_offer_skip
+import me.sdi.ethwallet.resources.biometric_offer_title
 import me.sdi.ethwallet.resources.delete
 import me.sdi.ethwallet.resources.pin_confirm_subtitle
 import me.sdi.ethwallet.resources.pin_confirm_title
@@ -67,6 +73,39 @@ fun SetPinCodeScreen(
     }
 
     SetPinCodeScreen(viewState, viewModel::onEvent, modifier)
+
+    if (viewState.showBiometricOffer) {
+        BiometricOfferDialog(
+            onAccept = { viewModel.onEvent(SetPinCodeEvent.OnBiometricOfferAccept) },
+            onSkip = { viewModel.onEvent(SetPinCodeEvent.OnBiometricOfferSkip) },
+        )
+    }
+}
+
+@Composable
+private fun BiometricOfferDialog(
+    onAccept: () -> Unit,
+    onSkip: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onSkip,
+        title = {
+            Text(stringResource(Res.string.biometric_offer_title))
+        },
+        text = {
+            Text(stringResource(Res.string.biometric_offer_message))
+        },
+        confirmButton = {
+            TextButton(onClick = onAccept) {
+                Text(stringResource(Res.string.biometric_offer_enable))
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onSkip) {
+                Text(stringResource(Res.string.biometric_offer_skip))
+            }
+        },
+    )
 }
 
 @Composable

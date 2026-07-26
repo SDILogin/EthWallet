@@ -18,7 +18,6 @@ object KekCipher {
     private const val GCM_IV_LENGTH = 12
     private const val GCM_TAG_LENGTH = 128
 
-
     suspend fun encrypt(key: ByteArray, plaintext: ByteArray): ByteArray = withContext(Dispatchers.Default) {
         val iv = ByteArray(GCM_IV_LENGTH).also(SecureRandom()::nextBytes)
         val cipher = Cipher.getInstance(TRANSFORMATION)

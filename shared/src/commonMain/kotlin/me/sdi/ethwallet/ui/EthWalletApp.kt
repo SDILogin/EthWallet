@@ -28,6 +28,7 @@ import me.sdi.ethwallet.ui.navigation.Navigator
 import me.sdi.ethwallet.ui.navigation.rememberNavigationState
 import me.sdi.ethwallet.ui.receive.ReceiveScreen
 import me.sdi.ethwallet.ui.send.SendScreen
+import me.sdi.ethwallet.ui.settings.SettingsScreen
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
@@ -123,6 +124,9 @@ fun EthWalletApp(
                             },
                             onEditButtonClick = { },
                             onTokenClick = { },
+                            onSettingsClick = {
+                                navigator.navigate(Destination.SettingsScreen)
+                            },
                         )
                     }
 
@@ -169,6 +173,13 @@ fun EthWalletApp(
                                 navigator.navigateAndClearStack(Destination.WalletScreen)
                             },
                             modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+
+                    entry<Destination.SettingsScreen> {
+                        SettingsScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onBack = { navigator.goBack() },
                         )
                     }
                 }

@@ -30,4 +30,7 @@ sealed interface Destination : NavKey {
 
     @Serializable
     data object SendScreen : Destination
+
+    @Serializable
+    data object SettingsScreen : Destination
 }

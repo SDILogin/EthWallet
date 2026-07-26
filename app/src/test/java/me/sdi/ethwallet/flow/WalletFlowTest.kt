@@ -14,6 +14,9 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.EthCreationResult
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.FiatRateProvider
+import me.sdi.ethwallet.core.security.biometry.BiometricResult
+import me.sdi.ethwallet.core.security.biometry.BiometricStatus
+import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.DataCleanerRoomDb
@@ -171,11 +174,11 @@ class WalletFlowTest : KoinTest {
         single<PinCodeStorage> { pinCodeStorage }
         single<PrivateKeyEncryptor> {
             object : PrivateKeyEncryptor {
-                override fun encryptPrivateKey(privateKey: BigInteger, address: String): String {
+                override suspend fun encryptPrivateKey(privateKey: BigInteger, address: String): String {
                     return privateKey.toString(16)
                 }
 
-                override fun decryptPrivateKey(encryptedBase64: String, address: String): BigInteger {
+                override suspend fun decryptPrivateKey(encryptedBase64: String, address: String): BigInteger {
                     return BigInteger(encryptedBase64, 16)
                 }
             }
@@ -191,6 +194,17 @@ class WalletFlowTest : KoinTest {
                     },
                 ),
             )
+        }
+        single<BiometricUnlock> {
+            object : BiometricUnlock {
+                override suspend fun status(): BiometricStatus = BiometricStatus.NotSupported
+
+                override suspend fun enable(): BiometricResult = BiometricResult.Error("unsupported")
+
+                override suspend fun disable() = Unit
+
+                override suspend fun unlock(): BiometricResult = BiometricResult.Error("unsupported")
+            }
         }
         factory<BalanceProvider> {
             object : BalanceProvider {

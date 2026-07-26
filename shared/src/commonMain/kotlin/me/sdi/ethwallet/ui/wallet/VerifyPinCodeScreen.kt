@@ -37,11 +37,13 @@ import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.backspace_24px
 import me.sdi.ethwallet.resources.delete
+import me.sdi.ethwallet.resources.fingerprint_24px
 import me.sdi.ethwallet.resources.logout_dialog_confirm
 import me.sdi.ethwallet.resources.logout_dialog_dismiss
 import me.sdi.ethwallet.resources.logout_dialog_message
 import me.sdi.ethwallet.resources.logout_dialog_title
 import me.sdi.ethwallet.resources.pin_attempts_remaining
+import me.sdi.ethwallet.resources.pin_biometric_button
 import me.sdi.ethwallet.resources.pin_enter_subtitle
 import me.sdi.ethwallet.resources.pin_enter_title
 import me.sdi.ethwallet.resources.pin_forgot
@@ -189,7 +191,7 @@ private fun VerifyPinCodeScreen(
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
-                            if (viewState.remainingAttempts > 0) {
+                            if (viewState.showRemainingAttempts && viewState.remainingAttempts > 0) {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = stringResource(
@@ -226,8 +228,13 @@ private fun VerifyPinCodeScreen(
                     onDeleteClick = {
                         onEvent(VerifyPinCodeEvent.OnDeleteClick)
                     },
+                    showBiometricButton = viewState.isBiometricAvailable,
+                    onBiometricClick = {
+                        onEvent(VerifyPinCodeEvent.OnBiometricClick)
+                    },
                     modifier = Modifier.padding(bottom = 16.dp),
                     enabled = !viewState.isLocked && !viewState.isVerifying,
+                    biometricEnabled = !viewState.isVerifying,
                 )
             }
         }
@@ -238,8 +245,11 @@ private fun VerifyPinCodeScreen(
 private fun VerifyNumberPad(
     onNumberClick: (Int) -> Unit,
     onDeleteClick: () -> Unit,
+    showBiometricButton: Boolean,
+    onBiometricClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    biometricEnabled: Boolean = enabled,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -282,7 +292,24 @@ private fun VerifyNumberPad(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            Box(modifier = Modifier.size(72.dp))
+            if (showBiometricButton) {
+                TextButton(
+                    onClick = onBiometricClick,
+                    modifier = Modifier.size(72.dp),
+                    enabled = biometricEnabled,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onBackground,
+                    ),
+                ) {
+                    Icon(
+                        painter = painterResource(Res.drawable.fingerprint_24px),
+                        contentDescription = stringResource(Res.string.pin_biometric_button),
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+            } else {
+                Box(modifier = Modifier.size(72.dp))
+            }
 
             NumberButton(number = 0, onClick = { onNumberClick(0) }, enabled = enabled)
 

@@ -3,6 +3,7 @@ package me.sdi.ethwallet
 import android.app.Application
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.di.appModules
+import me.sdi.ethwallet.util.CurrentActivityHolder
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -16,10 +17,12 @@ class EthWalletApplication : Application() {
             explorerBaseUrl = BuildConfig.ETH_EXPLORER_BASE_URL,
         )
 
-        startKoin {
+        val koinApplication = startKoin {
             androidLogger()
             androidContext(this@EthWalletApplication)
             modules(appModules(chainConfig))
         }
+
+        registerActivityLifecycleCallbacks(koinApplication.koin.get<CurrentActivityHolder>())
     }
 }

@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.fakes.FakeBiometricUnlock
 import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
@@ -29,6 +30,7 @@ class SetPinCodeViewModelWithStorageTest {
     private lateinit var pinCodeStorage: FakePinCodeStorage
     private lateinit var walletDao: FakeWalletDao
     private lateinit var walletRepository: WalletRepository
+    private lateinit var biometricUnlock: FakeBiometricUnlock
     private lateinit var viewModel: SetPinCodeViewModel
 
     @BeforeTest
@@ -41,7 +43,8 @@ class SetPinCodeViewModelWithStorageTest {
             ethManager = FakeEthManager(),
             privateKeyEncryptor = FakePrivateKeyEncryptor(),
         )
-        viewModel = SetPinCodeViewModel(pinCodeStorage, walletRepository)
+        biometricUnlock = FakeBiometricUnlock()
+        viewModel = SetPinCodeViewModel(pinCodeStorage, walletRepository, biometricUnlock)
     }
 
     @AfterTest

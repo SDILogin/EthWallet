@@ -27,6 +27,7 @@ class NavigationState(
                         Destination.VerifyPinCodeScreen -> "VerifyPinCodeScreen"
                         Destination.ReceiveQrScreen -> "ReceiveQrScreen"
                         Destination.SendScreen -> "SendScreen"
+                        Destination.SettingsScreen -> "SettingsScreen"
                     }
                 }
             },
@@ -45,6 +46,7 @@ class NavigationState(
                             "VerifyPinCodeScreen" -> Destination.VerifyPinCodeScreen
                             "ReceiveQrScreen" -> Destination.ReceiveQrScreen
                             "SendScreen" -> Destination.SendScreen
+                            "SettingsScreen" -> Destination.SettingsScreen
                             else -> Destination.OnBoardingScreen
                         }
                     },

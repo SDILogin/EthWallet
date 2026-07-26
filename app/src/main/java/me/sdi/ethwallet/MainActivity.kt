@@ -4,10 +4,10 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.fragment.app.FragmentActivity
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.database.DatabaseBuilder
 import me.sdi.ethwallet.ui.EthWalletApp
@@ -15,7 +15,7 @@ import me.sdi.ethwallet.ui.InitialNavigationViewModel
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private val viewModel: InitialNavigationViewModel by viewModel()
     private val userActivityManager: UserActivityManager by inject()
 

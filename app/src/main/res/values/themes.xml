@@ -7,5 +7,9 @@
 
         <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@mipmap/ic_launcher</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+
+        <!-- Below API 28 androidx.biometric shows its prompt in an AppCompat AlertDialog, which
+             crashes unless this platform theme points it at an AppCompat dialog theme. -->
+        <item name="alertDialogTheme">@style/Theme.AppCompat.Light.Dialog.Alert</item>
     </style>
 </resources>

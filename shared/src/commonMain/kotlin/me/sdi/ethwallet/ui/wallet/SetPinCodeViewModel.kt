@@ -2,6 +2,7 @@ package me.sdi.ethwallet.ui.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -13,6 +14,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.biometry.BiometricStatus
+import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.data.repository.WalletRepository
 import kotlin.time.Duration.Companion.milliseconds
@@ -26,6 +29,7 @@ data class SetPinCodeViewState(
     val isConfirmationMode: Boolean = false,
     val errorMessage: String? = null,
     val isSaving: Boolean = false,
+    val showBiometricOffer: Boolean = false,
 )
 
 /**
@@ -63,6 +67,16 @@ sealed interface SetPinCodeEvent {
     data object OnResetClick : SetPinCodeEvent
 
     /**
+     * User accepted the offer to enable biometric unlock
+     */
+    data object OnBiometricOfferAccept : SetPinCodeEvent
+
+    /**
+     * User declined the offer to enable biometric unlock
+     */
+    data object OnBiometricOfferSkip : SetPinCodeEvent
+
+    /**
      * Reset the view state to default empty state
      */
     data object Reset : SetPinCodeEvent
@@ -74,16 +88,20 @@ sealed interface SetPinCodeEvent {
  *
  * @param pinCodeStorage The storage implementation for saving and verifying PIN codes
  * @param walletRepository Persists the pending wallet once the PIN has been stored
+ * @param biometricUnlock Backs the offer to enable biometric unlock once the PIN has been stored
  */
 class SetPinCodeViewModel(
     private val pinCodeStorage: PinCodeStorage,
     private val walletRepository: WalletRepository,
+    private val biometricUnlock: BiometricUnlock,
 ) : ViewModel() {
     val viewState: StateFlow<SetPinCodeViewState>
         field = MutableStateFlow(SetPinCodeViewState())
 
     val news: SharedFlow<SetPinCodeNews>
         field = MutableSharedFlow<SetPinCodeNews>()
+
+    private var biometricOfferJob: Job? = null
 
     init {
         viewState
@@ -104,7 +122,34 @@ class SetPinCodeViewModel(
             is SetPinCodeEvent.OnDigitClick -> handleDigitClick(event.digit)
             is SetPinCodeEvent.OnDeleteClick -> handleDeleteClick()
             is SetPinCodeEvent.OnResetClick -> handleResetClick()
+            is SetPinCodeEvent.OnBiometricOfferAccept -> handleBiometricOffer(accepted = true)
+            is SetPinCodeEvent.OnBiometricOfferSkip -> handleBiometricOffer(accepted = false)
             is SetPinCodeEvent.Reset -> handleFullReset()
+        }
+    }
+
+    private fun handleBiometricOffer(accepted: Boolean) {
+        if (biometricOfferJob?.isActive == true) {
+            return
+        }
+
+        biometricOfferJob = viewModelScope.launch {
+            if (accepted) {
+                val result = biometricUnlock.enable()
+                Logger.debug(TAG) { "Biometric unlock enable result: $result" }
+            }
+
+            viewState.update { it.copy(showBiometricOffer = false) }
+
+            news.emit(SetPinCodeNews.PinCodeSet)
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (it == null) {
+                    Logger.debug(TAG) { "biometricOfferJob successfully completed" }
+                } else {
+                    Logger.warn(TAG, it) { "biometricOfferJob completed with exception" }
+                }
+            }
         }
     }
 
@@ -219,7 +264,11 @@ class SetPinCodeViewModel(
 
                     viewState.update { it.copy(isSaving = false) }
 
-                    news.emit(SetPinCodeNews.PinCodeSet)
+                    if (biometricUnlock.status() == BiometricStatus.NotSetUp) {
+                        viewState.update { it.copy(showBiometricOffer = true) }
+                    } else {
+                        news.emit(SetPinCodeNews.PinCodeSet)
+                    }
                 } catch (e: Exception) {
                     ensureActive()
 

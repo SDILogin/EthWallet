@@ -18,8 +18,11 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import me.sdi.ethwallet.core.security.biometry.BiometricResult
+import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PinLockState
+import me.sdi.ethwallet.fakes.FakeBiometricUnlock
 import me.sdi.ethwallet.fakes.FakeDataCleaner
 import me.sdi.ethwallet.fakes.FakePinAttemptsGuard
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
@@ -42,6 +45,7 @@ class VerifyPinCodeViewModelTest {
     private lateinit var pinCodeStorage: FakePinCodeStorage
     private lateinit var dataCleaner: FakeDataCleaner
     private lateinit var pinAttemptsGuard: FakePinAttemptsGuard
+    private lateinit var biometricUnlock: FakeBiometricUnlock
     private val testPin = "123456"
     private val wrongPin = "000000"
 
@@ -53,6 +57,7 @@ class VerifyPinCodeViewModelTest {
         pinCodeStorage = FakePinCodeStorage()
         dataCleaner = FakeDataCleaner()
         pinAttemptsGuard = FakePinAttemptsGuard()
+        biometricUnlock = FakeBiometricUnlock()
     }
 
     @AfterTest
@@ -78,7 +83,7 @@ class VerifyPinCodeViewModelTest {
 
     @Test
     fun should_ignore_digit_clicks_while_initializing() = runTest(testDispatcher) {
-        viewModel = VerifyPinCodeViewModel(pinCodeStorage, dataCleaner, pinAttemptsGuard)
+        viewModel = VerifyPinCodeViewModel(pinCodeStorage, dataCleaner, pinAttemptsGuard, biometricUnlock)
         assertTrue(viewModel.viewState.value.isInitializing, "ViewModel should start in the initializing state")
 
         viewModel.onEvent(VerifyPinCodeEvent.OnDigitClick(1))
@@ -108,7 +113,7 @@ class VerifyPinCodeViewModelTest {
     @Test
     fun tampered_status_at_init_should_wipe_and_log_out() = runTest(testDispatcher) {
         pinAttemptsGuard.statusResult = PinLockState.Tampered
-        viewModel = VerifyPinCodeViewModel(pinCodeStorage, dataCleaner, pinAttemptsGuard)
+        viewModel = VerifyPinCodeViewModel(pinCodeStorage, dataCleaner, pinAttemptsGuard, biometricUnlock)
         collectNews()
         runCurrent()
 
@@ -217,6 +222,7 @@ class VerifyPinCodeViewModelTest {
         assertEquals("", state.enteredPin, "Pin must be reset after wrong attempt")
         assertFalse(state.errorMessage.isNullOrBlank(), "Error message after invalid pin input")
         assertEquals(2, state.remainingAttempts, "remainingAttempts must mirror the guard's remaining-in-window")
+        assertTrue(state.showRemainingAttempts, "A wrong PIN should show how many attempts are left")
         assertFalse(state.isVerifying, "Flag isVerifying must be reset after pin check to unlock numpad")
         assertFalse(state.isLocked, "User must be able to input pin again when there are 2 more attempts left")
         assertEquals(1, pinAttemptsGuard.onFailedAttemptCallCount, "Wrong PIN should be recorded with the guard")
@@ -511,7 +517,7 @@ class VerifyPinCodeViewModelTest {
                 awaitCancellation()
             }
         }
-        viewModel = VerifyPinCodeViewModel(blockingStorage, dataCleaner, pinAttemptsGuard)
+        viewModel = VerifyPinCodeViewModel(blockingStorage, dataCleaner, pinAttemptsGuard, biometricUnlock)
         runCurrent()
         collectNews()
 
@@ -563,6 +569,172 @@ class VerifyPinCodeViewModelTest {
         assertEquals(0, unlockedState.lockCountdown, "Countdown should be 0 once unlocked")
     }
 
+    @Test
+    fun biometric_status_Ready_at_init_should_set_isBiometricAvailable_true() = runTest(testDispatcher) {
+        biometricUnlock.currentStatus = BiometricStatus.Ready
+        createViewModel()
+
+        val state = viewModel.viewState.first()
+        assertTrue(state.isBiometricAvailable, "Ready biometric status at init should make biometric unlock available")
+    }
+
+    @Test
+    fun biometric_status_NotSetUp_at_init_should_keep_isBiometricAvailable_false() = runTest(testDispatcher) {
+        biometricUnlock.currentStatus = BiometricStatus.NotSetUp
+        createViewModel()
+
+        val state = viewModel.viewState.first()
+        assertFalse(
+            state.isBiometricAvailable,
+            "NotSetUp biometric status at init should not show the biometric button",
+        )
+    }
+
+    @Test
+    fun should_unlock_with_biometrics_and_emit_PinVerified_news() = runTest(testDispatcher) {
+        biometricUnlock.currentStatus = BiometricStatus.Ready
+        biometricUnlock.unlockResult = BiometricResult.Success
+        createViewModel()
+        collectNews()
+
+        viewModel.onEvent(VerifyPinCodeEvent.OnBiometricClick)
+        advanceUntilIdle()
+
+        assertEquals(
+            VerifyPinCodeNews.PinVerified,
+            collectedNews.firstOrNull(),
+            "Successful biometric unlock should emit PinVerified news",
+        )
+        assertEquals(1, pinAttemptsGuard.onSuccessCallCount, "Biometric success should reset the guard's failure count")
+    }
+
+    @Test
+    fun biometric_unlock_cancelled_should_have_no_visible_effect() = runTest(testDispatcher) {
+        biometricUnlock.currentStatus = BiometricStatus.Ready
+        biometricUnlock.unlockResult = BiometricResult.Cancelled
+        createViewModel()
+        collectNews()
+
+        viewModel.onEvent(VerifyPinCodeEvent.OnBiometricClick)
+        advanceUntilIdle()
+
+        assertTrue(collectedNews.isEmpty(), "A cancelled biometric prompt should not emit news")
+        val state = viewModel.viewState.first()
+        assertNull(state.errorMessage, "A cancelled biometric prompt should not show an error")
+        assertTrue(state.isBiometricAvailable, "A cancelled biometric prompt should keep the biometric button visible")
+    }
+
+    @Test
+    fun biometric_unlock_invalidated_should_hide_button_and_show_error() = runTest(testDispatcher) {
+        biometricUnlock.currentStatus = BiometricStatus.Ready
+        biometricUnlock.unlockResult = BiometricResult.Invalidated
+        createViewModel()
+        collectNews()
+
+        viewModel.onEvent(VerifyPinCodeEvent.OnBiometricClick)
+        advanceUntilIdle()
+
+        assertTrue(collectedNews.isEmpty(), "An invalidated biometric unlock should not emit news")
+        val state = viewModel.viewState.first()
+        assertFalse(state.isBiometricAvailable, "An invalidated biometric unlock should hide the biometric button")
+        assertNotNull(state.errorMessage, "An invalidated biometric unlock should show an error message")
+        assertEquals(0, state.failedAttemptId, "An invalidated biometric unlock should not trigger the shake animation")
+    }
+
+    @Test
+    fun biometric_unlock_error_should_show_error_message() = runTest(testDispatcher) {
+        biometricUnlock.currentStatus = BiometricStatus.Ready
+        biometricUnlock.unlockResult = BiometricResult.Error("boom")
+        createViewModel()
+        collectNews()
+
+        viewModel.onEvent(VerifyPinCodeEvent.OnBiometricClick)
+        advanceUntilIdle()
+
+        assertTrue(collectedNews.isEmpty(), "A biometric unlock error should not emit news")
+        val state = viewModel.viewState.first()
+        assertNotNull(state.errorMessage, "A biometric unlock error should show an error message")
+    }
+
+    @Test
+    fun biometric_unlock_error_should_not_show_remaining_attempts() = runTest(testDispatcher) {
+        biometricUnlock.currentStatus = BiometricStatus.Ready
+        biometricUnlock.unlockResult = BiometricResult.Error("boom")
+        createViewModel()
+
+        viewModel.onEvent(VerifyPinCodeEvent.OnBiometricClick)
+        advanceUntilIdle()
+
+        val state = viewModel.viewState.first()
+        assertEquals(
+            "Biometric unlock failed. Use your PIN.",
+            state.errorMessage,
+            "A biometric unlock error should show the biometric error message",
+        )
+        assertFalse(
+            state.showRemainingAttempts,
+            "A biometric failure consumes no PIN attempt, so the attempts line must stay hidden",
+        )
+        assertEquals(3, state.remainingAttempts, "A biometric failure should not change the remaining PIN attempts")
+        assertEquals(
+            0,
+            pinAttemptsGuard.onFailedAttemptCallCount,
+            "A biometric failure should not be recorded with the guard",
+        )
+    }
+
+    @Test
+    fun biometric_unlock_throwing_should_release_the_screen_and_show_the_error() = runTest(testDispatcher) {
+        biometricUnlock.currentStatus = BiometricStatus.Ready
+        biometricUnlock.unlockThrowable = IllegalStateException("Biometric unlock broke its contract")
+        createViewModel()
+        collectNews()
+
+        viewModel.onEvent(VerifyPinCodeEvent.OnBiometricClick)
+        advanceUntilIdle()
+
+        val state = viewModel.viewState.first()
+        assertFalse(state.isVerifying, "A throwing biometric unlock must not leave the screen stuck in verification")
+        assertEquals(
+            "Biometric unlock failed. Use your PIN.",
+            state.errorMessage,
+            "A throwing biometric unlock should show the biometric error message",
+        )
+        assertFalse(state.showRemainingAttempts, "A throwing biometric unlock consumes no PIN attempt")
+        assertEquals(
+            0,
+            pinAttemptsGuard.onFailedAttemptCallCount,
+            "A throwing biometric unlock should not be recorded with the guard",
+        )
+    }
+
+    @Test
+    fun biometric_click_should_unlock_while_locked() = runTest(testDispatcher) {
+        pinAttemptsGuard.statusResult = PinLockState.Active(3, 3, 25.seconds)
+        biometricUnlock.currentStatus = BiometricStatus.Ready
+        biometricUnlock.unlockResult = BiometricResult.Success
+        createViewModel()
+        collectNews()
+
+        try {
+            val state = viewModel.viewState.first()
+            assertTrue(state.isLocked, "A locked status at init should render the screen as locked")
+
+            viewModel.onEvent(VerifyPinCodeEvent.OnBiometricClick)
+            runCurrent()
+
+            assertEquals(1, biometricUnlock.unlockCallCount, "The PIN lockout must not block the biometric prompt")
+            assertEquals(
+                VerifyPinCodeNews.PinVerified,
+                collectedNews.firstOrNull(),
+                "Biometric success while locked should emit PinVerified news",
+            )
+            assertEquals(1, pinAttemptsGuard.onSuccessCallCount, "Biometric success should reset the guard's failures")
+        } finally {
+            viewModel.viewModelScope.cancel()
+        }
+    }
+
     private fun escalatingToLockResults() = listOf(
         PinLockState.Active(1, 2, Duration.ZERO),
         PinLockState.Active(2, 1, Duration.ZERO),
@@ -570,7 +742,7 @@ class VerifyPinCodeViewModelTest {
     )
 
     private fun TestScope.createViewModel() {
-        viewModel = VerifyPinCodeViewModel(pinCodeStorage, dataCleaner, pinAttemptsGuard)
+        viewModel = VerifyPinCodeViewModel(pinCodeStorage, dataCleaner, pinAttemptsGuard, biometricUnlock)
         runCurrent()
     }
 
