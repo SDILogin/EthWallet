@@ -8,6 +8,13 @@ import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.data.UserActivityManager
 import java.io.File
 import java.io.IOException
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.FileAttribute
+import java.nio.file.attribute.PosixFilePermissions
 import java.security.GeneralSecurityException
 import java.security.SecureRandom
 import java.util.Properties
@@ -108,17 +115,44 @@ class PinCodeStorageFile(
 
     private suspend fun writeArtifacts(salt: ByteArray, wrappedKek: ByteArray) =
         withContext(dispatcher) {
-            artifactsFile.parentFile?.mkdirs()
-
             val properties = Properties()
             properties.setProperty(PIN_KDF_SALT, Base64.encode(salt))
             properties.setProperty(PIN_WRAPPED_KEK, Base64.encode(wrappedKek))
-            artifactsFile.outputStream().use { properties.store(it, null) }
 
-            artifactsFile.setReadable(false, false)
-            artifactsFile.setWritable(false, false)
-            artifactsFile.setReadable(true, true)
-            artifactsFile.setWritable(true, true)
+            val target = artifactsFile.toPath().toAbsolutePath()
+            val directory = Files.createDirectories(target.parent)
+            val pending = Files.createTempFile(directory, "pin", ".tmp", *ownerOnlyPermissions())
+            try {
+                Files.newOutputStream(pending).use { properties.store(it, null) }
+                replace(pending, target)
+            } finally {
+                Files.deleteIfExists(pending)
+            }
+        }
+
+    /**
+     * Renames [pending] over [target] so a crash mid-write cannot leave a half-written envelope,
+     * and so the permissions [pending] was created with become the permissions of the stored file.
+     */
+    private fun replace(pending: Path, target: Path) {
+        try {
+            Files.move(
+                pending,
+                target,
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING,
+            )
+        } catch (e: AtomicMoveNotSupportedException) {
+            Logger.warn(TAG, e) { "Atomic replace is unsupported here, falling back to a plain move" }
+            Files.move(pending, target, StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+
+    private fun ownerOnlyPermissions(): Array<FileAttribute<*>> =
+        if (FileSystems.getDefault().supportedFileAttributeViews().contains(POSIX_VIEW)) {
+            arrayOf(PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))
+        } else {
+            emptyArray()
         }
 
     private suspend fun readArtifacts(): PinArtifacts? = withContext(dispatcher) {
@@ -143,6 +177,7 @@ class PinCodeStorageFile(
 
     private companion object {
         private const val TAG = "PinCodeStorageFile"
+        private const val POSIX_VIEW = "posix"
 
         private const val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
         private const val PBKDF2_ITERATIONS = 200_000

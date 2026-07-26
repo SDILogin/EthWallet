@@ -6,6 +6,9 @@ import me.sdi.ethwallet.fakes.FakePinAttemptsGuard
 import me.sdi.ethwallet.fakes.FakePinSession
 import me.sdi.ethwallet.fakes.FakeUserActivityManager
 import java.io.File
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermissions
 import java.util.Properties
 import kotlin.io.encoding.Base64
 import kotlin.test.AfterTest
@@ -23,7 +26,7 @@ class PinCodeStorageFileTest {
 
     @AfterTest
     fun deleteArtifacts() {
-        artifactsFile.delete()
+        artifactsDirectory.listFiles()?.forEach { it.delete() }
         artifactsDirectory.delete()
     }
 
@@ -122,6 +125,35 @@ class PinCodeStorageFileTest {
     }
 
     @Test
+    fun the_artifacts_file_is_readable_only_by_its_owner() = runTest {
+        if (!FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
+            return@runTest
+        }
+
+        newStorage().storePinCode(PIN)
+
+        assertEquals(
+            PosixFilePermissions.fromString("rw-------"),
+            Files.getPosixFilePermissions(artifactsFile.toPath()),
+            "The PIN artifacts file must never be readable by other users",
+        )
+    }
+
+    @Test
+    fun storing_a_new_pin_replaces_the_previous_envelope() = runTest {
+        newStorage().storePinCode(PIN)
+        newStorage().storePinCode(NEW_PIN)
+
+        assertFalse(newStorage().verifyPinCode(PIN), "The replaced PIN must no longer verify")
+        assertTrue(newStorage().verifyPinCode(NEW_PIN), "The new PIN should verify")
+        assertEquals(
+            listOf(artifactsFile.name),
+            artifactsDirectory.list()?.sorted(),
+            "Replacing the envelope should leave no temporary files behind",
+        )
+    }
+
+    @Test
     fun the_stored_artifacts_never_contain_the_pin() = runTest {
         newStorage().storePinCode(PIN)
 
@@ -149,5 +181,6 @@ class PinCodeStorageFileTest {
 
     private companion object {
         private const val PIN = "123456"
+        private const val NEW_PIN = "999999"
     }
 }
