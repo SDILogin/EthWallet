@@ -2,6 +2,7 @@ package me.sdi.ethwallet.flow
 
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -86,6 +87,12 @@ fun ComposeTestRule.clickContentDescription(
             // Ignore if parent is not scrollable
         }
         node.performClick()
+    }
+}
+
+fun ComposeTestRule.waitUntilTextExists(text: String) {
+    waitUntil(10000) {
+        onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
     }
 }
 

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
@@ -204,16 +206,15 @@ class VerifyPinCodeViewModel(
         biometricJob = viewModelScope.launch {
             try {
                 val result = biometricUnlock.unlock()
+                if (result is BiometricResult.Success) {
+                    forgetFailedAttempts()
+                }
                 ensureActive()
 
                 viewState.update { it.copy(isVerifying = false) }
 
                 when (result) {
-                    is BiometricResult.Success -> {
-                        pinAttemptsGuard.onSuccess()
-                        newsChannel.send(VerifyPinCodeNews.PinVerified)
-                    }
-                    is BiometricResult.Cancelled -> {
+                    is BiometricResult.Success, is BiometricResult.Cancelled -> {
                         Unit
                     }
                     is BiometricResult.Invalidated -> {
@@ -260,15 +261,18 @@ class VerifyPinCodeViewModel(
             try {
                 val isValid = coroutineScope {
                     launch(CoroutineName("IndicatorAnimation")) { delay(300.milliseconds) }
-                    val verification = async(CoroutineName("KeyVerification")) { pinCodeStorage.verifyPinCode(pin) }
+                    val verification = async(CoroutineName("KeyVerification")) {
+                        pinCodeStorage.verifyPinCode(pin).also { isValid ->
+                            if (isValid) {
+                                forgetFailedAttempts()
+                            }
+                        }
+                    }
                     verification.await()
                 }
                 ensureActive()
 
-                if (isValid) {
-                    pinAttemptsGuard.onSuccess()
-                    newsChannel.send(VerifyPinCodeNews.PinVerified)
-                } else {
+                if (!isValid) {
                     handleInvalidPin()
                 }
             } catch (e: Exception) {
@@ -286,6 +290,17 @@ class VerifyPinCodeViewModel(
                 }
                 newsChannel.send(VerifyPinCodeNews.Error(errorMessage))
             }
+        }
+    }
+
+    /**
+     * Runs outside cancellation: verifying the PIN publishes the session key, which lifts the lock
+     * and disposes this ViewModel, and a skipped reset would keep counting failures from the
+     * previous lock towards the next lockout.
+     */
+    private suspend fun forgetFailedAttempts() {
+        withContext(NonCancellable) {
+            pinAttemptsGuard.onSuccess()
         }
     }
 
@@ -398,11 +413,6 @@ data class VerifyPinCodeViewState(
  * One-time UI events emitted by the ViewModel
  */
 sealed interface VerifyPinCodeNews {
-    /**
-     * PIN was verified successfully
-     */
-    data object PinVerified : VerifyPinCodeNews
-
     /**
      * User chose to logout
      */

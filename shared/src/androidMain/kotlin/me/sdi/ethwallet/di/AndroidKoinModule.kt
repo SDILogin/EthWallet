@@ -27,6 +27,7 @@ import me.sdi.ethwallet.database.DatabaseBuilder
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.dao.WalletDao
+import me.sdi.ethwallet.util.AppForegroundTracker
 import me.sdi.ethwallet.util.CurrentActivityHolder
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
@@ -70,6 +71,8 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     }
 
     single { CurrentActivityHolder() }
+
+    single { AppForegroundTracker(userActivityManager = get()) }
 
     single<BiometricUnlock> {
         AndroidBiometricUnlock(

@@ -4,9 +4,6 @@ import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
@@ -56,10 +53,11 @@ class AndroidBiometricUnlockTest {
 }
 
 private class NoOpUserActivityManager : UserActivityManager {
-    private val _showLockScreen = MutableStateFlow(false)
-    override val showLockScreen: StateFlow<Boolean> = _showLockScreen.asStateFlow()
-
     override fun onAnyUserAction() {}
 
     override fun onAppUnlocked() {}
+
+    override fun onAppBackgrounded() {}
+
+    override fun onAppForegrounded() {}
 }

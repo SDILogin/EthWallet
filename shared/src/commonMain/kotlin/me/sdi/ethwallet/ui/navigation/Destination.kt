@@ -23,9 +23,6 @@ sealed interface Destination : NavKey {
     data object SetPinCodeScreen : Destination
 
     @Serializable
-    data object VerifyPinCodeScreen : Destination
-
-    @Serializable
     data object ReceiveQrScreen : Destination
 
     @Serializable

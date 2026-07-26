@@ -8,9 +8,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -185,10 +182,11 @@ class PinCodeStorageDataStoreTest {
 }
 
 private class FakeUserActivityManager : UserActivityManager {
-    private val _showLockScreen = MutableStateFlow(false)
-    override val showLockScreen: StateFlow<Boolean> = _showLockScreen.asStateFlow()
-
     override fun onAnyUserAction() {}
 
     override fun onAppUnlocked() {}
+
+    override fun onAppBackgrounded() {}
+
+    override fun onAppForegrounded() {}
 }

@@ -81,6 +81,7 @@ class PinCodeStorageDataStore(
         }
 
         pinSession.set(masterKek)
+        userActivityManager.onAppUnlocked()
         Logger.debug(TAG) { "PIN code stored successfully" }
     }
 

@@ -5,7 +5,6 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import me.sdi.ethwallet.core.ChainConfig
-import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.di.appModules
 import me.sdi.ethwallet.ui.EthWalletApp
 import me.sdi.ethwallet.ui.InitialNavigationViewModel
@@ -29,8 +28,7 @@ fun main() = application {
             configuration = koinConfiguration(declaration = { modules(appModules(chainConfig)) }),
             content = {
                 val viewModel: InitialNavigationViewModel = koinInject()
-                val userActivityManager: UserActivityManager = koinInject()
-                EthWalletApp(viewModel, userActivityManager)
+                EthWalletApp(viewModel)
             },
         )
     }

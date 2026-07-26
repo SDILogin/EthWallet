@@ -41,7 +41,7 @@ class MainActivity : FragmentActivity() {
         }
 
         enableEdgeToEdge()
-        setContent { EthWalletApp(viewModel, userActivityManager) }
+        setContent { EthWalletApp(viewModel) }
     }
 
     override fun onUserInteraction() {

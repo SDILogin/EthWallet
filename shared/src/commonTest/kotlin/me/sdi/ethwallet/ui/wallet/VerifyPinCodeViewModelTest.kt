@@ -127,18 +127,15 @@ class VerifyPinCodeViewModelTest {
     }
 
     @Test
-    fun should_verify_PIN_successfully_and_emit_PinVerified_event() = runTest(testDispatcher) {
+    fun should_verify_PIN_successfully_and_forget_failed_attempts() = runTest(testDispatcher) {
         pinCodeStorage.storePinCode(testPin)
         createViewModel()
         collectNews()
 
         inputPin(testPin)
 
-        assertEquals(
-            VerifyPinCodeNews.PinVerified,
-            collectedNews.firstOrNull(),
-            "Success should emit PinVerified news",
-        )
+        assertEquals(1, pinAttemptsGuard.onSuccessCallCount, "Success should reset the guard's failure count")
+        assertTrue(collectedNews.isEmpty(), "A verified PIN is observed through the session, not through news")
 
         val finalState = viewModel.viewState.first()
         assertTrue(finalState.isVerifying, "Verification flag should remain set until navigation")
@@ -591,7 +588,7 @@ class VerifyPinCodeViewModelTest {
     }
 
     @Test
-    fun should_unlock_with_biometrics_and_emit_PinVerified_news() = runTest(testDispatcher) {
+    fun should_unlock_with_biometrics_and_forget_failed_attempts() = runTest(testDispatcher) {
         biometricUnlock.currentStatus = BiometricStatus.Ready
         biometricUnlock.unlockResult = BiometricResult.Success
         createViewModel()
@@ -600,12 +597,8 @@ class VerifyPinCodeViewModelTest {
         viewModel.onEvent(VerifyPinCodeEvent.OnBiometricClick)
         advanceUntilIdle()
 
-        assertEquals(
-            VerifyPinCodeNews.PinVerified,
-            collectedNews.firstOrNull(),
-            "Successful biometric unlock should emit PinVerified news",
-        )
         assertEquals(1, pinAttemptsGuard.onSuccessCallCount, "Biometric success should reset the guard's failure count")
+        assertTrue(collectedNews.isEmpty(), "A biometric unlock is observed through the session, not through news")
     }
 
     @Test
@@ -724,11 +717,6 @@ class VerifyPinCodeViewModelTest {
             runCurrent()
 
             assertEquals(1, biometricUnlock.unlockCallCount, "The PIN lockout must not block the biometric prompt")
-            assertEquals(
-                VerifyPinCodeNews.PinVerified,
-                collectedNews.firstOrNull(),
-                "Biometric success while locked should emit PinVerified news",
-            )
             assertEquals(1, pinAttemptsGuard.onSuccessCallCount, "Biometric success should reset the guard's failures")
         } finally {
             viewModel.viewModelScope.cancel()

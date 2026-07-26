@@ -54,7 +54,6 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun VerifyPinCodeScreen(
-    onPinVerified: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: VerifyPinCodeViewModel = koinViewModel(),
@@ -63,16 +62,8 @@ fun VerifyPinCodeScreen(
 
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
-            when (news) {
-                is VerifyPinCodeNews.PinVerified -> {
-                    onPinVerified()
-                }
-                is VerifyPinCodeNews.LoggedOut -> {
-                    onLogout()
-                }
-                is VerifyPinCodeNews.Error -> {
-                    Unit
-                }
+            if (news is VerifyPinCodeNews.LoggedOut) {
+                onLogout()
             }
         }
     }
