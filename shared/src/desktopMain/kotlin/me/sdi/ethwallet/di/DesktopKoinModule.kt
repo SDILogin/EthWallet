@@ -6,9 +6,6 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.KeyStoreEncryptor
 import me.sdi.ethwallet.core.Web3jEthManager
-import me.sdi.ethwallet.core.security.biometry.BiometricResult
-import me.sdi.ethwallet.core.security.biometry.BiometricStatus
-import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
@@ -16,6 +13,9 @@ import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PinLockPolicy
 import me.sdi.ethwallet.core.security.PinLockState
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
+import me.sdi.ethwallet.core.security.biometry.BiometricResult
+import me.sdi.ethwallet.core.security.biometry.BiometricStatus
+import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.database.DesktopDatabaseBuilder
 import me.sdi.ethwallet.database.dao.FiatRateDao

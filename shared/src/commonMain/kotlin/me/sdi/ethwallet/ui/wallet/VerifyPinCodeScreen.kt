@@ -213,7 +213,7 @@ private fun VerifyPinCodeScreen(
                 TextButton(
                     onClick = onForgotPinClick,
                     modifier = Modifier.fillMaxWidth(0.8f),
-                    enabled = !viewState.isVerifying && !viewState.isLoggingOut,
+                    enabled = !viewState.isLoggingOut,
                 ) {
                     Text(
                         text = stringResource(Res.string.pin_forgot),

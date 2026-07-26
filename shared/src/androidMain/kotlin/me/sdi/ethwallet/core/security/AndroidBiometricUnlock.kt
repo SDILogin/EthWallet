@@ -163,6 +163,10 @@ class AndroidBiometricUnlock(
                 Logger.warn(TAG, e) { "Biometric key is gone, resetting biometric unlock" }
                 reset(invalidated = false)
                 return BiometricResult.Error(e.message)
+            } catch (e: IllegalArgumentException) {
+                Logger.warn(TAG, e) { "Wrapped KEK blob is corrupt, resetting biometric unlock" }
+                reset(invalidated = false)
+                return BiometricResult.Error(e.message)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Logger.warn(TAG, e) { "Biometric key is temporarily unusable, keeping biometric unlock" }
@@ -199,6 +203,10 @@ class AndroidBiometricUnlock(
             BiometricStatus.Invalidated
         } catch (e: MissingBiometricKeyException) {
             Logger.warn(TAG, e) { "Biometric key is gone, resetting biometric unlock" }
+            reset(invalidated = false)
+            BiometricStatus.NotSetUp
+        } catch (e: IllegalArgumentException) {
+            Logger.warn(TAG, e) { "Wrapped KEK blob is corrupt, resetting biometric unlock" }
             reset(invalidated = false)
             BiometricStatus.NotSetUp
         } catch (e: Exception) {
@@ -239,6 +247,10 @@ class AndroidBiometricUnlock(
             BiometricResult.Success
         } catch (e: AEADBadTagException) {
             Logger.warn(TAG, e) { "Wrapped KEK does not match the biometric key, resetting biometric unlock" }
+            reset(invalidated = false)
+            BiometricResult.Error(e.message)
+        } catch (e: IllegalArgumentException) {
+            Logger.warn(TAG, e) { "Wrapped KEK blob is corrupt, resetting biometric unlock" }
             reset(invalidated = false)
             BiometricResult.Error(e.message)
         } catch (e: Exception) {
@@ -326,6 +338,9 @@ class AndroidBiometricUnlock(
             .setRandomizedEncryptionRequired(true)
             .setUserAuthenticationRequired(true)
             .setInvalidatedByBiometricEnrollment(true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            specBuilder.setUnlockedDeviceRequired(true)
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             specBuilder.setUserAuthenticationParameters(0, KeyProperties.AUTH_BIOMETRIC_STRONG)
         } else {

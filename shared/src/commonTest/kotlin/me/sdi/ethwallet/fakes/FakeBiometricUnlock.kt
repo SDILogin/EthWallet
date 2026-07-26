@@ -25,7 +25,9 @@ class FakeBiometricUnlock : BiometricUnlock {
 
     override suspend fun disable() {
         disableCallCount++
-        currentStatus = BiometricStatus.NotSetUp
+        if (currentStatus == BiometricStatus.Ready || currentStatus == BiometricStatus.Invalidated) {
+            currentStatus = BiometricStatus.NotSetUp
+        }
     }
 
     override suspend fun unlock(): BiometricResult {

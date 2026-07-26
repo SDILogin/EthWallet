@@ -238,7 +238,7 @@ class SetPinCodeViewModelTest {
     }
 
     @Test
-    fun biometric_status_Ready_should_emit_PinCodeSet_without_offer() = runTest(testDispatcher) {
+    fun storing_a_PIN_should_disable_biometrics_and_offer_them_again() = runTest(testDispatcher) {
         walletRepository.createWallet("Test Wallet")
         biometricUnlock.currentStatus = BiometricStatus.Ready
 
@@ -250,10 +250,18 @@ class SetPinCodeViewModelTest {
         enterMatchingPins()
         job.cancel()
 
-        assertEquals(SetPinCodeNews.PinCodeSet, collector.single(), "Should emit PinCodeSet news")
-        assertFalse(
+        assertEquals(
+            1,
+            biometricUnlock.disableCallCount,
+            "Storing a PIN rotates the master KEK, so the stale biometric envelope must be destroyed",
+        )
+        assertTrue(
             viewModel.viewState.first().showBiometricOffer,
-            "Ready biometric status should never show the offer",
+            "The offer should re-appear once the stale envelope is gone",
+        )
+        assertTrue(
+            collector.isEmpty(),
+            "PinCodeSet should not be emitted before the biometric offer is resolved",
         )
     }
 
@@ -377,6 +385,21 @@ class SetPinCodeViewModelTest {
         assertEquals(0, biometricUnlock.enableCallCount, "Skipping the offer should not call enable")
         assertFalse(viewModel.viewState.first().showBiometricOffer, "Offer should be dismissed after skipping")
         assertEquals(SetPinCodeNews.PinCodeSet, collector.single(), "Should emit PinCodeSet news after skipping")
+    }
+
+    @Test
+    fun biometric_offer_events_should_be_ignored_while_the_offer_is_hidden() = runTest(testDispatcher) {
+        val collector = mutableListOf<SetPinCodeNews>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.news.collect { collector.add(it) }
+        }
+
+        viewModel.onEvent(SetPinCodeEvent.OnBiometricOfferAccept)
+        advanceUntilIdle()
+        job.cancel()
+
+        assertEquals(0, biometricUnlock.enableCallCount, "A hidden offer should never enable biometrics")
+        assertTrue(collector.isEmpty(), "A hidden offer should never emit PinCodeSet")
     }
 
     private fun TestScope.enterMatchingPins() {

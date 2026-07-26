@@ -14,9 +14,6 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.EthCreationResult
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.FiatRateProvider
-import me.sdi.ethwallet.core.security.biometry.BiometricResult
-import me.sdi.ethwallet.core.security.biometry.BiometricStatus
-import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.DataCleanerRoomDb
@@ -24,6 +21,9 @@ import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PinLockState
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
+import me.sdi.ethwallet.core.security.biometry.BiometricResult
+import me.sdi.ethwallet.core.security.biometry.BiometricStatus
+import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.database.AppDatabase

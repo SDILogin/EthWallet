@@ -14,9 +14,9 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
-import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.data.repository.WalletRepository
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -129,6 +129,10 @@ class SetPinCodeViewModel(
     }
 
     private fun handleBiometricOffer(accepted: Boolean) {
+        if (!viewState.value.showBiometricOffer) {
+            return
+        }
+
         if (biometricOfferJob?.isActive == true) {
             return
         }
@@ -246,6 +250,10 @@ class SetPinCodeViewModel(
         }
     }
 
+    /**
+     * Stores the PIN once both entries match. Storing mints a fresh master KEK, so any biometric
+     * envelope still wrapping the previous one is destroyed before the offer is re-evaluated.
+     */
     private fun validatePins() {
         val currentState = viewState.value
         val firstPin = currentState.firstPin
@@ -263,6 +271,8 @@ class SetPinCodeViewModel(
                     walletRepository.persistPendingWallet()
 
                     viewState.update { it.copy(isSaving = false) }
+
+                    biometricUnlock.disable()
 
                     if (biometricUnlock.status() == BiometricStatus.NotSetUp) {
                         viewState.update { it.copy(showBiometricOffer = true) }
