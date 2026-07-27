@@ -88,6 +88,7 @@ val commonModule = module {
     viewModel<SettingsViewModel> {
         SettingsViewModel(
             biometricUnlock = get(),
+            pinSession = get(),
         )
     }
 

@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +28,8 @@ import me.sdi.ethwallet.resources.settings_biometric_invalidated
 import me.sdi.ethwallet.resources.settings_biometric_not_enrolled
 import me.sdi.ethwallet.resources.settings_biometric_not_supported
 import me.sdi.ethwallet.resources.settings_biometric_title
+import me.sdi.ethwallet.resources.settings_lock_app
+import me.sdi.ethwallet.resources.settings_lock_app_description
 import me.sdi.ethwallet.resources.settings_title
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.StringResource
@@ -76,6 +79,7 @@ private fun SettingsScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             BiometricSettingRow(viewState = viewState, onEvent = onEvent)
+            LockAppRow(onEvent = onEvent)
         }
     }
 }
@@ -110,6 +114,26 @@ private fun BiometricSettingRow(
             checked = viewState.isBiometricEnabled,
             enabled = viewState.isBiometricSwitchEnabled,
             onCheckedChange = { onEvent(SettingsEvent.OnBiometricToggle(it)) },
+        )
+    }
+}
+
+@Composable
+private fun LockAppRow(onEvent: (SettingsEvent) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onEvent(SettingsEvent.OnLockClick) }
+            .padding(16.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.settings_lock_app),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Text(
+            text = stringResource(Res.string.settings_lock_app_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

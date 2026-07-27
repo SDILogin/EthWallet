@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 
@@ -33,10 +34,16 @@ sealed interface SettingsEvent {
      * User flipped the biometric unlock switch
      */
     data class OnBiometricToggle(val enabled: Boolean) : SettingsEvent
+
+    /**
+     * User asked to lock the app
+     */
+    data object OnLockClick : SettingsEvent
 }
 
 class SettingsViewModel(
     private val biometricUnlock: BiometricUnlock,
+    private val pinSession: PinSession,
 ) : ViewModel() {
     val viewState: StateFlow<SettingsViewState>
         field = MutableStateFlow(SettingsViewState())
@@ -60,6 +67,7 @@ class SettingsViewModel(
         Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
             is SettingsEvent.OnBiometricToggle -> handleBiometricToggle(event.enabled)
+            SettingsEvent.OnLockClick -> pinSession.clear()
         }
     }
 
