@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
@@ -41,7 +40,6 @@ import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun EthWalletApp(viewModel: InitialNavigationViewModel) {
     EthWalletTheme {
@@ -60,7 +58,6 @@ fun EthWalletApp(viewModel: InitialNavigationViewModel) {
             }
             val navigationState = rememberNavigationState(startDestination)
             val navigator = remember(navigationState) { Navigator(navigationState) }
-            val listDetailSceneStrategy = rememberListDetailSceneStrategy<Destination>()
 
             var wasLocked by remember { mutableStateOf(state.isLocked) }
             LaunchedEffect(state.isLocked) {
@@ -180,6 +177,7 @@ fun EthWalletApp(viewModel: InitialNavigationViewModel) {
                     }
                 }
 
+                @OptIn(ExperimentalMaterial3AdaptiveApi::class)
                 NavDisplay(
                     modifier = Modifier
                         .fillMaxSize()
@@ -190,7 +188,9 @@ fun EthWalletApp(viewModel: InitialNavigationViewModel) {
                         rememberSaveableStateHolderNavEntryDecorator(),
                         rememberViewModelStoreNavEntryDecorator(),
                     ),
-                    sceneStrategies = listOf(listDetailSceneStrategy),
+                    sceneStrategies = listOf(
+                        rememberListDetailSceneStrategy(),
+                    ),
                     onBack = { navigator.goBack() },
                 )
             }
