@@ -89,11 +89,7 @@ fun EthWalletApp(viewModel: InitialNavigationViewModel) {
                 modifier = Modifier.fillMaxSize(),
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
             ) { innerPadding ->
-                val entryProvider = entryProvider<Destination>(
-                    fallback = { key ->
-                        NavEntry(key) { }
-                    },
-                ) {
+                val entryProvider = entryProvider {
                     entry<Destination.OnBoardingScreen> {
                         OnboardingScreen(
                             modifier = Modifier.fillMaxSize().systemBarsPadding(),
