@@ -3,7 +3,6 @@ package me.sdi.ethwallet.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -25,7 +24,6 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
-import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
@@ -85,10 +83,7 @@ fun EthWalletApp(viewModel: InitialNavigationViewModel) {
                 return@AnimatedVisibility
             }
 
-            Scaffold(
-                modifier = Modifier.fillMaxSize(),
-                contentWindowInsets = WindowInsets(0, 0, 0, 0),
-            ) { innerPadding ->
+            Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                 val entryProvider = entryProvider {
                     entry<Destination.OnBoardingScreen> {
                         OnboardingScreen(
