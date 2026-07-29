@@ -1,8 +1,6 @@
 package me.sdi.ethwallet.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -39,161 +37,170 @@ import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun EthWalletApp(viewModel: InitialNavigationViewModel) {
+fun EthWalletApp(viewModel: InitialNavigationViewModel = koinViewModel()) {
     EthWalletTheme {
         val state by viewModel.state.collectAsState()
 
-        AnimatedVisibility(
-            modifier = Modifier.fillMaxSize(),
-            visible = state.numberOfWallets >= 0,
-            enter = fadeIn(),
-            exit = fadeOut(),
-        ) {
-            val startDestination: Destination = when (state.initialRoute) {
+        val navigationState = rememberNavigationState(Destination.SplashScreen)
+        val navigator = remember(navigationState) { Navigator(navigationState) }
+
+        LaunchedEffect(state.initialRoute) {
+            if (navigationState.backStack.singleOrNull() != Destination.SplashScreen) {
+                return@LaunchedEffect
+            }
+
+            val startDestination = when (state.initialRoute) {
                 InitialRoute.OnBoarding -> Destination.OnBoardingScreen
                 InitialRoute.Wallet -> Destination.WalletScreen
-                null -> Destination.OnBoardingScreen
+                null -> return@LaunchedEffect
             }
-            val navigationState = rememberNavigationState(startDestination)
-            val navigator = remember(navigationState) { Navigator(navigationState) }
+            navigator.navigateAndClearStack(startDestination)
+        }
 
-            var wasLocked by remember { mutableStateOf(state.isLocked) }
-            LaunchedEffect(state.isLocked) {
-                if (wasLocked && !state.isLocked && state.isPinCodeSet) {
-                    navigator.navigateAndClearStack(Destination.WalletScreen)
+        var wasLocked by remember { mutableStateOf(state.isLocked) }
+        LaunchedEffect(state.isLocked) {
+            if (wasLocked && !state.isLocked && state.isPinCodeSet) {
+                navigator.navigateAndClearStack(Destination.WalletScreen)
+            }
+            wasLocked = state.isLocked
+        }
+
+        if (state.isLocked) {
+            FreshViewModelStoreOwner {
+                VerifyPinCodeScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onLogout = {
+                        viewModel.onEvent(InitialNavigationEvent.WalletsCleared)
+                        navigator.navigateAndClearStack(Destination.OnBoardingScreen)
+                    },
+                )
+            }
+            return@EthWalletTheme
+        }
+
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        ) { innerPadding ->
+            val entryProvider = entryProvider {
+                entry<Destination.SplashScreen> {
+                    SplashScreen(modifier = Modifier.fillMaxSize())
                 }
-                wasLocked = state.isLocked
-            }
 
-            if (state.isLocked) {
-                FreshViewModelStoreOwner {
-                    VerifyPinCodeScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        onLogout = {
-                            viewModel.onEvent(InitialNavigationEvent.WalletsCleared)
-                            navigator.navigateAndClearStack(Destination.OnBoardingScreen)
+                entry<Destination.OnBoardingScreen> {
+                    OnboardingScreen(
+                        modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                        onImportWallet = {
+                            navigator.navigate(Destination.ImportWalletScreen)
+                        },
+                        onCreateWallet = {
+                            navigator.navigate(Destination.CreateWalletScreen)
                         },
                     )
                 }
-                return@AnimatedVisibility
-            }
 
-            Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                val entryProvider = entryProvider {
-                    entry<Destination.OnBoardingScreen> {
-                        OnboardingScreen(
-                            modifier = Modifier.fillMaxSize().systemBarsPadding(),
-                            onImportWallet = {
-                                navigator.navigate(Destination.ImportWalletScreen)
-                            },
-                            onCreateWallet = {
-                                navigator.navigate(Destination.CreateWalletScreen)
-                            },
-                        )
-                    }
-
-                    entry<Destination.CreateWalletScreen> {
-                        CreateWalletScreen(
-                            modifier = Modifier.fillMaxSize().systemBarsPadding(),
-                            onUpButtonClick = { navigator.goBack() },
-                            onMnemonicSaved = {
-                                navigator.navigate(Destination.SetPinCodeScreen)
-                            },
-                        )
-                    }
-
-                    entry<Destination.ImportWalletScreen> {
-                        ImportWalletScreen(
-                            modifier = Modifier.fillMaxSize().systemBarsPadding(),
-                            onUpButtonClick = { navigator.goBack() },
-                            onWalletImported = {
-                                navigator.navigate(Destination.SetPinCodeScreen)
-                            },
-                        )
-                    }
-
-                    entry<Destination.WalletScreen> {
-                        WalletScreen(
-                            modifier = Modifier.fillMaxSize(),
-                            onManageWallets = {
-                                navigator.navigate(Destination.WalletsListScreen)
-                            },
-                            onReceiveButtonClick = {
-                                navigator.navigate(Destination.ReceiveQrScreen)
-                            },
-                            onSendButtonClick = {
-                                navigator.navigate(Destination.SendScreen)
-                            },
-                            onEditButtonClick = { },
-                            onTokenClick = { },
-                            onSettingsClick = {
-                                navigator.navigate(Destination.SettingsScreen)
-                            },
-                        )
-                    }
-
-                    entry<Destination.ReceiveQrScreen> {
-                        ReceiveScreen(
-                            onBackPressed = { navigator.goBack() },
-                        )
-                    }
-
-                    entry<Destination.SendScreen> {
-                        SendScreen(
-                            modifier = Modifier.fillMaxSize(),
-                            onBackPress = { navigator.goBack() },
-                        )
-                    }
-
-                    entry<Destination.WalletsListScreen> {
-                        WalletsListScreen(
-                            modifier = Modifier.fillMaxSize(),
-                            navigateToOnboarding = {
-                                viewModel.onEvent(InitialNavigationEvent.WalletsCleared)
-                                navigator.navigateAndClearStack(Destination.OnBoardingScreen)
-                            },
-                            navigateToWalletDetails = {
-                                navigator.navigateAndClearStack(Destination.WalletScreen)
-                            },
-                        )
-                    }
-
-                    entry<Destination.SetPinCodeScreen> {
-                        SetPinCodeScreen(
-                            modifier = Modifier.fillMaxSize(),
-                            onPinCodeSet = {
-                                navigator.navigateAndClearStack(Destination.WalletScreen)
-                            },
-                        )
-                    }
-
-                    entry<Destination.SettingsScreen> {
-                        SettingsScreen(
-                            modifier = Modifier.fillMaxSize(),
-                            onBack = { navigator.goBack() },
-                        )
-                    }
+                entry<Destination.CreateWalletScreen> {
+                    CreateWalletScreen(
+                        modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                        onUpButtonClick = { navigator.goBack() },
+                        onMnemonicSaved = {
+                            navigator.navigate(Destination.SetPinCodeScreen)
+                        },
+                    )
                 }
 
-                @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-                NavDisplay(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    backStack = navigationState.backStack,
-                    entryProvider = entryProvider,
-                    entryDecorators = listOf(
-                        rememberSaveableStateHolderNavEntryDecorator(),
-                        rememberViewModelStoreNavEntryDecorator(),
-                    ),
-                    sceneStrategies = listOf(
-                        rememberListDetailSceneStrategy(),
-                    ),
-                    onBack = { navigator.goBack() },
-                )
+                entry<Destination.ImportWalletScreen> {
+                    ImportWalletScreen(
+                        modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                        onUpButtonClick = { navigator.goBack() },
+                        onWalletImported = {
+                            navigator.navigate(Destination.SetPinCodeScreen)
+                        },
+                    )
+                }
+
+                entry<Destination.WalletScreen> {
+                    WalletScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onManageWallets = {
+                            navigator.navigate(Destination.WalletsListScreen)
+                        },
+                        onReceiveButtonClick = {
+                            navigator.navigate(Destination.ReceiveQrScreen)
+                        },
+                        onSendButtonClick = {
+                            navigator.navigate(Destination.SendScreen)
+                        },
+                        onEditButtonClick = { },
+                        onTokenClick = { },
+                        onSettingsClick = {
+                            navigator.navigate(Destination.SettingsScreen)
+                        },
+                    )
+                }
+
+                entry<Destination.ReceiveQrScreen> {
+                    ReceiveScreen(
+                        onBackPressed = { navigator.goBack() },
+                    )
+                }
+
+                entry<Destination.SendScreen> {
+                    SendScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onBackPress = { navigator.goBack() },
+                    )
+                }
+
+                entry<Destination.WalletsListScreen> {
+                    WalletsListScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        navigateToOnboarding = {
+                            viewModel.onEvent(InitialNavigationEvent.WalletsCleared)
+                            navigator.navigateAndClearStack(Destination.OnBoardingScreen)
+                        },
+                        navigateToWalletDetails = {
+                            navigator.navigateAndClearStack(Destination.WalletScreen)
+                        },
+                    )
+                }
+
+                entry<Destination.SetPinCodeScreen> {
+                    SetPinCodeScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onPinCodeSet = {
+                            navigator.navigateAndClearStack(Destination.WalletScreen)
+                        },
+                    )
+                }
+
+                entry<Destination.SettingsScreen> {
+                    SettingsScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = { navigator.goBack() },
+                    )
+                }
             }
+
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            NavDisplay(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                backStack = navigationState.backStack,
+                entryProvider = entryProvider,
+                entryDecorators = listOf(
+                    rememberSaveableStateHolderNavEntryDecorator(),
+                    rememberViewModelStoreNavEntryDecorator(),
+                ),
+                sceneStrategies = listOf(
+                    rememberListDetailSceneStrategy(),
+                ),
+                onBack = { navigator.goBack() },
+            )
         }
     }
 }

@@ -2,21 +2,20 @@ package me.sdi.ethwallet
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.splashscreen.SplashScreen
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.database.DatabaseBuilder
 import me.sdi.ethwallet.ui.EthWalletApp
-import me.sdi.ethwallet.ui.InitialNavigationViewModel
 import org.koin.android.ext.android.inject
-import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : FragmentActivity() {
-    private val viewModel: InitialNavigationViewModel by viewModel()
     private val userActivityManager: UserActivityManager by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,27 +26,35 @@ class MainActivity : FragmentActivity() {
 
         DatabaseBuilder.getInstance(application)
 
-        var lastPrintAt = System.currentTimeMillis()
-        splashScreen.setKeepOnScreenCondition {
-            (viewModel.state.value.numberOfWallets < 0).also {
-                val now = System.currentTimeMillis()
-                if (now - lastPrintAt > 1000) {
-                    lastPrintAt = now
-                    Logger.debug("MainActivity") {
-                        "Splash screen condition: $it"
-                    }
-                }
-            }
-        }
+        splashScreen.exitWithoutAnimation()
 
         enableEdgeToEdge()
-        setContent { EthWalletApp(viewModel) }
+        setContent {
+            EthWalletApp()
+        }
     }
 
     override fun onUserInteraction() {
         super.onUserInteraction()
 
         userActivityManager.onAnyUserAction()
+    }
+}
+
+/**
+ * Drops the system splash screen the moment the first Compose frame is drawn, with no exit
+ * animation, leaving the identical [me.sdi.ethwallet.ui.SplashScreen] behind it on screen.
+ *
+ * Android 12 and later only. Below that the platform ignores the splash screen theme attributes,
+ * and asking androidx.core for an exit animation makes it inflate its own splash view, which needs
+ * `Theme.SplashScreen` attributes that this app's platform theme does not declare.
+ */
+private fun SplashScreen.exitWithoutAnimation() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+
+    setOnExitAnimationListener { splashScreenViewProvider ->
+        Logger.debug("Splah") { "JC splash screen exit animation started" }
+        splashScreenViewProvider.remove()
     }
 }
 

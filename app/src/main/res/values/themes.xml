@@ -2,11 +2,15 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <style name="Theme.EthWallet" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowSplashScreenBackground" tools:targetApi="31">#ffffff</item>
-        <item name="windowSplashScreenBackground">#ffffff</item>
+        <item name="android:windowSplashScreenBackground" tools:targetApi="31">@color/splash_background</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
 
-        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@mipmap/ic_launcher</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <!-- The foreground layer alone, not @mipmap/ic_launcher: the launcher icon carries an
+             opaque white background that the platform masks into a circle, which would show up as
+             a white disc on the dark splash background. Geometry is unchanged either way, the
+             platform inflates a 108dp icon canvas to 288dp. -->
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
 
         <!-- Below API 28 androidx.biometric shows its prompt in an AppCompat AlertDialog, which
              crashes unless this platform theme points it at an AppCompat dialog theme. -->

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Kept equal to the background of SplashScreen.kt so that dropping the system splash on top
+         of the Compose one is invisible. -->
+    <color name="splash_background">#FF000000</color>
+</resources>

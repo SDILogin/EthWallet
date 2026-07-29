@@ -23,6 +23,7 @@ class NavigationState(
             save = { state ->
                 state.backStack.map { destination ->
                     when (destination) {
+                        Destination.SplashScreen -> "SplashScreen"
                         Destination.OnBoardingScreen -> "OnBoardingScreen"
                         Destination.CreateWalletScreen -> "CreateWalletScreen"
                         Destination.ImportWalletScreen -> "ImportWalletScreen"
@@ -41,6 +42,7 @@ class NavigationState(
                 NavigationState(
                     names.map { name ->
                         when (name) {
+                            "SplashScreen" -> Destination.SplashScreen
                             "OnBoardingScreen" -> Destination.OnBoardingScreen
                             "CreateWalletScreen" -> Destination.CreateWalletScreen
                             "ImportWalletScreen" -> Destination.ImportWalletScreen
