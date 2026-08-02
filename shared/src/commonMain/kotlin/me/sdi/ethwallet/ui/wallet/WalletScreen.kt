@@ -56,8 +56,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.arrow_downward_24px
 import me.sdi.ethwallet.resources.arrow_outward_24px
+import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.edit
 import me.sdi.ethwallet.resources.ic_question_mark_56
 import me.sdi.ethwallet.resources.wallet_network
@@ -80,6 +82,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun WalletScreen(
+    onUpButtonClick: () -> Unit,
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
     onReceiveButtonClick: () -> Unit,
@@ -102,6 +105,7 @@ fun WalletScreen(
     WalletScreenContent(
         viewState = viewState,
         onRefresh = { viewModel.onEvent(WalletEvent.Refresh) },
+        onUpButtonClick = onUpButtonClick,
         onEditButtonClick = onEditButtonClick,
         onTokenClick = onTokenClick,
         onReceiveButtonClick = onReceiveButtonClick,
@@ -115,6 +119,7 @@ fun WalletScreen(
 fun WalletScreenContent(
     viewState: WalletViewState,
     onRefresh: () -> Unit,
+    onUpButtonClick: () -> Unit,
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
     onReceiveButtonClick: () -> Unit,
@@ -129,6 +134,14 @@ fun WalletScreenContent(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.wallet_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onUpButtonClick) {
+                        Icon(
+                            painter = painterResource(Res.drawable.arrow_back_24px),
+                            contentDescription = stringResource(Res.string.back),
+                        )
+                    }
+                },
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -607,6 +620,7 @@ private fun WalletScreenContentPreview(
     MaterialTheme {
         WalletScreenContent(
             viewState = viewState,
+            onUpButtonClick = {},
             onEditButtonClick = {},
             onTokenClick = {},
             onReceiveButtonClick = {},

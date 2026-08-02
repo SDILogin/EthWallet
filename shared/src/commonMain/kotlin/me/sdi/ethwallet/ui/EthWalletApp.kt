@@ -176,6 +176,7 @@ fun EthWalletApp() {
             ) { entry ->
                 WalletScreen(
                     modifier = Modifier.fillMaxSize(),
+                    onUpButtonClick = { backStack.removeLastOrNull() },
                     onReceiveButtonClick = { backStack.add(Destination.ReceiveQrScreen) },
                     onSendButtonClick = { backStack.add(Destination.SendScreen) },
                     onEditButtonClick = { },
