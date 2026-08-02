@@ -65,6 +65,8 @@ import me.sdi.ethwallet.resources.delete_24px
 import me.sdi.ethwallet.resources.error_something_went_wrong
 import me.sdi.ethwallet.resources.onboarding_create_wallet
 import me.sdi.ethwallet.resources.onboarding_import_wallet
+import me.sdi.ethwallet.resources.settings_24px
+import me.sdi.ethwallet.resources.wallet_settings
 import me.sdi.ethwallet.resources.wallets_list_active_wallet_icon
 import me.sdi.ethwallet.resources.wallets_list_add_wallet
 import me.sdi.ethwallet.resources.wallets_list_delete_wallet
@@ -82,6 +84,7 @@ fun WalletsListScreen(
     onSelectedWalletDeleted: () -> Unit,
     onImportWallet: () -> Unit,
     onCreateWallet: () -> Unit,
+    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: WalletsListViewModel = koinViewModel()
@@ -105,6 +108,7 @@ fun WalletsListScreen(
         onEvent = viewModel::onEvent,
         onImportWallet = onImportWallet,
         onCreateWallet = onCreateWallet,
+        onSettingsClick = onSettingsClick,
     )
 }
 
@@ -116,6 +120,7 @@ private fun WalletsListScreenContent(
     onEvent: (WalletsListEvent) -> Unit,
     onImportWallet: () -> Unit,
     onCreateWallet: () -> Unit,
+    onSettingsClick: () -> Unit,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -127,6 +132,14 @@ private fun WalletsListScreenContent(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
+                },
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            painter = painterResource(Res.drawable.settings_24px),
+                            contentDescription = stringResource(Res.string.wallet_settings),
+                        )
+                    }
                 },
             )
         },
@@ -371,6 +384,7 @@ private fun WalletsListScreenPreview() {
             onEvent = {},
             onImportWallet = {},
             onCreateWallet = {},
+            onSettingsClick = {},
         )
     }
 }

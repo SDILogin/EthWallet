@@ -137,6 +137,7 @@ fun EthWalletApp() {
                     },
                     onImportWallet = { backStack.add(Destination.ImportWalletScreen) },
                     onCreateWallet = { backStack.add(Destination.CreateWalletScreen) },
+                    onSettingsClick = { backStack.add(Destination.SettingsScreen) },
                 )
             }
 
@@ -179,7 +180,6 @@ fun EthWalletApp() {
                     onSendButtonClick = { backStack.add(Destination.SendScreen) },
                     onEditButtonClick = { },
                     onTokenClick = { },
-                    onSettingsClick = { backStack.add(Destination.SettingsScreen) },
                 )
             }
 
