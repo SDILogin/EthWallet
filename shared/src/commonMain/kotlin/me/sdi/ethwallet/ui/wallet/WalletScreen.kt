@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -148,7 +151,11 @@ fun WalletScreenContent(
             onRefresh = onRefresh,
         ) {
             Column(
-                modifier = Modifier.padding(innerPadding),
+                modifier = Modifier.padding(
+                    top = innerPadding.calculateTopPadding(),
+                    start = innerPadding.calculateStartPadding(LocalLayoutDirection.current),
+                    end = innerPadding.calculateEndPadding(LocalLayoutDirection.current),
+                ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (viewState.isLoading) {
@@ -180,9 +187,9 @@ fun WalletScreenContent(
                         LazyVerticalGrid(
                             columns = GridCells.Adaptive(300.dp),
                             modifier = Modifier.consumeWindowInsets(innerPadding),
-                            contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            contentPadding = PaddingValues(16.dp),
                         ) {
                             if (viewState.isLoading) {
                                 repeat(10) {
@@ -204,6 +211,8 @@ fun WalletScreenContent(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
             }
         }
     }
