@@ -299,6 +299,39 @@ class WalletFlowTest : KoinTest {
     }
 
     @Test
+    fun emptyWalletsListDoesNotShowAddWalletFab() {
+        onboardingPage.clickCreatePinCode()
+        setPinCodePage.enterPin(PIN)
+        setPinCodePage.enterPin(PIN)
+
+        walletsListPage.assertAddWalletIsHidden()
+    }
+
+    @Test
+    fun addWalletFabOpensCreateWalletScreen() {
+        runInitialWalletCreationFlow()
+        showWalletsList()
+
+        walletsListPage.openAddWalletMenu()
+        walletsListPage.assertAddWalletActions()
+        walletsListPage.clickAddWalletCreate()
+
+        composeTestRule.assertTextExists("Create Wallet")
+    }
+
+    @Test
+    fun addWalletFabOpensImportWalletScreen() {
+        runInitialWalletCreationFlow()
+        showWalletsList()
+
+        walletsListPage.openAddWalletMenu()
+        walletsListPage.assertAddWalletActions()
+        walletsListPage.clickAddWalletImport()
+
+        composeTestRule.assertTextExists("Enter Recovery Phrase")
+    }
+
+    @Test
     fun forgot_pin_logout_requires_confirmation_and_clears_local_data() {
         runInitialWalletCreationFlow()
 
@@ -319,7 +352,7 @@ class WalletFlowTest : KoinTest {
         composeTestRule.clickText("Forgot PIN Code?")
         composeTestRule.clickText("Confirm logout")
 
-        composeTestRule.assertTextExists("Create PIN Code")
+        composeTestRule.waitUntilTextExists("Create PIN Code")
         runBlocking {
             assertTrue(appDatabase.walletDao().observeAllWallets().first().isEmpty())
             assertFalse(pinCodeStorage.hasPinCode())
@@ -357,6 +390,14 @@ class WalletFlowTest : KoinTest {
         activityController.pause().stop().destroy()
         pinSession.clear()
         activityController = Robolectric.buildActivity(WalletFlowTestActivity::class.java).setup()
+    }
+
+    private fun showWalletsList() {
+        walletPage.awaitVisible()
+        composeTestRule.runOnUiThread {
+            activityController.get().onBackPressedDispatcher.onBackPressed()
+        }
+        walletsListPage.assertSingleWallet()
     }
 
     private fun runInitialWalletCreationFlow() {

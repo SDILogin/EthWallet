@@ -28,7 +28,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,9 +44,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,12 +59,14 @@ import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.add_24px
 import me.sdi.ethwallet.resources.check_24px
 import me.sdi.ethwallet.resources.delete_24px
 import me.sdi.ethwallet.resources.error_something_went_wrong
 import me.sdi.ethwallet.resources.onboarding_create_wallet
 import me.sdi.ethwallet.resources.onboarding_import_wallet
 import me.sdi.ethwallet.resources.wallets_list_active_wallet_icon
+import me.sdi.ethwallet.resources.wallets_list_add_wallet
 import me.sdi.ethwallet.resources.wallets_list_delete_wallet
 import me.sdi.ethwallet.resources.wallets_list_title
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
@@ -119,6 +129,46 @@ private fun WalletsListScreenContent(
                     )
                 },
             )
+        },
+        floatingActionButton = {
+            if (!uiState.isLoading && uiState.wallets.isNotEmpty()) {
+                var isAddWalletMenuExpanded by remember { mutableStateOf(false) }
+                val addWalletLabel = stringResource(Res.string.wallets_list_add_wallet)
+
+                Box {
+                    ExtendedFloatingActionButton(
+                        onClick = { isAddWalletMenuExpanded = true },
+                        modifier = Modifier.semantics { contentDescription = addWalletLabel },
+                        icon = {
+                            Icon(
+                                painter = painterResource(Res.drawable.add_24px),
+                                contentDescription = null,
+                            )
+                        },
+                        text = { Text(addWalletLabel) },
+                    )
+
+                    DropdownMenu(
+                        expanded = isAddWalletMenuExpanded,
+                        onDismissRequest = { isAddWalletMenuExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.onboarding_create_wallet)) },
+                            onClick = {
+                                isAddWalletMenuExpanded = false
+                                onCreateWallet()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.onboarding_import_wallet)) },
+                            onClick = {
+                                isAddWalletMenuExpanded = false
+                                onImportWallet()
+                            },
+                        )
+                    }
+                }
+            }
         },
     ) { innerPadding ->
         Box(
@@ -198,10 +248,10 @@ private fun WalletsListScreenContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(
                         top = 0.dp,
-                        bottom = innerPadding.calculateBottomPadding(),
+                        bottom = innerPadding.calculateBottomPadding() + 80.dp,
                         start = innerPadding.calculateStartPadding(LocalLayoutDirection.current),
                         end = innerPadding.calculateEndPadding(LocalLayoutDirection.current),
-                    )
+                    ),
                 ) {
                     items(
                         items = uiState.wallets,
