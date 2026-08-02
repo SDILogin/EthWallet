@@ -13,6 +13,6 @@ private val usdFormatter = ThreadLocal.withInitial {
     }
 }
 
-actual fun formatUsdCurrency(amount: BigDecimal): String = usdFormatter.get().format(amount)
+actual fun formatUsdCurrency(amount: BigDecimal): String = usdFormatter.get()?.format(amount) ?: amount.toPlainString()
 
 actual fun formatUsdCurrency(usd: Usd): String = formatUsdCurrency(usd.value)
