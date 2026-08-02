@@ -29,6 +29,7 @@ class SetPinCodeViewModelWithStorageTest {
 
     private lateinit var pinCodeStorage: FakePinCodeStorage
     private lateinit var walletDao: FakeWalletDao
+    private lateinit var ethManager: FakeEthManager
     private lateinit var walletRepository: WalletRepository
     private lateinit var biometricUnlock: FakeBiometricUnlock
     private lateinit var viewModel: SetPinCodeViewModel
@@ -38,9 +39,10 @@ class SetPinCodeViewModelWithStorageTest {
         Dispatchers.setMain(testDispatcher)
         pinCodeStorage = FakePinCodeStorage()
         walletDao = FakeWalletDao()
+        ethManager = FakeEthManager()
         walletRepository = WalletRepository(
             walletDao = walletDao,
-            ethManager = FakeEthManager(),
+            ethManager = ethManager,
             privateKeyEncryptor = FakePrivateKeyEncryptor(),
         )
         biometricUnlock = FakeBiometricUnlock()
@@ -54,8 +56,6 @@ class SetPinCodeViewModelWithStorageTest {
 
     @Test
     fun should_store_PIN_code_when_PINs_match() = runTest(testDispatcher) {
-        walletRepository.createWallet("Test Wallet")
-
         val collector = mutableListOf<SetPinCodeNews>()
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.news.collect {
@@ -82,8 +82,8 @@ class SetPinCodeViewModelWithStorageTest {
     }
 
     @Test
-    fun should_persist_pending_wallet_before_emitting_PinCodeSet() = runTest(testDispatcher) {
-        walletRepository.createWallet("Test Wallet")
+    fun should_leave_already_persisted_wallet_unchanged_before_emitting_PinCodeSet() = runTest(testDispatcher) {
+        walletRepository.saveWallet(ethManager.creationResult, "Test Wallet")
 
         val collector = mutableListOf<SetPinCodeNews>()
         val walletCountWhenNewsArrived = mutableListOf<Int>()
@@ -108,12 +108,13 @@ class SetPinCodeViewModelWithStorageTest {
         assertEquals(
             1,
             walletCountWhenNewsArrived.single(),
-            "Pending wallet should already be persisted by the time PinCodeSet news is emitted",
+            "Setting a PIN should not change the already persisted wallet",
         )
     }
 
     @Test
-    fun should_emit_error_news_and_not_PinCodeSet_when_persist_pending_wallet_fails() = runTest(testDispatcher) {
+    fun should_emit_PinCodeSet_when_wallet_storage_is_unavailable() = runTest(testDispatcher) {
+        walletDao.shouldThrowException = true
         val collector = mutableListOf<SetPinCodeNews>()
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.news.collect {
@@ -131,11 +132,7 @@ class SetPinCodeViewModelWithStorageTest {
         advanceUntilIdle()
         job.cancel()
 
-        assertEquals(1, collector.size, "Should emit exactly one news event")
-        assertTrue(
-            collector.single() is SetPinCodeNews.Error,
-            "Should emit Error news, not PinCodeSet, when persistPendingWallet() fails",
-        )
+        assertEquals(listOf<SetPinCodeNews>(SetPinCodeNews.PinCodeSet), collector)
     }
 
     @Test

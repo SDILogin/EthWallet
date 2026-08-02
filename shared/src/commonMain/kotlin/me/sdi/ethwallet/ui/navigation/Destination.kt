@@ -9,6 +9,9 @@ sealed interface Destination : NavKey {
     data object SplashScreen : Destination
 
     @Serializable
+    data object LockScreen: Destination
+
+    @Serializable
     data object OnBoardingScreen : Destination
 
     @Serializable
@@ -18,7 +21,7 @@ sealed interface Destination : NavKey {
     data object ImportWalletScreen : Destination
 
     @Serializable
-    data object WalletScreen : Destination
+    data class WalletScreen(val ethAddress: String) : Destination
 
     @Serializable
     data object WalletsListScreen : Destination

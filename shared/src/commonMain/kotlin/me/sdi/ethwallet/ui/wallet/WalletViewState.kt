@@ -20,6 +20,7 @@ data class WalletViewState(
     val totalBalanceEth: String = "",
     val favoriteTokens: List<FavoriteToken> = emptyList(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
 )
 
 /**

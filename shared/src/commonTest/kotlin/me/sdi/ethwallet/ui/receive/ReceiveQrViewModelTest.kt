@@ -6,13 +6,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
-import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.fakes.FakeEthManager
@@ -24,7 +22,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -39,7 +37,6 @@ class ReceiveQrViewModelTest {
     private lateinit var viewModel: ReceiveQrViewModel
 
     private val testAddress = EthAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
-    private val testWallet = EthWallet(label = "Test Wallet", address = testAddress)
 
     @BeforeTest
     fun setUp() {
@@ -53,9 +50,9 @@ class ReceiveQrViewModelTest {
                 address = testAddress.toString(),
                 encryptedPrivateKeyBase64 = "encrypted_key_1",
                 label = "Test Wallet",
-                isActive = true,
             ),
         )
+        walletDao.currentWalletAddress = testAddress.toString()
         walletRepository = WalletRepository(
             walletDao = walletDao,
             ethManager = ethManager,
@@ -247,10 +244,10 @@ class ReceiveQrViewModelTest {
         job.cancel()
 
         val finalState = collector.last()
-        assertTrue(finalState.qrPayload?.isNotEmpty() == true, "QR code URI should be generated")
-        assertTrue(finalState.qrPayload?.contains(testAddress.toString()) == true, "QR code should contain ETH address")
-        assertTrue(finalState.qrPayload?.startsWith("ethereum:") == true, "QR code should be ETH format")
-        assertFalse(finalState.qrPayload?.contains("value=") == true, "QR code should not contain amount parameter")
+        assertEquals(finalState.qrPayload?.isNotEmpty(), true, "QR code URI should be generated")
+        assertEquals(finalState.qrPayload?.contains(testAddress.toString()), true, "QR code should contain ETH address")
+        assertEquals(finalState.qrPayload?.startsWith("ethereum:"), true, "QR code should be ETH format")
+        assertNotEquals(finalState.qrPayload?.contains("value="), true, "QR code should not contain amount parameter")
     }
 
     @Test
@@ -274,9 +271,10 @@ class ReceiveQrViewModelTest {
         assertEquals(EthContractAddress, finalState.selectedTokenContract, "Token should be selected")
         assertEquals("1.5", finalState.amount, "Amount should be set")
         assertNull(finalState.amountError, "Amount should be valid")
-        assertTrue(
-            finalState.qrPayload?.isNotEmpty() == true,
-            "QR code should be generated when token and amount are valid",
+        assertEquals(
+            finalState.qrPayload?.isNotEmpty(),
+            true,
+            "QR code should be generated when token and amount are valid"
         )
     }
 

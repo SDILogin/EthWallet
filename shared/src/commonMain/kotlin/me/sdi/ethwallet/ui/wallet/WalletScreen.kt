@@ -33,6 +33,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -57,8 +58,6 @@ import me.sdi.ethwallet.resources.arrow_outward_24px
 import me.sdi.ethwallet.resources.edit
 import me.sdi.ethwallet.resources.ic_question_mark_56
 import me.sdi.ethwallet.resources.settings_24px
-import me.sdi.ethwallet.resources.switch_account_24px
-import me.sdi.ethwallet.resources.wallet_manage_wallets
 import me.sdi.ethwallet.resources.wallet_network
 import me.sdi.ethwallet.resources.wallet_receive
 import me.sdi.ethwallet.resources.wallet_send
@@ -80,19 +79,14 @@ import org.koin.compose.viewmodel.koinViewModel
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun WalletScreen(
-    onManageWallets: () -> Unit,
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
     onReceiveButtonClick: () -> Unit,
     onSendButtonClick: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: WalletViewModel = koinViewModel<WalletViewModel>(),
 ) {
-    LaunchedEffect(viewModel) {
-        viewModel.onEvent(WalletEvent.Initialize)
-    }
-
+    val viewModel: WalletViewModel = koinViewModel<WalletViewModel>()
     val toastManager = rememberToastManager()
     LaunchedEffect(key1 = viewModel.news) {
         viewModel.news.collect { news ->
@@ -107,7 +101,7 @@ fun WalletScreen(
     val viewState by viewModel.viewState.collectAsState()
     WalletScreenContent(
         viewState = viewState,
-        onManageWallets = onManageWallets,
+        onRefresh = { viewModel.onEvent(WalletEvent.Refresh) },
         onEditButtonClick = onEditButtonClick,
         onTokenClick = onTokenClick,
         onReceiveButtonClick = onReceiveButtonClick,
@@ -121,7 +115,7 @@ fun WalletScreen(
 @Composable
 fun WalletScreenContent(
     viewState: WalletViewState,
-    onManageWallets: () -> Unit,
+    onRefresh: () -> Unit,
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
     onReceiveButtonClick: () -> Unit,
@@ -138,12 +132,6 @@ fun WalletScreenContent(
             TopAppBar(
                 title = { Text(stringResource(Res.string.wallet_title)) },
                 actions = {
-                    IconButton(onClick = onManageWallets) {
-                        Icon(
-                            painter = painterResource(Res.drawable.switch_account_24px),
-                            contentDescription = stringResource(Res.string.wallet_manage_wallets),
-                        )
-                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             painter = painterResource(Res.drawable.settings_24px),
@@ -155,58 +143,63 @@ fun WalletScreenContent(
             )
         },
     ) { innerPadding ->
-        Column(
-            modifier = Modifier.padding(innerPadding),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        PullToRefreshBox(
+            isRefreshing = viewState.isRefreshing,
+            onRefresh = onRefresh,
         ) {
-            if (viewState.isLoading) {
-                TotalBalanceShimmer()
-            } else {
-                TotalFiatBalanceCard(
-                    fiatBalance = viewState.totalBalanceUsd,
-                    ethBalance = viewState.totalBalanceEth,
-                    chainId = viewState.chainId,
-                )
-            }
-
-            ButtonsPanel(
-                isLoading = viewState.isLoading,
-                onReceiveClick = onReceiveButtonClick,
-                onSendButtonClick = onSendButtonClick,
-            )
-
-            Card(
-                modifier = Modifier.padding(16.dp),
+            Column(
+                modifier = Modifier.padding(innerPadding),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Column {
-                    TokensHeader(
-                        onEditButtonClick = onEditButtonClick,
-                        editButtonEnabled = !viewState.isLoading,
-                        modifier = Modifier.padding(16.dp),
+                if (viewState.isLoading) {
+                    TotalBalanceShimmer()
+                } else {
+                    TotalFiatBalanceCard(
+                        fiatBalance = viewState.totalBalanceUsd,
+                        ethBalance = viewState.totalBalanceEth,
+                        chainId = viewState.chainId,
                     )
+                }
 
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(300.dp),
-                        modifier = Modifier.consumeWindowInsets(innerPadding),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        if (viewState.isLoading) {
-                            repeat(10) {
-                                item {
-                                    TokenItemShimmer()
+                ButtonsPanel(
+                    isLoading = viewState.isLoading,
+                    onReceiveClick = onReceiveButtonClick,
+                    onSendButtonClick = onSendButtonClick,
+                )
+
+                Card(
+                    modifier = Modifier.padding(16.dp),
+                ) {
+                    Column {
+                        TokensHeader(
+                            onEditButtonClick = onEditButtonClick,
+                            editButtonEnabled = !viewState.isLoading,
+                            modifier = Modifier.padding(16.dp),
+                        )
+
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(300.dp),
+                            modifier = Modifier.consumeWindowInsets(innerPadding),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            if (viewState.isLoading) {
+                                repeat(10) {
+                                    item {
+                                        TokenItemShimmer()
+                                    }
                                 }
-                            }
-                        } else if (viewState.favoriteTokens.isNotEmpty()) {
-                            items(
-                                items = viewState.favoriteTokens,
-                                key = { it.address.toString() },
-                            ) { token ->
-                                TokenCard(
-                                    token = token,
-                                    onTokenClick = onTokenClick,
-                                )
+                            } else if (viewState.favoriteTokens.isNotEmpty()) {
+                                items(
+                                    items = viewState.favoriteTokens,
+                                    key = { it.address.toString() },
+                                ) { token ->
+                                    TokenCard(
+                                        token = token,
+                                        onTokenClick = onTokenClick,
+                                    )
+                                }
                             }
                         }
                     }
@@ -618,12 +611,12 @@ private fun WalletScreenContentPreview(
     MaterialTheme {
         WalletScreenContent(
             viewState = viewState,
-            onManageWallets = {},
             onEditButtonClick = {},
             onTokenClick = {},
             onReceiveButtonClick = {},
             onSendButtonClick = {},
             onSettingsClick = {},
+            onRefresh = {},
         )
     }
 }

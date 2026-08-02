@@ -19,7 +19,6 @@ import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.ui.InitialNavigationViewModel
 import me.sdi.ethwallet.ui.receive.ReceiveQrViewModel
 import me.sdi.ethwallet.ui.send.SendViewModel
 import me.sdi.ethwallet.ui.settings.SettingsViewModel
@@ -39,7 +38,7 @@ expect fun platformModule(chainConfig: ChainConfig): Module
 val commonModule = module {
     single<CoroutineScope> { CoroutineScope(SupervisorJob()) }
 
-    single<WalletRepository> {
+    factory<WalletRepository> {
         WalletRepository(
             walletDao = get(),
             ethManager = get(),
@@ -58,15 +57,6 @@ val commonModule = module {
 
     factory<BalanceProvider> { EthBalanceProvider(get(), get()) }
     factory<FiatRateProvider> { FiatRateProviderBinance(get(), get()) }
-
-    viewModel<InitialNavigationViewModel> {
-        InitialNavigationViewModel(
-            walletDao = get(),
-            pinCodeStorage = get(),
-            dataCleaner = get(),
-            pinSession = get(),
-        )
-    }
 
     viewModel<SetPinCodeViewModel> {
         SetPinCodeViewModel(
@@ -94,6 +84,7 @@ val commonModule = module {
 
     viewModel<CreateWalletViewModel> {
         CreateWalletViewModel(
+            ethManager = get(),
             walletRepository = get(),
         )
     }

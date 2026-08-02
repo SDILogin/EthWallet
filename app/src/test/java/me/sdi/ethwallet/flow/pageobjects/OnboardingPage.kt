@@ -5,10 +5,10 @@ import androidx.compose.ui.test.onAllNodesWithText
 import me.sdi.ethwallet.flow.clickText
 
 class OnboardingPage(private val composeTestRule: ComposeTestRule) {
-    fun clickCreateNewWallet() {
+    fun clickCreatePinCode() {
         composeTestRule.waitUntil(10000) {
-            composeTestRule.onAllNodesWithText("Create new wallet").fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodesWithText("Create PIN Code").fetchSemanticsNodes().isNotEmpty()
         }
-        composeTestRule.clickText("Create new wallet")
+        composeTestRule.clickText("Create PIN Code")
     }
 }

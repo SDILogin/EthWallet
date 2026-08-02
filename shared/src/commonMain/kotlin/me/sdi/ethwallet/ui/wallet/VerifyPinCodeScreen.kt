@@ -48,6 +48,8 @@ import me.sdi.ethwallet.resources.pin_enter_subtitle
 import me.sdi.ethwallet.resources.pin_enter_title
 import me.sdi.ethwallet.resources.pin_forgot
 import me.sdi.ethwallet.resources.pin_locked_subtitle
+import me.sdi.ethwallet.util.ToastManager
+import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -55,15 +57,19 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun VerifyPinCodeScreen(
     onLogout: () -> Unit,
+    onUnlocked: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: VerifyPinCodeViewModel = koinViewModel(),
 ) {
+    val viewModel: VerifyPinCodeViewModel = koinViewModel()
     val showLogoutDialog = remember { mutableStateOf(false) }
 
+    val toastManager = rememberToastManager()
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
-            if (news is VerifyPinCodeNews.LoggedOut) {
-                onLogout()
+            when(news) {
+                VerifyPinCodeNews.Error -> toastManager.showToast("Something went wrong")
+                VerifyPinCodeNews.LoggedOut -> onLogout()
+                VerifyPinCodeNews.Unlocked -> onUnlocked()
             }
         }
     }

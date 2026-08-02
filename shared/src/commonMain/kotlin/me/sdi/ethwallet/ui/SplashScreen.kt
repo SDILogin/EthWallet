@@ -6,13 +6,23 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.retain.retain
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import kotlinx.coroutines.ensureActive
+import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.ic_eth_logo
+import me.sdi.ethwallet.ui.navigation.Destination
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.getKoin
 
 /**
  * Height the Android system splash screen gives the logo: the 54dp tall drawing inside the 108dp
@@ -31,7 +41,26 @@ private val LogoHeight = 144.dp
  * to `@color/splash_background`, which the platform paints behind its own icon.
  */
 @Composable
-fun SplashScreen(modifier: Modifier = Modifier) {
+fun SplashScreen(
+    modifier: Modifier = Modifier,
+    startDestination: (Destination) -> Unit,
+) {
+    val koin = getKoin()
+    LaunchedEffect(Unit) {
+        val pinStorage = koin.get<PinCodeStorage>()
+        val isPinSet = try {
+            pinStorage.hasPinCode()
+        } catch (e: Exception) {
+            ensureActive()
+
+            Logger.warn("Splash", e) { "Failed to check if PIN code is set" }
+            false
+        }
+
+        val destination = if (isPinSet) Destination.LockScreen else Destination.OnBoardingScreen
+        startDestination(destination)
+    }
+
     Box(
         modifier = modifier.background(if (isSystemInDarkTheme()) Color.Black else Color.White),
         contentAlignment = Alignment.Center,

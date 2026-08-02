@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -55,6 +56,7 @@ class WalletViewModel(
     init {
         viewState
             .onEach { Logger.debug(TAG) { "ViewState: $it" } }
+            .onStart { startObservingActiveWalletBalanceChanges() }
             .launchIn(viewModelScope)
 
         news
@@ -65,7 +67,6 @@ class WalletViewModel(
     fun onEvent(event: WalletEvent) {
         Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
-            is WalletEvent.Initialize -> startObservingActiveWalletBalanceChanges()
             is WalletEvent.Refresh -> onRefreshRequested()
         }
     }
@@ -232,7 +233,7 @@ class WalletViewModel(
 
     private suspend fun getActiveWalletOrShowError(): EthWallet? {
         return try {
-            walletRepository.getActiveWallet()
+            walletRepository.observeActiveWallet().first()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
 

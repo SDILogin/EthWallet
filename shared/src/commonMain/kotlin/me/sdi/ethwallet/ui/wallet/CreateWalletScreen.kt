@@ -1,8 +1,5 @@
 package me.sdi.ethwallet.ui.wallet
 
-import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,7 +18,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,16 +50,15 @@ import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_confirm_butt
 import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_dismiss_button
 import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_message
 import me.sdi.ethwallet.resources.create_wallet_confirmation_dialog_title
-import me.sdi.ethwallet.resources.create_wallet_error_title
-import me.sdi.ethwallet.resources.create_wallet_loading_message
 import me.sdi.ethwallet.resources.create_wallet_next_button_text
 import me.sdi.ethwallet.resources.create_wallet_recovery_phrase_copied_message
 import me.sdi.ethwallet.resources.create_wallet_recovery_phrase_instruction
 import me.sdi.ethwallet.resources.create_wallet_recovery_phrase_title
 import me.sdi.ethwallet.resources.create_wallet_security_warning
 import me.sdi.ethwallet.resources.create_wallet_title
-import me.sdi.ethwallet.resources.create_wallet_unknown_error_message
 import me.sdi.ethwallet.resources.warning_24px
+import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -71,7 +66,6 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * Screen that displays the mnemonic phrase for a newly created wallet.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateWalletScreen(
     onMnemonicSaved: () -> Unit,
@@ -80,8 +74,30 @@ fun CreateWalletScreen(
 ) {
     val viewModel: CreateWalletViewModel = koinViewModel()
     val viewState by viewModel.viewState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        viewModel.news.collect { news ->
+            when (news) {
+                CreateWalletNews.WalletCreated -> onMnemonicSaved()
+            }
+        }
+    }
+    CreateWalletScreenContent(
+        viewState = viewState,
+        onEvent = viewModel::onEvent,
+        onUpButtonClick = onUpButtonClick,
+        modifier = modifier,
+    )
+}
 
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun CreateWalletScreenContent(
+    viewState: CreateWalletViewState,
+    onEvent: (CreateWalletEvent) -> Unit,
+    onUpButtonClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val snackbarHostState = remember { SnackbarHostState() }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -110,161 +126,92 @@ fun CreateWalletScreen(
             )
         },
     ) { innerPadding ->
-        CreateWalletScreenContent(
+        val scope = rememberCoroutineScope()
+        var showConfirmationDialog by remember { mutableStateOf(false) }
+        val copiedMessage = stringResource(Res.string.create_wallet_recovery_phrase_copied_message)
+        if (showConfirmationDialog) {
+            AlertDialog(
+                onDismissRequest = { showConfirmationDialog = false },
+                title = { Text(stringResource(Res.string.create_wallet_confirmation_dialog_title)) },
+                text = { Text(stringResource(Res.string.create_wallet_confirmation_dialog_message)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showConfirmationDialog = false
+                            onEvent(CreateWalletEvent.SeedPhraseSaved)
+                        },
+                    ) {
+                        Text(stringResource(Res.string.create_wallet_confirmation_dialog_confirm_button))
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = {
+                            showConfirmationDialog = false
+                        },
+                    ) {
+                        Text(stringResource(Res.string.create_wallet_confirmation_dialog_dismiss_button))
+                    }
+                },
+            )
+        }
+
+        Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
-            viewState = viewState,
-            onEvent = { event -> viewModel.onEvent(event) },
-            onMnemonicSaved = onMnemonicSaved,
-            snackbarHostState = snackbarHostState,
-        )
-    }
-}
+                    .padding(innerPadding)
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(modifier = Modifier.weight(1f))
+            BasicText(
+                text = stringResource(Res.string.create_wallet_recovery_phrase_title),
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    color = MaterialTheme.colorScheme.onBackground,
+                ),
+                maxLines = 1,
+            )
 
-@Composable
-private fun CreateWalletScreenContent(
-    viewState: CreateWalletViewState,
-    onEvent: (CreateWalletEvent) -> Unit,
-    onMnemonicSaved: () -> Unit,
-    modifier: Modifier = Modifier,
-    snackbarHostState: SnackbarHostState,
-) {
-    LaunchedEffect(Unit) {
-        onEvent(CreateWalletEvent.CreateWallet)
-    }
+            Spacer(modifier = Modifier.height(8.dp))
 
-    Crossfade(
-        modifier = modifier,
-        targetState = viewState::class.qualifiedName,
-    ) { target ->
-        when (target) {
-            CreateWalletViewState.Loading::class.qualifiedName -> {
-                LoadingState()
-            }
-            CreateWalletViewState.Content::class.qualifiedName -> {
-                (viewState as? CreateWalletViewState.Content)?.let { state ->
-                    ContentState(
-                        state = state,
-                        onMnemonicSaved = onMnemonicSaved,
-                        snackbarHostState = snackbarHostState,
-                    )
-                }
-            }
-            CreateWalletViewState.Error::class.qualifiedName -> {
-                (viewState as? CreateWalletViewState.Error)?.throwable?.let { throwable ->
-                    ErrorState(throwable)
-                }
-            }
-        }
-    }
-}
+            BasicText(
+                modifier = Modifier.widthIn(max = 420.dp),
+                text = stringResource(Res.string.create_wallet_recovery_phrase_instruction),
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onBackground,
+                ),
+                maxLines = 1,
+            )
 
-@Composable
-private fun LoadingState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(8.dp))
+            MnemonicCard(
+                seedPhrase = viewState.seedPhrase,
+                modifier =
+                    Modifier
+                        .widthIn(max = 420.dp)
+                        .fillMaxWidth(),
+                onCopied = {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = copiedMessage,
+                            duration = SnackbarDuration.Short,
+                        )
+                    }
+                },
+            )
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = stringResource(Res.string.create_wallet_loading_message))
+            SecurityWarning()
+            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.weight(1f))
+            NextButton(
+                onClick = {
+                    showConfirmationDialog = true
+                },
+            )
         }
-    }
-}
-
-@Composable
-private fun ContentState(
-    state: CreateWalletViewState.Content,
-    onMnemonicSaved: () -> Unit,
-    snackbarHostState: SnackbarHostState,
-) {
-    val scope = rememberCoroutineScope()
-    var showConfirmationDialog by remember { mutableStateOf(false) }
-    val copiedMessage = stringResource(Res.string.create_wallet_recovery_phrase_copied_message)
-    if (showConfirmationDialog) {
-        AlertDialog(
-            onDismissRequest = { showConfirmationDialog = false },
-            title = { Text(stringResource(Res.string.create_wallet_confirmation_dialog_title)) },
-            text = { Text(stringResource(Res.string.create_wallet_confirmation_dialog_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showConfirmationDialog = false
-                        onMnemonicSaved()
-                    },
-                ) {
-                    Text(stringResource(Res.string.create_wallet_confirmation_dialog_confirm_button))
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = {
-                        showConfirmationDialog = false
-                    },
-                ) {
-                    Text(stringResource(Res.string.create_wallet_confirmation_dialog_dismiss_button))
-                }
-            },
-        )
-    }
-
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(modifier = Modifier.weight(1f))
-        BasicText(
-            text = stringResource(Res.string.create_wallet_recovery_phrase_title),
-            style = MaterialTheme.typography.headlineMedium.copy(
-                color = MaterialTheme.colorScheme.onBackground,
-            ),
-            maxLines = 1,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        BasicText(
-            modifier = Modifier.widthIn(max = 420.dp),
-            text = stringResource(Res.string.create_wallet_recovery_phrase_instruction),
-            style = MaterialTheme.typography.bodyMedium.copy(
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onBackground,
-            ),
-            maxLines = 1,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-        MnemonicCard(
-            seedPhrase = state.seedPhrase,
-            modifier =
-                Modifier
-                    .widthIn(max = 420.dp)
-                    .fillMaxWidth(),
-            onCopied = {
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        message = copiedMessage,
-                        duration = SnackbarDuration.Short,
-                    )
-                }
-            },
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        SecurityWarning()
-        Spacer(modifier = Modifier.height(8.dp))
-        Spacer(modifier = Modifier.weight(1f))
-        NextButton(
-            onClick = {
-                showConfirmationDialog = true
-            },
-        )
     }
 }
 
@@ -321,28 +268,21 @@ private fun SecurityWarning() {
     }
 }
 
+@FormFactorPreviews
 @Composable
-private fun ErrorState(throwable: Throwable) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = stringResource(Res.string.create_wallet_error_title),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.error,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = throwable.message ?: stringResource(Res.string.create_wallet_unknown_error_message),
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
+private fun CreateWalletScreenContentPreview() {
+    EthWalletTheme {
+        CreateWalletScreenContent(
+            viewState = CreateWalletViewState(
+                seedPhrase = listOf(
+                    "word1", "word2", "word3",
+                    "word4", "word5", "word6",
+                    "word7", "word8", "word9",
+                    "word10", "word11", "word12",
+                ),
+            ),
+            onEvent = {},
+            onUpButtonClick = {},
         )
     }
 }

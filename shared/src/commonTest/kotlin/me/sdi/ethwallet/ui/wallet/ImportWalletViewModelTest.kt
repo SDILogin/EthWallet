@@ -82,7 +82,7 @@ class ImportWalletViewModelTest {
         advanceUntilIdle()
         job.cancel()
 
-        assertTrue(walletDao.wallets.isEmpty(), "importWallet should not persist to the DAO yet")
+        assertEquals(1, walletDao.wallets.size, "importWallet should persist the imported wallet")
         assertTrue(news.contains(ImportWalletNews.WalletImported), "WalletImported news should be emitted")
         assertFalse(viewModel.viewState.value.isError, "State should not be an error on success")
     }

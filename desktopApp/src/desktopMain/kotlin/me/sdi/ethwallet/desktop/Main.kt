@@ -15,7 +15,6 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.di.appModules
 import me.sdi.ethwallet.ui.EthWalletApp
-import me.sdi.ethwallet.ui.InitialNavigationViewModel
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
@@ -45,8 +44,6 @@ fun main() = application {
                     false
                 },
             ) {
-                val viewModel: InitialNavigationViewModel = koinInject()
-
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -61,7 +58,7 @@ fun main() = application {
                             }
                         },
                 ) {
-                    EthWalletApp(viewModel)
+                    EthWalletApp()
                 }
             }
         },

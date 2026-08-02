@@ -115,7 +115,9 @@ kotlin {
         }
         val androidHostTest = getByName("androidHostTest") {
             dependencies {
+                implementation(libs.junit)
                 implementation(libs.mockk)
+                implementation(libs.robolectric)
             }
         }
         val androidMain = getByName("androidMain") {

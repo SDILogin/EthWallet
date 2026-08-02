@@ -1,32 +1,32 @@
 package me.sdi.ethwallet.ui
 
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy.Companion.detailPane
+import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy.Companion.listPane
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import androidx.savedstate.serialization.SavedStateConfiguration
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.ui.navigation.Destination
-import me.sdi.ethwallet.ui.navigation.Navigator
-import me.sdi.ethwallet.ui.navigation.rememberNavigationState
 import me.sdi.ethwallet.ui.receive.ReceiveScreen
 import me.sdi.ethwallet.ui.send.SendScreen
 import me.sdi.ethwallet.ui.settings.SettingsScreen
@@ -37,191 +37,195 @@ import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
-import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.getKoin
 
 @Composable
-fun EthWalletApp(viewModel: InitialNavigationViewModel = koinViewModel()) {
+fun EthWalletApp() {
     EthWalletTheme {
-        val state by viewModel.state.collectAsState()
+        val backStack = rememberNavBackStack(
+            configuration = SavedStateConfiguration {
+                serializersModule = SerializersModule {
+                    polymorphic(NavKey::class) {
 
-        val navigationState = rememberNavigationState(Destination.SplashScreen)
-        val navigator = remember(navigationState) { Navigator(navigationState) }
+                        @OptIn(ExperimentalSerializationApi::class)
+                        subclassesOfSealed<Destination>()
+                    }
+                }
+            },
+            Destination.SplashScreen,
+        )
 
-        LaunchedEffect(state.initialRoute) {
-            if (navigationState.backStack.singleOrNull() != Destination.SplashScreen) {
-                return@LaunchedEffect
+        val koin = getKoin()
+        val isAuthenticatedFlow = snapshotFlow {
+            backStack.any { it is Destination.WalletsListScreen }
+        }
+        LaunchedEffect(Unit) {
+            combine(
+                koin.get<PinSession>().isUnlocked,
+                isAuthenticatedFlow,
+            ) { unlocked, isAuthenticated ->
+                !unlocked && isAuthenticated
             }
-
-            val startDestination = when (state.initialRoute) {
-                InitialRoute.OnBoarding -> Destination.OnBoardingScreen
-                InitialRoute.Wallet -> Destination.WalletScreen
-                null -> return@LaunchedEffect
-            }
-            navigator.navigateAndClearStack(startDestination)
+                .distinctUntilChanged()
+                .collect { showLockScreen ->
+                    if (showLockScreen) {
+                        backStack.clear()
+                        backStack.add(Destination.LockScreen)
+                    }
+                }
         }
 
-        var wasLocked by remember { mutableStateOf(state.isLocked) }
-        LaunchedEffect(state.isLocked) {
-            if (wasLocked && !state.isLocked && state.isPinCodeSet) {
-                navigator.navigateAndClearStack(Destination.WalletScreen)
-            }
-            wasLocked = state.isLocked
-        }
-
-        if (state.isLocked) {
-            FreshViewModelStoreOwner {
-                VerifyPinCodeScreen(
+        val entryProvider = entryProvider<NavKey> {
+            entry<Destination.SplashScreen> {
+                SplashScreen(
                     modifier = Modifier.fillMaxSize(),
-                    onLogout = {
-                        viewModel.onEvent(InitialNavigationEvent.WalletsCleared)
-                        navigator.navigateAndClearStack(Destination.OnBoardingScreen)
+                    startDestination = { destination ->
+                        backStack.clear()
+                        backStack.add(destination)
                     },
                 )
             }
-            return@EthWalletTheme
-        }
 
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        ) { innerPadding ->
-            val entryProvider = entryProvider {
-                entry<Destination.SplashScreen> {
-                    SplashScreen(modifier = Modifier.fillMaxSize())
-                }
+            entry<Destination.LockScreen> {
+                VerifyPinCodeScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onUnlocked = {
+                        backStack.clear()
+                        backStack.add(Destination.WalletsListScreen)
+                    },
+                    onLogout = {
+                        backStack.clear()
+                        backStack.add(Destination.OnBoardingScreen)
+                    },
+                )
+            }
 
-                entry<Destination.OnBoardingScreen> {
-                    OnboardingScreen(
-                        modifier = Modifier.fillMaxSize().systemBarsPadding(),
-                        onImportWallet = {
-                            navigator.navigate(Destination.ImportWalletScreen)
-                        },
-                        onCreateWallet = {
-                            navigator.navigate(Destination.CreateWalletScreen)
-                        },
-                    )
-                }
-
-                entry<Destination.CreateWalletScreen> {
-                    CreateWalletScreen(
-                        modifier = Modifier.fillMaxSize().systemBarsPadding(),
-                        onUpButtonClick = { navigator.goBack() },
-                        onMnemonicSaved = {
-                            navigator.navigate(Destination.SetPinCodeScreen)
-                        },
-                    )
-                }
-
-                entry<Destination.ImportWalletScreen> {
-                    ImportWalletScreen(
-                        modifier = Modifier.fillMaxSize().systemBarsPadding(),
-                        onUpButtonClick = { navigator.goBack() },
-                        onWalletImported = {
-                            navigator.navigate(Destination.SetPinCodeScreen)
-                        },
-                    )
-                }
-
-                entry<Destination.WalletScreen> {
-                    WalletScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        onManageWallets = {
-                            navigator.navigate(Destination.WalletsListScreen)
-                        },
-                        onReceiveButtonClick = {
-                            navigator.navigate(Destination.ReceiveQrScreen)
-                        },
-                        onSendButtonClick = {
-                            navigator.navigate(Destination.SendScreen)
-                        },
-                        onEditButtonClick = { },
-                        onTokenClick = { },
-                        onSettingsClick = {
-                            navigator.navigate(Destination.SettingsScreen)
-                        },
-                    )
-                }
-
-                entry<Destination.ReceiveQrScreen> {
-                    ReceiveScreen(
-                        onBackPressed = { navigator.goBack() },
-                    )
-                }
-
-                entry<Destination.SendScreen> {
-                    SendScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        onBackPress = { navigator.goBack() },
-                    )
-                }
-
-                entry<Destination.WalletsListScreen> {
-                    WalletsListScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        navigateToOnboarding = {
-                            viewModel.onEvent(InitialNavigationEvent.WalletsCleared)
-                            navigator.navigateAndClearStack(Destination.OnBoardingScreen)
-                        },
-                        navigateToWalletDetails = {
-                            navigator.navigateAndClearStack(Destination.WalletScreen)
-                        },
-                    )
-                }
-
-                entry<Destination.SetPinCodeScreen> {
-                    SetPinCodeScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        onPinCodeSet = {
-                            navigator.navigateAndClearStack(Destination.WalletScreen)
-                        },
-                    )
-                }
-
-                entry<Destination.SettingsScreen> {
-                    SettingsScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        onBack = { navigator.goBack() },
-                    )
-                }
+            entry<Destination.OnBoardingScreen> {
+                OnboardingScreen(
+                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                    onCreatePinClick = { backStack.add(Destination.SetPinCodeScreen) },
+                )
             }
 
             @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-            NavDisplay(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                backStack = navigationState.backStack,
-                entryProvider = entryProvider,
-                entryDecorators = listOf(
-                    rememberSaveableStateHolderNavEntryDecorator(),
-                    rememberViewModelStoreNavEntryDecorator(),
+            entry<Destination.WalletsListScreen>(
+                metadata = listPane(
+                    detailPlaceholder = {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "No wallet has been selected yet",
+                            )
+                        }
+                    },
                 ),
-                sceneStrategies = listOf(
-                    rememberListDetailSceneStrategy(),
-                ),
-                onBack = { navigator.goBack() },
-            )
+            ) {
+                WalletsListScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onWalletSelected = { ethAddress ->
+                        if (backStack.last() is Destination.WalletScreen) {
+                            backStack.removeLastOrNull()
+                        }
+                        backStack.add(Destination.WalletScreen(ethAddress = ethAddress.toString()))
+                    },
+                    onSelectedWalletDeleted = {
+                        if (backStack.last() is Destination.WalletScreen) {
+                            backStack.removeLastOrNull()
+                        }
+                    },
+                    onImportWallet = { backStack.add(Destination.ImportWalletScreen) },
+                    onCreateWallet = { backStack.add(Destination.CreateWalletScreen) },
+                )
+            }
+
+
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.CreateWalletScreen>(
+                metadata = detailPane(),
+            ) {
+                CreateWalletScreen(
+                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                    onUpButtonClick = { backStack.removeLastOrNull() },
+                    onMnemonicSaved = {
+                        backStack.clear()
+                        backStack.add(Destination.WalletsListScreen)
+                    },
+                )
+            }
+
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.ImportWalletScreen>(
+                metadata = detailPane(),
+            ) {
+                ImportWalletScreen(
+                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                    onUpButtonClick = { backStack.removeLastOrNull() },
+                    onWalletImported = {
+                        backStack.clear()
+                        backStack.add(Destination.WalletsListScreen)
+                    },
+                )
+            }
+
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.WalletScreen>(
+                metadata = detailPane(),
+            ) { entry ->
+                WalletScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onReceiveButtonClick = { backStack.add(Destination.ReceiveQrScreen) },
+                    onSendButtonClick = { backStack.add(Destination.SendScreen) },
+                    onEditButtonClick = { },
+                    onTokenClick = { },
+                    onSettingsClick = { backStack.add(Destination.SettingsScreen) },
+                )
+            }
+
+            entry<Destination.ReceiveQrScreen> {
+                ReceiveScreen(
+                    onBackPressed = { backStack.removeLastOrNull() },
+                )
+            }
+
+            entry<Destination.SendScreen> {
+                SendScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onBackPress = { backStack.removeLastOrNull() },
+                )
+            }
+
+            entry<Destination.SetPinCodeScreen> {
+                SetPinCodeScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onPinCodeSet = {
+                        backStack.clear()
+                        backStack.add(Destination.WalletsListScreen)
+                    },
+                )
+            }
+
+            entry<Destination.SettingsScreen> {
+                SettingsScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onBack = { backStack.removeLastOrNull() },
+                )
+            }
         }
-    }
-}
 
-/**
- * Runs [content] against a [ViewModelStore] that lives exactly as long as this composable stays in
- * the composition. The lock screen is shown once per lock, so its ViewModel must not survive into
- * the next one carrying the entered digits, the logout flag, or a stale attempt and biometric
- * status read at init.
- */
-@Composable
-private fun FreshViewModelStoreOwner(content: @Composable () -> Unit) {
-    val viewModelStoreOwner = remember {
-        object : ViewModelStoreOwner {
-            override val viewModelStore = ViewModelStore()
-        }
+        @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+        NavDisplay(
+            modifier = Modifier.fillMaxSize(),
+            backStack = backStack,
+            entryProvider = entryProvider,
+            entryDecorators = listOf(
+                rememberSaveableStateHolderNavEntryDecorator(),
+                rememberViewModelStoreNavEntryDecorator(),
+            ),
+            sceneStrategies = listOf(
+                rememberListDetailSceneStrategy(),
+            ),
+        )
     }
-
-    DisposableEffect(viewModelStoreOwner) {
-        onDispose { viewModelStoreOwner.viewModelStore.clear() }
-    }
-
-    CompositionLocalProvider(LocalViewModelStoreOwner provides viewModelStoreOwner, content = content)
 }

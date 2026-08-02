@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
@@ -133,14 +132,8 @@ class VerifyPinCodeViewModel(
             return
         }
 
-        verificationJob?.cancel()
-        verificationJob = null
-        countdownJob?.cancel()
-        countdownJob = null
-        errorClearJob?.cancel()
-        errorClearJob = null
-        biometricJob?.cancel()
-        biometricJob = null
+        viewModelScope.coroutineContext.cancelChildren()
+
         viewState.update {
             it.copy(
                 errorMessage = null,
@@ -156,16 +149,15 @@ class VerifyPinCodeViewModel(
             } catch (e: Exception) {
                 ensureActive()
 
-                val errorMessage = e.message ?: "Unknown error"
-                Logger.debug(TAG) { "Error clearing local wallet data: $errorMessage" }
+                Logger.warn(TAG, e) { "Error clearing local wallet data" }
                 viewState.update {
                     it.copy(
-                        errorMessage = "Error: $errorMessage",
+                        errorMessage = "Something went wrong",
                         showRemainingAttempts = false,
                         isLoggingOut = false,
                     )
                 }
-                newsChannel.send(VerifyPinCodeNews.Error(errorMessage))
+                newsChannel.send(VerifyPinCodeNews.Error)
             }
         }
     }
@@ -204,18 +196,9 @@ class VerifyPinCodeViewModel(
 
         biometricJob = viewModelScope.launch {
             try {
-                val result = biometricUnlock.unlock()
-                if (result is BiometricResult.Success) {
-                    forgetFailedAttempts()
-                }
-                ensureActive()
-
-                viewState.update { it.copy(isVerifying = false) }
-
-                when (result) {
-                    is BiometricResult.Success, is BiometricResult.Cancelled -> {
-                        Unit
-                    }
+                when (val result = biometricUnlock.unlock()) {
+                    is BiometricResult.Success -> onUnlocked()
+                    is BiometricResult.Cancelled -> Unit
                     is BiometricResult.Invalidated -> {
                         viewState.update {
                             it.copy(
@@ -250,6 +233,10 @@ class VerifyPinCodeViewModel(
                 }
                 scheduleErrorClear()
             }
+        }.also { job ->
+            job.invokeOnCompletion {
+                viewState.update { it.copy(isVerifying = false) }
+            }
         }
     }
 
@@ -258,53 +245,42 @@ class VerifyPinCodeViewModel(
 
         verificationJob = viewModelScope.launch {
             try {
-                val isValid = coroutineScope {
+                coroutineScope {
                     launch(CoroutineName("IndicatorAnimation")) { delay(300.milliseconds) }
                     pinCodeStorage.verifyPinCode(pin).also { isValid ->
                         if (isValid) {
-                            forgetFailedAttempts()
+                            onUnlocked()
+                        } else {
+                            handleInvalidPin()
                         }
                     }
-                }
-                ensureActive()
-
-                if (!isValid) {
-                    handleInvalidPin()
                 }
             } catch (e: Exception) {
                 ensureActive()
 
-                val errorMessage = e.message ?: "Unknown error"
-                Logger.debug(TAG) { "Error verifying PIN: $errorMessage" }
+                Logger.warn(TAG, e) { "Error verifying PIN" }
+
                 viewState.update {
                     it.copy(
                         enteredPin = "",
-                        errorMessage = "Error: $errorMessage",
+                        errorMessage = "Something went wrong",
                         showRemainingAttempts = false,
                         isVerifying = false,
                     )
                 }
-                newsChannel.send(VerifyPinCodeNews.Error(errorMessage))
+                newsChannel.send(VerifyPinCodeNews.Error)
             }
         }
     }
 
-    /**
-     * Runs outside cancellation: verifying the PIN publishes the session key, which lifts the lock
-     * and disposes this ViewModel, and a skipped reset would keep counting failures from the
-     * previous lock towards the next lockout.
-     */
-    private suspend fun forgetFailedAttempts() {
-        withContext(NonCancellable) {
-            pinAttemptsGuard.onSuccess()
-        }
+    private suspend fun onUnlocked() {
+        pinAttemptsGuard.onSuccess()
+        newsChannel.send(VerifyPinCodeNews.Unlocked)
     }
 
     private suspend fun handleInvalidPin() {
         when (val result = pinAttemptsGuard.onFailedAttempt()) {
-            is PinLockState.Tampered -> {
-                handleTamperDetected()
-            }
+            is PinLockState.Tampered -> handleTamperDetected()
             is PinLockState.Active -> {
                 val locked = result.lockRemaining > Duration.ZERO
                 viewState.update {
@@ -378,14 +354,6 @@ class VerifyPinCodeViewModel(
             }
         }
     }
-
-    override fun onCleared() {
-        super.onCleared()
-        verificationJob?.cancel()
-        countdownJob?.cancel()
-        errorClearJob?.cancel()
-        biometricJob?.cancel()
-    }
 }
 
 /**
@@ -409,15 +377,9 @@ data class VerifyPinCodeViewState(
  * One-time UI events emitted by the ViewModel
  */
 sealed interface VerifyPinCodeNews {
-    /**
-     * User chose to logout
-     */
+    data object Unlocked : VerifyPinCodeNews
     data object LoggedOut : VerifyPinCodeNews
-
-    /**
-     * Error occurred
-     */
-    data class Error(val message: String) : VerifyPinCodeNews
+    data object Error : VerifyPinCodeNews
 }
 
 /**

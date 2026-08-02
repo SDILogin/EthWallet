@@ -1,12 +1,14 @@
 package me.sdi.ethwallet.flow
 
+import android.app.Application
 import android.os.Build
+import androidx.activity.compose.setContent
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.test.core.app.ActivityScenario
+import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
-import me.sdi.ethwallet.MainActivity
 import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
@@ -34,6 +36,7 @@ import me.sdi.ethwallet.flow.pageobjects.OnboardingPage
 import me.sdi.ethwallet.flow.pageobjects.SetPinCodePage
 import me.sdi.ethwallet.flow.pageobjects.WalletPage
 import me.sdi.ethwallet.flow.pageobjects.WalletsListPage
+import me.sdi.ethwallet.ui.EthWalletApp
 import me.sdi.ethwallet.ui.daiOnSepolia
 import me.sdi.ethwallet.ui.usdcOnSepolia
 import me.sdi.ethwallet.ui.usdtOnSepolia
@@ -43,13 +46,17 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.koin.android.ext.koin.androidContext
+import org.koin.compose.KoinContext
+import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 import org.koin.test.KoinTest
 import org.koin.test.inject
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -58,12 +65,12 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [Build.VERSION_CODES.P])
+@Config(sdk = [Build.VERSION_CODES.P], application = WalletFlowTestApplication::class)
 class WalletFlowTest : KoinTest {
     @get:Rule
     val composeTestRule = createEmptyComposeRule()
 
-    private lateinit var scenario: ActivityScenario<MainActivity>
+    private lateinit var activityController: ActivityController<WalletFlowTestActivity>
 
     private val appDatabase: AppDatabase by inject()
 
@@ -96,9 +103,7 @@ class WalletFlowTest : KoinTest {
             return true
         }
 
-        override suspend fun hasPinCode(): Boolean {
-            return storedPin != null
-        }
+        override suspend fun hasPinCode(): Boolean = storedPin != null
 
         override suspend fun clearPinCode() {
             storedPin = null
@@ -254,6 +259,7 @@ class WalletFlowTest : KoinTest {
 
     @Before
     fun setUp() {
+        val application = RuntimeEnvironment.getApplication()
         stopKoin()
         val chainConfig = ChainConfig(
             rpcUrl = "https://ethereum-sepolia-rpc.publicnode.com",
@@ -261,7 +267,7 @@ class WalletFlowTest : KoinTest {
             explorerBaseUrl = "https://sepolia.etherscan.io",
         )
         startKoin {
-            androidContext(RuntimeEnvironment.getApplication())
+            androidContext(application)
             allowOverride(true)
             modules(appModules(chainConfig) + mockModule)
         }
@@ -275,35 +281,26 @@ class WalletFlowTest : KoinTest {
         }
 
         // Launch activity manually after Koin is properly initialized with mocks
-        scenario = ActivityScenario.launch(MainActivity::class.java)
+        activityController = Robolectric.buildActivity(WalletFlowTestActivity::class.java).setup()
     }
 
     @After
     fun tearDown() {
-        if (::scenario.isInitialized) {
-            scenario.close()
+        if (::activityController.isInitialized) {
+            activityController.pause().stop().destroy()
         }
         stopKoin()
     }
 
     @Test
-    fun testWalletFlow() {
-        // Step 1: Verification of Clean Setup is handled by setUp() clearing everything.
-
-        // Step 2 & 3: Create first account & set PIN
-        runAccountCreationAndPinSetupFlow()
-
-        // Step 4: Logout (switch to account screen, verify single wallet, delete it)
-        runLogoutAndDeletionFlow()
-
-        // Step 5: Repeat flow (verifies that screen viewmodel state is clean/reset and wallets are not duplicated)
-        runAccountCreationAndPinSetupFlow()
-        runLogoutAndDeletionFlow()
+    fun walletCreationNavigatesToWalletScreen() {
+        runInitialWalletCreationFlow()
+        walletPage.awaitVisible()
     }
 
     @Test
     fun forgot_pin_logout_requires_confirmation_and_clears_local_data() {
-        runAccountCreationAndPinSetupFlow()
+        runInitialWalletCreationFlow()
 
         restartProcess()
 
@@ -315,30 +312,30 @@ class WalletFlowTest : KoinTest {
 
         composeTestRule.clickText("Dismiss")
         runBlocking {
-            assertTrue(appDatabase.walletDao().getAllWallets().isNotEmpty())
+            assertTrue(appDatabase.walletDao().observeAllWallets().first().isNotEmpty())
             assertTrue(pinCodeStorage.hasPinCode())
         }
 
         composeTestRule.clickText("Forgot PIN Code?")
         composeTestRule.clickText("Confirm logout")
 
-        composeTestRule.assertTextExists("Create new wallet")
+        composeTestRule.assertTextExists("Create PIN Code")
         runBlocking {
-            assertTrue(appDatabase.walletDao().getAllWallets().isEmpty())
+            assertTrue(appDatabase.walletDao().observeAllWallets().first().isEmpty())
             assertFalse(pinCodeStorage.hasPinCode())
         }
     }
 
     @Test
     fun lock_screen_still_accepts_the_pin_after_a_logout_and_a_new_wallet() {
-        runAccountCreationAndPinSetupFlow()
+        runInitialWalletCreationFlow()
 
         lockApp()
         composeTestRule.clickText("Forgot PIN Code?")
         composeTestRule.clickText("Confirm logout")
-        composeTestRule.assertTextExists("Create new wallet")
+        composeTestRule.assertTextExists("Create PIN Code")
 
-        runAccountCreationAndPinSetupFlow()
+        runInitialWalletCreationFlow()
 
         lockApp()
         setPinCodePage.enterPin(PIN)
@@ -357,41 +354,38 @@ class WalletFlowTest : KoinTest {
     }
 
     private fun restartProcess() {
-        scenario.close()
+        activityController.pause().stop().destroy()
         pinSession.clear()
-        scenario = ActivityScenario.launch(MainActivity::class.java)
+        activityController = Robolectric.buildActivity(WalletFlowTestActivity::class.java).setup()
     }
 
-    private fun runAccountCreationAndPinSetupFlow() {
-        // 1. Click "Registration" (Create new wallet) button
-        onboardingPage.clickCreateNewWallet()
+    private fun runInitialWalletCreationFlow() {
+        onboardingPage.clickCreatePinCode()
+        setPinCodePage.enterPin(PIN)
+        setPinCodePage.enterPin(PIN)
 
-        // 2. Click next button
+        runWalletCreationFlow()
+    }
+
+    private fun runWalletCreationFlow() {
+        walletsListPage.clickCreateWallet()
         createWalletPage.clickNext()
-
-        // 3. Confirm seed phrase has been saved
         createWalletPage.clickConfirm()
-
-        // 4. Setup Pin Code (Set 112233)
-        setPinCodePage.enterPin(PIN)
-
-        // 5. Confirm Pin Code (Confirm 112233)
-        setPinCodePage.enterPin(PIN)
-    }
-
-    private fun runLogoutAndDeletionFlow() {
-        // 1. Go to the list of accounts
-        walletPage.clickManageWallets()
-
-        // 2. Ensure there is a single account
-        walletsListPage.assertSingleWallet()
-
-        // 3. Optional: Verify active checkmark is visible
-        walletsListPage.assertActiveCheckmarkExists()
-
-        // 4. Delete it
-        walletsListPage.deleteActiveWallet()
     }
 }
 
 private const val PIN = "112233"
+
+class WalletFlowTestApplication : Application()
+
+class WalletFlowTestActivity : FragmentActivity() {
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            @Suppress("DEPRECATION")
+            KoinContext(koin = GlobalContext.get()) {
+                EthWalletApp()
+            }
+        }
+    }
+}

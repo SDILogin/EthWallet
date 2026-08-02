@@ -12,33 +12,49 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.ensureActive
+import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.ic_eth_logo
-import me.sdi.ethwallet.resources.onboarding_create_wallet
-import me.sdi.ethwallet.resources.onboarding_import_wallet
 import me.sdi.ethwallet.resources.onboarding_title
+import me.sdi.ethwallet.resources.pin_create_title
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.getKoin
 
 @Composable
 fun OnboardingScreen(
-    onCreateWallet: () -> Unit,
-    onImportWallet: () -> Unit,
+    onCreatePinClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface {
+    val koin = getKoin()
+    LaunchedEffect(Unit) {
+        val dataCleaner = koin.get<DataCleaner>()
+        try {
+            dataCleaner.clean()
+        } catch (e: Exception) {
+            ensureActive()
+
+            Logger.warn("Onboarding", e) { "Failed to clean data" }
+        }
+    }
+
+    Scaffold(modifier = modifier) { paddingValues ->
         Column(
-            modifier = modifier.padding(horizontal = 16.dp),
+            modifier = Modifier
+                .padding(paddingValues)
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(Modifier.weight(1f))
@@ -71,32 +87,13 @@ fun OnboardingScreen(
                     .widthIn(max = 320.dp)
                     .padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(16.dp),
-                onClick = onCreateWallet,
+                onClick = onCreatePinClick,
             ) {
                 Text(
-                    text = stringResource(Res.string.onboarding_create_wallet),
+                    text = stringResource(Res.string.pin_create_title),
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
-
-            Spacer(Modifier.height(16.dp))
-
-            OutlinedButton(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 56.dp)
-                    .widthIn(max = 320.dp)
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                onClick = onImportWallet,
-            ) {
-                Text(
-                    text = stringResource(Res.string.onboarding_import_wallet),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
         }
     }
 }

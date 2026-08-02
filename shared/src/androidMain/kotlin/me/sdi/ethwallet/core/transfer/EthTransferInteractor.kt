@@ -24,7 +24,7 @@ class EthTransferInteractor(
 
     override suspend fun transfer(transferData: TransferData): String {
         return transferMutex.withLock {
-            val wallet = checkNotNull(walletRepository.getActiveWallet()) {
+            val wallet = checkNotNull(walletRepository.observeActiveWallet().first()) {
                 "No active wallet found"
             }
 

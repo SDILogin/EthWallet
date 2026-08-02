@@ -44,7 +44,7 @@ class EthTransferInteractorTest {
         balanceProvider = mockk()
         transferInteractor = EthTransferInteractor(ethManager, walletRepository, privateKeyEncryptor, balanceProvider)
 
-        coEvery { walletRepository.getActiveWallet() } returns testWallet
+        coEvery { walletRepository.observeActiveWallet() } returns flowOf(testWallet)
         coEvery {
             ethManager.sendTransfer(any(), EthContractAddress, testDestinationAddress, any(), any(), any(), any())
         } returns "0xabc123def456"
@@ -115,7 +115,7 @@ class EthTransferInteractorTest {
 
     @Test
     fun should_handle_wallet_repository_errors() = runTest(timeout = 10.seconds) {
-        coEvery { walletRepository.getActiveWallet() } throws RuntimeException("Wallet not found")
+        coEvery { walletRepository.observeActiveWallet() } throws RuntimeException("Wallet not found")
 
         assertFailsWith<RuntimeException> {
             transferInteractor.transfer(transferData())

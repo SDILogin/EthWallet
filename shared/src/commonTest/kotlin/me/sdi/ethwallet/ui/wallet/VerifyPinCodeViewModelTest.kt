@@ -135,7 +135,7 @@ class VerifyPinCodeViewModelTest {
         inputPin(testPin)
 
         assertEquals(1, pinAttemptsGuard.onSuccessCallCount, "Success should reset the guard's failure count")
-        assertTrue(collectedNews.isEmpty(), "A verified PIN is observed through the session, not through news")
+        assertEquals(listOf<VerifyPinCodeNews>(VerifyPinCodeNews.Unlocked), collectedNews)
 
         val finalState = viewModel.viewState.first()
         assertTrue(finalState.isVerifying, "Verification flag should remain set until navigation")
@@ -423,7 +423,7 @@ class VerifyPinCodeViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.viewState.first()
-        assertEquals("Error: Simulated data cleanup failure", state.errorMessage)
+        assertEquals("Something went wrong", state.errorMessage)
         assertTrue(collectedNews.single() is VerifyPinCodeNews.Error)
         assertTrue(collectedNews.none { it is VerifyPinCodeNews.LoggedOut })
     }
@@ -491,7 +491,7 @@ class VerifyPinCodeViewModelTest {
 
         val state = viewModel.viewState.first()
         assertNotNull(state.errorMessage, "Error message should be present when verification fails")
-        assertTrue(state.errorMessage!!.startsWith("Error:"), "Error message should include error details")
+        assertEquals("Something went wrong", state.errorMessage)
         assertFalse(state.isVerifying, "Verification flag should be reset after error")
         assertEquals(
             0,
@@ -598,7 +598,7 @@ class VerifyPinCodeViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, pinAttemptsGuard.onSuccessCallCount, "Biometric success should reset the guard's failure count")
-        assertTrue(collectedNews.isEmpty(), "A biometric unlock is observed through the session, not through news")
+        assertEquals(listOf<VerifyPinCodeNews>(VerifyPinCodeNews.Unlocked), collectedNews)
     }
 
     @Test

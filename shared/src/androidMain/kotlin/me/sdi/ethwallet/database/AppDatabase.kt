@@ -8,6 +8,7 @@ import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.dao.WalletDao
+import me.sdi.ethwallet.database.entity.CurrentWalletEntity
 import me.sdi.ethwallet.database.entity.FiatRateEntity
 import me.sdi.ethwallet.database.entity.TokenBalanceEntity
 import me.sdi.ethwallet.database.entity.WalletEntity
@@ -17,6 +18,7 @@ import me.sdi.ethwallet.database.entity.WalletEntity
         WalletEntity::class,
         TokenBalanceEntity::class,
         FiatRateEntity::class,
+        CurrentWalletEntity::class,
     ],
     version = 1,
     exportSchema = true,

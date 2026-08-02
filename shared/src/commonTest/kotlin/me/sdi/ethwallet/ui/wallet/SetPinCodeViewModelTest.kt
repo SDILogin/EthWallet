@@ -152,8 +152,6 @@ class SetPinCodeViewModelTest {
 
     @Test
     fun should_emit_PinCodeSet_news_when_PINs_match() = runTest(testDispatcher) {
-        walletRepository.createWallet("Test Wallet")
-
         val collector = mutableListOf<SetPinCodeNews>()
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.news.collect {
@@ -199,7 +197,6 @@ class SetPinCodeViewModelTest {
 
     @Test
     fun biometric_status_NotSetUp_should_show_offer_and_withhold_PinCodeSet() = runTest(testDispatcher) {
-        walletRepository.createWallet("Test Wallet")
         biometricUnlock.currentStatus = BiometricStatus.NotSetUp
 
         val collector = mutableListOf<SetPinCodeNews>()
@@ -220,7 +217,6 @@ class SetPinCodeViewModelTest {
 
     @Test
     fun biometric_status_NotSupported_should_emit_PinCodeSet_without_offer() = runTest(testDispatcher) {
-        walletRepository.createWallet("Test Wallet")
         biometricUnlock.currentStatus = BiometricStatus.NotSupported
 
         val collector = mutableListOf<SetPinCodeNews>()
@@ -240,7 +236,6 @@ class SetPinCodeViewModelTest {
 
     @Test
     fun storing_a_PIN_should_disable_biometrics_and_offer_them_again() = runTest(testDispatcher) {
-        walletRepository.createWallet("Test Wallet")
         biometricUnlock.currentStatus = BiometricStatus.Ready
 
         val collector = mutableListOf<SetPinCodeNews>()
@@ -268,7 +263,6 @@ class SetPinCodeViewModelTest {
 
     @Test
     fun accepting_biometric_offer_should_enable_biometrics_and_emit_PinCodeSet() = runTest(testDispatcher) {
-        walletRepository.createWallet("Test Wallet")
         biometricUnlock.currentStatus = BiometricStatus.NotSetUp
 
         val collector = mutableListOf<SetPinCodeNews>()
@@ -290,7 +284,6 @@ class SetPinCodeViewModelTest {
 
     @Test
     fun double_accepting_biometric_offer_should_enable_biometrics_once() = runTest(testDispatcher) {
-        walletRepository.createWallet("Test Wallet")
         biometricUnlock.currentStatus = BiometricStatus.NotSetUp
 
         val collector = mutableListOf<SetPinCodeNews>()
@@ -316,7 +309,6 @@ class SetPinCodeViewModelTest {
 
     @Test
     fun accepting_biometric_offer_with_cancelled_enable_should_still_emit_PinCodeSet() = runTest(testDispatcher) {
-        walletRepository.createWallet("Test Wallet")
         biometricUnlock.currentStatus = BiometricStatus.NotSetUp
         biometricUnlock.enableResult = BiometricResult.Cancelled
 
@@ -343,7 +335,6 @@ class SetPinCodeViewModelTest {
 
     @Test
     fun accepting_biometric_offer_with_enable_error_should_still_emit_PinCodeSet() = runTest(testDispatcher) {
-        walletRepository.createWallet("Test Wallet")
         biometricUnlock.currentStatus = BiometricStatus.NotSetUp
         biometricUnlock.enableResult = BiometricResult.Error("boom")
 
@@ -370,7 +361,6 @@ class SetPinCodeViewModelTest {
 
     @Test
     fun skipping_biometric_offer_should_not_enable_biometrics_and_should_emit_PinCodeSet() = runTest(testDispatcher) {
-        walletRepository.createWallet("Test Wallet")
         biometricUnlock.currentStatus = BiometricStatus.NotSetUp
 
         val collector = mutableListOf<SetPinCodeNews>()
@@ -390,7 +380,6 @@ class SetPinCodeViewModelTest {
 
     @Test
     fun keypad_should_stay_locked_until_the_biometric_status_check_resolves() = runTest(testDispatcher) {
-        walletRepository.createWallet("Test Wallet")
         biometricUnlock.currentStatus = BiometricStatus.Ready
         val statusGate = CompletableDeferred<Unit>()
         biometricUnlock.statusGate = statusGate

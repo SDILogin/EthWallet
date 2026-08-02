@@ -76,9 +76,9 @@ class WalletViewModelTest {
                 address = testAddress.toString(),
                 encryptedPrivateKeyBase64 = "encrypted_key_1",
                 label = "Test Wallet",
-                isActive = true,
             ),
         )
+        walletDao.currentWalletAddress = testAddress.toString()
         walletRepository = WalletRepository(
             walletDao = walletDao,
             ethManager = ethManager,
@@ -125,7 +125,6 @@ class WalletViewModelTest {
         )
 
         createViewModel()
-        viewModel.onEvent(WalletEvent.Initialize)
         advanceUntilIdle()
 
         val currentState = viewModel.viewState.first()
@@ -169,7 +168,6 @@ class WalletViewModelTest {
         )
 
         createViewModel()
-        viewModel.onEvent(WalletEvent.Initialize)
         advanceUntilIdle()
 
         val currentState = viewModel.viewState.first()
@@ -211,7 +209,6 @@ class WalletViewModelTest {
         )
 
         createViewModel()
-        viewModel.onEvent(WalletEvent.Initialize)
         advanceUntilIdle()
 
         val currentState = viewModel.viewState.first()

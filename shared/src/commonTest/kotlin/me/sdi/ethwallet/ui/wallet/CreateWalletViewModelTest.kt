@@ -1,30 +1,33 @@
 package me.sdi.ethwallet.ui.wallet
 
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
+import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.core.EthCreationResult
 import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
+import java.math.BigInteger
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CreateWalletViewModelTest {
-    private val testDispatcher = StandardTestDispatcher()
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var walletDao: FakeWalletDao
     private lateinit var ethManager: FakeEthManager
@@ -52,15 +55,18 @@ class CreateWalletViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         walletDao = FakeWalletDao()
-        ethManager = FakeEthManager()
+        ethManager =
+            FakeEthManager().also {
+                it.creationResult =
+                    EthCreationResult(
+                        address = EthAddress("0x71C7656EC7ab88b098defB751B7401B5f6d8976F"),
+                        privateKey = BigInteger.ONE,
+                        seedPhrase = testSeedPhrase,
+                    )
+            }
         privateKeyEncryptor = FakePrivateKeyEncryptor()
-
-        walletRepository = WalletRepository(
-            walletDao = walletDao,
-            ethManager = ethManager,
-            privateKeyEncryptor = privateKeyEncryptor,
-        )
-        viewModel = CreateWalletViewModel(walletRepository = walletRepository)
+        walletRepository = WalletRepository(walletDao, ethManager, privateKeyEncryptor)
+        viewModel = CreateWalletViewModel(ethManager, walletRepository)
     }
 
     @AfterTest
@@ -69,169 +75,46 @@ class CreateWalletViewModelTest {
     }
 
     @Test
-    fun initial_state_should_be_Loading() = runTest(testDispatcher) {
-        assertTrue(
-            viewModel.viewState.first() is CreateWalletViewState.Loading,
-            "Initial state should be Loading",
-        )
+    fun initializationGeneratesSeedPhraseWithoutPersistingWallet() = runTest(testDispatcher) {
+        assertEquals(testSeedPhrase, awaitSeedPhrase())
+        assertTrue(walletDao.wallets.isEmpty())
+        assertNull(walletDao.currentWalletAddress)
     }
 
     @Test
-    fun createWallet_should_update_state_to_Content_with_seed_phrase_on_success() = runTest(testDispatcher) {
-        ethManager.creationResult = ethManager.creationResult.copy(seedPhrase = testSeedPhrase)
+    fun confirmingSeedPhrasePersistsWalletAndShowsCreatedNews() = runTest(testDispatcher) {
+        awaitSeedPhrase()
 
-        viewModel.onEvent(CreateWalletEvent.CreateWallet)
-        advanceUntilIdle()
+        viewModel.onEvent(CreateWalletEvent.SeedPhraseSaved)
 
-        val currentState = viewModel.viewState.first()
-        assertTrue(
-            currentState is CreateWalletViewState.Content,
-            "State should be Content after successful wallet creation",
-        )
-
-        val contentState = currentState as CreateWalletViewState.Content
+        assertEquals(CreateWalletNews.WalletCreated, withTimeout(5.seconds) { viewModel.news.first() })
         assertEquals(
-            testSeedPhrase,
-            contentState.seedPhrase,
-            "Seed phrase in state should match the one from repository",
+            listOf(
+                WalletEntity(
+                    address = ethManager.creationResult.address.toString(),
+                    encryptedPrivateKeyBase64 = "encrypted_1",
+                    label = "My Wallet",
+                ),
+            ),
+            walletDao.wallets,
         )
-        assertTrue(walletDao.wallets.isEmpty(), "createWallet should not persist to the DAO yet")
+        assertEquals(ethManager.creationResult.address.toString(), walletDao.currentWalletAddress)
     }
 
     @Test
-    fun createWallet_should_update_state_to_Error_when_exception_occurs() = runTest(testDispatcher) {
-        ethManager.shouldThrowException = true
+    fun initializationPreservesGeneratedSeedPhrase() = runTest(testDispatcher) {
+        val seedPhrase = listOf("test", "seed", "phrase", "words")
+        ethManager.creationResult = ethManager.creationResult.copy(seedPhrase = seedPhrase)
+        viewModel = CreateWalletViewModel(ethManager, walletRepository)
 
-        viewModel.onEvent(CreateWalletEvent.CreateWallet)
-        advanceUntilIdle()
-
-        val currentState = viewModel.viewState.first()
-        assertTrue(
-            currentState is CreateWalletViewState.Error,
-            "State should be Error after wallet creation fails",
-        )
-
-        val errorState = currentState as CreateWalletViewState.Error
-        assertEquals(
-            "Wallet creation failed",
-            errorState.throwable.message,
-            "Error state should contain the exception thrown by repository",
-        )
+        assertEquals(seedPhrase, awaitSeedPhrase())
     }
 
-    @Test
-    fun createWallet_should_handle_CancellationException_correctly() = runTest(testDispatcher) {
-        ethManager.exceptionToThrow = CancellationException("Coroutine cancelled")
-
-        viewModel.onEvent(CreateWalletEvent.CreateWallet)
-        advanceUntilIdle()
-
-        val currentState = viewModel.viewState.first()
-        assertTrue(
-            currentState is CreateWalletViewState.Error,
-            "State should be Error when CancellationException occurs",
-        )
-
-        val errorState = currentState as CreateWalletViewState.Error
-        assertTrue(
-            errorState.throwable is CancellationException,
-            "Error state should contain a CancellationException",
-        )
-    }
-
-    @Test
-    fun createWallet_should_set_Loading_state_before_starting_wallet_creation() = runTest(testDispatcher) {
-        val states = mutableListOf<CreateWalletViewState>()
-
-        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.viewState.collect { states.add(it) }
+    private suspend fun awaitSeedPhrase(): List<String> =
+        withTimeout(5.seconds) {
+            viewModel.viewState
+                .filter { it.seedPhrase.isNotEmpty() }
+                .first()
+                .seedPhrase
         }
-
-        viewModel.onEvent(CreateWalletEvent.CreateWallet)
-        runCurrent()
-        advanceUntilIdle()
-        job.cancel()
-
-        assertTrue(
-            states[0] is CreateWalletViewState.Loading,
-            "State should be set to Loading immediately when createWallet is called",
-        )
-
-        val finalState = viewModel.viewState.first()
-        assertTrue(
-            finalState is CreateWalletViewState.Content,
-            "Final state should be Content after successful wallet creation",
-        )
-    }
-
-    @Test
-    fun multiple_createWallet_events_should_not_interfere_with_each_other() = runTest(testDispatcher) {
-        viewModel.onEvent(CreateWalletEvent.CreateWallet)
-        viewModel.onEvent(CreateWalletEvent.CreateWallet)
-        advanceUntilIdle()
-
-        val currentState = viewModel.viewState.first()
-        assertTrue(
-            currentState is CreateWalletViewState.Content,
-            "State should be Content after wallet creation",
-        )
-        assertTrue(walletDao.wallets.isEmpty(), "createWallet should not persist to the DAO yet")
-    }
-
-    @Test
-    fun createWallet_should_use_correct_wallet_label() = runTest(testDispatcher) {
-        viewModel.onEvent(CreateWalletEvent.CreateWallet)
-        advanceUntilIdle()
-
-        assertTrue(walletDao.wallets.isEmpty(), "createWallet should not persist to the DAO yet")
-    }
-
-    @Test
-    fun createWallet_should_preserve_seed_phrase_content_correctly() = runTest(testDispatcher) {
-        val customSeedPhrase = listOf("test", "seed", "phrase", "words")
-        ethManager.creationResult = ethManager.creationResult.copy(seedPhrase = customSeedPhrase)
-
-        viewModel.onEvent(CreateWalletEvent.CreateWallet)
-        advanceUntilIdle()
-
-        val currentState = viewModel.viewState.first()
-        assertTrue(
-            currentState is CreateWalletViewState.Content,
-            "State should be Content",
-        )
-
-        val contentState = currentState as CreateWalletViewState.Content
-        assertEquals(
-            customSeedPhrase,
-            contentState.seedPhrase,
-            "Seed phrase should match exactly",
-        )
-    }
-
-    @Test
-    fun error_state_should_preserve_the_original_exception() = runTest(testDispatcher) {
-        val originalException = IllegalStateException("Custom error message")
-        ethManager.exceptionToThrow = originalException
-
-        viewModel.onEvent(CreateWalletEvent.CreateWallet)
-        advanceUntilIdle()
-
-        val currentState = viewModel.viewState.first()
-        assertTrue(
-            currentState is CreateWalletViewState.Error,
-            "State should be Error",
-        )
-
-        val errorState = currentState as CreateWalletViewState.Error
-        assertEquals(
-            originalException,
-            errorState.throwable,
-            "Error should preserve original exception",
-        )
-        assertEquals(
-            "Custom error message",
-            errorState.throwable.message,
-            "Error message should be preserved",
-        )
-    }
 }

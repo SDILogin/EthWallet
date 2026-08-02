@@ -2,6 +2,7 @@ package me.sdi.ethwallet.ui.receive
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -11,7 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -32,16 +34,14 @@ private const val TAG = "ReceiveQrViewModel"
 private const val AMOUNT_MAX_LENGTH = 50
 
 class ReceiveQrViewModel(
-    private val walletRepository: WalletRepository,
+    walletRepository: WalletRepository,
 ) : ViewModel() {
     val viewState: StateFlow<ReceiveQrViewState>
         field = MutableStateFlow(ReceiveQrViewState())
 
-    private val receiverAddress: Flow<EthAddress> = flow {
-        emit(checkNotNull(walletRepository.getActiveWallet()?.address))
-    }.distinctUntilChanged().onEach {
-        Logger.debug(TAG) { "(flow) Address loaded: $it" }
-    }
+    private val activeWallet = walletRepository.observeActiveWallet()
+
+    private val receiverAddress: Flow<EthAddress> = activeWallet.filterNotNull().map { it.address }
 
     private val selectedTokenContractAddress: Flow<EthAddress> = viewState
         .map { it.selectedTokenContract }
@@ -153,21 +153,18 @@ class ReceiveQrViewModel(
         Logger.debug(TAG) { "Copy address requested" }
 
         viewModelScope.launch {
-            val address: String? = walletRepository.getActiveWallet()?.address?.toString()
-            val newsToEmit = if (address == null) {
-                ReceiveQrNews.ShowToast("Address not available")
-            } else {
-                ReceiveQrNews.CopyToClipboard(address)
-            }
-
-            news.emit(newsToEmit)
-        }.also { job ->
-            job.invokeOnCompletion {
-                if (it == null) {
-                    Logger.debug(TAG) { "copyAddressJob successfully completed" }
-                } else {
-                    Logger.warn(TAG, it) { "copyAddressJob completed with exception" }
+            try {
+                val address = activeWallet.first()?.address?.toString()
+                if (address == null) {
+                    news.emit(ReceiveQrNews.ShowToast("Address not available"))
+                    return@launch
                 }
+                news.emit(ReceiveQrNews.CopyToClipboard(address))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logger.warn(TAG) { "Failed to copy address: ${e.message}" }
+                news.emit(ReceiveQrNews.ShowToast("Failed to copy address"))
             }
         }
     }

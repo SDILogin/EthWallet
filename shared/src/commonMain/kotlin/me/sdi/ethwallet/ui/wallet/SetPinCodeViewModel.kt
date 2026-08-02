@@ -269,8 +269,6 @@ class SetPinCodeViewModel(
                         Logger.debug(TAG) { "PIN code stored successfully" }
                     }
 
-                    walletRepository.persistPendingWallet()
-
                     biometricUnlock.disable()
 
                     val showBiometricOffer = biometricUnlock.status() == BiometricStatus.NotSetUp
