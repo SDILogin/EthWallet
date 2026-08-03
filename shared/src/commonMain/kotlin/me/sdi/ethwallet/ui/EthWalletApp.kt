@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy.Companion.detailPane
+import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy.Companion.extraPane
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy.Companion.listPane
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
@@ -218,7 +219,10 @@ fun EthWalletApp() {
                 )
             }
 
-            entry<Destination.SettingsScreen> {
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.SettingsScreen>(
+                metadata = extraPane(),
+            ) {
                 SettingsScreen(
                     modifier = Modifier.fillMaxSize(),
                     onBack = { backStack.removeLastOrNull() },
