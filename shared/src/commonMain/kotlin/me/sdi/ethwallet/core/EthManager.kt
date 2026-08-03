@@ -1,7 +1,6 @@
 package me.sdi.ethwallet.core
 
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
-import me.sdi.ethwallet.data.repository.EthWallet
 import java.math.BigInteger
 
 /**
@@ -10,7 +9,7 @@ import java.math.BigInteger
  * a future library swap only touches its implementation.
  */
 interface EthManager {
-    suspend fun getBalance(wallet: EthWallet): Map<EthAddress, Result<BigInteger>>
+    suspend fun getBalance(address: EthAddress): Map<EthAddress, Result<BigInteger>>
 
     suspend fun fetchFeeSuggestion(): FeeSuggestion
 

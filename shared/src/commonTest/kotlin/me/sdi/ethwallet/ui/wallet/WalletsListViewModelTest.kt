@@ -20,15 +20,12 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WalletsListViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var walletDao: FakeWalletDao
-    private lateinit var walletRepository: WalletRepository
     private lateinit var viewModel: WalletsListViewModel
 
     private val firstWallet = EthWallet(
@@ -48,14 +45,10 @@ class WalletsListViewModelTest {
                 WalletEntity(firstWallet.address.toString(), "encrypted-key-1", firstWallet.label),
                 WalletEntity(secondWallet.address.toString(), "encrypted-key-2", secondWallet.label),
             )
-            it.currentWalletAddress = firstWallet.address.toString()
         }
-        walletRepository = WalletRepository(
-            walletDao = walletDao,
-            ethManager = FakeEthManager(),
-            privateKeyEncryptor = FakePrivateKeyEncryptor(),
+        viewModel = WalletsListViewModel(
+            WalletRepository(walletDao, FakeEthManager(), FakePrivateKeyEncryptor()),
         )
-        viewModel = WalletsListViewModel(walletRepository)
     }
 
     @AfterTest
@@ -64,106 +57,46 @@ class WalletsListViewModelTest {
     }
 
     @Test
-    fun initializationDisplaysAllWalletsAndTheCurrentSelection() = runTest(testDispatcher) {
+    fun initializationDisplaysAllWalletsWithoutSelectingOne() = runTest(testDispatcher) {
         val news = collectNews()
 
         advanceUntilIdle()
 
         assertEquals(listOf(firstWallet, secondWallet), viewModel.uiState.value.wallets)
-        assertEquals(firstWallet, viewModel.uiState.value.selected)
         assertFalse(viewModel.uiState.value.isLoading)
-        assertEquals(listOf<WalletScreenNews>(WalletScreenNews.ShowWalletDetails(firstWallet.address)), news)
+        assertEquals(emptyList(), news)
     }
 
     @Test
-    fun initializationWithNoWalletsShowsEmptyUnselectedState() = runTest(testDispatcher) {
-        walletDao.wallets = emptyList()
-        viewModel = WalletsListViewModel(walletRepository)
-        val news = collectNews()
-
-        advanceUntilIdle()
-
-        assertEquals(emptyList(), viewModel.uiState.value.wallets)
-        assertNull(viewModel.uiState.value.selected)
-        assertFalse(viewModel.uiState.value.isLoading)
-        assertTrue(news.isEmpty())
-    }
-
-    @Test
-    fun selectingWalletMakesItCurrentAndShowsItsDetails() = runTest(testDispatcher) {
+    fun deletingWalletUpdatesListAndEmitsDeletedAddress() = runTest(testDispatcher) {
         val news = collectNews()
         advanceUntilIdle()
-        news.clear()
-
-        viewModel.onEvent(WalletsListEvent.OnWalletSelected(secondWallet.address))
-        advanceUntilIdle()
-
-        assertEquals(secondWallet.address.toString(), walletDao.currentWalletAddress)
-        assertEquals(secondWallet, viewModel.uiState.value.selected)
-        assertEquals(listOf<WalletScreenNews>(WalletScreenNews.ShowWalletDetails(secondWallet.address)), news)
-    }
-
-    @Test
-    fun deletingInactiveWalletKeepsCurrentSelection() = runTest(testDispatcher) {
-        val news = collectNews()
-        advanceUntilIdle()
-        news.clear()
 
         viewModel.onEvent(WalletsListEvent.OnDeleteWalletClick(secondWallet.address))
         advanceUntilIdle()
 
         assertEquals(listOf(firstWallet), viewModel.uiState.value.wallets)
-        assertEquals(firstWallet, viewModel.uiState.value.selected)
-        assertEquals(firstWallet.address.toString(), walletDao.currentWalletAddress)
-        assertTrue(news.isEmpty())
-    }
-
-    @Test
-    fun deletingCurrentWalletClearsSelectionWithoutActivatingAnotherWallet() = runTest(testDispatcher) {
-        val news = collectNews()
-        advanceUntilIdle()
-        news.clear()
-
-        viewModel.onEvent(WalletsListEvent.OnDeleteWalletClick(firstWallet.address))
-        advanceUntilIdle()
-
-        assertEquals(listOf(secondWallet), viewModel.uiState.value.wallets)
-        assertNull(viewModel.uiState.value.selected)
-        assertNull(walletDao.currentWalletAddress)
-        assertEquals(listOf<WalletScreenNews>(WalletScreenNews.SelectedWalletDeleted), news)
-    }
-
-    @Test
-    fun failedWalletSelectionShowsErrorAndPreservesSelection() = runTest(testDispatcher) {
-        val news = collectNews()
-        advanceUntilIdle()
-        news.clear()
-        walletDao.shouldThrowException = true
-
-        viewModel.onEvent(WalletsListEvent.OnWalletSelected(secondWallet.address))
-        advanceUntilIdle()
-
-        assertEquals(firstWallet, viewModel.uiState.value.selected)
-        assertEquals(listOf<WalletScreenNews>(WalletScreenNews.ShowErrorMessage), news)
+        assertEquals(
+            listOf<WalletsListNews>(WalletsListNews.WalletDeleted(secondWallet.address)),
+            news,
+        )
     }
 
     @Test
     fun failedWalletDeletionShowsErrorAndPreservesWallets() = runTest(testDispatcher) {
         val news = collectNews()
         advanceUntilIdle()
-        news.clear()
         walletDao.shouldThrowException = true
 
         viewModel.onEvent(WalletsListEvent.OnDeleteWalletClick(secondWallet.address))
         advanceUntilIdle()
 
         assertEquals(listOf(firstWallet, secondWallet), viewModel.uiState.value.wallets)
-        assertEquals(firstWallet, viewModel.uiState.value.selected)
-        assertEquals(listOf<WalletScreenNews>(WalletScreenNews.ShowErrorMessage), news)
+        assertEquals(listOf<WalletsListNews>(WalletsListNews.ShowErrorMessage), news)
     }
 
-    private fun kotlinx.coroutines.test.TestScope.collectNews(): MutableList<WalletScreenNews> {
-        val news = mutableListOf<WalletScreenNews>()
+    private fun kotlinx.coroutines.test.TestScope.collectNews(): MutableList<WalletsListNews> {
+        val news = mutableListOf<WalletsListNews>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.news.collect { news.add(it) }
         }

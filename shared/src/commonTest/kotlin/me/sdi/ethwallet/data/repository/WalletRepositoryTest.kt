@@ -13,7 +13,6 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
 
 class WalletRepositoryTest {
     private lateinit var walletDao: FakeWalletDao
@@ -46,16 +45,13 @@ class WalletRepositoryTest {
             )
         }
         privateKeyEncryptor = FakePrivateKeyEncryptor()
-        walletRepository = WalletRepository(
-            walletDao = walletDao,
-            ethManager = ethManager,
-            privateKeyEncryptor = privateKeyEncryptor,
-        )
+        walletRepository = WalletRepository(walletDao, ethManager, privateKeyEncryptor)
     }
 
     @Test
-    fun saveWalletPersistsEncryptedWalletAndMakesItActive() = runTest {
+    fun saveWalletPersistsEncryptedWallet() = runTest {
         walletRepository.saveWallet(ethManager.creationResult, walletLabel)
+
         assertEquals(
             listOf(
                 WalletEntity(
@@ -66,7 +62,6 @@ class WalletRepositoryTest {
             ),
             walletDao.wallets,
         )
-        assertEquals(createdAddress, walletDao.currentWalletAddress)
     }
 
     @Test
@@ -76,7 +71,6 @@ class WalletRepositoryTest {
         assertFailsWith<RuntimeException> { walletRepository.saveWallet(ethManager.creationResult, walletLabel) }
 
         assertEquals(emptyList(), walletDao.wallets)
-        assertNull(walletDao.currentWalletAddress)
     }
 
     @Test
@@ -87,7 +81,7 @@ class WalletRepositoryTest {
     }
 
     @Test
-    fun importWalletPersistsEncryptedWalletAndMakesItActive() = runTest {
+    fun importWalletPersistsEncryptedWallet() = runTest {
         walletRepository.importWallet(mnemonic, walletLabel)
 
         assertEquals(mnemonic, ethManager.lastImportedMnemonic)
@@ -101,7 +95,6 @@ class WalletRepositoryTest {
             ),
             walletDao.wallets,
         )
-        assertEquals(importedAddress, walletDao.currentWalletAddress)
     }
 
     @Test
@@ -111,7 +104,6 @@ class WalletRepositoryTest {
         assertFailsWith<RuntimeException> { walletRepository.importWallet(mnemonic, walletLabel) }
 
         assertEquals(emptyList(), walletDao.wallets)
-        assertNull(walletDao.currentWalletAddress)
     }
 
     @Test
@@ -131,43 +123,12 @@ class WalletRepositoryTest {
     }
 
     @Test
-    fun observeActiveWalletMapsCurrentWalletAndEmitsNullWithoutSelection() = runTest {
-        val wallet = WalletEntity(createdAddress, "encrypted-created", walletLabel)
-        walletDao.wallets = listOf(wallet)
-
-        assertNull(walletRepository.observeActiveWallet().first())
-
-        walletDao.currentWalletAddress = createdAddress
-
-        assertEquals(
-            EthWallet(label = walletLabel, address = EthAddress(createdAddress)),
-            walletRepository.observeActiveWallet().first(),
-        )
-    }
-
-    @Test
-    fun setActiveWalletChangesCurrentWalletWithoutChangingWallets() = runTest {
-        walletDao.wallets = listOf(
-            WalletEntity(createdAddress, "encrypted-created", "Created"),
-            WalletEntity(importedAddress, "encrypted-imported", "Imported"),
-        )
-        walletDao.currentWalletAddress = createdAddress
-
-        walletRepository.setActiveWallet(EthAddress(importedAddress))
-
-        assertEquals(importedAddress, walletDao.currentWalletAddress)
-        assertEquals(2, walletDao.wallets.size)
-    }
-
-    @Test
-    fun deleteWalletRemovesWalletAndClearsCurrentSelectionWhenNeeded() = runTest {
+    fun deleteWalletRemovesRequestedWallet() = runTest {
         walletDao.wallets = listOf(WalletEntity(createdAddress, "encrypted-created", walletLabel))
-        walletDao.currentWalletAddress = createdAddress
 
         walletRepository.deleteWallet(EthAddress(createdAddress))
 
         assertEquals(emptyList(), walletDao.wallets)
-        assertNull(walletDao.currentWalletAddress)
     }
 
     @Test

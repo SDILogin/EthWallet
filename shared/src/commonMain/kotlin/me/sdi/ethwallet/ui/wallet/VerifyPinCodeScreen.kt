@@ -66,7 +66,7 @@ fun VerifyPinCodeScreen(
     val toastManager = rememberToastManager()
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
-            when(news) {
+            when (news) {
                 VerifyPinCodeNews.Error -> toastManager.showToast("Something went wrong")
                 VerifyPinCodeNews.LoggedOut -> onLogout()
                 VerifyPinCodeNews.Unlocked -> onUnlocked()

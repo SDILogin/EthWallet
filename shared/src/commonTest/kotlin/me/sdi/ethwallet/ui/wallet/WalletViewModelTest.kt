@@ -14,12 +14,6 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
-import me.sdi.ethwallet.data.repository.EthWallet
-import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.database.entity.WalletEntity
-import me.sdi.ethwallet.fakes.FakeEthManager
-import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
-import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.ui.daiOnMainnet
 import me.sdi.ethwallet.ui.usdcOnMainnet
 import me.sdi.ethwallet.ui.usdtOnMainnet
@@ -30,19 +24,15 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WalletViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
-    private lateinit var walletDao: FakeWalletDao
-    private lateinit var ethManager: FakeEthManager
-    private lateinit var privateKeyEncryptor: FakePrivateKeyEncryptor
-    private lateinit var walletRepository: WalletRepository
     private lateinit var viewModel: WalletViewModel
 
     private val testAddress = EthAddress("0x1234567890123456789012345678901234567890")
-    private val testWallet = EthWallet(label = "Test Wallet", address = testAddress)
     private val chainConfig = ChainConfig(
         rpcUrl = "https://eth.llamarpc.com",
         chainId = 1L,
@@ -52,11 +42,18 @@ class WalletViewModelTest {
     // Flow state holders for mocking providers
     private val balanceFlow = MutableStateFlow<Map<EthAddress, BigInteger>>(emptyMap())
     private val fiatRateFlow = MutableStateFlow<Map<EthAddress, BigDecimal>>(emptyMap())
+    private val observedAddresses = mutableListOf<EthAddress>()
+    private val forceUpdatedAddresses = mutableListOf<EthAddress>()
 
     private val balanceProvider: BalanceProvider = object : BalanceProvider {
-        override fun observe(address: EthAddress): Flow<Map<EthAddress, BigInteger>> = balanceFlow
+        override fun observe(address: EthAddress): Flow<Map<EthAddress, BigInteger>> {
+            observedAddresses += address
+            return balanceFlow
+        }
 
-        override suspend fun forceUpdate(wallet: EthWallet) = Unit
+        override suspend fun forceUpdate(address: EthAddress) {
+            forceUpdatedAddresses += address
+        }
     }
     private val fiatRateProvider: FiatRateProvider = object : FiatRateProvider {
         override fun observe(): Flow<Map<EthAddress, BigDecimal>> = fiatRateFlow
@@ -67,23 +64,8 @@ class WalletViewModelTest {
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        walletDao = FakeWalletDao()
-        ethManager = FakeEthManager()
-        privateKeyEncryptor = FakePrivateKeyEncryptor()
-
-        walletDao.wallets = listOf(
-            WalletEntity(
-                address = testAddress.toString(),
-                encryptedPrivateKeyBase64 = "encrypted_key_1",
-                label = "Test Wallet",
-            ),
-        )
-        walletDao.currentWalletAddress = testAddress.toString()
-        walletRepository = WalletRepository(
-            walletDao = walletDao,
-            ethManager = ethManager,
-            privateKeyEncryptor = privateKeyEncryptor,
-        )
+        observedAddresses.clear()
+        forceUpdatedAddresses.clear()
     }
 
     @AfterTest
@@ -93,7 +75,7 @@ class WalletViewModelTest {
 
     private fun createViewModel() {
         viewModel = WalletViewModel(
-            walletRepository = walletRepository,
+            walletAddress = testAddress,
             balanceProvider = balanceProvider,
             fiatRateProvider = fiatRateProvider,
             chainConfig = chainConfig,
@@ -145,6 +127,16 @@ class WalletViewModelTest {
             currentState.favoriteTokens.size,
             "Should have favorite tokens",
         )
+    }
+
+    @Test
+    fun balanceOperationsUseConstructorAddress() = runTest(testDispatcher) {
+        createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(listOf(testAddress), observedAddresses)
+        assertTrue(forceUpdatedAddresses.isNotEmpty())
+        assertTrue(forceUpdatedAddresses.all { it == testAddress })
     }
 
     @Test

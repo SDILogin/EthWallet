@@ -4,6 +4,7 @@ import me.sdi.ethwallet.core.EthAddress
 import java.math.BigInteger
 
 data class TransferData(
+    val senderAddress: EthAddress,
     val destinationAddress: EthAddress,
     val amount: BigInteger,
     val contractAddress: EthAddress,

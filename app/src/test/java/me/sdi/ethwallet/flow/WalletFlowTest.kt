@@ -28,7 +28,6 @@ import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
-import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.di.appModules
 import me.sdi.ethwallet.flow.pageobjects.CreateWalletPage
@@ -152,7 +151,7 @@ class WalletFlowTest : KoinTest {
         }
         single<EthManager> {
             object : EthManager {
-                override suspend fun getBalance(wallet: EthWallet): Map<EthAddress, Result<BigInteger>> = emptyMap()
+                override suspend fun getBalance(address: EthAddress): Map<EthAddress, Result<BigInteger>> = emptyMap()
 
                 override suspend fun fetchFeeSuggestion(): FeeSuggestion = throw NotImplementedError()
 
@@ -237,7 +236,7 @@ class WalletFlowTest : KoinTest {
                         ),
                     )
 
-                override suspend fun forceUpdate(wallet: EthWallet) {}
+                override suspend fun forceUpdate(address: EthAddress) {}
             }
         }
         factory<FiatRateProvider> {
@@ -293,9 +292,21 @@ class WalletFlowTest : KoinTest {
     }
 
     @Test
-    fun walletCreationNavigatesToWalletScreen() {
+    fun walletCreationReturnsToWalletList() {
         runInitialWalletCreationFlow()
+        walletsListPage.assertSingleWallet()
+        walletsListPage.assertSelectedIndicatorIsHidden()
+    }
+
+    @Test
+    fun tappingWalletOpensDetailsAndUpReturnsToList() {
+        runInitialWalletCreationFlow()
+
+        walletsListPage.clickWallet("My Wallet")
         walletPage.awaitVisible()
+        walletPage.clickUp()
+
+        walletsListPage.assertSingleWallet()
     }
 
     @Test
@@ -373,7 +384,8 @@ class WalletFlowTest : KoinTest {
         lockApp()
         setPinCodePage.enterPin(PIN)
 
-        walletPage.awaitVisible()
+        walletsListPage.assertSingleWallet()
+        walletsListPage.assertSelectedIndicatorIsHidden()
     }
 
     /**
@@ -381,6 +393,7 @@ class WalletFlowTest : KoinTest {
      * decides whether the app is locked.
      */
     private fun lockApp() {
+        walletsListPage.clickWallet("My Wallet")
         walletPage.awaitVisible()
         composeTestRule.runOnUiThread { pinSession.clear() }
         composeTestRule.waitUntilTextExists("Forgot PIN Code?")
@@ -393,10 +406,6 @@ class WalletFlowTest : KoinTest {
     }
 
     private fun showWalletsList() {
-        walletPage.awaitVisible()
-        composeTestRule.runOnUiThread {
-            activityController.get().onBackPressedDispatcher.onBackPressed()
-        }
         walletsListPage.assertSingleWallet()
     }
 

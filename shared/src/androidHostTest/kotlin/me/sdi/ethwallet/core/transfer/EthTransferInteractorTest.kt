@@ -1,8 +1,10 @@
 package me.sdi.ethwallet.core.transfer
 
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -11,7 +13,6 @@ import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
-import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.ui.daiOnMainnet
 import me.sdi.ethwallet.ui.usdtOnMainnet
@@ -34,7 +35,6 @@ class EthTransferInteractorTest {
     private val testAmount = 1.eth.toWei().value
     private val testMaxFeePerGas = Wei(BigInteger("30000000000"))
     private val testMaxPriorityFeePerGas = Wei(BigInteger("2000000000"))
-    private val testWallet = EthWallet(label = "Test Wallet", address = testWalletAddress)
 
     @BeforeTest
     fun setUp() {
@@ -44,13 +44,13 @@ class EthTransferInteractorTest {
         balanceProvider = mockk()
         transferInteractor = EthTransferInteractor(ethManager, walletRepository, privateKeyEncryptor, balanceProvider)
 
-        coEvery { walletRepository.observeActiveWallet() } returns flowOf(testWallet)
         coEvery {
             ethManager.sendTransfer(any(), EthContractAddress, testDestinationAddress, any(), any(), any(), any())
         } returns "0xabc123def456"
     }
 
     private fun transferData(
+        sender: EthAddress = testWalletAddress,
         destination: EthAddress = testDestinationAddress,
         amount: BigInteger = testAmount,
         contract: EthAddress = EthContractAddress,
@@ -58,6 +58,7 @@ class EthTransferInteractorTest {
         maxPriorityFeePerGas: Wei = testMaxPriorityFeePerGas,
         gasUnits: BigInteger = ETH_TRANSFER_GAS_UNITS,
     ) = TransferData(
+        senderAddress = sender,
         destinationAddress = destination,
         amount = amount,
         contractAddress = contract,
@@ -115,7 +116,8 @@ class EthTransferInteractorTest {
 
     @Test
     fun should_handle_wallet_repository_errors() = runTest(timeout = 10.seconds) {
-        coEvery { walletRepository.observeActiveWallet() } throws RuntimeException("Wallet not found")
+        setUpEthTransferMocks()
+        coEvery { walletRepository.getEncryptedPrivateKey(testWalletAddress) } throws RuntimeException("Wallet not found")
 
         assertFailsWith<RuntimeException> {
             transferInteractor.transfer(transferData())
@@ -198,7 +200,7 @@ class EthTransferInteractorTest {
                 usdtOnMainnet.ethAddress to BigInteger.TEN.pow(21),
             ),
         )
-        coEvery { balanceProvider.forceUpdate(any()) } returns Unit
+        coEvery { balanceProvider.forceUpdate(testWalletAddress) } returns Unit
 
         assertFailsWith<TransferException.InsufficientBalance>(
             "ERC-20 transfer with ETH balance below maxFeePerGas * gasUnits must be rejected",
@@ -249,9 +251,25 @@ class EthTransferInteractorTest {
         assertEquals(expected, transferInteractor.fetchFeeSuggestion(), "fetchFeeSuggestion should delegate to EthManager")
     }
 
+    @Test
+    fun should_use_transfer_sender_for_balance_and_private_key_lookup() = runTest(timeout = 10.seconds) {
+        val sender = EthAddress("0x1111111111111111111111111111111111111111")
+        every { balanceProvider.observe(sender) } returns flowOf(mapOf(EthContractAddress to 2.eth.toWei().value))
+        coEvery { balanceProvider.forceUpdate(sender) } returns Unit
+        coEvery { walletRepository.getEncryptedPrivateKey(sender) } returns "encrypted_key"
+        coEvery { privateKeyEncryptor.decryptPrivateKey("encrypted_key", sender.toString()) } returns BigInteger("123456789")
+
+        transferInteractor.transfer(transferData(sender = sender))
+
+        coVerify { balanceProvider.forceUpdate(sender) }
+        verify { balanceProvider.observe(sender) }
+        coVerify { walletRepository.getEncryptedPrivateKey(sender) }
+        coVerify { privateKeyEncryptor.decryptPrivateKey("encrypted_key", sender.toString()) }
+    }
+
     private fun setUpEthTransferMocks() {
         every { balanceProvider.observe(testWalletAddress) } returns flowOf(mapOf(EthContractAddress to 2.eth.toWei().value))
-        coEvery { balanceProvider.forceUpdate(any()) } returns Unit
+        coEvery { balanceProvider.forceUpdate(testWalletAddress) } returns Unit
         coEvery { walletRepository.getEncryptedPrivateKey(testWalletAddress) } returns "encrypted_key"
         coEvery { privateKeyEncryptor.decryptPrivateKey("encrypted_key", testWalletAddress.toString()) } returns BigInteger("123456789")
     }
@@ -263,7 +281,7 @@ class EthTransferInteractorTest {
                 usdtOnMainnet.ethAddress to BigInteger.TEN.pow(21),
             ),
         )
-        coEvery { balanceProvider.forceUpdate(any()) } returns Unit
+        coEvery { balanceProvider.forceUpdate(testWalletAddress) } returns Unit
         coEvery { walletRepository.getEncryptedPrivateKey(testWalletAddress) } returns "encrypted_key"
         coEvery { privateKeyEncryptor.decryptPrivateKey("encrypted_key", testWalletAddress.toString()) } returns BigInteger("123456789")
         coEvery {

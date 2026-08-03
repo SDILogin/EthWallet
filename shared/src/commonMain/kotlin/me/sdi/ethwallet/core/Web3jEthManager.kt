@@ -8,7 +8,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
 import me.sdi.ethwallet.core.transfer.toWei
-import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.ui.supportedKnownTokens
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.FunctionReturnDecoder
@@ -42,10 +41,10 @@ class Web3jEthManager(
     private val web3j: Web3j,
     private val chainConfig: ChainConfig,
 ) : EthManager {
-    override suspend fun getBalance(wallet: EthWallet) = coroutineScope {
+    override suspend fun getBalance(address: EthAddress) = coroutineScope {
         val getEthBalanceTask = async {
             try {
-                val ethBalanceWei: BigInteger = getEthBalanceFromBlockchain(wallet.address)
+                val ethBalanceWei: BigInteger = getEthBalanceFromBlockchain(address)
                 Pair(EthContractAddress, Result.success(ethBalanceWei))
             } catch (e: Exception) {
                 ensureActive()
@@ -59,7 +58,7 @@ class Web3jEthManager(
             async {
                 try {
                     val balanceInMinimalUnits: BigInteger = getErc20TokenBalanceFromBlockchain(
-                        walletAddress = wallet.address,
+                        walletAddress = address,
                         tokenContractAddress = tokenContractAddress,
                     )
                     Pair(tokenContractAddress, Result.success(balanceInMinimalUnits))

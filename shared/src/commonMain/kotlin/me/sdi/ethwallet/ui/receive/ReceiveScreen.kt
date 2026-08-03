@@ -75,31 +75,26 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceiveScreen(
+    walletAddress: EthAddress,
     onBackPressed: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ReceiveQrViewModel = koinViewModel(),
+    viewModel: ReceiveQrViewModel = koinViewModel(
+        parameters = { parametersOf(walletAddress) },
+    ),
 ) {
     val chainConfig: ChainConfig = koinInject()
     val chainTokens = remember(chainConfig.chainId) { supportedKnownTokens(chainConfig.chainId) }
     val viewState by viewModel.viewState.collectAsState()
     val toastManager = rememberToastManager()
-    val clipboardManager = LocalClipboardManager.current
-    val addressCopiedMessage = stringResource(Res.string.receive_address_copied)
-
     LaunchedEffect(key1 = viewModel.news) {
         viewModel.news.collect { news ->
             when (news) {
-                is ReceiveQrNews.ShowToast -> {
-                    toastManager.showToast(news.message)
-                }
-                is ReceiveQrNews.CopyToClipboard -> {
-                    clipboardManager.setText(AnnotatedString(news.text))
-                    toastManager.showToast(addressCopiedMessage)
-                }
+                is ReceiveQrNews.ShowToast -> toastManager.showToast(news.message)
             }
         }
     }
@@ -108,12 +103,8 @@ fun ReceiveScreen(
         modifier = modifier,
         viewState = viewState,
         chainTokens = chainTokens,
-        onEvent = { event ->
-            when (event) {
-                ReceiveQrEvent.OnBackPressed -> onBackPressed()
-                else -> viewModel.onEvent(event)
-            }
-        },
+        onBackPressed = onBackPressed,
+        onEvent = viewModel::onEvent,
     )
 }
 
@@ -123,6 +114,7 @@ private fun ReceiveScreenContent(
     modifier: Modifier = Modifier,
     viewState: ReceiveQrViewState,
     chainTokens: List<KnownToken>,
+    onBackPressed: () -> Unit,
     onEvent: (event: ReceiveQrEvent) -> Unit,
 ) {
     Scaffold(
@@ -131,7 +123,7 @@ private fun ReceiveScreenContent(
             TopAppBar(
                 title = { Text(stringResource(Res.string.receive_title)) },
                 navigationIcon = {
-                    IconButton(onClick = { onEvent(ReceiveQrEvent.OnBackPressed) }) {
+                    IconButton(onClick = onBackPressed) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
@@ -165,7 +157,6 @@ private fun ReceiveScreenContent(
             QrCodeDisplay(
                 qrPayload = viewState.qrPayload,
                 walletAddress = viewState.walletAddress,
-                onCopyAddress = { onEvent(ReceiveQrEvent.OnCopyAddress) },
             )
         }
     }
@@ -283,7 +274,6 @@ private fun AmountInput(
 private fun QrCodeDisplay(
     qrPayload: String?,
     walletAddress: EthAddress?,
-    onCopyAddress: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -316,7 +306,6 @@ private fun QrCodeDisplay(
             Spacer(modifier = Modifier.height(16.dp))
             AddressDisplay(
                 address = address,
-                onCopyAddress = onCopyAddress,
             )
         }
     }
@@ -325,7 +314,6 @@ private fun QrCodeDisplay(
 @Composable
 private fun AddressDisplay(
     address: EthAddress,
-    onCopyAddress: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val addressString = address.toString()
@@ -354,6 +342,9 @@ private fun AddressDisplay(
         },
     )
 
+    val clipboardManager = LocalClipboardManager.current
+    val toastManager = rememberToastManager()
+    val addressCopiedMessage = stringResource(Res.string.receive_address_copied)
     Text(
         text = annotatedText,
         inlineContent = inlineContent,
@@ -363,7 +354,10 @@ private fun AddressDisplay(
         modifier = modifier
             .fillMaxWidth()
             .minimumInteractiveComponentSize()
-            .clickable { onCopyAddress() }
+            .clickable {
+                clipboardManager.setText(AnnotatedString(address.toString()))
+                toastManager.showToast(addressCopiedMessage)
+            }
             .padding(horizontal = 16.dp, vertical = 8.dp),
     )
 }

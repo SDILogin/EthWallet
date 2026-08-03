@@ -1,7 +1,6 @@
 package me.sdi.ethwallet.database.entity
 
 import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
 /**
@@ -18,27 +17,3 @@ data class WalletEntity(
     val encryptedPrivateKeyBase64: String,
     val label: String,
 )
-
-/**
- * Table with a single row representing the currently active wallet.
- *
- * Primary key is fixed int = 1.
- * Foreign key is to the address column of the wallets table.
- */
-@Entity(
-    tableName = "current_wallet",
-    primaryKeys = ["id"],
-    foreignKeys = [
-        ForeignKey(
-            entity = WalletEntity::class,
-            parentColumns = ["address"],
-            childColumns = ["address"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-    ],
-)
-data class CurrentWalletEntity(
-    val id: Int = 1,
-    val address: String,
-)
-

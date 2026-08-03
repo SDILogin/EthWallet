@@ -35,6 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.navigation3.LocalListDetailSceneScope
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -78,10 +79,12 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun WalletScreen(
+    walletAddress: EthAddress,
     onUpButtonClick: () -> Unit,
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
@@ -89,8 +92,11 @@ fun WalletScreen(
     onSendButtonClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: WalletViewModel = koinViewModel<WalletViewModel>()
+    val viewModel: WalletViewModel = koinViewModel(
+        parameters = { parametersOf(walletAddress) },
+    )
     val toastManager = rememberToastManager()
+    val showUpButton = LocalListDetailSceneScope.current == null
     LaunchedEffect(key1 = viewModel.news) {
         viewModel.news.collect { news ->
             when (news) {
@@ -105,6 +111,7 @@ fun WalletScreen(
     WalletScreenContent(
         viewState = viewState,
         onRefresh = { viewModel.onEvent(WalletEvent.Refresh) },
+        showUpButton = showUpButton,
         onUpButtonClick = onUpButtonClick,
         onEditButtonClick = onEditButtonClick,
         onTokenClick = onTokenClick,
@@ -119,6 +126,7 @@ fun WalletScreen(
 fun WalletScreenContent(
     viewState: WalletViewState,
     onRefresh: () -> Unit,
+    showUpButton: Boolean,
     onUpButtonClick: () -> Unit,
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
@@ -134,13 +142,17 @@ fun WalletScreenContent(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(Res.string.wallet_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onUpButtonClick) {
-                        Icon(
-                            painter = painterResource(Res.drawable.arrow_back_24px),
-                            contentDescription = stringResource(Res.string.back),
-                        )
+                navigationIcon = if (showUpButton) {
+                    {
+                        IconButton(onClick = onUpButtonClick) {
+                            Icon(
+                                painter = painterResource(Res.drawable.arrow_back_24px),
+                                contentDescription = stringResource(Res.string.back),
+                            )
+                        }
                     }
+                } else {
+                    {}
                 },
                 scrollBehavior = scrollBehavior,
             )
@@ -621,6 +633,7 @@ private fun WalletScreenContentPreview(
         WalletScreenContent(
             viewState = viewState,
             onUpButtonClick = {},
+            showUpButton = true,
             onEditButtonClick = {},
             onTokenClick = {},
             onReceiveButtonClick = {},

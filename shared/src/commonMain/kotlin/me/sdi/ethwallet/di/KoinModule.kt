@@ -95,23 +95,24 @@ val commonModule = module {
         )
     }
 
-    viewModel<WalletViewModel> {
+    viewModel<WalletViewModel> { params ->
         WalletViewModel(
-            walletRepository = get(),
+            walletAddress = params.get(),
             balanceProvider = get(),
             fiatRateProvider = get(),
             chainConfig = get(),
         )
     }
 
-    viewModel<ReceiveQrViewModel> {
+    viewModel<ReceiveQrViewModel> { params ->
         ReceiveQrViewModel(
-            walletRepository = get(),
+            walletAddress = params.get(),
         )
     }
 
-    viewModel<SendViewModel> {
+    viewModel<SendViewModel> { params ->
         SendViewModel(
+            walletAddress = params.get(),
             transferInteractor = get(),
             fiatRateProvider = get(),
             savedStateHandle = get(),

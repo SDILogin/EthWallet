@@ -96,6 +96,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -105,8 +106,11 @@ private val SECTION_EXIT = fadeOut(animationSpec = tween(300)) + shrinkVerticall
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SendScreen(
+    walletAddress: EthAddress,
     modifier: Modifier = Modifier,
-    viewModel: SendViewModel = koinViewModel(),
+    viewModel: SendViewModel = koinViewModel(
+        parameters = { parametersOf(walletAddress) },
+    ),
     onBackPress: () -> Unit,
 ) {
     val chainConfig: ChainConfig = koinInject()

@@ -2,7 +2,6 @@ package me.sdi.ethwallet.core
 
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.database.dao.InMemoryTokenBalanceDao
 import me.sdi.ethwallet.database.entity.TokenBalanceEntity
 import me.sdi.ethwallet.ui.usdtOnMainnet
@@ -13,9 +12,9 @@ import kotlin.test.assertEquals
 
 class EthBalanceProviderTest {
     private val fakeEthManager = object : EthManager {
-        private val balance = mutableMapOf<EthWallet, Map<EthAddress, Result<BigInteger>>>()
+        private val balance = mutableMapOf<EthAddress, Map<EthAddress, Result<BigInteger>>>()
 
-        override suspend fun getBalance(wallet: EthWallet) = balance.getValue(wallet)
+        override suspend fun getBalance(address: EthAddress) = balance.getValue(address)
 
         override suspend fun fetchFeeSuggestion() = throw NotImplementedError()
 
@@ -33,8 +32,8 @@ class EthBalanceProviderTest {
 
         override fun importWallet(mnemonic: String) = throw NotImplementedError()
 
-        fun setBalance(wallet: EthWallet, balances: Map<EthAddress, Result<BigInteger>>) {
-            balance[wallet] = balances
+        fun setBalance(address: EthAddress, balances: Map<EthAddress, Result<BigInteger>>) {
+            balance[address] = balances
         }
     }
     private val inMemoryTokenBalanceDao = InMemoryTokenBalanceDao()
@@ -46,7 +45,6 @@ class EthBalanceProviderTest {
     )
 
     private val testWalletAddress = EthAddress("0x1234567890abcdef1234567890abcdef12345678")
-    private val testWallet = EthWallet(label = "Test Wallet", address = testWalletAddress)
 
     @BeforeTest
     fun setUp() {
@@ -69,14 +67,14 @@ class EthBalanceProviderTest {
         val ethBalance = BigInteger("1000000000000000000")
         val usdtBalance = BigInteger("100000000")
         fakeEthManager.setBalance(
-            wallet = testWallet,
+            address = testWalletAddress,
             balances = mapOf(
                 EthContractAddress to Result.success(ethBalance),
                 usdtOnMainnet.ethAddress to Result.success(usdtBalance),
             ),
         )
 
-        ethBalanceProvider.forceUpdate(testWallet)
+        ethBalanceProvider.forceUpdate(testWalletAddress)
 
         val result = ethBalanceProvider.observe(testWalletAddress).first()
 
@@ -105,14 +103,14 @@ class EthBalanceProviderTest {
 
         val tokenBalance = BigInteger("50000000")
         fakeEthManager.setBalance(
-            wallet = testWallet,
+            address = testWalletAddress,
             balances = mapOf(
                 EthContractAddress to Result.failure(RuntimeException("Network error")),
                 EthAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7") to Result.success(tokenBalance),
             ),
         )
 
-        ethBalanceProvider.forceUpdate(testWallet)
+        ethBalanceProvider.forceUpdate(testWalletAddress)
 
         val result = ethBalanceProvider.observe(testWalletAddress).first()
 
@@ -131,14 +129,14 @@ class EthBalanceProviderTest {
     @Test
     fun forceUpdate_handles_complete_network_failure_with_no_database_fallback() = runTest {
         fakeEthManager.setBalance(
-            wallet = testWallet,
+            address = testWalletAddress,
             balances = mapOf(
                 EthContractAddress to Result.failure(RuntimeException("Network error")),
                 EthAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7") to Result.failure(RuntimeException("Network error")),
             ),
         )
 
-        ethBalanceProvider.forceUpdate(testWallet)
+        ethBalanceProvider.forceUpdate(testWalletAddress)
 
         val result = ethBalanceProvider.observe(testWalletAddress).first()
 

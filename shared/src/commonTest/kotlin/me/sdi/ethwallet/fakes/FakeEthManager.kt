@@ -4,7 +4,6 @@ import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthCreationResult
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
-import me.sdi.ethwallet.data.repository.EthWallet
 import java.math.BigInteger
 
 class FakeEthManager : EthManager {
@@ -36,7 +35,7 @@ class FakeEthManager : EthManager {
     var lastImportedMnemonic: String? = null
     var balanceResult: Map<EthAddress, Result<BigInteger>> = emptyMap()
 
-    override suspend fun getBalance(wallet: EthWallet): Map<EthAddress, Result<BigInteger>> = balanceResult
+    override suspend fun getBalance(address: EthAddress): Map<EthAddress, Result<BigInteger>> = balanceResult
 
     override suspend fun fetchFeeSuggestion(): FeeSuggestion = throw NotImplementedError()
 

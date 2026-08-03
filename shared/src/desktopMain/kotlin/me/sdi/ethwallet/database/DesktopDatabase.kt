@@ -5,7 +5,6 @@ import kotlinx.coroutines.flow.flowOf
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.dao.WalletDao
-import me.sdi.ethwallet.database.entity.CurrentWalletEntity
 import me.sdi.ethwallet.database.entity.FiatRateEntity
 import me.sdi.ethwallet.database.entity.TokenBalanceEntity
 import me.sdi.ethwallet.database.entity.WalletEntity
@@ -34,15 +33,11 @@ object DesktopDatabaseBuilder {
 }
 
 private class DesktopWalletDao : WalletDao {
-    override suspend fun insertWalletInternal(wallet: WalletEntity) {}
-
-    override suspend fun setActiveWallet(currentWalletEntity: CurrentWalletEntity) {}
+    override suspend fun insertWallet(wallet: WalletEntity) {}
 
     override fun observeAllWallets(): Flow<List<WalletEntity>> = flowOf(emptyList())
 
     override suspend fun getEncryptedPrivateKeyByAddress(address: String): String = ""
-
-    override fun currentActiveWallet(): Flow<WalletEntity?> = flowOf(null)
 
     override suspend fun deleteWalletByAddress(address: String) {}
 }

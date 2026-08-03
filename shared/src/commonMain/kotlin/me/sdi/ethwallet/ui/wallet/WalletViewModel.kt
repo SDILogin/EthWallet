@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -26,8 +25,6 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.core.transfer.Wei
 import me.sdi.ethwallet.core.transfer.toEth
-import me.sdi.ethwallet.data.repository.EthWallet
-import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.util.formatUsdCurrency
 import java.math.BigDecimal
@@ -37,7 +34,7 @@ import java.math.RoundingMode
 private const val TAG = "WalletViewModel"
 
 class WalletViewModel(
-    private val walletRepository: WalletRepository,
+    private val walletAddress: EthAddress,
     private val balanceProvider: BalanceProvider,
     private val fiatRateProvider: FiatRateProvider,
     private val chainConfig: ChainConfig,
@@ -56,7 +53,7 @@ class WalletViewModel(
     init {
         viewState
             .onEach { Logger.debug(TAG) { "ViewState: $it" } }
-            .onStart { startObservingActiveWalletBalanceChanges() }
+            .onStart { startObservingWalletBalanceChanges() }
             .launchIn(viewModelScope)
 
         news
@@ -82,16 +79,7 @@ class WalletViewModel(
         if (forceUpdateJob == null) {
             viewModelScope.launch {
                 forceUpdateJob = launch(CoroutineName("BalanceUpdate")) {
-                    val activeWallet: EthWallet? = getActiveWalletOrShowError()
-                    if (activeWallet == null) {
-                        Logger.warn(TAG) {
-                            "No active wallet found, cannot refresh balance"
-                        }
-
-                        return@launch
-                    }
-
-                    updateWalletBalanceOrShowError(activeWallet)
+                    updateWalletBalanceOrShowError()
                     updateFiatRatesOrShowError()
                 }.also { job ->
                     job.invokeOnCompletion {
@@ -114,30 +102,21 @@ class WalletViewModel(
         }
     }
 
-    private fun startObservingActiveWalletBalanceChanges() {
+    private fun startObservingWalletBalanceChanges() {
         viewState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            val activeWallet: EthWallet? = getActiveWalletOrShowError()
-            if (activeWallet == null) {
-                Logger.warn(TAG) {
-                    "No active wallet found, stop observing balance updates"
-                }
-
-                return@launch
-            }
-
             balanceProvider
-                .observe(activeWallet.address)
+                .observe(walletAddress)
                 .combine(fiatRateProvider.observe()) { balance, fiatRates ->
                     Logger.debug(TAG) {
-                        "Combining balance and fiat rates for ${activeWallet.address}"
+                        "Combining balance and fiat rates for $walletAddress"
                     }
                     CombinedBalance(balance, fiatRates)
                 }
                 .onStart {
                     forceUpdateJob = launch(CoroutineName("BalanceUpdate")) {
-                        updateWalletBalanceOrShowError(activeWallet)
+                        updateWalletBalanceOrShowError()
                         updateFiatRatesOrShowError()
                     }.also { job ->
                         job.invokeOnCompletion {
@@ -151,7 +130,7 @@ class WalletViewModel(
                 }
                 .onEach {
                     Logger.debug(TAG) {
-                        "Balance update for ${activeWallet.address}: $it"
+                        "Balance update for $walletAddress: $it"
                     }
                 }
                 .collectLatest { combinedBalance: CombinedBalance ->
@@ -231,22 +210,6 @@ class WalletViewModel(
         )
     }
 
-    private suspend fun getActiveWalletOrShowError(): EthWallet? {
-        return try {
-            walletRepository.observeActiveWallet().first()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-
-            Logger.warn(TAG) {
-                "Error loading active wallet\n ${e.stackTraceToString()}"
-            }
-
-            news.emit(WalletNews.ShowErrorMessage(e))
-
-            null
-        }
-    }
-
     private suspend fun updateFiatRatesOrShowError() {
         try {
             fiatRateProvider.forceUpdate()
@@ -261,14 +224,14 @@ class WalletViewModel(
         }
     }
 
-    private suspend fun updateWalletBalanceOrShowError(wallet: EthWallet) {
+    private suspend fun updateWalletBalanceOrShowError() {
         try {
-            balanceProvider.forceUpdate(wallet)
+            balanceProvider.forceUpdate(walletAddress)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
 
             Logger.warn(TAG) {
-                "Failed to force update balance for ${wallet.address}: ${e.message}"
+                "Failed to force update balance for $walletAddress: ${e.message}"
             }
 
             news.emit(WalletNews.ShowErrorMessage(e))

@@ -62,6 +62,7 @@ private const val KEY_PRIORITY_FEE = "priority_fee_wei"
 private const val KEY_ETH_USD_RATE = "eth_usd_rate"
 
 class SendViewModel(
+    private val walletAddress: EthAddress,
     private val transferInteractor: TransferInteractor,
     private val fiatRateProvider: FiatRateProvider,
     private val savedStateHandle: SavedStateHandle,
@@ -213,7 +214,7 @@ class SendViewModel(
 
         viewModelScope.launch {
             try {
-                val transferData = viewState.value.createTransferData()
+                val transferData = viewState.value.createTransferData(walletAddress)
                 val transactionHash = transferInteractor.transfer(transferData)
 
                 Logger.debug(TAG) { "Transfer successful: $transactionHash" }
@@ -367,13 +368,14 @@ private fun parsePriorityFeeGwei(value: String): BigDecimal? =
 private fun parseGasUnits(value: String): BigInteger? =
     value.toBigIntegerOrNull()?.takeIf { validateGasUnits(value) == null }
 
-private fun SendViewState.createTransferData(): TransferData {
+private fun SendViewState.createTransferData(senderAddress: EthAddress): TransferData {
     val amount = amountToBigInteger(transferAmountInputState.value, selectedTokenContractAddress)
     checkNotNull(amount) {
         "Invalid amount conversion"
     }
 
     return TransferData(
+        senderAddress = senderAddress,
         destinationAddress = EthAddress(receiverAddress.value),
         amount = amount,
         contractAddress = selectedTokenContractAddress,

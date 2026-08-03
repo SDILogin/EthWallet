@@ -11,11 +11,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
-import me.sdi.ethwallet.data.repository.WalletRepository
-import me.sdi.ethwallet.database.entity.WalletEntity
-import me.sdi.ethwallet.fakes.FakeEthManager
-import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
-import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.ui.daiOnMainnet
 import me.sdi.ethwallet.ui.usdcOnMainnet
 import kotlin.test.AfterTest
@@ -30,10 +25,6 @@ import kotlin.test.assertTrue
 class ReceiveQrViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
-    private lateinit var walletDao: FakeWalletDao
-    private lateinit var ethManager: FakeEthManager
-    private lateinit var privateKeyEncryptor: FakePrivateKeyEncryptor
-    private lateinit var walletRepository: WalletRepository
     private lateinit var viewModel: ReceiveQrViewModel
 
     private val testAddress = EthAddress("0x742d35Cc6634C0532925a3b8D2A9C0Eeb5D6d0f2")
@@ -41,24 +32,7 @@ class ReceiveQrViewModelTest {
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        walletDao = FakeWalletDao()
-        ethManager = FakeEthManager()
-        privateKeyEncryptor = FakePrivateKeyEncryptor()
-
-        walletDao.wallets = listOf(
-            WalletEntity(
-                address = testAddress.toString(),
-                encryptedPrivateKeyBase64 = "encrypted_key_1",
-                label = "Test Wallet",
-            ),
-        )
-        walletDao.currentWalletAddress = testAddress.toString()
-        walletRepository = WalletRepository(
-            walletDao = walletDao,
-            ethManager = ethManager,
-            privateKeyEncryptor = privateKeyEncryptor,
-        )
-        viewModel = ReceiveQrViewModel(walletRepository)
+        viewModel = ReceiveQrViewModel(testAddress)
     }
 
     @AfterTest
@@ -74,44 +48,6 @@ class ReceiveQrViewModelTest {
         assertEquals("", state.amount, "Initial amount should be empty")
         assertNull(state.amountError, "Initial amount error should be null")
         assertNull(state.qrPayload, "Initial QR code URI should be null")
-    }
-
-    @Test
-    fun should_handle_no_active_wallet_gracefully() = runTest(testDispatcher) {
-        walletDao.wallets = emptyList()
-        val viewModel = ReceiveQrViewModel(walletRepository)
-
-        val collector = mutableListOf<ReceiveQrViewState>()
-        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.viewState.collect { collector.add(it) }
-        }
-
-        testScheduler.advanceUntilIdle()
-        job.cancel()
-
-        val finalState = collector.last()
-        assertEquals(EthContractAddress, finalState.selectedTokenContract, "Initial token should be EthContractAddress")
-        assertEquals("", finalState.amount, "Initial amount should be empty")
-        assertNull(finalState.qrPayload, "QR payload should be null without wallet")
-    }
-
-    @Test
-    fun should_handle_wallet_repository_exception_during_initialization() = runTest(testDispatcher) {
-        walletDao.shouldThrowException = true
-        val viewModel = ReceiveQrViewModel(walletRepository)
-
-        val collector = mutableListOf<ReceiveQrViewState>()
-        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.viewState.collect { collector.add(it) }
-        }
-
-        testScheduler.advanceUntilIdle()
-        job.cancel()
-
-        val finalState = collector.last()
-        assertEquals(EthContractAddress, finalState.selectedTokenContract, "Token should be EthContractAddress even when exception occurs")
-        assertEquals("", finalState.amount, "Amount should be empty")
-        assertNull(finalState.qrPayload, "QR payload should be null on error")
     }
 
     @Test
@@ -274,7 +210,7 @@ class ReceiveQrViewModelTest {
         assertEquals(
             finalState.qrPayload?.isNotEmpty(),
             true,
-            "QR code should be generated when token and amount are valid"
+            "QR code should be generated when token and amount are valid",
         )
     }
 
@@ -315,42 +251,6 @@ class ReceiveQrViewModelTest {
         val finalState = collector.last()
         assertEquals("", finalState.amount, "Amount should be cleared")
         assertNull(finalState.amountError, "Amount error should be cleared")
-    }
-
-    @Test
-    fun onCopyAddress_should_emit_copy_news_with_wallet_address() = runTest(testDispatcher) {
-        val newsCollector = mutableListOf<ReceiveQrNews>()
-        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.news.collect { newsCollector.add(it) }
-        }
-
-        viewModel.onEvent(ReceiveQrEvent.OnCopyAddress)
-        testScheduler.advanceUntilIdle()
-        job.cancel()
-
-        assertTrue(newsCollector.any { it is ReceiveQrNews.CopyToClipboard }, "Should emit copy to clipboard news")
-
-        val copyNews = newsCollector.find { it is ReceiveQrNews.CopyToClipboard } as ReceiveQrNews.CopyToClipboard
-        assertEquals(testAddress.toString(), copyNews.text, "Should copy wallet address")
-    }
-
-    @Test
-    fun onCopyAddress_should_handle_missing_wallet_address() = runTest(testDispatcher) {
-        walletDao.wallets = emptyList()
-        val viewModel = ReceiveQrViewModel(walletRepository)
-
-        val newsCollector = mutableListOf<ReceiveQrNews>()
-        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.news.collect { newsCollector.add(it) }
-        }
-
-        viewModel.onEvent(ReceiveQrEvent.OnCopyAddress)
-        testScheduler.advanceUntilIdle()
-        job.cancel()
-
-        assertTrue(newsCollector.any { it is ReceiveQrNews.ShowToast }, "Should emit error news")
-        val toastNews = newsCollector.find { it is ReceiveQrNews.ShowToast } as ReceiveQrNews.ShowToast
-        assertEquals("Address not available", toastNews.message, "Should show address not available message")
     }
 
     @Test

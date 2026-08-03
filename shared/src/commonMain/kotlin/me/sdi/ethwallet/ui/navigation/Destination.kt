@@ -9,7 +9,7 @@ sealed interface Destination : NavKey {
     data object SplashScreen : Destination
 
     @Serializable
-    data object LockScreen: Destination
+    data object LockScreen : Destination
 
     @Serializable
     data object OnBoardingScreen : Destination
@@ -30,10 +30,10 @@ sealed interface Destination : NavKey {
     data object SetPinCodeScreen : Destination
 
     @Serializable
-    data object ReceiveQrScreen : Destination
+    data class ReceiveQrScreen(val ethAddress: String) : Destination
 
     @Serializable
-    data object SendScreen : Destination
+    data class SendScreen(val ethAddress: String) : Destination
 
     @Serializable
     data object SettingsScreen : Destination

@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
+import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.receive.ReceiveScreen
@@ -46,7 +47,6 @@ fun EthWalletApp() {
             configuration = SavedStateConfiguration {
                 serializersModule = SerializersModule {
                     polymorphic(NavKey::class) {
-
                         @OptIn(ExperimentalSerializationApi::class)
                         subclassesOfSealed<Destination>()
                     }
@@ -122,16 +122,25 @@ fun EthWalletApp() {
                     },
                 ),
             ) {
+                val selectedWalletAddress = (backStack.lastOrNull() as? Destination.WalletScreen)
+                    ?.ethAddress
+                    ?.let(::EthAddress)
                 WalletsListScreen(
                     modifier = Modifier.fillMaxSize(),
+                    selectedWalletAddress = selectedWalletAddress,
                     onWalletSelected = { ethAddress ->
-                        if (backStack.last() is Destination.WalletScreen) {
+                        val destination = Destination.WalletScreen(ethAddress = ethAddress.toString())
+                        val currentDestination = backStack.lastOrNull()
+                        if (currentDestination == destination) {
+                            return@WalletsListScreen
+                        }
+                        if (currentDestination is Destination.WalletScreen) {
                             backStack.removeLastOrNull()
                         }
-                        backStack.add(Destination.WalletScreen(ethAddress = ethAddress.toString()))
+                        backStack.add(destination)
                     },
-                    onSelectedWalletDeleted = {
-                        if (backStack.last() is Destination.WalletScreen) {
+                    onWalletDeleted = { address ->
+                        if ((backStack.lastOrNull() as? Destination.WalletScreen)?.ethAddress == address.toString()) {
                             backStack.removeLastOrNull()
                         }
                     },
@@ -140,7 +149,6 @@ fun EthWalletApp() {
                     onSettingsClick = { backStack.add(Destination.SettingsScreen) },
                 )
             }
-
 
             @OptIn(ExperimentalMaterial3AdaptiveApi::class)
             entry<Destination.CreateWalletScreen>(
@@ -173,26 +181,29 @@ fun EthWalletApp() {
             @OptIn(ExperimentalMaterial3AdaptiveApi::class)
             entry<Destination.WalletScreen>(
                 metadata = detailPane(),
-            ) { entry ->
+            ) { destination ->
                 WalletScreen(
                     modifier = Modifier.fillMaxSize(),
+                    walletAddress = EthAddress(destination.ethAddress),
                     onUpButtonClick = { backStack.removeLastOrNull() },
-                    onReceiveButtonClick = { backStack.add(Destination.ReceiveQrScreen) },
-                    onSendButtonClick = { backStack.add(Destination.SendScreen) },
+                    onReceiveButtonClick = { backStack.add(Destination.ReceiveQrScreen(destination.ethAddress)) },
+                    onSendButtonClick = { backStack.add(Destination.SendScreen(destination.ethAddress)) },
                     onEditButtonClick = { },
                     onTokenClick = { },
                 )
             }
 
-            entry<Destination.ReceiveQrScreen> {
+            entry<Destination.ReceiveQrScreen> { destination ->
                 ReceiveScreen(
+                    walletAddress = EthAddress(destination.ethAddress),
                     onBackPressed = { backStack.removeLastOrNull() },
                 )
             }
 
-            entry<Destination.SendScreen> {
+            entry<Destination.SendScreen> { destination ->
                 SendScreen(
                     modifier = Modifier.fillMaxSize(),
+                    walletAddress = EthAddress(destination.ethAddress),
                     onBackPress = { backStack.removeLastOrNull() },
                 )
             }

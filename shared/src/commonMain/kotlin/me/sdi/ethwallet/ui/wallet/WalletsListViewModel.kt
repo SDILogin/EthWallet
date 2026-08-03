@@ -27,7 +27,7 @@ class WalletsListViewModel(
     val uiState: StateFlow<WalletsListUiState>
         field = MutableStateFlow(WalletsListUiState(isLoading = true))
 
-    private val newsChannel = Channel<WalletScreenNews>(Channel.BUFFERED)
+    private val newsChannel = Channel<WalletsListNews>(Channel.BUFFERED)
     val news = newsChannel
         .receiveAsFlow()
         .onEach { Logger.debug(TAG) { "News: $it" } }
@@ -35,24 +35,6 @@ class WalletsListViewModel(
     init {
         uiState
             .onEach { Logger.debug(TAG) { "ViewState: $it" } }
-            .launchIn(viewModelScope)
-
-        walletRepository
-            .observeActiveWallet()
-            .catch {
-                Logger.warn(TAG, it) { "Error observing active wallet" }
-            }
-            .onEach { activeWallet ->
-                if (activeWallet?.address != uiState.value.selected?.address) {
-                    activeWallet?.let { wallet ->
-                        newsChannel.send(WalletScreenNews.ShowWalletDetails(wallet.address))
-                    }
-                }
-
-                uiState.update {
-                    it.copy(selected = activeWallet)
-                }
-            }
             .launchIn(viewModelScope)
 
         walletRepository
@@ -73,22 +55,7 @@ class WalletsListViewModel(
     fun onEvent(event: WalletsListEvent) {
         Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
-            is WalletsListEvent.OnWalletSelected -> setActiveWallet(event.address)
             is WalletsListEvent.OnDeleteWalletClick -> deleteWallet(event.address)
-        }
-    }
-
-    private fun setActiveWallet(address: EthAddress) {
-        viewModelScope.launch {
-            suspendableTryCatch(
-                block = {
-                    walletRepository.setActiveWallet(address)
-                },
-                onFailure = { e ->
-                    Logger.warn(TAG, e) { "Error setting active wallet" }
-                    newsChannel.send(WalletScreenNews.ShowErrorMessage)
-                },
-            )
         }
     }
 
@@ -97,14 +64,12 @@ class WalletsListViewModel(
             suspendableTryCatch(
                 block = {
                     walletRepository.deleteWallet(address)
-                    if (address == uiState.value.selected?.address) {
-                        newsChannel.send(WalletScreenNews.SelectedWalletDeleted)
-                    }
+                    newsChannel.send(WalletsListNews.WalletDeleted(address))
                 },
                 onFailure = { e ->
                     Logger.warn(TAG, e) { "Error deleting wallet" }
 
-                    newsChannel.send(WalletScreenNews.ShowErrorMessage)
+                    newsChannel.send(WalletsListNews.ShowErrorMessage)
                 },
             )
         }
@@ -127,19 +92,16 @@ private suspend fun suspendableTryCatch(
 }
 
 data class WalletsListUiState(
-    val selected: EthWallet? = null,
     val wallets: List<EthWallet> = emptyList(),
     val isLoading: Boolean = false,
 )
 
-sealed interface WalletScreenNews {
-    data class ShowWalletDetails(val ethAddress: EthAddress) : WalletScreenNews
-    data object ShowErrorMessage : WalletScreenNews
-    data object SelectedWalletDeleted : WalletScreenNews
+sealed interface WalletsListNews {
+    data class WalletDeleted(val address: EthAddress) : WalletsListNews
+
+    data object ShowErrorMessage : WalletsListNews
 }
 
 sealed interface WalletsListEvent {
-    data class OnWalletSelected(val address: EthAddress) : WalletsListEvent
     data class OnDeleteWalletClick(val address: EthAddress) : WalletsListEvent
 }
-

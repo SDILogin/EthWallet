@@ -4,7 +4,6 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
-import me.sdi.ethwallet.flow.assertContentDescriptionExists
 import me.sdi.ethwallet.flow.clickContentDescription
 import me.sdi.ethwallet.flow.clickText
 
@@ -48,11 +47,11 @@ class WalletsListPage(private val composeTestRule: ComposeTestRule) {
         composeTestRule.onAllNodesWithContentDescription("Delete wallet", useUnmergedTree = true).assertCountEquals(1)
     }
 
-    fun assertActiveCheckmarkExists() {
-        composeTestRule.assertContentDescriptionExists("Active wallet")
+    fun assertSelectedIndicatorIsHidden() {
+        composeTestRule.onAllNodesWithContentDescription("Selected wallet").assertCountEquals(0)
     }
 
-    fun deleteActiveWallet() {
-        composeTestRule.clickContentDescription("Delete wallet")
+    fun clickWallet(label: String) {
+        composeTestRule.clickText(label)
     }
 }

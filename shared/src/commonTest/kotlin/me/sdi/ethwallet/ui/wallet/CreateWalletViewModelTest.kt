@@ -21,7 +21,6 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
@@ -78,7 +77,6 @@ class CreateWalletViewModelTest {
     fun initializationGeneratesSeedPhraseWithoutPersistingWallet() = runTest(testDispatcher) {
         assertEquals(testSeedPhrase, awaitSeedPhrase())
         assertTrue(walletDao.wallets.isEmpty())
-        assertNull(walletDao.currentWalletAddress)
     }
 
     @Test
@@ -98,7 +96,6 @@ class CreateWalletViewModelTest {
             ),
             walletDao.wallets,
         )
-        assertEquals(ethManager.creationResult.address.toString(), walletDao.currentWalletAddress)
     }
 
     @Test

@@ -3,7 +3,6 @@ package me.sdi.ethwallet.core
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import me.sdi.ethwallet.Logger
-import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.entity.TokenBalanceEntity
 import me.sdi.ethwallet.database.entity.createTokenBalanceEntity
@@ -17,17 +16,17 @@ class EthBalanceProvider(
     private val tokenBalanceDao: TokenBalanceDao,
     private val now: () -> Long = { TimeSource.Monotonic.markNow().elapsedNow().inWholeMilliseconds },
 ) : BalanceProvider {
-    override suspend fun forceUpdate(wallet: EthWallet) {
+    override suspend fun forceUpdate(address: EthAddress) {
         Logger.debug(TAG) {
             "Forcing update of ETH and ERC-20 token balances"
         }
 
-        val ethBalance: Map<EthAddress, Result<BigInteger>> = ethManager.getBalance(wallet)
+        val ethBalance: Map<EthAddress, Result<BigInteger>> = ethManager.getBalance(address)
         val tokenBalanceEntities: List<TokenBalanceEntity> = ethBalance.map { (tokenAddress, result) ->
             val balance: BigInteger = result
                 .recoverCatching { throwable ->
                     val dbEntity = tokenBalanceDao.read(
-                        walletAddress = wallet.address.toString(),
+                        walletAddress = address.toString(),
                         tokenAddress = tokenAddress.toString(),
                     )
                     if (dbEntity == null) {
@@ -51,7 +50,7 @@ class EthBalanceProvider(
                 "Token: $tokenAddress, Balance: $balance"
             }
             createTokenBalanceEntity(
-                walletAddress = wallet.address.toString(),
+                walletAddress = address.toString(),
                 tokenAddress = tokenAddress.toString(),
                 balance = balance.toString(),
                 timestamp = now(),

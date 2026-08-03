@@ -30,7 +30,7 @@
     <string name="wallets_list_title">My Wallets</string>
     <string name="wallets_list_no_wallets">No wallets found</string>
     <string name="wallets_list_add_wallet">Add wallet</string>
-    <string name="wallets_list_active_wallet_icon">Active wallet</string>
+    <string name="wallets_list_selected_wallet_icon">Selected wallet</string>
     <string name="wallets_list_delete_wallet">Delete wallet</string>
 
     <!-- Wallet Screen -->

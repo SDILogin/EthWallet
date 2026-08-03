@@ -8,7 +8,6 @@ import me.sdi.ethwallet.core.EthCreationResult
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.database.dao.WalletDao
-import me.sdi.ethwallet.database.entity.CurrentWalletEntity
 import me.sdi.ethwallet.database.entity.WalletEntity
 
 private const val TAG = "WalletRepository"
@@ -21,7 +20,6 @@ class WalletRepository(
     private val ethManager: EthManager,
     private val privateKeyEncryptor: PrivateKeyEncryptor,
 ) {
-
     suspend fun saveWallet(creationResult: EthCreationResult, label: String) {
         val encryptedKeyBase64 = privateKeyEncryptor.encryptPrivateKey(
             privateKey = creationResult.privateKey,
@@ -55,13 +53,6 @@ class WalletRepository(
 
     fun observeAllWallets(): Flow<List<EthWallet>> = walletDao.observeAllWallets().map { dbEntities ->
         dbEntities.map { it.toEthWallet() }
-    }
-
-    fun observeActiveWallet(): Flow<EthWallet?> = walletDao.currentActiveWallet().map {  it?.toEthWallet() }
-
-    suspend fun setActiveWallet(address: EthAddress) {
-        Logger.debug(TAG) { "Setting wallet $address as active" }
-        walletDao.setActiveWallet(CurrentWalletEntity(address = address.toString()))
     }
 
     /**

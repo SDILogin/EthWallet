@@ -40,6 +40,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.navigation3.LocalListDetailSceneScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -67,9 +69,9 @@ import me.sdi.ethwallet.resources.onboarding_create_wallet
 import me.sdi.ethwallet.resources.onboarding_import_wallet
 import me.sdi.ethwallet.resources.settings_24px
 import me.sdi.ethwallet.resources.wallet_settings
-import me.sdi.ethwallet.resources.wallets_list_active_wallet_icon
 import me.sdi.ethwallet.resources.wallets_list_add_wallet
 import me.sdi.ethwallet.resources.wallets_list_delete_wallet
+import me.sdi.ethwallet.resources.wallets_list_selected_wallet_icon
 import me.sdi.ethwallet.resources.wallets_list_title
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.util.rememberToastManager
@@ -77,11 +79,12 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun WalletsListScreen(
+    selectedWalletAddress: EthAddress?,
     onWalletSelected: (EthAddress) -> Unit,
-    onSelectedWalletDeleted: () -> Unit,
+    onWalletDeleted: (EthAddress) -> Unit,
     onImportWallet: () -> Unit,
     onCreateWallet: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -91,13 +94,13 @@ fun WalletsListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val toastManager = rememberToastManager()
     val errorMessage = stringResource(Res.string.error_something_went_wrong)
+    val isListDetailLayout = LocalListDetailSceneScope.current != null
 
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
             when (news) {
-                is WalletScreenNews.ShowWalletDetails -> onWalletSelected(news.ethAddress)
-                is WalletScreenNews.ShowErrorMessage -> toastManager.showToast(errorMessage)
-                is WalletScreenNews.SelectedWalletDeleted -> onSelectedWalletDeleted()
+                is WalletsListNews.ShowErrorMessage -> toastManager.showToast(errorMessage)
+                is WalletsListNews.WalletDeleted -> onWalletDeleted(news.address)
             }
         }
     }
@@ -105,6 +108,9 @@ fun WalletsListScreen(
     WalletsListScreenContent(
         modifier = modifier,
         uiState = uiState,
+        selectedWalletAddress = selectedWalletAddress,
+        isListDetailLayout = isListDetailLayout,
+        onWalletSelected = onWalletSelected,
         onEvent = viewModel::onEvent,
         onImportWallet = onImportWallet,
         onCreateWallet = onCreateWallet,
@@ -117,6 +123,9 @@ fun WalletsListScreen(
 private fun WalletsListScreenContent(
     modifier: Modifier,
     uiState: WalletsListUiState,
+    selectedWalletAddress: EthAddress?,
+    isListDetailLayout: Boolean,
+    onWalletSelected: (EthAddress) -> Unit,
     onEvent: (WalletsListEvent) -> Unit,
     onImportWallet: () -> Unit,
     onCreateWallet: () -> Unit,
@@ -197,7 +206,10 @@ private fun WalletsListScreenContent(
                 )
             } else if (uiState.wallets.isEmpty()) {
                 Column(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .padding(16.dp)
+                        .fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Spacer(modifier = Modifier.weight(1f))
@@ -222,8 +234,7 @@ private fun WalletsListScreenContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 56.dp)
-                            .widthIn(max = 320.dp)
-                            .padding(horizontal = 16.dp),
+                            .widthIn(max = 320.dp),
                         shape = RoundedCornerShape(16.dp),
                         onClick = onCreateWallet,
                     ) {
@@ -239,8 +250,7 @@ private fun WalletsListScreenContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 56.dp)
-                            .widthIn(max = 320.dp)
-                            .padding(horizontal = 16.dp),
+                            .widthIn(max = 320.dp),
                         shape = RoundedCornerShape(16.dp),
                         onClick = onImportWallet,
                     ) {
@@ -274,8 +284,8 @@ private fun WalletsListScreenContent(
                         WalletCard(
                             modifier = Modifier.fillMaxWidth(),
                             wallet = wallet,
-                            isActive = wallet.address == uiState.selected?.address,
-                            onWalletClicked = { onEvent(WalletsListEvent.OnWalletSelected(wallet.address)) },
+                            isSelected = isListDetailLayout && wallet.address == selectedWalletAddress,
+                            onWalletClicked = { onWalletSelected(wallet.address) },
                             onDeleteClicked = { onEvent(WalletsListEvent.OnDeleteWalletClick(wallet.address)) },
                         )
                     }
@@ -289,7 +299,7 @@ private fun WalletsListScreenContent(
 @Composable
 private fun WalletCard(
     wallet: EthWallet,
-    isActive: Boolean,
+    isSelected: Boolean,
     onWalletClicked: () -> Unit,
     onDeleteClicked: () -> Unit,
     modifier: Modifier = Modifier,
@@ -325,13 +335,13 @@ private fun WalletCard(
                     )
 
                     AnimatedVisibility(
-                        isActive,
+                        isSelected,
                         enter = fadeIn() + scaleIn(),
                         exit = fadeOut() + scaleOut(),
                     ) {
                         Icon(
                             painter = painterResource(Res.drawable.check_24px),
-                            contentDescription = stringResource(Res.string.wallets_list_active_wallet_icon),
+                            contentDescription = stringResource(Res.string.wallets_list_selected_wallet_icon),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp),
                         )
@@ -374,13 +384,15 @@ private fun WalletsListScreenPreview() {
         WalletsListScreenContent(
             modifier = Modifier.fillMaxSize(),
             uiState = WalletsListUiState(
-                selected = EthWallet("Personal Wallet", EthAddress("0x1234567890123456789012345678901234567890")),
                 wallets = listOf(
                     EthWallet("Business Wallet", EthAddress("0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef")),
                     EthWallet("Savings Wallet", EthAddress("0x9876543210987654321098765432109876543210")),
                 ),
                 isLoading = false,
             ),
+            selectedWalletAddress = null,
+            isListDetailLayout = false,
+            onWalletSelected = {},
             onEvent = {},
             onImportWallet = {},
             onCreateWallet = {},

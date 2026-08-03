@@ -7,10 +7,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.core.BalanceProvider
+import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
-import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import java.math.BigInteger
 
@@ -24,16 +24,12 @@ class EthTransferInteractor(
 
     override suspend fun transfer(transferData: TransferData): String {
         return transferMutex.withLock {
-            val wallet = checkNotNull(walletRepository.observeActiveWallet().first()) {
-                "No active wallet found"
-            }
-
-            validateTransferData(transferData, wallet)
+            validateTransferData(transferData)
 
             val gasCost = transferData.maxFeePerGas.value.multiply(transferData.gasUnits)
-            validateSufficientBalance(transferData, wallet, gasCost)
+            validateSufficientBalance(transferData, gasCost)
 
-            val privateKey = decryptPrivateKey(wallet)
+            val privateKey = decryptPrivateKey(transferData.senderAddress)
 
             try {
                 ethManager.sendTransfer(
@@ -55,12 +51,12 @@ class EthTransferInteractor(
 
     override suspend fun fetchFeeSuggestion(): FeeSuggestion = ethManager.fetchFeeSuggestion()
 
-    private fun validateTransferData(transferData: TransferData, wallet: EthWallet) {
+    private fun validateTransferData(transferData: TransferData) {
         if (transferData.amount <= BigInteger.ZERO) {
             throw TransferException.InvalidAmount("Transfer amount must be positive")
         }
 
-        if (wallet.address == transferData.destinationAddress) {
+        if (transferData.senderAddress == transferData.destinationAddress) {
             throw TransferException.InvalidAddress("Source and destination addresses must be different")
         }
 
@@ -83,11 +79,10 @@ class EthTransferInteractor(
 
     private suspend fun validateSufficientBalance(
         transferData: TransferData,
-        wallet: EthWallet,
         gasCost: BigInteger,
     ) {
-        balanceProvider.forceUpdate(wallet)
-        val balances = balanceProvider.observe(wallet.address).first()
+        balanceProvider.forceUpdate(transferData.senderAddress)
+        val balances = balanceProvider.observe(transferData.senderAddress).first()
         val ethBalance = balances[EthContractAddress]
             ?: throw TransferException.NetworkError("ETH balance unavailable")
 
@@ -116,12 +111,12 @@ class EthTransferInteractor(
         }
     }
 
-    private suspend fun decryptPrivateKey(wallet: EthWallet): BigInteger {
-        val encryptedPrivateKey = walletRepository.getEncryptedPrivateKey(wallet.address)
+    private suspend fun decryptPrivateKey(address: EthAddress): BigInteger {
+        val encryptedPrivateKey = walletRepository.getEncryptedPrivateKey(address)
         return withContext(Dispatchers.Default) {
             privateKeyEncryptor.decryptPrivateKey(
                 encryptedPrivateKey,
-                wallet.address.toString(),
+                address.toString(),
             )
         }
     }

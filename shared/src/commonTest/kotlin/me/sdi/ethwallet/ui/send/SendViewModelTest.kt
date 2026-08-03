@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.json.Json
+import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
 import me.sdi.ethwallet.core.transfer.TransferException
@@ -53,6 +54,7 @@ class SendViewModelTest {
     private val ethRate = BigDecimal("2000.00")
 
     private val validEthAddress = "0x742d35cc6634C0532925a3b8d73a726FbCF3eB11"
+    private val senderAddress = EthAddress("0x1234567890123456789012345678901234567890")
     private val invalidAddressNoPrefix = "742d35cc6634C0532925a3b8d73a726FbCF3eB11"
     private val invalidAddressWrongLength = "0x742d35cc6634C0532925a3b8d73a726FbCF3eB"
     private val invalidAddressWrongFormat = "0x742d35cc6634C0532925a3b8d73a726FbCF3eB1G"
@@ -67,7 +69,7 @@ class SendViewModelTest {
     }
 
     private fun newViewModel(savedStateHandle: SavedStateHandle = SavedStateHandle()): SendViewModel =
-        SendViewModel(transferInteractor, fiatRateProvider, savedStateHandle).also { activeViewModels += it }
+        SendViewModel(senderAddress, transferInteractor, fiatRateProvider, savedStateHandle).also { activeViewModels += it }
 
     private fun vmTest(body: suspend TestScope.() -> Unit) = runTest(testDispatcher, timeout = 10.seconds) {
         try {
@@ -769,6 +771,7 @@ class SendViewModelTest {
         )
         assertEquals(BigInteger.valueOf(ETH_GAS_UNITS), captured.gasUnits, "ETH transfer should use 21000 gas units")
         assertEquals(EthContractAddress, captured.contractAddress, "Contract address should be ETH")
+        assertEquals(senderAddress, captured.senderAddress, "Sender should come from the ViewModel address")
     }
 
     @Test
