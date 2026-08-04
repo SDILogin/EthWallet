@@ -159,6 +159,71 @@ class WalletsListViewModel(
         Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
             is WalletsListEvent.OnDeleteWalletClick -> deleteWallet(event.address)
+            is WalletsListEvent.OnRenameWalletClick -> openWalletLabelEditor(event.wallet)
+            is WalletsListEvent.OnWalletLabelChanged -> updateWalletLabelDraft(event.label)
+            WalletsListEvent.OnWalletLabelEditorDismiss -> dismissWalletLabelEditor()
+            WalletsListEvent.OnWalletLabelSaveClick -> renameWallet()
+        }
+    }
+
+    private fun openWalletLabelEditor(wallet: EthWallet) {
+        uiState.update {
+            it.copy(
+                walletLabelEditor = WalletLabelEditorState(
+                    address = wallet.address,
+                    originalLabel = wallet.label,
+                    draftLabel = wallet.label,
+                ),
+            )
+        }
+    }
+
+    private fun updateWalletLabelDraft(label: String) {
+        uiState.update { state ->
+            state.walletLabelEditor?.let { editor ->
+                state.copy(walletLabelEditor = editor.copy(draftLabel = label, hasSaveError = false))
+            } ?: state
+        }
+    }
+
+    private fun dismissWalletLabelEditor() {
+        if (uiState.value.walletLabelEditor?.isSaving == true) {
+            return
+        }
+        uiState.update { it.copy(walletLabelEditor = null) }
+    }
+
+    private fun renameWallet() {
+        val editor = uiState.value.walletLabelEditor ?: return
+        if (!editor.isSaveEnabled) {
+            return
+        }
+
+        uiState.update {
+            it.copy(walletLabelEditor = editor.copy(isSaving = true, hasSaveError = false))
+        }
+        viewModelScope.launch {
+            try {
+                walletRepository.renameWallet(
+                    address = editor.address,
+                    label = editor.normalizedDraftLabel,
+                )
+                uiState.update { it.copy(walletLabelEditor = null) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logger.warn(TAG, e) { "Error renaming wallet" }
+                uiState.update { state ->
+                    state.walletLabelEditor?.let { currentEditor ->
+                        state.copy(
+                            walletLabelEditor = currentEditor.copy(
+                                isSaving = false,
+                                hasSaveError = true,
+                            ),
+                        )
+                    } ?: state
+                }
+            }
         }
     }
 
@@ -197,7 +262,25 @@ private suspend fun suspendableTryCatch(
 data class WalletsListUiState(
     val wallets: List<WalletListItemUiState> = emptyList(),
     val isLoading: Boolean = false,
+    val walletLabelEditor: WalletLabelEditorState? = null,
 )
+
+data class WalletLabelEditorState(
+    val address: EthAddress,
+    val originalLabel: String,
+    val draftLabel: String,
+    val isSaving: Boolean = false,
+    val hasSaveError: Boolean = false,
+) {
+    val normalizedDraftLabel: String
+        get() = normalizeWalletLabel(draftLabel)
+
+    val isSaveEnabled: Boolean
+        get() =
+            !isSaving &&
+                isWalletLabelValid(normalizedDraftLabel) &&
+                normalizedDraftLabel != originalLabel
+}
 
 data class WalletListItemUiState(
     val wallet: EthWallet,
@@ -212,4 +295,12 @@ sealed interface WalletsListNews {
 
 sealed interface WalletsListEvent {
     data class OnDeleteWalletClick(val address: EthAddress) : WalletsListEvent
+
+    data class OnRenameWalletClick(val wallet: EthWallet) : WalletsListEvent
+
+    data class OnWalletLabelChanged(val label: String) : WalletsListEvent
+
+    data object OnWalletLabelEditorDismiss : WalletsListEvent
+
+    data object OnWalletLabelSaveClick : WalletsListEvent
 }

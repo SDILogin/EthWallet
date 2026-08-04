@@ -132,6 +132,19 @@ class WalletRepositoryTest {
     }
 
     @Test
+    fun renameWalletUpdatesOnlyTheLabel() = runTest {
+        val originalWallet = WalletEntity(createdAddress, "encrypted-created", walletLabel)
+        walletDao.wallets = listOf(originalWallet)
+
+        walletRepository.renameWallet(EthAddress(createdAddress), "Renamed wallet")
+
+        assertEquals(
+            listOf(originalWallet.copy(label = "Renamed wallet")),
+            walletDao.wallets,
+        )
+    }
+
+    @Test
     fun getEncryptedPrivateKeyReturnsStoredValue() = runTest {
         walletDao.wallets = listOf(WalletEntity(createdAddress, "encrypted-created", walletLabel))
 

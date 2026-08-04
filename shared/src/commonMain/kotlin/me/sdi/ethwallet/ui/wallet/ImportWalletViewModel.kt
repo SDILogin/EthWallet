@@ -18,13 +18,15 @@ import me.sdi.ethwallet.data.repository.WalletRepository
 /**
  * UI state for the Import Wallet screen.
  *
+ * @param label The user-visible wallet name
  * @param mnemonic The recovery phrase entered by the user
- * @param isImportEnabled Whether the input is a plausible 12-word phrase
+ * @param isImportEnabled Whether the name and recovery phrase are valid for import
  * @param isLoading Whether an import is in progress
  * @param isError Whether the last import attempt failed
  * @param errorMessage Message describing the failure, if any
  */
 data class ImportWalletViewState(
+    val label: String = "",
     val mnemonic: String = "",
     val isImportEnabled: Boolean = false,
     val isLoading: Boolean = false,
@@ -33,7 +35,7 @@ data class ImportWalletViewState(
 ) {
     // Redacts the mnemonic so state logging never leaks seed material.
     override fun toString(): String =
-        "ImportWalletViewState(mnemonic=<redacted>, isImportEnabled=$isImportEnabled, " +
+        "ImportWalletViewState(label=$label, mnemonic=<redacted>, isImportEnabled=$isImportEnabled, " +
             "isLoading=$isLoading, isError=$isError, errorMessage=$errorMessage)"
 }
 
@@ -41,6 +43,9 @@ data class ImportWalletViewState(
  * Events that can be handled by the ImportWalletViewModel.
  */
 sealed interface ImportWalletEvent {
+    /** The wallet label changed. */
+    data class LabelChanged(val label: String) : ImportWalletEvent
+
     /** The recovery phrase text changed. */
     data class MnemonicChanged(val mnemonic: String) : ImportWalletEvent {
         // Redacts the mnemonic so event logging never leaks seed material.
@@ -91,6 +96,7 @@ class ImportWalletViewModel(
     fun onEvent(event: ImportWalletEvent) {
         Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
+            is ImportWalletEvent.LabelChanged -> onLabelChanged(event.label)
             is ImportWalletEvent.MnemonicChanged -> onMnemonicChanged(event.mnemonic)
             is ImportWalletEvent.ImportClicked -> importWallet()
         }
@@ -100,19 +106,35 @@ class ImportWalletViewModel(
         viewState.update {
             it.copy(
                 mnemonic = mnemonic,
-                isImportEnabled = isValidMnemonic(mnemonic),
+                isImportEnabled = isValidMnemonic(mnemonic) && isValidWalletLabel(it.label),
                 isError = false,
                 errorMessage = null,
             )
         }
     }
 
+    private fun onLabelChanged(label: String) {
+        viewState.update {
+            it.copy(
+                label = label,
+                isImportEnabled = isValidMnemonic(it.mnemonic) && isValidWalletLabel(label),
+            )
+        }
+    }
+
     private fun importWallet() {
+        if (!viewState.value.isImportEnabled || viewState.value.isLoading) {
+            return
+        }
+
         viewState.update { it.copy(isLoading = true, isError = false, errorMessage = null) }
 
         viewModelScope.launch {
             try {
-                walletRepository.importWallet(mnemonic = viewState.value.mnemonic, label = "My Wallet")
+                walletRepository.importWallet(
+                    mnemonic = viewState.value.mnemonic,
+                    label = normalizeWalletLabel(viewState.value.label),
+                )
                 viewState.update { it.copy(isLoading = false) }
                 news.emit(ImportWalletNews.WalletImported)
             } catch (e: CancellationException) {
@@ -135,3 +157,6 @@ private fun isValidMnemonic(mnemonic: String): Boolean {
     val words = mnemonic.trim().split(Regex("\\s+"))
     return words.size == 12 && words.all { it.isNotEmpty() }
 }
+
+private fun isValidWalletLabel(label: String): Boolean =
+    isWalletLabelValid(normalizeWalletLabel(label))

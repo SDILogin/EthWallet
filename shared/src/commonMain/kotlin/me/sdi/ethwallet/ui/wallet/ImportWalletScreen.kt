@@ -29,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,9 @@ import me.sdi.ethwallet.resources.import_wallet_recovery_phrase_label
 import me.sdi.ethwallet.resources.import_wallet_recovery_phrase_placeholder
 import me.sdi.ethwallet.resources.import_wallet_recovery_phrase_supporting
 import me.sdi.ethwallet.resources.import_wallet_title
+import me.sdi.ethwallet.resources.wallet_label
+import me.sdi.ethwallet.resources.wallet_label_placeholder
+import me.sdi.ethwallet.resources.wallet_label_supporting
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -109,6 +113,24 @@ fun ImportWalletScreen(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            OutlinedTextField(
+                value = viewState.label,
+                onValueChange = { viewModel.onEvent(ImportWalletEvent.LabelChanged(it)) },
+                label = { Text(stringResource(Res.string.wallet_label)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 420.dp)
+                    .testTag("wallet-label-input"),
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                placeholder = { Text(stringResource(Res.string.wallet_label_placeholder)) },
+                supportingText = { Text(stringResource(Res.string.wallet_label_supporting)) },
+                isError = viewState.label.isNotEmpty() && !isWalletLabelValid(normalizeWalletLabel(viewState.label)),
+                enabled = !viewState.isLoading,
+                singleLine = true,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             val supportingText =
                 if (viewState.isError) {

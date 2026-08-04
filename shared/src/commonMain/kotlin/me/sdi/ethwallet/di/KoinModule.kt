@@ -101,6 +101,7 @@ val commonModule = module {
             balanceProvider = get(),
             fiatRateProvider = get(),
             chainConfig = get(),
+            walletRepository = get(),
         )
     }
 

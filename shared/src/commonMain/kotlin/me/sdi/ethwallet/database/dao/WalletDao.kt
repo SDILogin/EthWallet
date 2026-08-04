@@ -15,6 +15,9 @@ interface WalletDao {
     @Query("DELETE FROM wallets WHERE address = :address")
     suspend fun deleteWalletByAddress(address: String)
 
+    @Query("UPDATE wallets SET label = :label WHERE address = :address")
+    suspend fun updateWalletLabel(address: String, label: String)
+
     @Query("SELECT * FROM wallets")
     fun observeAllWallets(): Flow<List<WalletEntity>>
 

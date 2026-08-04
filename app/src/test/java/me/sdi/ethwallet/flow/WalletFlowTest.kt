@@ -299,6 +299,15 @@ class WalletFlowTest : KoinTest {
     }
 
     @Test
+    fun walletLabelCanBeRenamedFromWalletOptions() {
+        runInitialWalletCreationFlow()
+
+        walletsListPage.renameWallet(currentLabel = "My Wallet", newLabel = "Daily spending")
+
+        walletsListPage.assertWalletOptions("Daily spending")
+    }
+
+    @Test
     fun tappingWalletOpensDetailsAndUpReturnsToList() {
         runInitialWalletCreationFlow()
 
@@ -419,6 +428,7 @@ class WalletFlowTest : KoinTest {
 
     private fun runWalletCreationFlow() {
         walletsListPage.clickCreateWallet()
+        createWalletPage.enterWalletName("My Wallet")
         createWalletPage.clickNext()
         createWalletPage.clickConfirm()
     }

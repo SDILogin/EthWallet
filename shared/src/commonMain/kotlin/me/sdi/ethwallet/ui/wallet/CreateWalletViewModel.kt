@@ -2,7 +2,7 @@ package me.sdi.ethwallet.ui.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -56,18 +56,29 @@ class CreateWalletViewModel(
     fun onEvent(event: CreateWalletEvent) {
         Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
+            is CreateWalletEvent.LabelChanged -> viewState.update { it.copy(label = event.label) }
             is CreateWalletEvent.SeedPhraseSaved -> onSeedPhraseSaved()
         }
     }
 
     private fun onSeedPhraseSaved() {
         val ethCreationResult = ethCreationResult ?: return
-        val coroutineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
-            Logger.warn(TAG, throwable) { "Error saving wallet" }
+        val label = normalizeWalletLabel(viewState.value.label)
+        if (!isWalletLabelValid(label) || viewState.value.isSaving) {
+            return
         }
-        viewModelScope.launch(coroutineExceptionHandler) {
-            walletRepository.saveWallet(ethCreationResult, label = "My Wallet")
-            newsChannel.send(CreateWalletNews.WalletCreated)
+
+        viewState.update { it.copy(isSaving = true) }
+        viewModelScope.launch {
+            try {
+                walletRepository.saveWallet(ethCreationResult, label = label)
+                newsChannel.send(CreateWalletNews.WalletCreated)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logger.warn(TAG, e) { "Error saving wallet" }
+                viewState.update { it.copy(isSaving = false) }
+            }
         }
     }
 
@@ -78,12 +89,19 @@ class CreateWalletViewModel(
 
 data class CreateWalletViewState(
     val seedPhrase: List<String> = emptyList(),
-)
+    val label: String = "",
+    val isSaving: Boolean = false,
+) {
+    val isLabelValid: Boolean
+        get() = isWalletLabelValid(normalizeWalletLabel(label))
+}
 
 sealed interface CreateWalletNews {
     data object WalletCreated : CreateWalletNews
 }
 
 sealed interface CreateWalletEvent {
+    data class LabelChanged(val label: String) : CreateWalletEvent
+
     data object SeedPhraseSaved : CreateWalletEvent
 }

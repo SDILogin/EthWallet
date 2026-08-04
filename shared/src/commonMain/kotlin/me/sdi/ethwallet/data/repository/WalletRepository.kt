@@ -65,6 +65,11 @@ class WalletRepository(
         walletDao.deleteWalletByAddress(address.toString())
     }
 
+    suspend fun renameWallet(address: EthAddress, label: String) {
+        Logger.debug(TAG) { "Renaming wallet with address $address" }
+        walletDao.updateWalletLabel(address = address.toString(), label = label)
+    }
+
     suspend fun getEncryptedPrivateKey(address: EthAddress) = walletDao
         .getEncryptedPrivateKeyByAddress(address = address.toString())
 

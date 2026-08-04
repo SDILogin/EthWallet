@@ -139,6 +139,52 @@ class WalletsListViewModelTest {
     }
 
     @Test
+    fun renamingWalletNormalizesTheLabelAndUpdatesTheList() = runTest(testDispatcher) {
+        advanceUntilIdle()
+
+        viewModel.onEvent(WalletsListEvent.OnRenameWalletClick(firstWallet))
+        assertEquals(firstWallet.label, viewModel.uiState.value.walletLabelEditor?.draftLabel)
+
+        viewModel.onEvent(WalletsListEvent.OnWalletLabelChanged("  Daily   spending  "))
+        viewModel.onEvent(WalletsListEvent.OnWalletLabelSaveClick)
+        advanceUntilIdle()
+
+        assertEquals("Daily spending", walletDao.wallets.first().label)
+        assertEquals("Daily spending", viewModel.uiState.value.wallets.first().wallet.label)
+        assertEquals(null, viewModel.uiState.value.walletLabelEditor)
+    }
+
+    @Test
+    fun renamingWalletRejectsInvalidOrUnchangedLabelsAndCanBeCancelled() = runTest(testDispatcher) {
+        advanceUntilIdle()
+
+        viewModel.onEvent(WalletsListEvent.OnRenameWalletClick(firstWallet))
+        assertFalse(viewModel.uiState.value.walletLabelEditor?.isSaveEnabled == true)
+
+        viewModel.onEvent(WalletsListEvent.OnWalletLabelChanged("   "))
+        assertFalse(viewModel.uiState.value.walletLabelEditor?.isSaveEnabled == true)
+
+        viewModel.onEvent(WalletsListEvent.OnWalletLabelEditorDismiss)
+        assertEquals(null, viewModel.uiState.value.walletLabelEditor)
+        assertEquals(firstWallet.label, walletDao.wallets.first().label)
+    }
+
+    @Test
+    fun failedWalletRenameKeepsTheEditorOpen() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        walletDao.shouldThrowException = true
+
+        viewModel.onEvent(WalletsListEvent.OnRenameWalletClick(firstWallet))
+        viewModel.onEvent(WalletsListEvent.OnWalletLabelChanged("Renamed wallet"))
+        viewModel.onEvent(WalletsListEvent.OnWalletLabelSaveClick)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.walletLabelEditor?.hasSaveError == true)
+        assertFalse(viewModel.uiState.value.walletLabelEditor?.isSaving == true)
+        assertEquals(firstWallet.label, walletDao.wallets.first().label)
+    }
+
+    @Test
     fun walletCardsDisplayTheirOwnTotalsAndRefreshEveryWallet() = runTest(testDispatcher) {
         balances.getValue(firstWallet.address).value = supportedBalances(ethWei = BigInteger("1000000000000000000"))
         balances.getValue(secondWallet.address).value = supportedBalances(ethWei = BigInteger("500000000000000000"))

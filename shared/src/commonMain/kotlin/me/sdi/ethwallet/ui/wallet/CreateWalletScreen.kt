@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -23,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -41,6 +43,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -56,6 +60,9 @@ import me.sdi.ethwallet.resources.create_wallet_recovery_phrase_instruction
 import me.sdi.ethwallet.resources.create_wallet_recovery_phrase_title
 import me.sdi.ethwallet.resources.create_wallet_security_warning
 import me.sdi.ethwallet.resources.create_wallet_title
+import me.sdi.ethwallet.resources.wallet_label
+import me.sdi.ethwallet.resources.wallet_label_placeholder
+import me.sdi.ethwallet.resources.wallet_label_supporting
 import me.sdi.ethwallet.resources.warning_24px
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
@@ -166,6 +173,14 @@ private fun CreateWalletScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(modifier = Modifier.weight(1f))
+            WalletLabelTextField(
+                value = viewState.label,
+                onValueChange = { onEvent(CreateWalletEvent.LabelChanged(it)) },
+                enabled = !viewState.isSaving,
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             BasicText(
                 text = stringResource(Res.string.create_wallet_recovery_phrase_title),
                 style = MaterialTheme.typography.headlineMedium.copy(
@@ -207,6 +222,7 @@ private fun CreateWalletScreenContent(
             Spacer(modifier = Modifier.height(8.dp))
             Spacer(modifier = Modifier.weight(1f))
             NextButton(
+                enabled = viewState.isLabelValid && !viewState.isSaving,
                 onClick = {
                     showConfirmationDialog = true
                 },
@@ -216,7 +232,30 @@ private fun CreateWalletScreenContent(
 }
 
 @Composable
-private fun NextButton(onClick: () -> Unit) {
+private fun WalletLabelTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    enabled: Boolean,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(Res.string.wallet_label)) },
+        placeholder = { Text(stringResource(Res.string.wallet_label_placeholder)) },
+        supportingText = { Text(stringResource(Res.string.wallet_label_supporting)) },
+        modifier = Modifier
+            .widthIn(max = 420.dp)
+            .fillMaxWidth()
+            .testTag("wallet-label-input"),
+        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+        singleLine = true,
+        isError = value.isNotEmpty() && !isWalletLabelValid(normalizeWalletLabel(value)),
+        enabled = enabled,
+    )
+}
+
+@Composable
+private fun NextButton(enabled: Boolean, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier =
@@ -226,6 +265,7 @@ private fun NextButton(onClick: () -> Unit) {
                 .heightIn(min = 56.dp)
                 .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(16.dp),
+        enabled = enabled,
     ) {
         Text(
             text = stringResource(Res.string.create_wallet_next_button_text),

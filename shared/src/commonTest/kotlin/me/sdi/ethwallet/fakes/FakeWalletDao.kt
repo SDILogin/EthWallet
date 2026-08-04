@@ -34,6 +34,13 @@ class FakeWalletDao : WalletDao {
         wallets = wallets.filter { it.address != address }
     }
 
+    override suspend fun updateWalletLabel(address: String, label: String) {
+        checkErrors()
+        wallets = wallets.map { wallet ->
+            if (wallet.address == address) wallet.copy(label = label) else wallet
+        }
+    }
+
     override fun observeAllWallets(): Flow<List<WalletEntity>> = flow {
         checkErrors()
         emitAll(walletsState)

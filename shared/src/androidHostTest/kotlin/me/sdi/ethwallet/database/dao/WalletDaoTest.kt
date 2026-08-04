@@ -141,4 +141,16 @@ class WalletDaoTest {
         assertEquals(emptyList(), remainingWallets.await())
         assertTrue(walletDao.observeAllWallets().first().isEmpty())
     }
+
+    @Test
+    fun updateWalletLabelPreservesTheEncryptedKey() = runTest {
+        walletDao.insertWallet(firstWallet)
+
+        walletDao.updateWalletLabel(firstWallet.address, "Renamed wallet")
+
+        assertEquals(
+            firstWallet.copy(label = "Renamed wallet"),
+            walletDao.observeAllWallets().first().single(),
+        )
+    }
 }

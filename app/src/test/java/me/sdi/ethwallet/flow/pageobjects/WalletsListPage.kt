@@ -4,6 +4,8 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTextReplacement
 import me.sdi.ethwallet.flow.clickContentDescription
 import me.sdi.ethwallet.flow.clickText
 
@@ -41,10 +43,17 @@ class WalletsListPage(private val composeTestRule: ComposeTestRule) {
     }
 
     fun assertSingleWallet() {
+        assertWalletOptions("My Wallet")
+    }
+
+    fun assertWalletOptions(label: String) {
         composeTestRule.waitUntil(10000) {
-            composeTestRule.onAllNodesWithContentDescription("Delete wallet", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            composeTestRule.onAllNodesWithContentDescription(
+                "More options for $label",
+                useUnmergedTree = true,
+            ).fetchSemanticsNodes().isNotEmpty()
         }
-        composeTestRule.onAllNodesWithContentDescription("Delete wallet", useUnmergedTree = true).assertCountEquals(1)
+        composeTestRule.onAllNodesWithContentDescription("More options for $label", useUnmergedTree = true).assertCountEquals(1)
     }
 
     fun assertSelectedIndicatorIsHidden() {
@@ -53,5 +62,12 @@ class WalletsListPage(private val composeTestRule: ComposeTestRule) {
 
     fun clickWallet(label: String) {
         composeTestRule.clickText(label)
+    }
+
+    fun renameWallet(currentLabel: String, newLabel: String) {
+        composeTestRule.clickContentDescription("More options for $currentLabel")
+        composeTestRule.clickText("Rename")
+        composeTestRule.onNodeWithTag("wallet-label-editor-input").performTextReplacement(newLabel)
+        composeTestRule.clickText("Rename")
     }
 }

@@ -14,6 +14,11 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
+import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.database.entity.WalletEntity
+import me.sdi.ethwallet.fakes.FakeEthManager
+import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
+import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.ui.daiOnMainnet
 import me.sdi.ethwallet.ui.usdcOnMainnet
 import me.sdi.ethwallet.ui.usdtOnMainnet
@@ -32,6 +37,8 @@ class WalletViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var viewModel: WalletViewModel
+    private lateinit var walletDao: FakeWalletDao
+    private lateinit var walletRepository: WalletRepository
 
     private val testAddress = EthAddress("0x1234567890123456789012345678901234567890")
     private val chainConfig = ChainConfig(
@@ -73,6 +80,8 @@ class WalletViewModelTest {
         observedAddresses.clear()
         forceUpdatedAddresses.clear()
         fiatRateUpdateFailure = null
+        walletDao = FakeWalletDao()
+        walletRepository = WalletRepository(walletDao, FakeEthManager(), FakePrivateKeyEncryptor())
     }
 
     @AfterTest
@@ -86,6 +95,7 @@ class WalletViewModelTest {
             balanceProvider = balanceProvider,
             fiatRateProvider = fiatRateProvider,
             chainConfig = chainConfig,
+            walletRepository = walletRepository,
         )
     }
 
@@ -145,6 +155,22 @@ class WalletViewModelTest {
         assertTrue(forceUpdatedAddresses.isNotEmpty())
         assertTrue(forceUpdatedAddresses.all { it == testAddress })
         assertTrue(viewModel.viewState.value.isBalanceLoading)
+    }
+
+    @Test
+    fun walletNameIsObservedFromTheWalletRepository() = runTest(testDispatcher) {
+        walletDao.wallets = listOf(
+            WalletEntity(
+                address = testAddress.toString(),
+                encryptedPrivateKeyBase64 = "encrypted-key",
+                label = "Daily spending",
+            ),
+        )
+
+        createViewModel()
+        advanceUntilIdle()
+
+        assertEquals("Daily spending", viewModel.viewState.value.walletName)
     }
 
     @Test

@@ -1,13 +1,19 @@
 package me.sdi.ethwallet.flow.pageobjects
 
 import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.printToString
 import me.sdi.ethwallet.flow.assertTextExists
 import me.sdi.ethwallet.flow.clickText
 
 class CreateWalletPage(private val composeTestRule: ComposeTestRule) {
+    fun enterWalletName(label: String) {
+        composeTestRule.onNodeWithTag("wallet-label-input").performTextInput(label)
+    }
+
     fun clickNext() {
         try {
             composeTestRule.waitUntil(10000) {

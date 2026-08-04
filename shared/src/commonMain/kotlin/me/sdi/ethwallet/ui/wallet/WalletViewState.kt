@@ -16,6 +16,7 @@ import java.math.BigDecimal
 @Immutable
 data class WalletViewState(
     val chainId: Long = 0L,
+    val walletName: String = "",
     val totalBalanceUsd: String? = null,
     val totalBalanceEth: String = "",
     val favoriteTokens: List<FavoriteToken> = emptyList(),

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
@@ -23,6 +24,7 @@ import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.FiatRateProvider
+import me.sdi.ethwallet.data.repository.WalletRepository
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -33,6 +35,7 @@ class WalletViewModel(
     private val balanceProvider: BalanceProvider,
     private val fiatRateProvider: FiatRateProvider,
     private val chainConfig: ChainConfig,
+    private val walletRepository: WalletRepository,
 ) : ViewModel() {
     val viewState: StateFlow<WalletViewState>
         field = MutableStateFlow(WalletViewState(chainId = chainConfig.chainId))
@@ -51,6 +54,7 @@ class WalletViewModel(
             .launchIn(viewModelScope)
 
         startObservingWalletBalanceChanges()
+        startObservingWalletLabelChanges()
 
         news
             .onEach { Logger.debug(TAG) { "News: $it" } }
@@ -94,6 +98,17 @@ class WalletViewModel(
                 }
             }
         }
+    }
+
+    private fun startObservingWalletLabelChanges() {
+        walletRepository
+            .observeAllWallets()
+            .map { wallets -> wallets.firstOrNull { it.address == walletAddress }?.label }
+            .onEach { label ->
+                if (label != null) {
+                    viewState.update { it.copy(walletName = label) }
+                }
+            }.launchIn(viewModelScope)
     }
 
     private fun displayUpdatedBalance(combinedBalance: CombinedBalance) {

@@ -66,7 +66,6 @@ import me.sdi.ethwallet.resources.ic_question_mark_56
 import me.sdi.ethwallet.resources.wallet_network
 import me.sdi.ethwallet.resources.wallet_receive
 import me.sdi.ethwallet.resources.wallet_send
-import me.sdi.ethwallet.resources.wallet_title
 import me.sdi.ethwallet.resources.wallet_tokens_erc20
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.components.shimmer
@@ -141,7 +140,7 @@ fun WalletScreenContent(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.wallet_title)) },
+                title = { Text(viewState.walletName) },
                 navigationIcon = if (showUpButton) {
                     {
                         IconButton(onClick = onUpButtonClick) {
@@ -590,6 +589,7 @@ private class WalletViewStateProvider : PreviewParameterProvider<WalletViewState
     override val values: Sequence<WalletViewState> = sequenceOf(
         WalletViewState(
             chainId = 11155111L,
+            walletName = "Daily spending",
             totalBalanceUsd = "$12,345.67",
             totalBalanceEth = "5.234 ETH",
             favoriteTokens = listOf(
@@ -621,6 +621,7 @@ private class WalletViewStateProvider : PreviewParameterProvider<WalletViewState
             isBalanceLoading = false,
         ),
         WalletViewState(
+            walletName = "Daily spending",
             isBalanceLoading = true,
         ),
     )

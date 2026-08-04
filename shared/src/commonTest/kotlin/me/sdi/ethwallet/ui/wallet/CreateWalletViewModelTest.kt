@@ -83,6 +83,7 @@ class CreateWalletViewModelTest {
     fun confirmingSeedPhrasePersistsWalletAndShowsCreatedNews() = runTest(testDispatcher) {
         awaitSeedPhrase()
 
+        viewModel.onEvent(CreateWalletEvent.LabelChanged("  Daily   spending  "))
         viewModel.onEvent(CreateWalletEvent.SeedPhraseSaved)
 
         assertEquals(CreateWalletNews.WalletCreated, withTimeout(5.seconds) { viewModel.news.first() })
@@ -91,7 +92,7 @@ class CreateWalletViewModelTest {
                 WalletEntity(
                     address = ethManager.creationResult.address.toString(),
                     encryptedPrivateKeyBase64 = "encrypted_1",
-                    label = "My Wallet",
+                    label = "Daily spending",
                 ),
             ),
             walletDao.wallets,
@@ -105,6 +106,19 @@ class CreateWalletViewModelTest {
         viewModel = CreateWalletViewModel(ethManager, walletRepository)
 
         assertEquals(seedPhrase, awaitSeedPhrase())
+    }
+
+    @Test
+    fun walletNameMustBeNonBlankAndNoLongerThanFortyCharacters() = runTest(testDispatcher) {
+        awaitSeedPhrase()
+
+        assertTrue(!viewModel.viewState.value.isLabelValid)
+
+        viewModel.onEvent(CreateWalletEvent.LabelChanged("x".repeat(MAX_WALLET_LABEL_LENGTH)))
+        assertTrue(viewModel.viewState.value.isLabelValid)
+
+        viewModel.onEvent(CreateWalletEvent.LabelChanged("x".repeat(MAX_WALLET_LABEL_LENGTH + 1)))
+        assertTrue(!viewModel.viewState.value.isLabelValid)
     }
 
     private suspend fun awaitSeedPhrase(): List<String> =

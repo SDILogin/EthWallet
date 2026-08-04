@@ -1,6 +1,7 @@
 package me.sdi.ethwallet.database
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
@@ -33,13 +34,27 @@ object DesktopDatabaseBuilder {
 }
 
 private class DesktopWalletDao : WalletDao {
-    override suspend fun insertWallet(wallet: WalletEntity) {}
+    private val wallets = MutableStateFlow<List<WalletEntity>>(emptyList())
 
-    override fun observeAllWallets(): Flow<List<WalletEntity>> = flowOf(emptyList())
+    override suspend fun insertWallet(wallet: WalletEntity) {
+        wallets.value = wallets.value.filter { it.address != wallet.address } + wallet
+    }
 
-    override suspend fun getEncryptedPrivateKeyByAddress(address: String): String = ""
+    override suspend fun updateWalletLabel(address: String, label: String) {
+        wallets.value = wallets.value.map { wallet ->
+            if (wallet.address == address) wallet.copy(label = label) else wallet
+        }
+    }
 
-    override suspend fun deleteWalletByAddress(address: String) {}
+    override fun observeAllWallets(): Flow<List<WalletEntity>> = wallets
+
+    override suspend fun getEncryptedPrivateKeyByAddress(address: String): String =
+        wallets.value.firstOrNull { it.address == address }?.encryptedPrivateKeyBase64
+            ?: throw IllegalStateException("Wallet not found: $address")
+
+    override suspend fun deleteWalletByAddress(address: String) {
+        wallets.value = wallets.value.filter { it.address != address }
+    }
 }
 
 private class DesktopTokenBalanceDao : TokenBalanceDao {

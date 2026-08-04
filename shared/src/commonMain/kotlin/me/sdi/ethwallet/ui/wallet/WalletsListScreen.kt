@@ -25,6 +25,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,8 +40,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.navigation3.LocalListDetailSceneScope
@@ -52,10 +57,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,15 +74,25 @@ import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.add_24px
+import me.sdi.ethwallet.resources.cancel
 import me.sdi.ethwallet.resources.check_24px
-import me.sdi.ethwallet.resources.delete_24px
+import me.sdi.ethwallet.resources.delete
 import me.sdi.ethwallet.resources.error_something_went_wrong
+import me.sdi.ethwallet.resources.more_vert_24px
 import me.sdi.ethwallet.resources.onboarding_create_wallet
 import me.sdi.ethwallet.resources.onboarding_import_wallet
 import me.sdi.ethwallet.resources.settings_24px
+import me.sdi.ethwallet.resources.wallet_label
+import me.sdi.ethwallet.resources.wallet_label_error_length
+import me.sdi.ethwallet.resources.wallet_label_error_required
+import me.sdi.ethwallet.resources.wallet_label_placeholder
+import me.sdi.ethwallet.resources.wallet_label_rename_error
+import me.sdi.ethwallet.resources.wallet_label_supporting
+import me.sdi.ethwallet.resources.wallet_options
+import me.sdi.ethwallet.resources.wallet_rename
+import me.sdi.ethwallet.resources.wallet_rename_title
 import me.sdi.ethwallet.resources.wallet_settings
 import me.sdi.ethwallet.resources.wallets_list_add_wallet
-import me.sdi.ethwallet.resources.wallets_list_delete_wallet
 import me.sdi.ethwallet.resources.wallets_list_selected_wallet_icon
 import me.sdi.ethwallet.resources.wallets_list_title
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
@@ -289,11 +310,19 @@ private fun WalletsListScreenContent(
                             isSelected = isListDetailLayout && item.wallet.address == selectedWalletAddress,
                             onWalletClicked = { onWalletSelected(item.wallet.address) },
                             onDeleteClicked = { onEvent(WalletsListEvent.OnDeleteWalletClick(item.wallet.address)) },
+                            onRenameClicked = { onEvent(WalletsListEvent.OnRenameWalletClick(item.wallet)) },
                         )
                     }
                 }
             }
         }
+    }
+
+    uiState.walletLabelEditor?.let { editor ->
+        WalletLabelEditorDialog(
+            editor = editor,
+            onEvent = onEvent,
+        )
     }
 }
 
@@ -304,6 +333,7 @@ private fun WalletCard(
     isSelected: Boolean,
     onWalletClicked: () -> Unit,
     onDeleteClicked: () -> Unit,
+    onRenameClicked: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val wallet = item.wallet
@@ -378,17 +408,140 @@ private fun WalletCard(
                 }
             }
 
-            IconButton(
-                onClick = onDeleteClicked,
-            ) {
-                Icon(
-                    painter = painterResource(Res.drawable.delete_24px),
-                    contentDescription = stringResource(Res.string.wallets_list_delete_wallet),
-                    tint = MaterialTheme.colorScheme.error,
-                )
+            var isOptionsMenuExpanded by remember { mutableStateOf(false) }
+            val optionsDescription = stringResource(Res.string.wallet_options, wallet.label)
+            Box {
+                IconButton(
+                    onClick = { isOptionsMenuExpanded = true },
+                    modifier = Modifier.semantics { contentDescription = optionsDescription },
+                ) {
+                    Icon(
+                        painter = painterResource(Res.drawable.more_vert_24px),
+                        contentDescription = null,
+                    )
+                }
+                DropdownMenu(
+                    expanded = isOptionsMenuExpanded,
+                    onDismissRequest = { isOptionsMenuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.wallet_rename)) },
+                        onClick = {
+                            isOptionsMenuExpanded = false
+                            onRenameClicked()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.delete)) },
+                        onClick = {
+                            isOptionsMenuExpanded = false
+                            onDeleteClicked()
+                        },
+                    )
+                }
             }
         }
     }
+}
+
+@Composable
+private fun WalletLabelEditorDialog(
+    editor: WalletLabelEditorState,
+    onEvent: (WalletsListEvent) -> Unit,
+) {
+    val focusRequester = remember { FocusRequester() }
+    var fieldValue by remember(editor.address) {
+        mutableStateOf(
+            TextFieldValue(
+                text = editor.draftLabel,
+                selection = TextRange(0, editor.draftLabel.length),
+            ),
+        )
+    }
+    LaunchedEffect(editor.address) {
+        focusRequester.requestFocus()
+    }
+
+    val validationMessage = when {
+        editor.hasSaveError -> {
+            stringResource(Res.string.wallet_label_rename_error)
+        }
+        editor.normalizedDraftLabel.isEmpty() -> {
+            stringResource(Res.string.wallet_label_error_required)
+        }
+        editor.normalizedDraftLabel.length > MAX_WALLET_LABEL_LENGTH -> {
+            stringResource(Res.string.wallet_label_error_length, MAX_WALLET_LABEL_LENGTH)
+        }
+        else -> {
+            stringResource(Res.string.wallet_label_supporting)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = {
+            if (!editor.isSaving) {
+                onEvent(WalletsListEvent.OnWalletLabelEditorDismiss)
+            }
+        },
+        title = {
+            Column {
+                Text(stringResource(Res.string.wallet_rename_title))
+                Text(
+                    text = editor.address.abbreviated(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        text = {
+            OutlinedTextField(
+                value = fieldValue,
+                onValueChange = {
+                    fieldValue = it
+                    onEvent(WalletsListEvent.OnWalletLabelChanged(it.text))
+                },
+                label = { Text(stringResource(Res.string.wallet_label)) },
+                placeholder = { Text(stringResource(Res.string.wallet_label_placeholder)) },
+                supportingText = { Text(validationMessage) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .testTag("wallet-label-editor-input"),
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (editor.isSaveEnabled) {
+                            onEvent(WalletsListEvent.OnWalletLabelSaveClick)
+                        }
+                    },
+                ),
+                singleLine = true,
+                enabled = !editor.isSaving,
+                isError = editor.hasSaveError || !isWalletLabelValid(editor.normalizedDraftLabel),
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onEvent(WalletsListEvent.OnWalletLabelSaveClick) },
+                enabled = editor.isSaveEnabled,
+            ) {
+                Text(stringResource(Res.string.wallet_rename))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = { onEvent(WalletsListEvent.OnWalletLabelEditorDismiss) },
+                enabled = !editor.isSaving,
+            ) {
+                Text(stringResource(Res.string.cancel))
+            }
+        },
+    )
+}
+
+private fun EthAddress.abbreviated(): String {
+    val address = toString()
+    return "${address.take(6)}...${address.takeLast(4)}"
 }
 
 @FormFactorPreviews
