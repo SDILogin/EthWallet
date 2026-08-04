@@ -122,6 +122,9 @@ val commonModule = module {
     viewModel<WalletsListViewModel> {
         WalletsListViewModel(
             walletRepository = get(),
+            balanceProvider = get(),
+            fiatRateProvider = get(),
+            chainConfig = get(),
         )
     }
 }

@@ -170,7 +170,7 @@ fun WalletScreenContent(
                 ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                if (viewState.isLoading) {
+                if (viewState.isBalanceLoading) {
                     TotalBalanceShimmer()
                 } else {
                     TotalFiatBalanceCard(
@@ -181,7 +181,7 @@ fun WalletScreenContent(
                 }
 
                 ButtonsPanel(
-                    isLoading = viewState.isLoading,
+                    isLoading = viewState.isBalanceLoading,
                     onReceiveClick = onReceiveButtonClick,
                     onSendButtonClick = onSendButtonClick,
                 )
@@ -192,7 +192,6 @@ fun WalletScreenContent(
                     Column {
                         TokensHeader(
                             onEditButtonClick = onEditButtonClick,
-                            editButtonEnabled = !viewState.isLoading,
                             modifier = Modifier.padding(16.dp),
                         )
 
@@ -203,7 +202,7 @@ fun WalletScreenContent(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             contentPadding = PaddingValues(16.dp),
                         ) {
-                            if (viewState.isLoading) {
+                            if (viewState.isBalanceLoading) {
                                 repeat(10) {
                                     item {
                                         TokenItemShimmer()
@@ -233,7 +232,6 @@ fun WalletScreenContent(
 @Composable
 private fun TokensHeader(
     onEditButtonClick: () -> Unit,
-    editButtonEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -255,13 +253,8 @@ private fun TokensHeader(
             )
         }
 
-        TextButton(
-            enabled = editButtonEnabled,
-            onClick = { onEditButtonClick() },
-        ) {
-            Text(
-                stringResource(Res.string.edit),
-            )
+        TextButton(onClick = { onEditButtonClick() }) {
+            Text(stringResource(Res.string.edit))
         }
     }
 }
@@ -379,7 +372,7 @@ private fun CircularButtonWithTitleShimmer() {
 
 @Composable
 private fun TotalFiatBalanceCard(
-    fiatBalance: String,
+    fiatBalance: String?,
     ethBalance: String,
     chainId: Long,
     modifier: Modifier = Modifier,
@@ -388,17 +381,26 @@ private fun TotalFiatBalanceCard(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        BasicText(
-            text = fiatBalance,
-            autoSize = TextAutoSize.StepBased(
-                minFontSize = 12.sp,
-                maxFontSize = 48.sp,
-            ),
-            style = MaterialTheme.typography.headlineLarge.copy(
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-            ),
-        )
+        if (fiatBalance == null) {
+            Box(
+                modifier = Modifier
+                    .size(width = 176.dp, height = 56.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .shimmer(),
+            )
+        } else {
+            BasicText(
+                text = fiatBalance,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = 12.sp,
+                    maxFontSize = 48.sp,
+                ),
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                ),
+            )
+        }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = ethBalance,
@@ -616,10 +618,10 @@ private class WalletViewStateProvider : PreviewParameterProvider<WalletViewState
                     usdValueFormatted = "$750.50",
                 ),
             ),
-            isLoading = false,
+            isBalanceLoading = false,
         ),
         WalletViewState(
-            isLoading = true,
+            isBalanceLoading = true,
         ),
     )
 }

@@ -51,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -74,6 +75,7 @@ import me.sdi.ethwallet.resources.wallets_list_delete_wallet
 import me.sdi.ethwallet.resources.wallets_list_selected_wallet_icon
 import me.sdi.ethwallet.resources.wallets_list_title
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.components.shimmer
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -278,15 +280,15 @@ private fun WalletsListScreenContent(
                 ) {
                     items(
                         items = uiState.wallets,
-                        key = { wallet -> wallet.address.toString() },
+                        key = { item -> item.wallet.address.toString() },
                         contentType = { it::class.qualifiedName },
-                    ) { wallet ->
+                    ) { item ->
                         WalletCard(
                             modifier = Modifier.fillMaxWidth(),
-                            wallet = wallet,
-                            isSelected = isListDetailLayout && wallet.address == selectedWalletAddress,
-                            onWalletClicked = { onWalletSelected(wallet.address) },
-                            onDeleteClicked = { onEvent(WalletsListEvent.OnDeleteWalletClick(wallet.address)) },
+                            item = item,
+                            isSelected = isListDetailLayout && item.wallet.address == selectedWalletAddress,
+                            onWalletClicked = { onWalletSelected(item.wallet.address) },
+                            onDeleteClicked = { onEvent(WalletsListEvent.OnDeleteWalletClick(item.wallet.address)) },
                         )
                     }
                 }
@@ -298,12 +300,14 @@ private fun WalletsListScreenContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WalletCard(
-    wallet: EthWallet,
+    item: WalletListItemUiState,
     isSelected: Boolean,
     onWalletClicked: () -> Unit,
     onDeleteClicked: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val wallet = item.wallet
+
     Card(
         modifier = modifier,
         onClick = onWalletClicked,
@@ -356,12 +360,22 @@ private fun WalletCard(
                     overflow = TextOverflow.MiddleEllipsis,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "$0",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (item.totalBalanceUsd == null) {
+                    Box(
+                        modifier = Modifier
+                            .padding(vertical = 2.dp)
+                            .size(width = 56.dp, height = 20.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .shimmer(),
+                    )
+                } else {
+                    Text(
+                        text = item.totalBalanceUsd,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             IconButton(
@@ -385,8 +399,13 @@ private fun WalletsListScreenPreview() {
             modifier = Modifier.fillMaxSize(),
             uiState = WalletsListUiState(
                 wallets = listOf(
-                    EthWallet("Business Wallet", EthAddress("0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef")),
-                    EthWallet("Savings Wallet", EthAddress("0x9876543210987654321098765432109876543210")),
+                    WalletListItemUiState(
+                        wallet = EthWallet("Business Wallet", EthAddress("0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef")),
+                        totalBalanceUsd = "$12,345.67",
+                    ),
+                    WalletListItemUiState(
+                        wallet = EthWallet("Savings Wallet", EthAddress("0x9876543210987654321098765432109876543210")),
+                    ),
                 ),
                 isLoading = false,
             ),

@@ -24,6 +24,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -44,6 +45,7 @@ class WalletViewModelTest {
     private val fiatRateFlow = MutableStateFlow<Map<EthAddress, BigDecimal>>(emptyMap())
     private val observedAddresses = mutableListOf<EthAddress>()
     private val forceUpdatedAddresses = mutableListOf<EthAddress>()
+    private var fiatRateUpdateFailure: Throwable? = null
 
     private val balanceProvider: BalanceProvider = object : BalanceProvider {
         override fun observe(address: EthAddress): Flow<Map<EthAddress, BigInteger>> {
@@ -58,14 +60,19 @@ class WalletViewModelTest {
     private val fiatRateProvider: FiatRateProvider = object : FiatRateProvider {
         override fun observe(): Flow<Map<EthAddress, BigDecimal>> = fiatRateFlow
 
-        override suspend fun forceUpdate() = Unit
+        override suspend fun forceUpdate() {
+            fiatRateUpdateFailure?.let { throw it }
+        }
     }
 
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        balanceFlow.value = emptyMap()
+        fiatRateFlow.value = emptyMap()
         observedAddresses.clear()
         forceUpdatedAddresses.clear()
+        fiatRateUpdateFailure = null
     }
 
     @AfterTest
@@ -110,7 +117,7 @@ class WalletViewModelTest {
         advanceUntilIdle()
 
         val currentState = viewModel.viewState.first()
-        assertFalse(currentState.isLoading, "Should not be loading after data is available")
+        assertFalse(currentState.isBalanceLoading, "Should not be loading after data is available")
         assertEquals(1L, currentState.chainId, "Chain ID should be exposed in state")
         assertEquals(
             "1 ETH",
@@ -137,6 +144,7 @@ class WalletViewModelTest {
         assertEquals(listOf(testAddress), observedAddresses)
         assertTrue(forceUpdatedAddresses.isNotEmpty())
         assertTrue(forceUpdatedAddresses.all { it == testAddress })
+        assertTrue(viewModel.viewState.value.isBalanceLoading)
     }
 
     @Test
@@ -163,6 +171,7 @@ class WalletViewModelTest {
         advanceUntilIdle()
 
         val currentState = viewModel.viewState.first()
+        assertFalse(currentState.isBalanceLoading)
         assertEquals(
             "0 ETH",
             currentState.totalBalanceEth,
@@ -221,5 +230,65 @@ class WalletViewModelTest {
         val usdtToken = currentState.favoriteTokens.find { it.ticker == "USDT" }
         assertEquals("100", usdtToken?.amount)
         assertEquals("$100.00", usdtToken?.usdValueFormatted)
+    }
+
+    @Test
+    fun should_expose_token_balances_when_fiat_rates_are_unavailable() = runTest(testDispatcher) {
+        balanceFlow.value = mapOf(
+            EthContractAddress to BigInteger("1000000000000000000"),
+            usdtOnMainnet.ethAddress to BigInteger("100000000"),
+            usdcOnMainnet.ethAddress to BigInteger.ZERO,
+            daiOnMainnet.ethAddress to BigInteger.ZERO,
+        )
+
+        createViewModel()
+        advanceUntilIdle()
+
+        val currentState = viewModel.viewState.first()
+        assertFalse(currentState.isBalanceLoading)
+        assertNull(currentState.totalBalanceUsd)
+        assertEquals("1 ETH", currentState.totalBalanceEth)
+        assertEquals("100", currentState.favoriteTokens.first { it.ticker == "USDT" }.amount)
+    }
+
+    @Test
+    fun fiat_refresh_failure_does_not_prevent_balance_loading() = runTest(testDispatcher) {
+        balanceFlow.value = mapOf(
+            EthContractAddress to BigInteger("1000000000000000000"),
+            usdtOnMainnet.ethAddress to BigInteger.ZERO,
+            usdcOnMainnet.ethAddress to BigInteger.ZERO,
+            daiOnMainnet.ethAddress to BigInteger.ZERO,
+        )
+        fiatRateUpdateFailure = IllegalStateException("Fiat unavailable")
+
+        createViewModel()
+        advanceUntilIdle()
+
+        assertTrue(forceUpdatedAddresses.contains(testAddress))
+        assertFalse(viewModel.viewState.value.isBalanceLoading)
+        assertNull(viewModel.viewState.value.totalBalanceUsd)
+    }
+
+    @Test
+    fun fiat_refresh_failure_keeps_a_cached_usd_rate() = runTest(testDispatcher) {
+        balanceFlow.value = mapOf(
+            EthContractAddress to BigInteger("1000000000000000000"),
+            usdtOnMainnet.ethAddress to BigInteger.ZERO,
+            usdcOnMainnet.ethAddress to BigInteger.ZERO,
+            daiOnMainnet.ethAddress to BigInteger.ZERO,
+        )
+        fiatRateFlow.value = mapOf(
+            EthContractAddress to BigDecimal("2000"),
+            usdtOnMainnet.ethAddress to BigDecimal.ONE,
+            usdcOnMainnet.ethAddress to BigDecimal.ONE,
+            daiOnMainnet.ethAddress to BigDecimal.ONE,
+        )
+        fiatRateUpdateFailure = IllegalStateException("Fiat unavailable")
+
+        createViewModel()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.viewState.value.isBalanceLoading)
+        assertEquals("$2,000.00", viewModel.viewState.value.totalBalanceUsd)
     }
 }
