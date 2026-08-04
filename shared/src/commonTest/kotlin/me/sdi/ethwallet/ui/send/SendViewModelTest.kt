@@ -21,8 +21,13 @@ import me.sdi.ethwallet.core.transfer.FeeSuggestion
 import me.sdi.ethwallet.core.transfer.TransferException
 import me.sdi.ethwallet.core.transfer.Wei
 import me.sdi.ethwallet.core.transfer.toEth
+import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.database.entity.WalletEntity
+import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakeFiatRateProvider
+import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeTransferInteractor
+import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.ui.usdtOnMainnet
 import me.sdi.ethwallet.util.formatUsdCurrency
 import java.math.BigDecimal
@@ -43,6 +48,8 @@ class SendViewModelTest {
 
     private lateinit var transferInteractor: FakeTransferInteractor
     private lateinit var fiatRateProvider: FakeFiatRateProvider
+    private lateinit var walletDao: FakeWalletDao
+    private lateinit var walletRepository: WalletRepository
     private lateinit var viewModel: SendViewModel
     private val activeViewModels = mutableListOf<SendViewModel>()
     private val collectedNews = mutableListOf<SendNews>()
@@ -55,6 +62,7 @@ class SendViewModelTest {
 
     private val validEthAddress = "0x742d35cc6634C0532925a3b8d73a726FbCF3eB11"
     private val senderAddress = EthAddress("0x1234567890123456789012345678901234567890")
+    private val receiverWalletAddress = EthAddress("0x9876543210987654321098765432109876543210")
     private val invalidAddressNoPrefix = "742d35cc6634C0532925a3b8d73a726FbCF3eB11"
     private val invalidAddressWrongLength = "0x742d35cc6634C0532925a3b8d73a726FbCF3eB"
     private val invalidAddressWrongFormat = "0x742d35cc6634C0532925a3b8d73a726FbCF3eB1G"
@@ -64,12 +72,20 @@ class SendViewModelTest {
         Dispatchers.setMain(testDispatcher)
         transferInteractor = FakeTransferInteractor()
         fiatRateProvider = FakeFiatRateProvider()
+        walletDao = FakeWalletDao()
+        walletRepository = WalletRepository(walletDao, FakeEthManager(), FakePrivateKeyEncryptor())
         activeViewModels.clear()
         viewModel = newViewModel()
     }
 
     private fun newViewModel(savedStateHandle: SavedStateHandle = SavedStateHandle()): SendViewModel =
-        SendViewModel(senderAddress, transferInteractor, fiatRateProvider, savedStateHandle).also { activeViewModels += it }
+        SendViewModel(
+            walletAddress = senderAddress,
+            transferInteractor = transferInteractor,
+            fiatRateProvider = fiatRateProvider,
+            walletRepository = walletRepository,
+            savedStateHandle = savedStateHandle,
+        ).also { activeViewModels += it }
 
     private fun vmTest(body: suspend TestScope.() -> Unit) = runTest(testDispatcher, timeout = 10.seconds) {
         try {
@@ -174,6 +190,49 @@ class SendViewModelTest {
         val state = viewModel.viewState.value
         assertEquals(validEthAddress, state.receiverAddress.value, "Address should be trimmed")
         assertNull(state.receiverAddress.error, "Trimmed valid address should have no error")
+    }
+
+    @Test
+    fun should_observe_other_owned_wallets_and_exclude_sender() = vmTest {
+        walletDao.wallets = listOf(
+            WalletEntity(senderAddress.toString(), "encrypted-sender", "Current wallet"),
+            WalletEntity(receiverWalletAddress.toString(), "encrypted-receiver", "Savings"),
+        )
+        runCurrent()
+
+        assertEquals(
+            listOf("Savings"),
+            viewModel.viewState.value.receiverWallets.map { it.label },
+        )
+
+        walletDao.wallets = listOf(
+            WalletEntity(senderAddress.toString(), "encrypted-sender", "Current wallet"),
+            WalletEntity(receiverWalletAddress.toString(), "encrypted-receiver", "Long-term savings"),
+        )
+        runCurrent()
+
+        assertEquals("Long-term savings", viewModel.viewState.value.receiverWallets.single().label)
+
+        walletDao.wallets = listOf(WalletEntity(senderAddress.toString(), "encrypted-sender", "Current wallet"))
+        runCurrent()
+
+        assertTrue(viewModel.viewState.value.receiverWallets.isEmpty())
+    }
+
+    @Test
+    fun should_fill_receiver_address_when_owned_wallet_is_selected() = vmTest {
+        sendEvent(SendEvent.OnReceiverWalletSelected(receiverWalletAddress))
+
+        assertEquals(receiverWalletAddress.toString(), viewModel.viewState.value.receiverAddress.value)
+        assertTrue(viewModel.viewState.value.receiverAddress.isValid)
+
+        sendEvent(SendEvent.OnReceiverAddressChanged(validEthAddress))
+
+        assertEquals(validEthAddress, viewModel.viewState.value.receiverAddress.value)
+
+        sendEvent(SendEvent.OnClearFormClick)
+
+        assertEquals("", viewModel.viewState.value.receiverAddress.value)
     }
 
     @Test

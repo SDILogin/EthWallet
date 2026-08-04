@@ -14,13 +14,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -41,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
@@ -50,8 +54,10 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.transfer.ERC20_TRANSFER_GAS_UNITS
 import me.sdi.ethwallet.core.transfer.ETH_TRANSFER_GAS_UNITS
 import me.sdi.ethwallet.core.transfer.Wei
+import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
+import me.sdi.ethwallet.resources.arrow_downward_24px
 import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.cancel_24px
 import me.sdi.ethwallet.resources.ic_eth_logo
@@ -72,9 +78,12 @@ import me.sdi.ethwallet.resources.send_enter_receiver_address
 import me.sdi.ethwallet.resources.send_fee_estimate
 import me.sdi.ethwallet.resources.send_gas_units
 import me.sdi.ethwallet.resources.send_gas_units_placeholder
+import me.sdi.ethwallet.resources.send_my_wallets
+import me.sdi.ethwallet.resources.send_no_other_wallets
 import me.sdi.ethwallet.resources.send_priority_fee
 import me.sdi.ethwallet.resources.send_priority_fee_placeholder
 import me.sdi.ethwallet.resources.send_receiver_address
+import me.sdi.ethwallet.resources.send_select_wallet
 import me.sdi.ethwallet.resources.send_sending
 import me.sdi.ethwallet.resources.send_title
 import me.sdi.ethwallet.resources.send_token
@@ -152,6 +161,8 @@ private fun SendScreenContent(
     onEvent: (SendEvent) -> Unit,
     onBackPress: () -> Unit,
 ) {
+    var receiverWalletsExpanded by remember { mutableStateOf(false) }
+
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -173,18 +184,39 @@ private fun SendScreenContent(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp)
+                .imePadding()
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            Column {
+                ReceiverAddressInput(
+                    addressState = viewState.receiverAddress,
+                    receiverWallets = viewState.receiverWallets,
+                    onAddressChanged = { onEvent(SendEvent.OnReceiverAddressChanged(it)) },
+                    onWalletPickerClick = { receiverWalletsExpanded = !receiverWalletsExpanded },
+                )
+                AnimatedVisibility(
+                    visible = receiverWalletsExpanded && viewState.receiverWallets.isNotEmpty(),
+                    enter = SECTION_ENTER,
+                    exit = SECTION_EXIT,
+                ) {
+                    Column {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ReceiverWalletDropdownList(
+                            wallets = viewState.receiverWallets,
+                            onWalletSelected = {
+                                receiverWalletsExpanded = false
+                                onEvent(SendEvent.OnReceiverWalletSelected(it))
+                            },
+                        )
+                    }
+                }
+            }
+
             TokenSelector(
                 selectedTokenContract = viewState.selectedTokenContractAddress,
                 chainTokens = chainTokens,
                 onTokenSelected = { onEvent(SendEvent.OnTokenSelected(it)) },
-            )
-
-            ReceiverAddressInput(
-                addressState = viewState.receiverAddress,
-                onAddressChanged = { onEvent(SendEvent.OnReceiverAddressChanged(it)) },
             )
 
             Column {
@@ -202,7 +234,7 @@ private fun SendScreenContent(
                     supportingText = viewState.transferAmountInputState.error
                         ?: viewState.transferAmountUsd?.let {
                             stringResource(Res.string.send_fee_estimate, it)
-                        },
+                    },
                     onAmountChanged = { onEvent(SendEvent.OnTransferAmountChanged(it)) },
                 )
             }
@@ -415,7 +447,9 @@ private fun GasChipLabel(labelRes: StringResource, feeUsd: String?) {
 @Composable
 private fun ReceiverAddressInput(
     addressState: TextInputState,
+    receiverWallets: List<EthWallet>,
     onAddressChanged: (String) -> Unit,
+    onWalletPickerClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -434,11 +468,28 @@ private fun ReceiverAddressInput(
             isError = addressState.error != null,
             supportingText = addressState.error?.let { { Text(it) } },
             trailingIcon = {
-                if (addressState.value.isNotEmpty()) {
-                    IconButton(onClick = { onAddressChanged("") }) {
+                Row {
+                    if (addressState.value.isNotEmpty()) {
+                        IconButton(onClick = { onAddressChanged("") }) {
+                            Icon(
+                                painter = painterResource(Res.drawable.cancel_24px),
+                                contentDescription = stringResource(Res.string.send_clear_address),
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = onWalletPickerClick,
+                        enabled = receiverWallets.isNotEmpty(),
+                    ) {
                         Icon(
-                            painter = painterResource(Res.drawable.cancel_24px),
-                            contentDescription = stringResource(Res.string.send_clear_address),
+                            painter = painterResource(Res.drawable.arrow_downward_24px),
+                            contentDescription = stringResource(
+                                if (receiverWallets.isEmpty()) {
+                                    Res.string.send_no_other_wallets
+                                } else {
+                                    Res.string.send_select_wallet
+                                },
+                            ),
                         )
                     }
                 }
@@ -446,6 +497,43 @@ private fun ReceiverAddressInput(
             modifier = Modifier.fillMaxWidth(),
             singleLine = false,
         )
+    }
+}
+
+@Composable
+private fun ReceiverWalletDropdownList(
+    wallets: List<EthWallet>,
+    onWalletSelected: (EthAddress) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(modifier = modifier.fillMaxWidth()) {
+        Column {
+            Text(
+                text = stringResource(Res.string.send_my_wallets),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp),
+            )
+            wallets.forEach { wallet ->
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(
+                                text = wallet.label,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = wallet.address.toString(),
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    },
+                    onClick = { onWalletSelected(wallet.address) },
+                )
+            }
+        }
     }
 }
 
@@ -513,6 +601,16 @@ private fun SendButton(
 private class SendViewStateProvider : PreviewParameterProvider<SendViewState> {
     override val values: Sequence<SendViewState> = sequenceOf(
         SendViewState(
+            receiverWallets = listOf(
+                EthWallet(
+                    label = "Business Wallet",
+                    address = EthAddress("0x742d35cc6634C0532925a3b8d73a726FbCF3eB11"),
+                ),
+                EthWallet(
+                    label = "Savings Wallet",
+                    address = EthAddress("0x9876543210987654321098765432109876543210"),
+                ),
+            ),
             receiverAddress = TextInputState(value = "0x742d35cc6634C0532925a3b8d73a726FbCF3eB11"),
             transferAmountInputState = TextInputState(value = "0.5"),
             transferAmountUsd = "$1,000.00",

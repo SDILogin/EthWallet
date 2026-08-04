@@ -14,4 +14,8 @@ class WalletPage(private val composeTestRule: ComposeTestRule) {
     fun clickUp() {
         composeTestRule.clickContentDescription("Back")
     }
+
+    fun clickSend() {
+        composeTestRule.clickContentDescription("Send")
+    }
 }

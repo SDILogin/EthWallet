@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.transfer.Wei
+import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.send_fee_custom
 import me.sdi.ethwallet.resources.send_fee_default
@@ -14,6 +15,7 @@ import java.math.BigInteger
 
 data class SendViewState(
     val selectedTokenContractAddress: EthAddress = EthContractAddress,
+    val receiverWallets: List<EthWallet> = emptyList(),
     val receiverAddress: TextInputState = TextInputState(),
     val transferAmountInputState: TextInputState = TextInputState(),
     val transferAmountUsd: String? = null,

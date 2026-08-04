@@ -63,6 +63,9 @@
     <string name="send_token_usdc">USDC</string>
     <string name="send_token_dai">DAI</string>
     <string name="send_receiver_address">Receiver Address</string>
+    <string name="send_my_wallets">My wallets</string>
+    <string name="send_select_wallet">Select wallet</string>
+    <string name="send_no_other_wallets">No other wallets</string>
     <string name="send_enter_receiver_address">Enter receiver address</string>
     <string name="send_address_placeholder">0x…</string>
     <string name="send_clear_address">Clear address</string>

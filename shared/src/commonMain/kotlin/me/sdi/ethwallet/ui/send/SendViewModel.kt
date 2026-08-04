@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.WhileSubscribed
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
@@ -40,6 +41,8 @@ import me.sdi.ethwallet.core.transfer.toGwei
 import me.sdi.ethwallet.core.transfer.toUsd
 import me.sdi.ethwallet.core.transfer.toWei
 import me.sdi.ethwallet.core.transfer.wei
+import me.sdi.ethwallet.data.repository.EthWallet
+import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.ui.findKnownToken
 import me.sdi.ethwallet.util.formatUsdCurrency
 import java.math.BigDecimal
@@ -66,6 +69,7 @@ class SendViewModel(
     private val walletAddress: EthAddress,
     private val transferInteractor: TransferInteractor,
     private val fiatRateProvider: FiatRateProvider,
+    private val walletRepository: WalletRepository,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val userInput = MutableStateFlow(restoreUserInput())
@@ -119,12 +123,24 @@ class SendViewModel(
 
     val news: Flow<SendNews> = newsChannel.receiveAsFlow().onEach { Logger.debug(TAG) { "News: $it" } }
 
+    private val receiverWallets: StateFlow<List<EthWallet>> = walletRepository
+        .observeAllWallets()
+        .map { wallets ->
+            wallets.filterNot { wallet -> wallet.address.toString().equals(walletAddress.toString(), ignoreCase = true) }
+        }
+        .catch { error ->
+            Logger.warn(TAG, error) { "Failed to observe receiver wallets" }
+            emit(emptyList())
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     val viewState: StateFlow<SendViewState> = combine(
         userInput,
         feeSuggestion,
         fiatRates,
         isTransferring,
-    ) { input, suggestion, rates, transferring ->
+        receiverWallets,
+    ) { input, suggestion, rates, transferring, wallets ->
         val selectedToken = EthAddress(input.token)
         val transferAmountInputState = TextInputState(
             value = input.amount,
@@ -132,6 +148,7 @@ class SendViewModel(
         )
         SendViewState(
             selectedTokenContractAddress = selectedToken,
+            receiverWallets = wallets,
             receiverAddress = TextInputState(
                 value = input.receiverAddress,
                 error = validateAddress(input.receiverAddress),
@@ -186,7 +203,10 @@ class SendViewModel(
                 }
             }
             is SendEvent.OnReceiverAddressChanged -> {
-                userInput.update { it.copy(receiverAddress = event.address.trim().take(ETH_ADDRESS_LENGTH)) }
+                updateReceiverAddress(event.address)
+            }
+            is SendEvent.OnReceiverWalletSelected -> {
+                updateReceiverAddress(event.address.toString())
             }
             is SendEvent.OnTransferAmountChanged -> {
                 userInput.update { it.copy(amount = truncateNumericInput(event.amount)) }
@@ -226,6 +246,10 @@ class SendViewModel(
                 ),
             )
         }
+    }
+
+    private fun updateReceiverAddress(address: String) {
+        userInput.update { it.copy(receiverAddress = address.trim().take(ETH_ADDRESS_LENGTH)) }
     }
 
     private fun handleTransferRequested() {

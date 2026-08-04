@@ -3,7 +3,9 @@ package me.sdi.ethwallet.flow
 import android.app.Application
 import android.os.Build
 import androidx.activity.compose.setContent
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -29,6 +31,7 @@ import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
 import me.sdi.ethwallet.database.AppDatabase
+import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.di.appModules
 import me.sdi.ethwallet.flow.pageobjects.CreateWalletPage
 import me.sdi.ethwallet.flow.pageobjects.OnboardingPage
@@ -316,6 +319,46 @@ class WalletFlowTest : KoinTest {
         walletPage.clickUp()
 
         walletsListPage.assertSingleWallet()
+    }
+
+    @Test
+    fun sendScreenSelectsAnOwnedDestinationWallet() {
+        runInitialWalletCreationFlow()
+        val savingsAddress = "0x9876543210987654321098765432109876543210"
+        runBlocking {
+            appDatabase.walletDao().insertWallet(
+                WalletEntity(
+                    address = savingsAddress,
+                    encryptedPrivateKeyBase64 = "private-key",
+                    label = "Savings",
+                ),
+            )
+        }
+
+        walletsListPage.clickWallet("My Wallet")
+        walletPage.awaitVisible()
+        walletPage.clickSend()
+
+        composeTestRule.waitUntilTextExists("Receiver Address")
+        composeTestRule.clickContentDescription("Select wallet")
+        composeTestRule.waitUntilTextExists("My wallets")
+        composeTestRule.assertTextExists("Savings")
+        composeTestRule.assertTextExists(savingsAddress)
+        composeTestRule.clickText("Savings")
+
+        composeTestRule.assertTextExists(savingsAddress)
+    }
+
+    @Test
+    fun sendScreenDisablesOwnedWalletPickerWhenNoOtherWalletExists() {
+        runInitialWalletCreationFlow()
+
+        walletsListPage.clickWallet("My Wallet")
+        walletPage.awaitVisible()
+        walletPage.clickSend()
+
+        composeTestRule.waitUntilTextExists("Receiver Address")
+        composeTestRule.onNodeWithContentDescription("No other wallets").assertIsNotEnabled()
     }
 
     @Test

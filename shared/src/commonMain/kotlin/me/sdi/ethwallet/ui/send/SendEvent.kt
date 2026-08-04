@@ -7,6 +7,8 @@ sealed interface SendEvent {
 
     data class OnReceiverAddressChanged(val address: String) : SendEvent
 
+    data class OnReceiverWalletSelected(val address: EthAddress) : SendEvent
+
     data class OnTransferAmountChanged(val amount: String) : SendEvent
 
     data class OnGasOptionSelected(val option: GasOption) : SendEvent

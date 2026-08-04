@@ -116,6 +116,7 @@ val commonModule = module {
             walletAddress = params.get(),
             transferInteractor = get(),
             fiatRateProvider = get(),
+            walletRepository = get(),
             savedStateHandle = get(),
         )
     }
