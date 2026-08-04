@@ -13,10 +13,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
@@ -92,22 +93,27 @@ class SendViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), null)
 
-    private val ethUsdRate: StateFlow<BigDecimal?> = flow {
-        savedStateHandle.get<String>(KEY_ETH_USD_RATE)?.let { emit(it.toBigDecimal()) }
-        while (true) {
-            fiatRateProvider.forceUpdate()
-            val fresh = fiatRateProvider.observe().first().getValue(EthContractAddress)
-            savedStateHandle[KEY_ETH_USD_RATE] = fresh.toPlainString()
-            emit(fresh)
-            delay(30.seconds)
+    private val fiatRates: StateFlow<Map<EthAddress, BigDecimal>> = fiatRateProvider
+        .observe()
+        .onStart {
+            savedStateHandle.get<String>(KEY_ETH_USD_RATE)?.let { cachedRate ->
+                emit(mapOf(EthContractAddress to cachedRate.toBigDecimal()))
+            }
         }
-    }
-        .retry { error ->
-            Logger.warn(TAG) { "Failed to fetch ETH/USD rate, retrying: ${error.message}" }
-            delay(5.seconds)
-            true
+        .map { rates ->
+            val cachedEthRate = savedStateHandle.get<String>(KEY_ETH_USD_RATE)?.toBigDecimal()
+            if (EthContractAddress !in rates && cachedEthRate != null) {
+                rates + (EthContractAddress to cachedEthRate)
+            } else {
+                rates
+            }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), null)
+        .onEach { rates ->
+            rates[EthContractAddress]?.let { ethUsdRate ->
+                savedStateHandle[KEY_ETH_USD_RATE] = ethUsdRate.toPlainString()
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), emptyMap())
 
     private val newsChannel = Channel<SendNews>(Channel.BUFFERED)
 
@@ -116,22 +122,24 @@ class SendViewModel(
     val viewState: StateFlow<SendViewState> = combine(
         userInput,
         feeSuggestion,
-        ethUsdRate,
+        fiatRates,
         isTransferring,
-    ) { input, suggestion, rate, transferring ->
+    ) { input, suggestion, rates, transferring ->
         val selectedToken = EthAddress(input.token)
+        val transferAmountInputState = TextInputState(
+            value = input.amount,
+            error = validateAmount(input.amount, selectedToken),
+        )
         SendViewState(
             selectedTokenContractAddress = selectedToken,
             receiverAddress = TextInputState(
                 value = input.receiverAddress,
                 error = validateAddress(input.receiverAddress),
             ),
-            transferAmountInputState = TextInputState(
-                value = input.amount,
-                error = validateAmount(input.amount, selectedToken),
-            ),
+            transferAmountInputState = transferAmountInputState,
+            transferAmountUsd = transferAmountUsd(transferAmountInputState, selectedToken, rates),
             transferring = transferring,
-            gas = buildGasViewState(input, selectedToken, suggestion, rate),
+            gas = buildGasViewState(input, selectedToken, suggestion, rates[EthContractAddress]),
         )
     }
         .onEach { Logger.debug(TAG) { "ViewState: $it" } }
@@ -144,6 +152,19 @@ class SendViewModel(
         feeSuggestion
             .filterNotNull()
             .onEach(::prefillCustomFees)
+            .launchIn(viewModelScope)
+        flow<Unit> {
+            while (true) {
+                fiatRateProvider.forceUpdate()
+                emit(Unit)
+                delay(30.seconds)
+            }
+        }
+            .retry { error ->
+                Logger.warn(TAG) { "Failed to fetch ETH/USD rate, retrying: ${error.message}" }
+                delay(5.seconds)
+                true
+            }
             .launchIn(viewModelScope)
     }
 
@@ -349,6 +370,18 @@ private fun BigInteger.scaleBy(ratio: Pair<Int, Int>): BigInteger =
 private fun feeUsd(maxFeePerGasUnit: Wei, gasUnits: BigInteger, ethUsdRate: BigDecimal): String {
     val totalFee = Wei(maxFeePerGasUnit.value.multiply(gasUnits))
     return formatUsdCurrency(totalFee.toEth().toUsd(ethUsdRate))
+}
+
+private fun transferAmountUsd(
+    amountInputState: TextInputState,
+    selectedToken: EthAddress,
+    fiatRates: Map<EthAddress, BigDecimal>,
+): String? {
+    if (!amountInputState.isValid) return null
+
+    val amount = amountInputState.value.toBigDecimalOrNull() ?: return null
+    val rate = fiatRates[selectedToken] ?: return null
+    return formatUsdCurrency(amount.multiply(rate))
 }
 
 private fun Wei.toGweiInput(): String {

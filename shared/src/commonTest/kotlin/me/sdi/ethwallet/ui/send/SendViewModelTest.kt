@@ -187,6 +187,74 @@ class SendViewModelTest {
     }
 
     @Test
+    fun should_compute_fiat_value_for_valid_ETH_amount() = vmTest {
+        seedFiatRates(EthContractAddress to ethRate)
+
+        sendEvent(SendEvent.OnTransferAmountChanged("1.5"))
+
+        assertEquals(
+            formatUsdCurrency(BigDecimal("3000.00")),
+            viewModel.viewState.value.transferAmountUsd,
+            "ETH amount should use the current ETH/USD rate",
+        )
+    }
+
+    @Test
+    fun should_recalculate_fiat_value_for_selected_token_and_rate_updates() = vmTest {
+        seedFiatRates(
+            EthContractAddress to ethRate,
+            usdtOnMainnet.ethAddress to BigDecimal.ONE,
+        )
+        sendEvent(SendEvent.OnTransferAmountChanged("1.5"))
+
+        sendEvent(SendEvent.OnTokenSelected(usdtOnMainnet.ethAddress))
+        assertEquals(
+            formatUsdCurrency(BigDecimal("1.50")),
+            viewModel.viewState.value.transferAmountUsd,
+            "Changing the selected token should use its USD rate",
+        )
+
+        fiatRateProvider.rates.value = mapOf(
+            EthContractAddress to ethRate,
+            usdtOnMainnet.ethAddress to BigDecimal("1.01"),
+        )
+        runCurrent()
+
+        assertEquals(
+            formatUsdCurrency(BigDecimal("1.515")),
+            viewModel.viewState.value.transferAmountUsd,
+            "A fiat-rate update should recalculate the selected token amount",
+        )
+    }
+
+    @Test
+    fun should_hide_fiat_value_for_invalid_amounts_or_unavailable_rate() = vmTest {
+        seedFiatRates(EthContractAddress to ethRate)
+
+        sendEvent(SendEvent.OnTransferAmountChanged(""))
+        assertNull(viewModel.viewState.value.transferAmountUsd, "Blank amount should have no fiat value")
+
+        sendEvent(SendEvent.OnTransferAmountChanged("0"))
+        assertNull(viewModel.viewState.value.transferAmountUsd, "Zero amount should have no fiat value")
+
+        sendEvent(SendEvent.OnTransferAmountChanged("abc"))
+        assertNull(viewModel.viewState.value.transferAmountUsd, "Invalid amount should have no fiat value")
+
+        sendEvent(SendEvent.OnTokenSelected(usdtOnMainnet.ethAddress))
+        sendEvent(SendEvent.OnTransferAmountChanged("1.1234567"))
+        assertNull(
+            viewModel.viewState.value.transferAmountUsd,
+            "Amount with too many token decimal places should have no fiat value",
+        )
+
+        sendEvent(SendEvent.OnTransferAmountChanged("1"))
+        assertNull(
+            viewModel.viewState.value.transferAmountUsd,
+            "Amount should have no fiat value when its token rate is unavailable",
+        )
+    }
+
+    @Test
     fun should_validate_negative_amount() = vmTest {
         sendEvent(SendEvent.OnTransferAmountChanged("-1.5"))
 
@@ -943,6 +1011,11 @@ class SendViewModelTest {
     private fun TestScope.seedFees() {
         transferInteractor.feeSuggestionToReturn = feeSuggestion
         fiatRateProvider.rates.value = mapOf(EthContractAddress to ethRate)
+        runCurrent()
+    }
+
+    private fun TestScope.seedFiatRates(vararg rates: Pair<EthAddress, BigDecimal>) {
+        fiatRateProvider.rates.value = mapOf(*rates)
         runCurrent()
     }
 

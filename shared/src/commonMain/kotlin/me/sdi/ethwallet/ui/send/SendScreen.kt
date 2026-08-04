@@ -199,7 +199,10 @@ private fun SendScreenContent(
                     label = stringResource(Res.string.send_enter_amount),
                     placeholder = stringResource(Res.string.send_amount_placeholder),
                     clearContentDescription = stringResource(Res.string.send_clear_amount),
-                    supportingText = viewState.transferAmountInputState.error,
+                    supportingText = viewState.transferAmountInputState.error
+                        ?: viewState.transferAmountUsd?.let {
+                            stringResource(Res.string.send_fee_estimate, it)
+                        },
                     onAmountChanged = { onEvent(SendEvent.OnTransferAmountChanged(it)) },
                 )
             }
@@ -512,6 +515,7 @@ private class SendViewStateProvider : PreviewParameterProvider<SendViewState> {
         SendViewState(
             receiverAddress = TextInputState(value = "0x742d35cc6634C0532925a3b8d73a726FbCF3eB11"),
             transferAmountInputState = TextInputState(value = "0.5"),
+            transferAmountUsd = "$1,000.00",
             gas = GasViewState(
                 chips = listOf(
                     GasChip(
@@ -552,6 +556,7 @@ private class SendViewStateProvider : PreviewParameterProvider<SendViewState> {
             selectedTokenContractAddress = usdtOnMainnet.ethAddress,
             receiverAddress = TextInputState(value = "0x742d35cc6634C0532925a3b8d73a726FbCF3eB11"),
             transferAmountInputState = TextInputState(value = "125.00"),
+            transferAmountUsd = "$125.00",
             gas = GasViewState(
                 chips = listOf(
                     GasChip(

@@ -16,6 +16,7 @@ data class SendViewState(
     val selectedTokenContractAddress: EthAddress = EthContractAddress,
     val receiverAddress: TextInputState = TextInputState(),
     val transferAmountInputState: TextInputState = TextInputState(),
+    val transferAmountUsd: String? = null,
     val gas: GasViewState = GasViewState(),
     val transferring: Boolean = false,
 ) {
