@@ -3,11 +3,11 @@ package me.sdi.ethwallet.ui.wallet
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -44,18 +44,6 @@ fun PinCodeInput(
     isError: Boolean = false,
     shakeTrigger: Int = 0,
 ) {
-    val fillColor by animateColorAsState(
-        targetValue =
-            if (isError) {
-                MaterialTheme.colorScheme.error
-            } else {
-                MaterialTheme.colorScheme.primary
-            },
-        animationSpec = tween(150),
-        label = "fillColor",
-    )
-    val ringColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-
     val digitsEntered = stringResource(Res.string.pin_digits_entered, pinCode.length, maxLength)
 
     val density = LocalDensity.current
@@ -91,41 +79,36 @@ fun PinCodeInput(
     ) {
         repeat(maxLength) { index ->
             val isActive = index < pinCode.length
-            val fillFraction = remember { Animatable(if (index < pinCode.length) 1f else 0f) }
-
-            LaunchedEffect(isActive) {
-                if (isActive) {
-                    fillFraction.animateTo(
-                        targetValue = 1f,
-                        animationSpec =
-                            spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMedium,
-                            ),
-                    )
-                } else {
-                    fillFraction.animateTo(targetValue = 0f, animationSpec = tween(100))
-                }
-            }
+            val scale by animateFloatAsState(
+                targetValue = if (isActive) 1f else 0.75f,
+                animationSpec =
+                    spring(
+                        dampingRatio = Spring.DampingRatioHighBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                label = "dotScale",
+            )
+            val color by animateColorAsState(
+                targetValue =
+                    when {
+                        isError && isActive -> MaterialTheme.colorScheme.error
+                        isActive -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    },
+                animationSpec = tween(),
+                label = "dotColor",
+            )
 
             Box(
                 modifier =
                     Modifier
-                        .size(16.dp)
-                        .border(2.dp, ringColor, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(16.dp)
-                            .graphicsLayer {
-                                scaleX = fillFraction.value
-                                scaleY = fillFraction.value
-                            }
-                            .background(fillColor, CircleShape),
-                )
-            }
+                        .size(24.dp)
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                        }
+                        .background(color, CircleShape),
+            )
         }
     }
 }
