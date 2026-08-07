@@ -169,15 +169,13 @@ fun WalletScreenContent(
                 ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                if (viewState.isBalanceLoading) {
-                    TotalBalanceShimmer()
-                } else {
-                    TotalFiatBalanceCard(
-                        fiatBalance = viewState.totalBalanceUsd,
-                        ethBalance = viewState.totalBalanceEth,
-                        chainId = viewState.chainId,
-                    )
-                }
+                TotalFiatBalanceCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    fiatBalance = viewState.totalBalanceUsd,
+                    ethBalance = viewState.totalBalanceEth,
+                    chainId = viewState.chainId,
+                    isBalanceLoading = viewState.isBalanceLoading,
+                )
 
                 ButtonsPanel(
                     isLoading = viewState.isBalanceLoading,
@@ -290,15 +288,18 @@ private fun ButtonsPanel(
     onReceiveClick: () -> Unit,
     onSendButtonClick: () -> Unit,
 ) {
+    val receiveTitle = stringResource(Res.string.wallet_receive)
+    val sendTitle = stringResource(Res.string.wallet_send)
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
         if (isLoading) {
-            CircularButtonWithTitleShimmer()
+            CircularButtonWithTitleShimmer(title = receiveTitle)
         } else {
             CircularButtonWithTitle(
-                title = stringResource(Res.string.wallet_receive),
+                title = receiveTitle,
                 icon = painterResource(Res.drawable.arrow_downward_24px),
                 onClick = onReceiveClick,
             )
@@ -307,10 +308,10 @@ private fun ButtonsPanel(
         Spacer(modifier = Modifier.width(32.dp))
 
         if (isLoading) {
-            CircularButtonWithTitleShimmer()
+            CircularButtonWithTitleShimmer(title = sendTitle)
         } else {
             CircularButtonWithTitle(
-                title = stringResource(Res.string.wallet_send),
+                title = sendTitle,
                 icon = painterResource(Res.drawable.arrow_outward_24px),
                 onClick = onSendButtonClick,
             )
@@ -349,7 +350,7 @@ private fun CircularButtonWithTitle(
 }
 
 @Composable
-private fun CircularButtonWithTitleShimmer() {
+private fun CircularButtonWithTitleShimmer(title: String) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -359,13 +360,17 @@ private fun CircularButtonWithTitleShimmer() {
                 .clip(CircleShape)
                 .shimmer(),
         )
-        Spacer(modifier = Modifier.height(8.dp))
         Box(
             modifier = Modifier
-                .size(width = 60.dp, height = 16.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .shimmer(),
-        )
+        ) {
+            Text(
+                text = title,
+                modifier = Modifier.alpha(0f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     }
 }
 
@@ -374,22 +379,28 @@ private fun TotalFiatBalanceCard(
     fiatBalance: String?,
     ethBalance: String,
     chainId: Long,
+    isBalanceLoading: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (fiatBalance == null) {
-            Box(
-                modifier = Modifier
-                    .size(width = 176.dp, height = 56.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .shimmer(),
-            )
-        } else {
+        val isFiatLoading = fiatBalance == null
+        Box(
+            modifier = Modifier.then(
+                if (isFiatLoading) {
+                    Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .shimmer()
+                } else {
+                    Modifier
+                },
+            ),
+        ) {
             BasicText(
-                text = fiatBalance,
+                text = fiatBalance ?: "\$00,000.00",
+                modifier = Modifier.alpha(if (isFiatLoading) 0f else 1f),
                 autoSize = TextAutoSize.StepBased(
                     minFontSize = 12.sp,
                     maxFontSize = 48.sp,
@@ -398,14 +409,29 @@ private fun TotalFiatBalanceCard(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
                 ),
+                maxLines = 1,
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = ethBalance,
-            fontSize = 18.sp,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-        )
+        Box(
+            modifier = Modifier.then(
+                if (isBalanceLoading) {
+                    Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .shimmer()
+                } else {
+                    Modifier
+                },
+            ),
+        ) {
+            Text(
+                text = if (isBalanceLoading) "0.000 ETH" else ethBalance,
+                modifier = Modifier.alpha(if (isBalanceLoading) 0f else 1f),
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                maxLines = 1,
+            )
+        }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(Res.string.wallet_network, chainId.toNetworkName()),
@@ -468,45 +494,6 @@ private fun TokenItem(
             fontSize = 18.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-@Composable
-private fun TotalBalanceShimmer(
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .height(56.dp)
-                .shimmer(),
-        ) {
-            Text(
-                modifier = Modifier.alpha(0f),
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = 12.sp,
-                    maxFontSize = 48.sp,
-                ),
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                ),
-                text = "100$",
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .height(24.dp)
-                .shimmer(),
-        ) {
-            Text(modifier = Modifier.alpha(0f), text = "0.001 ETH")
-        }
     }
 }
 
