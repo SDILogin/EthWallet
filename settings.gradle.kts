@@ -28,5 +28,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "EthWallet"
 include(":app")
+include(":ethwallet-kotlin")
 include(":shared")
 include(":desktopApp")
