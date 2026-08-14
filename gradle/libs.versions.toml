@@ -26,7 +26,6 @@ lifecycleViewModelNav3Kmp = "2.11.0"
 kotlinSerialization = "1.11.0"
 room = "2.8.4"
 coroutines = "1.11.0"
-coroutinesTest = "1.11.0"
 mockk = "1.14.11"
 datastore = "1.2.1"
 koin-bom = "4.2.2"
@@ -82,10 +81,11 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 
 # Coroutines
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "coroutines" }
 
 # Testing
-kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 
 # DataStore

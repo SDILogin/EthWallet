@@ -1,5 +1,9 @@
 package me.sdi.ethwallet.kotlin
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
+
 /**
  * Stateless entry point for Ethereum wallet operations.
  *
@@ -7,27 +11,37 @@ package me.sdi.ethwallet.kotlin
  * this skeleton and currently throw [NotImplementedError].
  */
 object EthWalletKotlin {
-    fun createWallet(): Mnemonic = notImplemented()
+    suspend fun createWallet(): Mnemonic = withContext(Dispatchers.Default) {
+        notImplemented()
+    }
 
     suspend fun getBalance(
         network: EthereumNetwork,
         owner: EthAddress,
         asset: Asset,
-    ): UInt256 = notImplemented()
+    ): UInt256 = withContext(Dispatchers.IO) {
+        notImplemented()
+    }
 
-    suspend fun getFeeSuggestion(
-        network: EthereumNetwork,
-    ): FeeSuggestion = notImplemented()
+    suspend fun getFeeSuggestion(network: EthereumNetwork): FeeSuggestion = withContext(Dispatchers.IO) {
+        notImplemented()
+    }
 
     suspend fun sendTransfer(
         network: EthereumNetwork,
         privateKey: PrivateKey,
         request: TransferRequest,
-    ): TransactionHash = notImplemented()
+    ): TransactionHash = withContext(Dispatchers.IO) {
+        notImplemented()
+    }
 }
 
-fun Mnemonic.derivePrivateKey(): PrivateKey = notImplemented()
+suspend fun Mnemonic.derivePrivateKey(): PrivateKey = withContext(Dispatchers.Default) {
+    notImplemented()
+}
 
-fun PrivateKey.deriveAddress(): EthAddress = notImplemented()
+suspend fun PrivateKey.deriveAddress(): EthAddress = withContext(Dispatchers.Default) {
+    notImplemented()
+}
 
 internal fun notImplemented(): Nothing = throw NotImplementedError("EthWalletKotlin skeleton")
