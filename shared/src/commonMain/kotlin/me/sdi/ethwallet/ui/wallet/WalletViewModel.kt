@@ -153,6 +153,21 @@ class WalletViewModel(
                     balance.await() to fiat.await()
                 }
 
+                viewState.update { state ->
+                    state.copy(
+                        balanceLoadState = when {
+                            balanceUpdated -> state.balanceLoadState
+                            state.balanceLoadState == WalletBalanceLoadState.Content -> state.balanceLoadState
+                            else -> WalletBalanceLoadState.Error
+                        },
+                        fiatLoadState = when {
+                            fiatUpdated -> state.fiatLoadState
+                            state.fiatLoadState == WalletFiatLoadState.Available -> state.fiatLoadState
+                            else -> WalletFiatLoadState.Unavailable
+                        },
+                    )
+                }
+
                 val shouldShowRefreshError = isRefreshErrorShouldBeShown(
                     balanceLoadingState = viewState.value.balanceLoadState,
                     balanceUpdateSuccess = balanceUpdated,

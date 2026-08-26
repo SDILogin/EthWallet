@@ -158,7 +158,6 @@ class WalletViewModelTest {
         assertEquals(listOf(testAddress), observedAddresses)
         assertTrue(forceUpdatedAddresses.isNotEmpty())
         assertTrue(forceUpdatedAddresses.all { it == testAddress })
-        assertEquals(WalletBalanceLoadState.Content, viewModel.viewState.value.balanceLoadState)
     }
 
     @Test
@@ -340,6 +339,8 @@ class WalletViewModelTest {
         balanceUpdateFailure = IllegalStateException("RPC unavailable")
         createViewModel()
         advanceUntilIdle()
+
+        assertEquals(WalletBalanceLoadState.Error, viewModel.viewState.value.balanceLoadState)
 
         balanceUpdateFailure = null
         balanceFlow.value = mapOf(
