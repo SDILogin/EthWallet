@@ -2,7 +2,9 @@ package me.sdi.ethwallet.ui.wallet
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,8 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
@@ -51,6 +53,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -165,78 +169,111 @@ fun WalletScreenContent(
         },
     ) { innerPadding ->
         PullToRefreshBox(
+            modifier = Modifier.fillMaxSize(),
             isRefreshing = viewState.showP2rIndicator,
             onRefresh = onRefresh,
         ) {
-            Column(
-                modifier = Modifier.padding(
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(300.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .consumeWindowInsets(innerPadding),
+                contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
                     start = innerPadding.calculateStartPadding(LocalLayoutDirection.current),
                     end = innerPadding.calculateEndPadding(LocalLayoutDirection.current),
+                    bottom = innerPadding.calculateBottomPadding(),
                 ),
-                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                when (viewState.balanceLoadState) {
-                    WalletBalanceLoadState.Error -> BalanceErrorCard(onRetry = onRetry)
-                    WalletBalanceLoadState.Loading,
-                    WalletBalanceLoadState.Content,
-                    -> TotalFiatBalanceCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        fiatBalance = viewState.totalBalanceUsd,
-                        ethBalance = viewState.totalBalanceEth,
-                        chainId = viewState.chainId,
-                        balanceLoadState = viewState.balanceLoadState,
-                        fiatLoadState = viewState.fiatLoadState,
-                    )
-                }
-
-                ButtonsPanel(
-                    isLoading = viewState.balanceLoadState == WalletBalanceLoadState.Loading,
-                    isSendEnabled = viewState.balanceLoadState == WalletBalanceLoadState.Content,
-                    onReceiveClick = onReceiveButtonClick,
-                    onSendButtonClick = onSendButtonClick,
-                )
-
-                if (viewState.balanceLoadState != WalletBalanceLoadState.Error) {
-                    Card(
-                        modifier = Modifier.padding(16.dp),
-                    ) {
-                        Column {
-                            TokensHeader(
-                                onEditButtonClick = onEditButtonClick,
-                                modifier = Modifier.padding(16.dp),
-                            )
-
-                            LazyVerticalGrid(
-                                columns = GridCells.Adaptive(300.dp),
-                                modifier = Modifier.consumeWindowInsets(innerPadding),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                contentPadding = PaddingValues(16.dp),
-                            ) {
-                                if (viewState.balanceLoadState == WalletBalanceLoadState.Loading) {
-                                    repeat(10) {
-                                        item {
-                                            TokenItemShimmer()
-                                        }
-                                    }
-                                } else if (viewState.favoriteTokens.isNotEmpty()) {
-                                    items(
-                                        items = viewState.favoriteTokens,
-                                        key = { it.address.toString() },
-                                    ) { token ->
-                                        TokenCard(
-                                            token = token,
-                                            onTokenClick = onTokenClick,
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    when (viewState.balanceLoadState) {
+                        WalletBalanceLoadState.Error -> BalanceErrorCard(onRetry = onRetry)
+                        WalletBalanceLoadState.Loading,
+                        WalletBalanceLoadState.Content,
+                        -> TotalFiatBalanceCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            fiatBalance = viewState.totalBalanceUsd,
+                            ethBalance = viewState.totalBalanceEth,
+                            chainId = viewState.chainId,
+                            balanceLoadState = viewState.balanceLoadState,
+                            fiatLoadState = viewState.fiatLoadState,
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding()))
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    ButtonsPanel(
+                        isLoading = viewState.balanceLoadState == WalletBalanceLoadState.Loading,
+                        isSendEnabled = viewState.balanceLoadState == WalletBalanceLoadState.Content,
+                        onReceiveClick = onReceiveButtonClick,
+                        onSendButtonClick = onSendButtonClick,
+                    )
+                }
+
+                if (viewState.balanceLoadState != WalletBalanceLoadState.Error) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        TokensSection(
+                            viewState = viewState,
+                            onEditButtonClick = onEditButtonClick,
+                            onTokenClick = onTokenClick,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TokensSection(
+    viewState: WalletViewState,
+    onEditButtonClick: () -> Unit,
+    onTokenClick: (tokenAddress: EthAddress) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(modifier = modifier) {
+        Column {
+            TokensHeader(
+                onEditButtonClick = onEditButtonClick,
+                modifier = Modifier.padding(16.dp),
+            )
+
+            BoxWithConstraints {
+                val spacing = 16.dp
+                val contentPadding = 16.dp
+                val minimumItemWidth = 300.dp
+                val availableWidth = maxWidth - contentPadding * 2
+                val columnCount = maxOf(
+                    1,
+                    ((availableWidth + spacing) / (minimumItemWidth + spacing)).toInt(),
+                )
+                val itemWidth = (availableWidth - spacing * (columnCount - 1)) / columnCount
+
+                FlowRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(contentPadding),
+                    horizontalArrangement = Arrangement.spacedBy(spacing),
+                    verticalArrangement = Arrangement.spacedBy(spacing),
+                    maxItemsInEachRow = columnCount,
+                ) {
+                    if (viewState.balanceLoadState == WalletBalanceLoadState.Loading) {
+                        repeat(10) {
+                            Box(modifier = Modifier.width(itemWidth)) {
+                                TokenItemShimmer()
+                            }
+                        }
+                    } else {
+                        viewState.favoriteTokens.forEach { token ->
+                            TokenCard(
+                                token = token,
+                                onTokenClick = onTokenClick,
+                                modifier = Modifier.width(itemWidth),
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -497,9 +534,17 @@ private fun TotalFiatBalanceCard(
                 },
             ),
         ) {
+            val displayedEthBalance =
+                if (balanceLoadState == WalletBalanceLoadState.Loading) "0.000 ETH" else ethBalance
             Text(
-                text = if (balanceLoadState == WalletBalanceLoadState.Loading) "0.000 ETH" else ethBalance,
-                modifier = Modifier.alpha(if (balanceLoadState == WalletBalanceLoadState.Loading) 0f else 1f),
+                text = displayedEthBalance,
+                modifier = Modifier
+                    .alpha(if (balanceLoadState == WalletBalanceLoadState.Loading) 0f else 1f)
+                    .clearAndSetSemantics {
+                        if (balanceLoadState != WalletBalanceLoadState.Loading) {
+                            contentDescription = "ETH balance: $displayedEthBalance"
+                        }
+                    },
                 fontSize = 18.sp,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 maxLines = 1,

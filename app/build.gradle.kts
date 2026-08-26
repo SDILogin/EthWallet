@@ -1,6 +1,9 @@
 import androidx.room.gradle.RoomExtension
 import com.android.build.api.dsl.ApplicationExtension
+import org.gradle.api.tasks.testing.Test
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -151,4 +154,117 @@ dependencies {
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+val sepoliaE2eEnabled = providers.gradleProperty("sepoliaE2e")
+    .map { it == "true" }
+    .orElse(false)
+val localPropertiesFile = rootProject.layout.projectDirectory.file("local.properties")
+val sepoliaE2eCategory = "me.sdi.ethwallet.flow.e2e.environment.SepoliaE2e"
+val localPropertiesPathProperty = "ethwallet.e2e.localProperties"
+
+fun commandSucceeds(vararg command: String): Boolean {
+    val process = ProcessBuilder(*command)
+        .directory(rootProject.projectDir)
+        .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+        .redirectError(ProcessBuilder.Redirect.DISCARD)
+        .start()
+    return process.waitFor() == 0
+}
+
+val validateSepoliaE2eEnvironment = tasks.register("validateSepoliaE2eEnvironment") {
+    group = "verification"
+    description = "Validates the local, secret-backed Sepolia E2E environment."
+    outputs.upToDateWhen { false }
+    doLast {
+        check(sepoliaE2eEnabled.get()) {
+            "Sepolia E2E is disabled. Run with -PsepoliaE2e=true."
+        }
+        check(System.getProperty("os.name").startsWith("Mac", ignoreCase = true)) {
+            "Sepolia E2E Android host tests currently require macOS."
+        }
+        check(System.getProperty("os.arch").lowercase() in setOf("aarch64", "arm64", "x86_64", "amd64")) {
+            "Sepolia E2E Android host tests require Intel or Apple Silicon macOS."
+        }
+        check(localPropertiesFile.asFile.isFile) {
+            "Missing root local.properties."
+        }
+        check(commandSucceeds("git", "check-ignore", "--quiet", "--", "local.properties")) {
+            "Root local.properties must be ignored by Git."
+        }
+        check(!commandSucceeds("git", "ls-files", "--error-unmatch", "--", "local.properties")) {
+            "Root local.properties must not be tracked by Git."
+        }
+        val properties = Properties().apply {
+            localPropertiesFile.asFile.inputStream().use(::load)
+        }
+        check(properties.getProperty("seed_1")?.isNotBlank() == true) {
+            "Missing required Sepolia E2E property: seed_1"
+        }
+        check(properties.getProperty("seed_2")?.isNotBlank() == true) {
+            "Missing required Sepolia E2E property: seed_2"
+        }
+        check(properties.getProperty("seed_1") != properties.getProperty("seed_2")) {
+            "Sepolia E2E seed phrases must identify different accounts."
+        }
+        logger.lifecycle("Sepolia E2E environment is configured.")
+    }
+}
+
+tasks.withType<Test>().configureEach {
+    val runsSepoliaE2e = name == "testDebugUnitTest" && sepoliaE2eEnabled.get()
+    useJUnit {
+        if (runsSepoliaE2e) {
+            includeCategories(sepoliaE2eCategory)
+        } else {
+            excludeCategories(sepoliaE2eCategory)
+        }
+    }
+
+    if (runsSepoliaE2e) {
+        dependsOn(validateSepoliaE2eEnvironment)
+        systemProperty(localPropertiesPathProperty, localPropertiesFile.asFile.absolutePath)
+
+        val hostArchitecture = System.getProperty("os.arch").lowercase()
+        val (rustBuildTask, rustTarget) = when (hostArchitecture) {
+            "aarch64", "arm64" -> {
+                ":ethwallet-kotlin:buildRustMacosArm64" to "aarch64-apple-darwin"
+            }
+            "x86_64", "amd64" -> {
+                ":ethwallet-kotlin:buildRustMacosX64" to "x86_64-apple-darwin"
+            }
+            else -> {
+                null to null
+            }
+        }
+        if (rustBuildTask != null && rustTarget != null) {
+            dependsOn(rustBuildTask)
+            val nativeDirectory = rootProject.layout.projectDirectory
+                .dir("ethwallet-kotlin/build/rust/target/$rustTarget/release")
+                .asFile
+            val javaLibraryPath = listOf(
+                nativeDirectory.absolutePath,
+                System.getProperty("java.library.path").orEmpty(),
+            ).filter(String::isNotEmpty).joinToString(File.pathSeparator)
+            systemProperty("java.library.path", javaLibraryPath)
+        } else {
+            doFirst {
+                error("Sepolia E2E Android host tests require Intel or Apple Silicon macOS.")
+            }
+        }
+    }
+}
+
+tasks.register("sepoliaE2eTest") {
+    group = "verification"
+    description = "Runs the opt-in Sepolia wallet transfer E2E test."
+    dependsOn(validateSepoliaE2eEnvironment)
+    if (sepoliaE2eEnabled.get()) {
+        dependsOn("testDebugUnitTest")
+    }
+    doFirst {
+        check(sepoliaE2eEnabled.get()) {
+            "Sepolia E2E is disabled. Run with -PsepoliaE2e=true."
+        }
+    }
 }

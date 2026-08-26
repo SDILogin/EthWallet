@@ -3,6 +3,7 @@ package me.sdi.ethwallet.flow
 import android.os.Build
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -11,6 +12,8 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import androidx.fragment.app.FragmentActivity
 import me.sdi.ethwallet.ui.wallet.WalletBalanceLoadState
 import me.sdi.ethwallet.ui.wallet.WalletFiatLoadState
@@ -22,6 +25,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
@@ -65,18 +69,44 @@ class WalletScreenContentTest {
 
         composeTestRule.onNodeWithText("USD value unavailable").assertIsDisplayed()
     }
+
+    @Test
+    fun pulling_from_balance_refreshes_dashboard() {
+        var refreshCount = 0
+        activity.setWalletContent(
+            WalletViewState(
+                chainId = 11155111L,
+                totalBalanceEth = "1 ETH",
+                balanceLoadState = WalletBalanceLoadState.Content,
+                fiatLoadState = WalletFiatLoadState.Available,
+            ),
+            onRefresh = { refreshCount += 1 },
+        )
+
+        composeTestRule.onNodeWithContentDescription("ETH balance: 1 ETH").performTouchInput {
+            swipe(
+                start = center,
+                end = Offset(center.x, center.y + 240f),
+                durationMillis = 500L,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        assertEquals(1, refreshCount)
+    }
 }
 
 private class WalletScreenContentTestActivity : FragmentActivity() {
     fun setWalletContent(
         viewState: WalletViewState,
         onRetry: () -> Unit = {},
+        onRefresh: () -> Unit = {},
     ) {
         setContent {
             MaterialTheme {
                 WalletScreenContent(
                     viewState = viewState,
-                    onRefresh = {},
+                    onRefresh = onRefresh,
                     onRetry = onRetry,
                     showUpButton = false,
                     onUpButtonClick = {},
