@@ -20,6 +20,7 @@ release/
 .gradle/
 build/
 **/build/
+ethwallet-kotlin/rust/target/
 
 # Kotlin
 .kotlin/

@@ -1,0 +1,3 @@
+headers = ethwallet_crypto.h
+headerFilter = ethwallet_crypto.h
+package = ethwallet_crypto

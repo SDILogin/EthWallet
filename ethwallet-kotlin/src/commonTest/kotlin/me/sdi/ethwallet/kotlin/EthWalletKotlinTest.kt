@@ -5,6 +5,12 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+
+private const val CANONICAL_MNEMONIC =
+    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+private const val CANONICAL_ETHEREUM_ADDRESS = "0x9858effd232b4033e47d90003d41ec34ecaeda94"
+private const val PRIVATE_KEY_ONE_ETHEREUM_ADDRESS = "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"
 
 class EthWalletKotlinTest {
     @Test
@@ -16,7 +22,7 @@ class EthWalletKotlinTest {
 
     @Test
     fun modelsRepresentEthAndErc20Assets() {
-        val address = EthAddress("0x1234")
+        val address = EthAddress(CANONICAL_ETHEREUM_ADDRESS)
 
         assertEquals(Asset.Eth, Asset.Eth)
         assertEquals(Asset.Erc20(address), Asset.Erc20(address))
@@ -33,37 +39,83 @@ class EthWalletKotlinTest {
     }
 
     @Test
-    fun mnemonicCopiesInputAndClearingUpdatesItsViews() {
-        val source = StringBuilder("alpha beta")
-        val mnemonic = Mnemonic(source)
+    fun parseNormalizesAsciiCaseAndWhitespace() = runTest {
+        val source = StringBuilder(
+            "  ABANDON\tABANDON abandon\nABANDON abandon abandon  abandon abandon abandon abandon abandon  ABOUT  ",
+        )
 
-        source[0] = 'X'
+        val mnemonic = Mnemonic.parse(source)
+        source[2] = 'x'
 
-        assertEquals("alpha", mnemonic.words[0].copyToString())
+        assertEquals(12, mnemonic.words.size)
+        assertEquals("abandon", mnemonic.words.first().copyToString())
+        assertEquals("about", mnemonic.words.last().copyToString())
         assertEquals("Mnemonic(**redacted**)", mnemonic.toString())
-        assertEquals("MnemonicWord(**redacted**)", mnemonic.words[0].toString())
-
-        mnemonic.clear()
-
-        assertEquals("\u0000".repeat(5), mnemonic.words[0].copyToString())
+        assertEquals("MnemonicWord(**redacted**)", mnemonic.words.first().toString())
     }
 
     @Test
-    fun privateKeyCopiesInputAndOutputAndCanBeCleared() {
-        val source = ByteArray(32) { it.toByte() }
-        val privateKey = PrivateKey.fromBytes(source)
-        source.fill(7)
+    fun parseRejectsInvalidBip39Phrases() = runTest {
+        assertFailsWith<IllegalArgumentException> {
+            Mnemonic.parse("abandon ".repeat(12).trim())
+        }
+        assertFailsWith<IllegalArgumentException> {
+            Mnemonic.parse("abandon ".repeat(11) + "zzzz")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            Mnemonic.parse("abandon ".repeat(11) + "about!")
+        }
+        assertFailsWith<IllegalArgumentException> {
+            Mnemonic.parse("abandon ".repeat(11).trim())
+        }
+    }
 
-        assertContentEquals(ByteArray(32) { it.toByte() }, privateKey.copyBytes())
+    @Test
+    fun canonicalMnemonicDerivesTheFirstEthereumBip44Address() = runTest {
+        val privateKey = Mnemonic.parse(CANONICAL_MNEMONIC).derivePrivateKey()
 
-        val copy = privateKey.copyBytes()
-        copy.fill(8)
-        assertContentEquals(ByteArray(32) { it.toByte() }, privateKey.copyBytes())
+        assertEquals(CANONICAL_ETHEREUM_ADDRESS, privateKey.deriveAddress().value)
+    }
+
+    @Test
+    fun privateKeyOneDerivesTheKnownEthereumAddress() = runTest {
+        val privateKeyBytes = ByteArray(32).also { it[31] = 1 }
+        val privateKey = PrivateKey.fromBytes(privateKeyBytes)
+        privateKeyBytes.fill(7)
+
+        assertContentEquals(ByteArray(32).also { it[31] = 1 }, privateKey.copyBytes())
+        privateKey.copyBytes().also { returned ->
+            returned.fill(7)
+        }
+        assertContentEquals(ByteArray(32).also { it[31] = 1 }, privateKey.copyBytes())
+        assertEquals(PRIVATE_KEY_ONE_ETHEREUM_ADDRESS, privateKey.deriveAddress().value)
         assertEquals("PrivateKey(**redacted**)", privateKey.toString())
+    }
 
+    @Test
+    fun walletCreationProducesAValidTwelveWordMnemonic() = runTest {
+        val mnemonic = EthWalletKotlin.createWallet()
+        val phrase = mnemonic.words.joinToString(separator = " ") { it.copyToString() }
+
+        assertEquals(12, mnemonic.words.size)
+        assertEquals(phrase, Mnemonic.parse(phrase).words.joinToString(" ") { it.copyToString() })
+        assertTrue(mnemonic.words.all { word -> word.all { it in 'a'..'z' } })
+    }
+
+    @Test
+    fun clearedSecretsCannotBeUsedAndTheirMutableViewsAreCleared() = runTest {
+        val mnemonic = Mnemonic.parse(CANONICAL_MNEMONIC)
+        val firstWord = mnemonic.words.first()
+        mnemonic.clear()
+
+        assertEquals("\u0000".repeat(firstWord.length), firstWord.copyToString())
+        assertSuspendFailsWith<IllegalStateException> { mnemonic.derivePrivateKey() }
+
+        val privateKey = PrivateKey.fromBytes(ByteArray(32).also { it[31] = 1 })
         privateKey.clear()
 
         assertContentEquals(ByteArray(32), privateKey.copyBytes())
+        assertSuspendFailsWith<IllegalStateException> { privateKey.deriveAddress() }
     }
 
     @Test
@@ -74,13 +126,27 @@ class EthWalletKotlinTest {
     }
 
     @Test
-    fun walletAndCryptographicOperationsAreStubs() = runTest {
+    fun invalidPrivateKeysAreRejectedAtConstruction() {
+        assertFailsWith<IllegalArgumentException> {
+            PrivateKey.fromBytes(ByteArray(32))
+        }
+        assertFailsWith<IllegalArgumentException> {
+            PrivateKey.fromBytes(SECP256K1_ORDER_BYTES.copyOf())
+        }
+        assertFailsWith<IllegalArgumentException> {
+            PrivateKey.fromBytes(ByteArray(32) { 0xff.toByte() })
+        }
+        PrivateKey.fromBytes(SECP256K1_ORDER_BYTES.decrementUnsigned()).clear()
+    }
+
+    @Test
+    fun rpcOperationsRemainStubs() = runTest {
         val network = EthereumNetwork(
             chainId = 1L,
             transport = JsonRpcTransport { error("Transport must not be used by stubs") },
         )
-        val address = EthAddress("0x1234")
-        val privateKey = PrivateKey.fromBytes(ByteArray(32))
+        val address = EthAddress(CANONICAL_ETHEREUM_ADDRESS)
+        val privateKey = PrivateKey.fromBytes(ByteArray(32).also { it[31] = 1 })
         val request = TransferRequest(
             destination = address,
             asset = Asset.Eth,
@@ -90,19 +156,57 @@ class EthWalletKotlinTest {
             maxFeePerGas = UInt256("0x2"),
         )
 
-        assertFailsWith<NotImplementedError> { EthWalletKotlin.createWallet() }
-        assertFailsWith<NotImplementedError> { Mnemonic.parse(StringBuilder("alpha beta")) }
-        assertFailsWith<NotImplementedError> { Mnemonic("alpha beta").derivePrivateKey() }
-        assertFailsWith<NotImplementedError> { privateKey.deriveAddress() }
-        assertFailsWith<NotImplementedError> {
-            EthWalletKotlin.getBalance(network, address, Asset.Eth)
-        }
-        assertFailsWith<NotImplementedError> {
+        assertSuspendFailsWith<NotImplementedError> {
             EthWalletKotlin.getFeeSuggestion(network)
         }
-        assertFailsWith<NotImplementedError> {
+        assertSuspendFailsWith<NotImplementedError> {
             EthWalletKotlin.sendTransfer(network, privateKey, request)
         }
+    }
+}
+
+private val SECP256K1_ORDER_BYTES = byteArrayOf(
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xff.toByte(),
+    0xfe.toByte(),
+    0xba.toByte(),
+    0xae.toByte(),
+    0xdc.toByte(),
+    0xe6.toByte(),
+    0xaf.toByte(),
+    0x48,
+    0xa0.toByte(),
+    0x3b,
+    0xbf.toByte(),
+    0xd2.toByte(),
+    0x5e,
+    0x8c.toByte(),
+    0xd0.toByte(),
+    0x36,
+    0x41,
+    0x41,
+)
+
+private fun ByteArray.decrementUnsigned(): ByteArray = copyOf().also { bytes ->
+    for (index in bytes.lastIndex downTo 0) {
+        if (bytes[index].toInt() and 0xff > 0) {
+            bytes[index] = (bytes[index] - 1).toByte()
+            break
+        }
+        bytes[index] = 0xff.toByte()
     }
 }
 
