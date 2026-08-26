@@ -77,6 +77,15 @@ class GetBalanceTest {
     }
 
     @Test
+    fun largestEthBalanceIsReturnedAsQuantity() = runTest {
+        val largest = "0x" + "f".repeat(64)
+
+        val balance = EthWalletKotlin.getBalance(network(RecordingTransport(success(largest))), owner, Asset.Eth)
+
+        assertEquals(UInt256(largest), balance, "largest balance")
+    }
+
+    @Test
     fun unknownResponseKeysAreIgnored() = runTest {
         val transport = RecordingTransport("""{"jsonrpc":"2.0","id":1,"result":"0x1","extra":true}""")
 
@@ -121,10 +130,13 @@ class GetBalanceTest {
             """{"jsonrpc":"2.0","id":1,"error":{"code":-32000,"message":"insufficient funds","data":"0xabc"}}""",
         )
 
-        val rejected = assertSuspendFailsWith<IllegalStateException> {
+        val rejected = assertSuspendFailsWith<JsonRpcException.Rejected> {
             EthWalletKotlin.getBalance(network(transport), owner, Asset.Eth)
         }
 
+        assertEquals(-32000, rejected.code)
+        assertEquals("insufficient funds", rejected.rpcMessage)
+        assertEquals(JsonPrimitive("0xabc"), rejected.data)
         assertEquals("JSON-RPC error -32000: insufficient funds: 0xabc", rejected.message)
     }
 
@@ -132,10 +144,13 @@ class GetBalanceTest {
     fun errorWithNullIdIsStillReported() = runTest {
         val transport = RecordingTransport("""{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"parse error"}}""")
 
-        val rejected = assertSuspendFailsWith<IllegalStateException> {
+        val rejected = assertSuspendFailsWith<JsonRpcException.Rejected> {
             EthWalletKotlin.getBalance(network(transport), owner, Asset.Eth)
         }
 
+        assertEquals(-32700, rejected.code)
+        assertEquals("parse error", rejected.rpcMessage)
+        assertEquals(null, rejected.data)
         assertEquals("JSON-RPC error -32700: parse error", rejected.message)
     }
 
@@ -143,10 +158,11 @@ class GetBalanceTest {
     fun nullErrorDataIsReportedWithoutExtraText() = runTest {
         val transport = RecordingTransport("""{"jsonrpc":"2.0","id":1,"error":{"code":3,"message":"reverted","data":null}}""")
 
-        val rejected = assertSuspendFailsWith<IllegalStateException> {
+        val rejected = assertSuspendFailsWith<JsonRpcException.Rejected> {
             EthWalletKotlin.getBalance(network(transport), owner, Asset.Eth)
         }
 
+        assertEquals(null, rejected.data)
         assertEquals("JSON-RPC error 3: reverted", rejected.message)
     }
 
@@ -156,20 +172,55 @@ class GetBalanceTest {
             """{"jsonrpc":"2.0","id":1,"error":{"code":3,"message":"reverted","data":{"reason":"paused"}}}""",
         )
 
-        val rejected = assertSuspendFailsWith<IllegalStateException> {
+        val rejected = assertSuspendFailsWith<JsonRpcException.Rejected> {
             EthWalletKotlin.getBalance(network(transport), owner, Asset.Eth)
         }
 
+        assertEquals(Json.parseToJsonElement("{\"reason\":\"paused\"}"), rejected.data)
         assertEquals("JSON-RPC error 3: reverted: {\"reason\":\"paused\"}", rejected.message)
     }
 
     @Test
+    fun mismatchedErrorIdIsAnInvalidResponse() = runTest {
+        val invalid = assertSuspendFailsWith<JsonRpcException.InvalidResponse> {
+            EthWalletKotlin.getBalance(
+                network(
+                    RecordingTransport(
+                        """{"jsonrpc":"2.0","id":2,"error":{"code":3,"message":"reverted"}}""",
+                    ),
+                ),
+                owner,
+                Asset.Eth,
+            )
+        }
+
+        assertTrue(invalid.cause is IllegalArgumentException)
+    }
+
+    @Test
+    fun responseWithResultAndErrorIsAnInvalidResponse() = runTest {
+        val invalid = assertSuspendFailsWith<JsonRpcException.InvalidResponse> {
+            EthWalletKotlin.getBalance(
+                network(
+                    RecordingTransport(
+                        """{"jsonrpc":"2.0","id":1,"result":"0x1","error":{"code":3,"message":"reverted"}}""",
+                    ),
+                ),
+                owner,
+                Asset.Eth,
+            )
+        }
+
+        assertTrue(invalid.cause is IllegalArgumentException)
+    }
+
+    @Test
     fun nonJsonBodyKeepsParserCause() = runTest {
-        val invalid = assertSuspendFailsWith<SerializationException> {
+        val invalid = assertSuspendFailsWith<JsonRpcException.InvalidResponse> {
             EthWalletKotlin.getBalance(network(RecordingTransport("<html>502</html>")), owner, Asset.Eth)
         }
 
-        assertTrue(invalid.message.orEmpty().isNotEmpty())
+        assertTrue(invalid.cause is SerializationException)
     }
 
     @Test
@@ -187,10 +238,10 @@ class GetBalanceTest {
         )
 
         for (body in bodies) {
-            val failure = assertSuspendFailsWith<Exception>("Body $body") {
+            val failure = assertSuspendFailsWith<JsonRpcException.InvalidResponse>("Body $body") {
                 EthWalletKotlin.getBalance(network(RecordingTransport(body)), owner, Asset.Eth)
             }
-            assertTrue(failure is SerializationException || failure is IllegalStateException)
+            assertTrue(failure.cause != null)
         }
     }
 
@@ -202,10 +253,42 @@ class GetBalanceTest {
         )
 
         for (body in bodies) {
-            assertSuspendFailsWith<IllegalStateException>("Body $body") {
+            assertSuspendFailsWith<JsonRpcException.InvalidResponse>("Body $body") {
                 EthWalletKotlin.getBalance(network(RecordingTransport(body)), owner, erc20)
             }
         }
+    }
+
+    @Test
+    fun nonCanonicalEthQuantitiesAreInvalidResponses() = runTest {
+        val invalidQuantities = listOf(
+            "0x",
+            "0x00",
+            "0x01",
+            "0x" + "f".repeat(65),
+            "0xA",
+            "1",
+        )
+
+        for (quantity in invalidQuantities) {
+            val invalid = assertSuspendFailsWith<JsonRpcException.InvalidResponse>("Quantity $quantity") {
+                EthWalletKotlin.getBalance(network(RecordingTransport(success(quantity))), owner, Asset.Eth)
+            }
+            assertTrue(invalid.cause is IllegalArgumentException, "Quantity $quantity cause")
+        }
+    }
+
+    @Test
+    fun nonStringEthQuantityIsAnInvalidResponse() = runTest {
+        val invalid = assertSuspendFailsWith<JsonRpcException.InvalidResponse> {
+            EthWalletKotlin.getBalance(
+                network(RecordingTransport("""{"jsonrpc":"2.0","id":1,"result":1}""")),
+                owner,
+                Asset.Eth,
+            )
+        }
+
+        assertTrue(invalid.cause is IllegalArgumentException)
     }
 
     @Test
