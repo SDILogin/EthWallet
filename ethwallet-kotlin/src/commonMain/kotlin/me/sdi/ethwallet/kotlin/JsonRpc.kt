@@ -58,7 +58,7 @@ internal suspend fun JsonRpcTransport.call(
 
 private fun JsonRpcResponse.extractResultOrThrow(): JsonElement {
     check(jsonrpc == JSON_RPC_VERSION) {
-        "Unsupported JSON-RPC version '${jsonrpc}'"
+        "Unsupported JSON-RPC version '$jsonrpc'"
     }
     error?.let { error ->
         val data = when (val errorData = error.data) {
@@ -69,7 +69,7 @@ private fun JsonRpcResponse.extractResultOrThrow(): JsonElement {
         throw IllegalStateException("JSON-RPC error ${error.code}: ${error.message}$data")
     }
     check(id == JsonPrimitive(REQUEST_ID)) {
-        "Response id ${id} does not match request id $REQUEST_ID"
+        "Response id $id does not match request id $REQUEST_ID"
     }
     return checkNotNull(result?.takeUnless { it is JsonNull }) {
         "Response has no result and no error"

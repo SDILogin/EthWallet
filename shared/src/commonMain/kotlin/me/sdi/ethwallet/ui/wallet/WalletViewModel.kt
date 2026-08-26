@@ -5,10 +5,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -40,11 +41,9 @@ class WalletViewModel(
     val viewState: StateFlow<WalletViewState>
         field = MutableStateFlow(WalletViewState(chainId = chainConfig.chainId))
 
-    val news: SharedFlow<WalletNews>
-        field = MutableSharedFlow<WalletNews>(
-            extraBufferCapacity = 1,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST,
-        )
+    private val newsChannel = Channel<WalletNews>(Channel.BUFFERED)
+
+    val news: Flow<WalletNews> = newsChannel.receiveAsFlow()
 
     private var refreshJob: Job? = null
 
@@ -55,16 +54,13 @@ class WalletViewModel(
 
         startObservingWalletBalanceChanges()
         startObservingWalletLabelChanges()
-
-        news
-            .onEach { Logger.debug(TAG) { "News: $it" } }
-            .launchIn(viewModelScope)
     }
 
     fun onEvent(event: WalletEvent) {
         Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
             is WalletEvent.Refresh -> onRefreshRequested()
+            is WalletEvent.Retry -> onRefreshRequested()
         }
     }
 
@@ -88,7 +84,6 @@ class WalletViewModel(
                 .onStart { refreshData(isUserInitiated = false) }
                 .onEach { Logger.debug(TAG) { "Balance update for $walletAddress: $it" } }
                 .collectLatest { combinedBalance: CombinedBalance -> displayUpdatedBalance(combinedBalance) }
-
         }.also { job ->
             job.invokeOnCompletion { throwable ->
                 when (throwable) {
@@ -125,63 +120,93 @@ class WalletViewModel(
                 totalBalanceEth = summary.totalBalanceEth,
                 totalBalanceUsd = summary.totalBalanceUsd,
                 favoriteTokens = summary.favoriteTokens,
-                isBalanceLoading = false,
+                balanceLoadState = WalletBalanceLoadState.Content,
+                fiatLoadState = if (summary.totalBalanceUsd != null) {
+                    WalletFiatLoadState.Available
+                } else {
+                    currentViewState.fiatLoadState
+                },
             )
         }
     }
 
     private fun refreshData(isUserInitiated: Boolean) {
-        refreshJob = viewModelScope.launch(CoroutineName("WalletRefresh")) {
-            if (isUserInitiated) {
-                viewState.update { it.copy(isRefreshing = true) }
-            }
+        viewState.update { state ->
+            state.copy(
+                balanceLoadState = when (state.balanceLoadState) {
+                    WalletBalanceLoadState.Content -> state.balanceLoadState
+                    else -> WalletBalanceLoadState.Loading
+                },
+                fiatLoadState = when (state.fiatLoadState) {
+                    WalletFiatLoadState.Available -> state.fiatLoadState
+                    else -> WalletFiatLoadState.Loading
+                },
+                showP2rIndicator = isUserInitiated,
+            )
+        }
 
+        refreshJob = viewModelScope.launch(CoroutineName("WalletRefresh")) {
             try {
-                supervisorScope {
-                    launch { updateWalletBalanceOrShowError() }
-                    launch { updateFiatRatesOrShowError() }
+                val (balanceUpdated, fiatUpdated) = supervisorScope {
+                    val balance = async { updateWalletBalance() }
+                    val fiat = async { updateFiatRates() }
+                    balance.await() to fiat.await()
+                }
+
+                val shouldShowRefreshError = isRefreshErrorShouldBeShown(
+                    balanceLoadingState = viewState.value.balanceLoadState,
+                    balanceUpdateSuccess = balanceUpdated,
+                    fiatUpdateSuccess = fiatUpdated,
+                )
+                if (shouldShowRefreshError) {
+                    newsChannel.send(WalletNews.ShowErrorMessage)
                 }
             } finally {
                 if (isUserInitiated) {
-                    viewState.update { it.copy(isRefreshing = false) }
-                }
-            }
-        }.also { job ->
-            job.invokeOnCompletion { throwable ->
-                when (throwable) {
-                    null -> Logger.debug(TAG) { "refreshJob successfully completed" }
-                    is CancellationException -> Logger.debug(TAG) { "refreshJob cancelled" }
-                    else -> Logger.warn(TAG, throwable) { "refreshJob completed with exception" }
+                    viewState.update { it.copy(showP2rIndicator = false) }
                 }
             }
         }
     }
 
-    private suspend fun updateFiatRatesOrShowError() {
-        try {
+    private fun isRefreshErrorShouldBeShown(
+        balanceLoadingState: WalletBalanceLoadState,
+        balanceUpdateSuccess: Boolean,
+        fiatUpdateSuccess: Boolean,
+    ): Boolean {
+        // toast must be shown only when content is on screen. In other cases errors must be handled by
+        // error states with recovery action buttons
+        if (balanceLoadingState != WalletBalanceLoadState.Content) return false
+
+        val success = balanceUpdateSuccess && fiatUpdateSuccess
+        return !success
+    }
+
+    private suspend fun updateFiatRates(): Boolean {
+        return try {
             fiatRateProvider.forceUpdate()
+            true
         } catch (e: Exception) {
             if (e is CancellationException) throw e
 
             Logger.warn(TAG) {
                 "Failed to force update fiat rates: ${e.message}"
             }
-
-            news.emit(WalletNews.ShowErrorMessage(e))
+            false
         }
     }
 
-    private suspend fun updateWalletBalanceOrShowError() {
-        try {
+    private suspend fun updateWalletBalance(): Boolean {
+        return try {
             balanceProvider.forceUpdate(walletAddress)
+            true
         } catch (e: Exception) {
             if (e is CancellationException) throw e
 
             Logger.warn(TAG) {
                 "Failed to force update balance for $walletAddress: ${e.message}"
             }
-
-            news.emit(WalletNews.ShowErrorMessage(e))
+            false
         }
     }
 }

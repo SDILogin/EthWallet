@@ -378,7 +378,9 @@ data class VerifyPinCodeViewState(
  */
 sealed interface VerifyPinCodeNews {
     data object Unlocked : VerifyPinCodeNews
+
     data object LoggedOut : VerifyPinCodeNews
+
     data object Error : VerifyPinCodeNews
 }
 

@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,8 +64,13 @@ import me.sdi.ethwallet.resources.arrow_outward_24px
 import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.edit
 import me.sdi.ethwallet.resources.ic_question_mark_56
+import me.sdi.ethwallet.resources.wallet_balance_error_message
+import me.sdi.ethwallet.resources.wallet_balance_error_title
+import me.sdi.ethwallet.resources.wallet_fiat_unavailable
 import me.sdi.ethwallet.resources.wallet_network
 import me.sdi.ethwallet.resources.wallet_receive
+import me.sdi.ethwallet.resources.wallet_refresh_error
+import me.sdi.ethwallet.resources.wallet_retry
 import me.sdi.ethwallet.resources.wallet_send
 import me.sdi.ethwallet.resources.wallet_tokens_erc20
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
@@ -96,12 +102,11 @@ fun WalletScreen(
     )
     val toastManager = rememberToastManager()
     val showUpButton = LocalListDetailSceneScope.current == null
+    val refreshErrorMessage = stringResource(Res.string.wallet_refresh_error)
     LaunchedEffect(key1 = viewModel.news) {
         viewModel.news.collect { news ->
             when (news) {
-                is WalletNews.ShowErrorMessage -> {
-                    toastManager.showToast("Error: ${news.error.message ?: "Unknown error"}")
-                }
+                WalletNews.ShowErrorMessage -> toastManager.showToast(refreshErrorMessage)
             }
         }
     }
@@ -110,6 +115,7 @@ fun WalletScreen(
     WalletScreenContent(
         viewState = viewState,
         onRefresh = { viewModel.onEvent(WalletEvent.Refresh) },
+        onRetry = { viewModel.onEvent(WalletEvent.Retry) },
         showUpButton = showUpButton,
         onUpButtonClick = onUpButtonClick,
         onEditButtonClick = onEditButtonClick,
@@ -125,6 +131,7 @@ fun WalletScreen(
 fun WalletScreenContent(
     viewState: WalletViewState,
     onRefresh: () -> Unit,
+    onRetry: () -> Unit,
     showUpButton: Boolean,
     onUpButtonClick: () -> Unit,
     onEditButtonClick: () -> Unit,
@@ -158,7 +165,7 @@ fun WalletScreenContent(
         },
     ) { innerPadding ->
         PullToRefreshBox(
-            isRefreshing = viewState.isRefreshing,
+            isRefreshing = viewState.showP2rIndicator,
             onRefresh = onRefresh,
         ) {
             Column(
@@ -169,51 +176,60 @@ fun WalletScreenContent(
                 ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                TotalFiatBalanceCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    fiatBalance = viewState.totalBalanceUsd,
-                    ethBalance = viewState.totalBalanceEth,
-                    chainId = viewState.chainId,
-                    isBalanceLoading = viewState.isBalanceLoading,
-                )
+                when (viewState.balanceLoadState) {
+                    WalletBalanceLoadState.Error -> BalanceErrorCard(onRetry = onRetry)
+                    WalletBalanceLoadState.Loading,
+                    WalletBalanceLoadState.Content,
+                    -> TotalFiatBalanceCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        fiatBalance = viewState.totalBalanceUsd,
+                        ethBalance = viewState.totalBalanceEth,
+                        chainId = viewState.chainId,
+                        balanceLoadState = viewState.balanceLoadState,
+                        fiatLoadState = viewState.fiatLoadState,
+                    )
+                }
 
                 ButtonsPanel(
-                    isLoading = viewState.isBalanceLoading,
+                    isLoading = viewState.balanceLoadState == WalletBalanceLoadState.Loading,
+                    isSendEnabled = viewState.balanceLoadState == WalletBalanceLoadState.Content,
                     onReceiveClick = onReceiveButtonClick,
                     onSendButtonClick = onSendButtonClick,
                 )
 
-                Card(
-                    modifier = Modifier.padding(16.dp),
-                ) {
-                    Column {
-                        TokensHeader(
-                            onEditButtonClick = onEditButtonClick,
-                            modifier = Modifier.padding(16.dp),
-                        )
+                if (viewState.balanceLoadState != WalletBalanceLoadState.Error) {
+                    Card(
+                        modifier = Modifier.padding(16.dp),
+                    ) {
+                        Column {
+                            TokensHeader(
+                                onEditButtonClick = onEditButtonClick,
+                                modifier = Modifier.padding(16.dp),
+                            )
 
-                        LazyVerticalGrid(
-                            columns = GridCells.Adaptive(300.dp),
-                            modifier = Modifier.consumeWindowInsets(innerPadding),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            contentPadding = PaddingValues(16.dp),
-                        ) {
-                            if (viewState.isBalanceLoading) {
-                                repeat(10) {
-                                    item {
-                                        TokenItemShimmer()
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(300.dp),
+                                modifier = Modifier.consumeWindowInsets(innerPadding),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                contentPadding = PaddingValues(16.dp),
+                            ) {
+                                if (viewState.balanceLoadState == WalletBalanceLoadState.Loading) {
+                                    repeat(10) {
+                                        item {
+                                            TokenItemShimmer()
+                                        }
                                     }
-                                }
-                            } else if (viewState.favoriteTokens.isNotEmpty()) {
-                                items(
-                                    items = viewState.favoriteTokens,
-                                    key = { it.address.toString() },
-                                ) { token ->
-                                    TokenCard(
-                                        token = token,
-                                        onTokenClick = onTokenClick,
-                                    )
+                                } else if (viewState.favoriteTokens.isNotEmpty()) {
+                                    items(
+                                        items = viewState.favoriteTokens,
+                                        key = { it.address.toString() },
+                                    ) { token ->
+                                        TokenCard(
+                                            token = token,
+                                            onTokenClick = onTokenClick,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -256,6 +272,42 @@ private fun TokensHeader(
     }
 }
 
+@Composable
+private fun BalanceErrorCard(
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.padding(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(Res.string.wallet_balance_error_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(Res.string.wallet_balance_error_message),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onRetry) {
+                Text(stringResource(Res.string.wallet_retry))
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TokenCard(
@@ -285,6 +337,7 @@ private fun TokenCard(
 @Composable
 private fun ButtonsPanel(
     isLoading: Boolean,
+    isSendEnabled: Boolean,
     onReceiveClick: () -> Unit,
     onSendButtonClick: () -> Unit,
 ) {
@@ -295,15 +348,11 @@ private fun ButtonsPanel(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        if (isLoading) {
-            CircularButtonWithTitleShimmer(title = receiveTitle)
-        } else {
-            CircularButtonWithTitle(
-                title = receiveTitle,
-                icon = painterResource(Res.drawable.arrow_downward_24px),
-                onClick = onReceiveClick,
-            )
-        }
+        CircularButtonWithTitle(
+            title = receiveTitle,
+            icon = painterResource(Res.drawable.arrow_downward_24px),
+            onClick = onReceiveClick,
+        )
 
         Spacer(modifier = Modifier.width(32.dp))
 
@@ -314,6 +363,7 @@ private fun ButtonsPanel(
                 title = sendTitle,
                 icon = painterResource(Res.drawable.arrow_outward_24px),
                 onClick = onSendButtonClick,
+                enabled = isSendEnabled,
             )
         }
     }
@@ -324,12 +374,14 @@ private fun CircularButtonWithTitle(
     title: String,
     icon: Painter,
     onClick: () -> Unit,
+    enabled: Boolean = true,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         IconButton(
             onClick = onClick,
+            enabled = enabled,
             colors = IconButtonDefaults.iconButtonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -345,6 +397,7 @@ private fun CircularButtonWithTitle(
             text = title,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.alpha(if (enabled) 1f else 0.6f),
         )
     }
 }
@@ -379,43 +432,63 @@ private fun TotalFiatBalanceCard(
     fiatBalance: String?,
     ethBalance: String,
     chainId: Long,
-    isBalanceLoading: Boolean,
+    balanceLoadState: WalletBalanceLoadState,
+    fiatLoadState: WalletFiatLoadState,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        val isFiatLoading = fiatBalance == null
-        Box(
-            modifier = Modifier.then(
-                if (isFiatLoading) {
-                    Modifier
+        when (fiatLoadState) {
+            WalletFiatLoadState.Loading -> {
+                Box(
+                    modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .shimmer()
-                } else {
-                    Modifier
-                },
-            ),
-        ) {
-            BasicText(
-                text = fiatBalance ?: "\$00,000.00",
-                modifier = Modifier.alpha(if (isFiatLoading) 0f else 1f),
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = 12.sp,
-                    maxFontSize = 48.sp,
-                ),
-                style = MaterialTheme.typography.headlineLarge.copy(
+                        .shimmer(),
+                ) {
+                    BasicText(
+                        text = "\$00,000.00",
+                        modifier = Modifier.alpha(0f),
+                        autoSize = TextAutoSize.StepBased(
+                            minFontSize = 12.sp,
+                            maxFontSize = 48.sp,
+                        ),
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        ),
+                        maxLines = 1,
+                    )
+                }
+            }
+            WalletFiatLoadState.Available -> {
+                BasicText(
+                    text = fiatBalance.orEmpty(),
+                    autoSize = TextAutoSize.StepBased(
+                        minFontSize = 12.sp,
+                        maxFontSize = 48.sp,
+                    ),
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    ),
+                    maxLines = 1,
+                )
+            }
+            WalletFiatLoadState.Unavailable -> {
+                Text(
+                    text = stringResource(Res.string.wallet_fiat_unavailable),
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
-                ),
-                maxLines = 1,
-            )
+                )
+            }
         }
         Spacer(modifier = Modifier.height(4.dp))
         Box(
             modifier = Modifier.then(
-                if (isBalanceLoading) {
+                if (balanceLoadState == WalletBalanceLoadState.Loading) {
                     Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .shimmer()
@@ -425,8 +498,8 @@ private fun TotalFiatBalanceCard(
             ),
         ) {
             Text(
-                text = if (isBalanceLoading) "0.000 ETH" else ethBalance,
-                modifier = Modifier.alpha(if (isBalanceLoading) 0f else 1f),
+                text = if (balanceLoadState == WalletBalanceLoadState.Loading) "0.000 ETH" else ethBalance,
+                modifier = Modifier.alpha(if (balanceLoadState == WalletBalanceLoadState.Loading) 0f else 1f),
                 fontSize = 18.sp,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 maxLines = 1,
@@ -605,11 +678,18 @@ private class WalletViewStateProvider : PreviewParameterProvider<WalletViewState
                     usdValueFormatted = "$750.50",
                 ),
             ),
-            isBalanceLoading = false,
+            balanceLoadState = WalletBalanceLoadState.Content,
+            fiatLoadState = WalletFiatLoadState.Available,
         ),
         WalletViewState(
             walletName = "Daily spending",
-            isBalanceLoading = true,
+            balanceLoadState = WalletBalanceLoadState.Loading,
+            fiatLoadState = WalletFiatLoadState.Loading,
+        ),
+        WalletViewState(
+            walletName = "Daily spending",
+            balanceLoadState = WalletBalanceLoadState.Error,
+            fiatLoadState = WalletFiatLoadState.Unavailable,
         ),
     )
 }
@@ -629,6 +709,7 @@ private fun WalletScreenContentPreview(
             onReceiveButtonClick = {},
             onSendButtonClick = {},
             onRefresh = {},
+            onRetry = {},
         )
     }
 }

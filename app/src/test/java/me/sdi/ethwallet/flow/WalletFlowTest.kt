@@ -4,7 +4,7 @@ import android.app.Application
 import android.os.Build
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.flow.Flow

@@ -234,7 +234,7 @@ private fun SendScreenContent(
                     supportingText = viewState.transferAmountInputState.error
                         ?: viewState.transferAmountUsd?.let {
                             stringResource(Res.string.send_fee_estimate, it)
-                    },
+                        },
                     onAmountChanged = { onEvent(SendEvent.OnTransferAmountChanged(it)) },
                 )
             }

@@ -11,7 +11,8 @@ import java.math.BigDecimal
  * @property totalBalanceUsd The total wallet balance in USD, or `null` while fiat data is unavailable
  * @property totalBalanceEth The total wallet balance in ETH
  * @property favoriteTokens The list of favorite tokens
- * @property isBalanceLoading Whether blockchain balance data is being loaded
+ * @property balanceLoadState The current blockchain balance loading state
+ * @property fiatLoadState The current fiat-rate loading state
  */
 @Immutable
 data class WalletViewState(
@@ -20,9 +21,22 @@ data class WalletViewState(
     val totalBalanceUsd: String? = null,
     val totalBalanceEth: String = "",
     val favoriteTokens: List<FavoriteToken> = emptyList(),
-    val isBalanceLoading: Boolean = true,
-    val isRefreshing: Boolean = false,
+    val balanceLoadState: WalletBalanceLoadState = WalletBalanceLoadState.Loading,
+    val fiatLoadState: WalletFiatLoadState = WalletFiatLoadState.Loading,
+    val showP2rIndicator: Boolean = false,
 )
+
+enum class WalletBalanceLoadState {
+    Loading,
+    Content,
+    Error,
+}
+
+enum class WalletFiatLoadState {
+    Loading,
+    Available,
+    Unavailable,
+}
 
 /**
  * Represents a favorite token in the wallet.

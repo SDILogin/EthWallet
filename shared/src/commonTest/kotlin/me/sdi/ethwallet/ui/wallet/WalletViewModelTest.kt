@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeoutOrNull
 import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
@@ -52,6 +53,7 @@ class WalletViewModelTest {
     private val fiatRateFlow = MutableStateFlow<Map<EthAddress, BigDecimal>>(emptyMap())
     private val observedAddresses = mutableListOf<EthAddress>()
     private val forceUpdatedAddresses = mutableListOf<EthAddress>()
+    private var balanceUpdateFailure: Throwable? = null
     private var fiatRateUpdateFailure: Throwable? = null
 
     private val balanceProvider: BalanceProvider = object : BalanceProvider {
@@ -62,6 +64,7 @@ class WalletViewModelTest {
 
         override suspend fun forceUpdate(address: EthAddress) {
             forceUpdatedAddresses += address
+            balanceUpdateFailure?.let { throw it }
         }
     }
     private val fiatRateProvider: FiatRateProvider = object : FiatRateProvider {
@@ -79,6 +82,7 @@ class WalletViewModelTest {
         fiatRateFlow.value = emptyMap()
         observedAddresses.clear()
         forceUpdatedAddresses.clear()
+        balanceUpdateFailure = null
         fiatRateUpdateFailure = null
         walletDao = FakeWalletDao()
         walletRepository = WalletRepository(walletDao, FakeEthManager(), FakePrivateKeyEncryptor())
@@ -127,7 +131,7 @@ class WalletViewModelTest {
         advanceUntilIdle()
 
         val currentState = viewModel.viewState.first()
-        assertFalse(currentState.isBalanceLoading, "Should not be loading after data is available")
+        assertEquals(WalletBalanceLoadState.Content, currentState.balanceLoadState)
         assertEquals(1L, currentState.chainId, "Chain ID should be exposed in state")
         assertEquals(
             "1 ETH",
@@ -154,7 +158,7 @@ class WalletViewModelTest {
         assertEquals(listOf(testAddress), observedAddresses)
         assertTrue(forceUpdatedAddresses.isNotEmpty())
         assertTrue(forceUpdatedAddresses.all { it == testAddress })
-        assertTrue(viewModel.viewState.value.isBalanceLoading)
+        assertEquals(WalletBalanceLoadState.Content, viewModel.viewState.value.balanceLoadState)
     }
 
     @Test
@@ -197,7 +201,7 @@ class WalletViewModelTest {
         advanceUntilIdle()
 
         val currentState = viewModel.viewState.first()
-        assertFalse(currentState.isBalanceLoading)
+        assertEquals(WalletBalanceLoadState.Content, currentState.balanceLoadState)
         assertEquals(
             "0 ETH",
             currentState.totalBalanceEth,
@@ -271,7 +275,7 @@ class WalletViewModelTest {
         advanceUntilIdle()
 
         val currentState = viewModel.viewState.first()
-        assertFalse(currentState.isBalanceLoading)
+        assertEquals(WalletBalanceLoadState.Content, currentState.balanceLoadState)
         assertNull(currentState.totalBalanceUsd)
         assertEquals("1 ETH", currentState.totalBalanceEth)
         assertEquals("100", currentState.favoriteTokens.first { it.ticker == "USDT" }.amount)
@@ -291,8 +295,9 @@ class WalletViewModelTest {
         advanceUntilIdle()
 
         assertTrue(forceUpdatedAddresses.contains(testAddress))
-        assertFalse(viewModel.viewState.value.isBalanceLoading)
+        assertEquals(WalletBalanceLoadState.Content, viewModel.viewState.value.balanceLoadState)
         assertNull(viewModel.viewState.value.totalBalanceUsd)
+        assertEquals(WalletFiatLoadState.Unavailable, viewModel.viewState.value.fiatLoadState)
     }
 
     @Test
@@ -314,7 +319,92 @@ class WalletViewModelTest {
         createViewModel()
         advanceUntilIdle()
 
-        assertFalse(viewModel.viewState.value.isBalanceLoading)
+        assertEquals(WalletBalanceLoadState.Content, viewModel.viewState.value.balanceLoadState)
         assertEquals("$2,000.00", viewModel.viewState.value.totalBalanceUsd)
+        assertEquals(WalletFiatLoadState.Available, viewModel.viewState.value.fiatLoadState)
+    }
+
+    @Test
+    fun initial_balance_failure_reaches_error_state() = runTest(testDispatcher) {
+        balanceUpdateFailure = IllegalStateException("RPC unavailable")
+
+        createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(WalletBalanceLoadState.Error, viewModel.viewState.value.balanceLoadState)
+        assertFalse(viewModel.viewState.value.showP2rIndicator)
+    }
+
+    @Test
+    fun retry_recovers_from_initial_balance_failure() = runTest(testDispatcher) {
+        balanceUpdateFailure = IllegalStateException("RPC unavailable")
+        createViewModel()
+        advanceUntilIdle()
+
+        balanceUpdateFailure = null
+        balanceFlow.value = mapOf(
+            EthContractAddress to BigInteger("1000000000000000000"),
+            usdtOnMainnet.ethAddress to BigInteger.ZERO,
+            usdcOnMainnet.ethAddress to BigInteger.ZERO,
+            daiOnMainnet.ethAddress to BigInteger.ZERO,
+        )
+        viewModel.onEvent(WalletEvent.Retry)
+        advanceUntilIdle()
+
+        assertEquals(WalletBalanceLoadState.Content, viewModel.viewState.value.balanceLoadState)
+        assertEquals("1 ETH", viewModel.viewState.value.totalBalanceEth)
+    }
+
+    @Test
+    fun balance_refresh_failure_preserves_cached_content_and_emits_one_news_event() = runTest(testDispatcher) {
+        balanceFlow.value = mapOf(
+            EthContractAddress to BigInteger("1000000000000000000"),
+            usdtOnMainnet.ethAddress to BigInteger.ZERO,
+            usdcOnMainnet.ethAddress to BigInteger.ZERO,
+            daiOnMainnet.ethAddress to BigInteger.ZERO,
+        )
+        fiatRateFlow.value = mapOf(
+            EthContractAddress to BigDecimal("2000"),
+            usdtOnMainnet.ethAddress to BigDecimal.ONE,
+            usdcOnMainnet.ethAddress to BigDecimal.ONE,
+            daiOnMainnet.ethAddress to BigDecimal.ONE,
+        )
+        createViewModel()
+        advanceUntilIdle()
+        balanceUpdateFailure = IllegalStateException("RPC unavailable")
+
+        viewModel.onEvent(WalletEvent.Refresh)
+        advanceUntilIdle()
+
+        assertEquals(WalletBalanceLoadState.Content, viewModel.viewState.value.balanceLoadState)
+        assertEquals("1 ETH", viewModel.viewState.value.totalBalanceEth)
+        assertFalse(viewModel.viewState.value.showP2rIndicator)
+        assertEquals(WalletNews.ShowErrorMessage, viewModel.news.first())
+    }
+
+    @Test
+    fun both_refresh_failures_emit_only_one_news_event() = runTest(testDispatcher) {
+        balanceFlow.value = mapOf(
+            EthContractAddress to BigInteger("1000000000000000000"),
+            usdtOnMainnet.ethAddress to BigInteger.ZERO,
+            usdcOnMainnet.ethAddress to BigInteger.ZERO,
+            daiOnMainnet.ethAddress to BigInteger.ZERO,
+        )
+        fiatRateFlow.value = mapOf(
+            EthContractAddress to BigDecimal("2000"),
+            usdtOnMainnet.ethAddress to BigDecimal.ONE,
+            usdcOnMainnet.ethAddress to BigDecimal.ONE,
+            daiOnMainnet.ethAddress to BigDecimal.ONE,
+        )
+        createViewModel()
+        advanceUntilIdle()
+        balanceUpdateFailure = IllegalStateException("RPC unavailable")
+        fiatRateUpdateFailure = IllegalStateException("Rates unavailable")
+
+        viewModel.onEvent(WalletEvent.Refresh)
+        advanceUntilIdle()
+
+        assertEquals(WalletNews.ShowErrorMessage, viewModel.news.first())
+        assertNull(withTimeoutOrNull(1) { viewModel.news.first() })
     }
 }
