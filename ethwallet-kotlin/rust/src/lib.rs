@@ -31,7 +31,7 @@ enum Status {
     Ok = 0,
     InvalidMnemonic = 1,
     InvalidPrivateKey = 2,
-    InsufficientBuffer = 3,
+    #[cfg(any(target_os = "android", target_os = "macos"))]
     InvalidArgument = 4,
     EntropyFailure = 5,
     InternalPanic = 6,
@@ -53,25 +53,11 @@ pub extern "C" fn ewc_abi_version() -> u32 {
 /// Creates a twelve-word English BIP-39 mnemonic in the caller-owned buffer.
 ///
 /// # Safety
-/// `output` must reference `capacity` writable bytes and `length` must reference one writable
-/// `usize`. The two pointers must remain valid for the duration of this call.
+/// `output` must reference a writable buffer of `MAX_12_WORD_MNEMONIC_LENGTH` bytes and `length`
+/// must reference one writable `usize`. The two pointers must remain valid for the duration of
+/// this call.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn ewc_create_mnemonic(
-    output: *mut u8,
-    capacity: usize,
-    length: *mut usize,
-) -> i32 {
-    if output.is_null() || length.is_null() {
-        return Status::InvalidArgument.code();
-    }
-
-    // SAFETY: The caller promises that `output` references `capacity` writable bytes and that
-    // `length` is writable. Clearing before work prevents callers from observing stale secrets.
-    unsafe {
-        ptr::write_bytes(output, 0, capacity);
-        *length = 0;
-    }
-
+pub unsafe extern "C" fn ewc_create_mnemonic(output: *mut u8, length: *mut usize) -> i32 {
     ffi_status(|| {
         let mut entropy = Zeroizing::new([0_u8; ENTROPY_LENGTH]);
         getrandom::fill(entropy.as_mut()).map_err(|_| Status::EntropyFailure)?;
@@ -80,12 +66,8 @@ pub unsafe extern "C" fn ewc_create_mnemonic(
         let mut encoded = Zeroizing::new([0_u8; MAX_12_WORD_MNEMONIC_LENGTH]);
         let encoded_length = write_mnemonic_ascii(&mnemonic, encoded.as_mut())?;
 
-        if capacity < encoded_length {
-            return Err(Status::InsufficientBuffer);
-        }
-
-        // SAFETY: `capacity >= encoded_length` was checked above and the caller supplied a valid
-        // output buffer.
+        // SAFETY: the Kotlin binding guarantees a writable output buffer of the maximum mnemonic
+        // length and a writable output-length pointer.
         unsafe {
             ptr::copy_nonoverlapping(encoded.as_ptr(), output, encoded_length);
             *length = encoded_length;
@@ -100,10 +82,6 @@ pub unsafe extern "C" fn ewc_create_mnemonic(
 /// `input` must reference `length` readable bytes for the duration of this call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ewc_validate_mnemonic(input: *const u8, length: usize) -> i32 {
-    if input.is_null() || length == 0 {
-        return Status::InvalidArgument.code();
-    }
-
     ffi_status(|| {
         // SAFETY: The caller promised `length` readable bytes at `input`.
         let input = unsafe { slice::from_raw_parts(input, length) };
@@ -122,16 +100,6 @@ pub unsafe extern "C" fn ewc_derive_private_key(
     mnemonic_length: usize,
     output: *mut u8,
 ) -> i32 {
-    if output.is_null() {
-        return Status::InvalidArgument.code();
-    }
-    // SAFETY: The ABI requires a 32-byte output buffer.
-    unsafe { ptr::write_bytes(output, 0, PRIVATE_KEY_LENGTH) };
-
-    if mnemonic.is_null() || mnemonic_length == 0 {
-        return Status::InvalidArgument.code();
-    }
-
     ffi_status(|| {
         // SAFETY: The caller promised `mnemonic_length` readable bytes at `mnemonic`.
         let mnemonic = unsafe { slice::from_raw_parts(mnemonic, mnemonic_length) };
@@ -153,7 +121,7 @@ pub unsafe extern "C" fn ewc_derive_private_key(
         let private_key = Zeroizing::new(child.private_key.secret_bytes());
         child.private_key.non_secure_erase();
 
-        // SAFETY: The output pointer was checked and cleared at function entry.
+        // SAFETY: the Kotlin binding guarantees a writable 32-byte output buffer.
         unsafe { ptr::copy_nonoverlapping(private_key.as_ptr(), output, PRIVATE_KEY_LENGTH) };
         Ok(())
     })
@@ -166,16 +134,6 @@ pub unsafe extern "C" fn ewc_derive_private_key(
 /// writable bytes. Both pointers must remain valid for the duration of this call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ewc_derive_address(private_key: *const u8, output: *mut u8) -> i32 {
-    if output.is_null() {
-        return Status::InvalidArgument.code();
-    }
-    // SAFETY: The ABI requires a 20-byte output buffer.
-    unsafe { ptr::write_bytes(output, 0, ADDRESS_LENGTH) };
-
-    if private_key.is_null() {
-        return Status::InvalidArgument.code();
-    }
-
     ffi_status(|| {
         // SAFETY: The ABI requires a 32-byte private-key input buffer.
         let private_key = unsafe { slice::from_raw_parts(private_key, PRIVATE_KEY_LENGTH) };
@@ -186,7 +144,7 @@ pub unsafe extern "C" fn ewc_derive_address(private_key: *const u8, output: *mut
         secret_key.non_secure_erase();
         let hash = Keccak256::digest(&public_key[1..]);
 
-        // SAFETY: The output pointer was checked and cleared at function entry.
+        // SAFETY: the Kotlin binding guarantees a writable 20-byte output buffer.
         unsafe {
             ptr::copy_nonoverlapping(
                 hash[hash.len() - ADDRESS_LENGTH..].as_ptr(),
@@ -242,7 +200,7 @@ pub unsafe extern "C" fn ewc_sign_eip1559_transaction(
             },
         };
         let signed = sign_eip1559_transaction(&private_key, &transaction)?;
-        // SAFETY: the caller promises enough output capacity for the encoded transaction.
+        // SAFETY: the caller promises an output buffer large enough for the encoded transaction.
         unsafe {
             ptr::copy_nonoverlapping(signed.as_ptr(), output, signed.len());
             *output_length = signed.len();
@@ -455,19 +413,11 @@ mod jni_bridge {
     ) -> jint {
         let output = unsafe { JByteArray::from_raw(output) };
         let length = unsafe { JIntArray::from_raw(length) };
-        let output_length = match env.get_array_length(&output) {
-            Ok(length) if length >= 0 => length as usize,
-            _ => return Status::InvalidArgument.code() as jint,
-        };
-        let mut output_bytes = Zeroizing::new(vec![0_i8; output_length]);
+        let mut output_bytes = Zeroizing::new(vec![0_i8; MAX_12_WORD_MNEMONIC_LENGTH]);
         let mut actual_length = 0_usize;
-        // SAFETY: `output_bytes` owns `output_length` writable bytes and `actual_length` is valid.
+        // SAFETY: `output_bytes` owns the maximum mnemonic buffer and `actual_length` is valid.
         let status = unsafe {
-            ewc_create_mnemonic(
-                output_bytes.as_mut_ptr().cast::<u8>(),
-                output_bytes.len(),
-                &mut actual_length,
-            )
+            ewc_create_mnemonic(output_bytes.as_mut_ptr().cast::<u8>(), &mut actual_length)
         };
         if env
             .set_byte_array_region(&output, 0, &output_bytes)
@@ -495,7 +445,7 @@ mod jni_bridge {
             Ok(input) => input,
             Err(status) => return status as jint,
         };
-        // SAFETY: `input` is an owned, non-empty native buffer.
+        // SAFETY: `input` is an owned native buffer.
         unsafe { ewc_validate_mnemonic(input.as_ptr().cast::<u8>(), input.len()) as jint }
     }
 
@@ -564,53 +514,44 @@ mod jni_bridge {
         output: jbyteArray,
         output_length: jintArray,
     ) -> jint {
-        if chain_id <= 0 {
-            return Status::InvalidTransaction.code() as jint;
-        }
-        let private_key = match read_fixed_input(&mut env, private_key, PRIVATE_KEY_LENGTH) {
+        let private_key = match read_input(&mut env, private_key) {
             Ok(input) => input,
             Err(status) => return status.code() as jint,
         };
-        let nonce = match read_fixed_input(&mut env, nonce, 32) {
+        let nonce = match read_input(&mut env, nonce) {
             Ok(input) => input,
             Err(status) => return status.code() as jint,
         };
-        let priority_fee = match read_fixed_input(&mut env, max_priority_fee_per_gas, 32) {
+        let priority_fee = match read_input(&mut env, max_priority_fee_per_gas) {
             Ok(input) => input,
             Err(status) => return status.code() as jint,
         };
-        let max_fee = match read_fixed_input(&mut env, max_fee_per_gas, 32) {
+        let max_fee = match read_input(&mut env, max_fee_per_gas) {
             Ok(input) => input,
             Err(status) => return status.code() as jint,
         };
-        let gas_limit = match read_fixed_input(&mut env, gas_limit, 32) {
+        let gas_limit = match read_input(&mut env, gas_limit) {
             Ok(input) => input,
             Err(status) => return status.code() as jint,
         };
-        let destination = match read_fixed_input(&mut env, destination, ADDRESS_LENGTH) {
+        let destination = match read_input(&mut env, destination) {
             Ok(input) => input,
             Err(status) => return status.code() as jint,
         };
-        let value = match read_fixed_input(&mut env, value, 32) {
+        let value = match read_input(&mut env, value) {
             Ok(input) => input,
             Err(status) => return status.code() as jint,
         };
-        let data = match read_input_allow_empty(&mut env, data) {
+        let data = match read_input(&mut env, data) {
             Ok(input) => input,
             Err(status) => return status.code() as jint,
         };
-        if output.is_null() || output_length.is_null() {
-            return Status::InvalidArgument.code() as jint;
-        }
         let output = unsafe { JByteArray::from_raw(output) };
         let output_length = unsafe { JIntArray::from_raw(output_length) };
         let capacity = match env.get_array_length(&output) {
-            Ok(length) if length > 0 => length as usize,
+            Ok(length) if length >= 0 => length as usize,
             _ => return Status::InvalidArgument.code() as jint,
         };
-        if env.get_array_length(&output_length).ok() != Some(1) {
-            return Status::InvalidArgument.code() as jint;
-        }
         let mut output_bytes = Zeroizing::new(vec![0_i8; capacity]);
         let mut actual_length = 0_usize;
         // SAFETY: all input buffers have been copied to owned native memory with fixed lengths;
@@ -652,28 +593,6 @@ mod jni_bridge {
     }
 
     fn read_input(env: &mut JNIEnv, input: jbyteArray) -> Result<Zeroizing<Vec<i8>>, Status> {
-        if input.is_null() {
-            return Err(Status::InvalidArgument);
-        }
-        let input = unsafe { JByteArray::from_raw(input) };
-        let length = match env.get_array_length(&input) {
-            Ok(length) if length > 0 => length as usize,
-            _ => return Err(Status::InvalidArgument),
-        };
-        let mut bytes = Zeroizing::new(vec![0_i8; length]);
-        if env.get_byte_array_region(&input, 0, &mut bytes).is_err() {
-            return Err(Status::InvalidArgument);
-        }
-        Ok(bytes)
-    }
-
-    fn read_input_allow_empty(
-        env: &mut JNIEnv,
-        input: jbyteArray,
-    ) -> Result<Zeroizing<Vec<i8>>, Status> {
-        if input.is_null() {
-            return Err(Status::InvalidArgument);
-        }
         let input = unsafe { JByteArray::from_raw(input) };
         let length = match env.get_array_length(&input) {
             Ok(length) if length >= 0 => length as usize,
@@ -686,31 +605,13 @@ mod jni_bridge {
         Ok(bytes)
     }
 
-    fn read_fixed_input(
-        env: &mut JNIEnv,
-        input: jbyteArray,
-        expected_length: usize,
-    ) -> Result<Zeroizing<Vec<i8>>, Status> {
-        let input = read_input(env, input)?;
-        if input.len() != expected_length {
-            return Err(Status::InvalidArgument);
-        }
-        Ok(input)
-    }
-
     fn write_fixed_output(
         env: &mut JNIEnv,
         output: jbyteArray,
         length: usize,
         operation: impl FnOnce(&mut Zeroizing<Vec<i8>>) -> i32,
     ) -> i32 {
-        if output.is_null() {
-            return Status::InvalidArgument.code();
-        }
         let output = unsafe { JByteArray::from_raw(output) };
-        if env.get_array_length(&output).ok() != Some(length as i32) {
-            return Status::InvalidArgument.code();
-        }
         let mut bytes = Zeroizing::new(vec![0_i8; length]);
         let status = operation(&mut bytes);
         if env.set_byte_array_region(&output, 0, &bytes).is_err() {

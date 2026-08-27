@@ -14,7 +14,6 @@ typedef enum ewc_status {
     EWC_STATUS_OK = 0,
     EWC_STATUS_INVALID_MNEMONIC = 1,
     EWC_STATUS_INVALID_PRIVATE_KEY = 2,
-    EWC_STATUS_INSUFFICIENT_BUFFER = 3,
     EWC_STATUS_INVALID_ARGUMENT = 4,
     EWC_STATUS_ENTROPY_FAILURE = 5,
     EWC_STATUS_INTERNAL_PANIC = 6,
@@ -23,7 +22,7 @@ typedef enum ewc_status {
 
 uint32_t ewc_abi_version(void);
 
-int32_t ewc_create_mnemonic(uint8_t *output, size_t capacity, size_t *length);
+int32_t ewc_create_mnemonic(uint8_t *output, size_t *length);
 
 int32_t ewc_validate_mnemonic(const uint8_t *input, size_t length);
 

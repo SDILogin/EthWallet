@@ -4,7 +4,6 @@ internal const val NATIVE_ABI_VERSION = 1
 internal const val STATUS_OK = 0
 internal const val STATUS_INVALID_MNEMONIC = 1
 internal const val STATUS_INVALID_PRIVATE_KEY = 2
-internal const val STATUS_INSUFFICIENT_BUFFER = 3
 internal const val STATUS_INVALID_ARGUMENT = 4
 internal const val STATUS_ENTROPY_FAILURE = 5
 internal const val STATUS_INTERNAL_PANIC = 6
@@ -16,7 +15,6 @@ internal fun checkNativeStatus(status: Int) {
         STATUS_INVALID_MNEMONIC -> throw IllegalArgumentException("Invalid BIP-39 mnemonic")
         STATUS_INVALID_PRIVATE_KEY -> throw IllegalArgumentException("Invalid secp256k1 private key")
         STATUS_INVALID_TRANSACTION -> throw IllegalArgumentException("Invalid EIP-1559 transaction")
-        STATUS_INSUFFICIENT_BUFFER,
         STATUS_INVALID_ARGUMENT,
         STATUS_ENTROPY_FAILURE,
         STATUS_INTERNAL_PANIC,

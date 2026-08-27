@@ -36,7 +36,6 @@ internal actual object NativeCrypto {
                     output.usePinned { pinned ->
                         ewc_create_mnemonic(
                             pinned.addressOf(0).reinterpret<UByteVar>(),
-                            output.size.toULong(),
                             nativeLength.ptr,
                         )
                     },

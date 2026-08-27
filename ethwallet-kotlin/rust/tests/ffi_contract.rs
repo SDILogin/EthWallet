@@ -1,5 +1,3 @@
-use std::ptr;
-
 use ethwallet_crypto::{
     ewc_abi_version, ewc_create_mnemonic, ewc_derive_address, ewc_derive_private_key,
     ewc_sign_eip1559_transaction, ewc_validate_mnemonic,
@@ -8,8 +6,6 @@ use ethwallet_crypto::{
 const STATUS_OK: i32 = 0;
 const STATUS_INVALID_MNEMONIC: i32 = 1;
 const STATUS_INVALID_PRIVATE_KEY: i32 = 2;
-const STATUS_INSUFFICIENT_BUFFER: i32 = 3;
-const STATUS_INVALID_ARGUMENT: i32 = 4;
 const STATUS_INVALID_TRANSACTION: i32 = 7;
 
 const CANONICAL_MNEMONIC: &[u8] =
@@ -71,7 +67,7 @@ fn derives_the_known_address_for_private_key_one() {
 }
 
 #[test]
-fn invalid_inputs_return_stable_statuses_and_clear_outputs() {
+fn invalid_inputs_return_stable_statuses_without_writing_outputs() {
     let mut private_key = [0xaa_u8; 32];
     // SAFETY: the output has the fixed ABI size; the mnemonic is deliberately invalid.
     let mnemonic_status = unsafe {
@@ -82,40 +78,23 @@ fn invalid_inputs_return_stable_statuses_and_clear_outputs() {
         )
     };
     assert_eq!(STATUS_INVALID_MNEMONIC, mnemonic_status);
-    assert_eq!([0_u8; 32], private_key);
+    assert_eq!([0xaa_u8; 32], private_key);
 
     let mut address = [0xaa_u8; 20];
     // SAFETY: both fixed-size buffers meet the ABI requirements; zero is an invalid scalar.
     let private_key_status =
         unsafe { ewc_derive_address([0_u8; 32].as_ptr(), address.as_mut_ptr()) };
     assert_eq!(STATUS_INVALID_PRIVATE_KEY, private_key_status);
-    assert_eq!([0_u8; 20], address);
-
-    // SAFETY: null and zero length are intentionally used to check ABI validation.
-    let null_status = unsafe { ewc_validate_mnemonic(ptr::null(), 0) };
-    assert_eq!(STATUS_INVALID_ARGUMENT, null_status);
-}
-
-#[test]
-fn mnemonic_creation_requires_a_large_enough_caller_buffer() {
-    let mut output = [0xaa_u8; 4];
-    let mut length = usize::MAX;
-
-    // SAFETY: output and length are valid writable buffers with the declared capacity.
-    let status = unsafe { ewc_create_mnemonic(output.as_mut_ptr(), output.len(), &mut length) };
-
-    assert_eq!(STATUS_INSUFFICIENT_BUFFER, status);
-    assert_eq!([0_u8; 4], output);
-    assert_eq!(0, length);
+    assert_eq!([0xaa_u8; 20], address);
 }
 
 #[test]
 fn created_mnemonic_is_english_and_validates() {
-    let mut output = [0_u8; 128];
+    let mut output = [0_u8; 107];
     let mut length = 0_usize;
 
-    // SAFETY: output and length are valid writable buffers with the declared capacity.
-    let status = unsafe { ewc_create_mnemonic(output.as_mut_ptr(), output.len(), &mut length) };
+    // SAFETY: output and length satisfy the private binding contract.
+    let status = unsafe { ewc_create_mnemonic(output.as_mut_ptr(), &mut length) };
     // SAFETY: `length` is set only after a successful bounded write.
     let validation_status = unsafe { ewc_validate_mnemonic(output.as_ptr(), length) };
 
