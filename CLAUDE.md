@@ -1,6 +1,6 @@
 # EthWallet
 
-Kotlin Multiplatform Ethereum wallet for Android and Desktop.
+Kotlin Multiplatform Ethereum wallet for Android, Desktop, and iOS.
 
 ## Stack
 
@@ -13,15 +13,41 @@ Kotlin Multiplatform Ethereum wallet for Android and Desktop.
 ViewModels use Events/State/News:
 - `onEvent(Event)` - User actions
 - `viewState: StateFlow` - UI state
-- `news: SharedFlow` - One-time effects (navigation, toasts)
+- `news: Channel` exposed as `Flow` - One-time effects (navigation, toasts)
+
+## ethwallet-kotlin Rust Interop
+
+- `:ethwallet-kotlin` is the Kotlin Multiplatform Ethereum crypto library backed by Rust.
+- The public Kotlin API hides Rust, JNI, and C interop details.
+- Ethereum transaction signing supports EIP-1559 only. Do not add legacy transaction support.
+- Web3j may be used as a test-only compatibility oracle but must not be required by production signing.
+- The Rust C ABI is private and is called only by the module's Kotlin bindings.
+- Kotlin owns non-null guarantees, fixed input-buffer validation, and output-buffer allocation.
+- Treat valid pointers, lengths, and output capacity as preconditions of unsafe Rust ABI functions. Do not add redundant native runtime checks for states excluded by the Kotlin bindings.
+- Preserve semantic validation for externally sourced values, including mnemonics, private keys, and transaction fields.
+- Keep raw-pointer unsafe operations explicit and localized at the FFI boundary.
+- Copy private keys into fixed-size arrays and wrap owned secret copies in `Zeroizing`.
+- The signing function writes output and output length only on success. Kotlin owns temporary-buffer cleanup.
+- Keep the Rust function, C header, JNI bridge, iOS cinterop call, and tests synchronized when changing the ABI.
+- Signing changes must retain byte-for-byte Web3j compatibility tests for both empty and non-empty calldata.
 
 ## Comments
 
-Single-line `//` comments are forbidden — never write them; delete them on sight when editing a file. KDoc is the only permitted comment form, used sparingly on declarations whose contract the signature cannot express.
+Avoid comments for obvious behavior. Use KDoc sparingly when a declaration's contract is not clear from its signature. Rust `// SAFETY:` comments are allowed for unsafe operations and should state the binding or memory invariant being relied upon.
 
 ## Formatting
 
 Run `./gradlew spotlessApply` before committing. Pre-push hook runs checks automatically.
+
+For Rust changes, run these commands from `ethwallet-kotlin/rust`:
+
+```bash
+cargo fmt -- --check
+cargo test
+cargo clippy --all-targets -- -D warnings
+```
+
+Tests should let unexpected exceptions fail normally. Do not catch or translate failures unless the behavior under test specifically requires it.
 
 ## Live Sepolia UI E2E
 
