@@ -6,11 +6,12 @@ use std::{
     sync::OnceLock,
 };
 
+use alloy_rlp::{Encodable, Header};
 use bip39::{Language, Mnemonic};
 use bitcoin::{
     NetworkKind,
     bip32::{DerivationPath, Xpriv},
-    secp256k1::{All, PublicKey, Secp256k1, SecretKey},
+    secp256k1::{All, Message, PublicKey, Secp256k1, SecretKey},
 };
 use sha3::{Digest, Keccak256};
 use zeroize::Zeroizing;
@@ -34,6 +35,7 @@ enum Status {
     InvalidArgument = 4,
     EntropyFailure = 5,
     InternalPanic = 6,
+    InvalidTransaction = 7,
 }
 
 impl Status {
@@ -196,6 +198,187 @@ pub unsafe extern "C" fn ewc_derive_address(private_key: *const u8, output: *mut
     })
 }
 
+/// Signs and encodes an EIP-1559 transaction into the caller-owned output buffer.
+///
+/// All quantity inputs are unsigned 256-bit big-endian values. The destination is exactly 20
+/// bytes. A null `data` pointer is accepted only when `data_length` is zero.
+///
+/// # Safety
+/// Fixed-size input pointers must reference their documented byte lengths. `data` must reference
+/// `data_length` readable bytes unless its length is zero. `output` must reference enough writable
+/// bytes for the encoded transaction, and `output_length` must reference one writable `usize`.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ewc_sign_eip1559_transaction(
+    private_key: *const u8,
+    chain_id: u64,
+    nonce: *const u8,
+    max_priority_fee_per_gas: *const u8,
+    max_fee_per_gas: *const u8,
+    gas_limit: *const u8,
+    destination: *const u8,
+    value: *const u8,
+    data: *const u8,
+    data_length: usize,
+    output: *mut u8,
+    output_length: *mut usize,
+) -> i32 {
+    ffi_status(|| {
+        // SAFETY: the Kotlin binding guarantees all fixed-size input buffers.
+        let private_key = Zeroizing::new(unsafe { copy_array::<PRIVATE_KEY_LENGTH>(private_key) });
+        let transaction = Eip1559Transaction {
+            chain_id,
+            nonce: unsafe { copy_array::<32>(nonce) },
+            max_priority_fee_per_gas: unsafe { copy_array::<32>(max_priority_fee_per_gas) },
+            max_fee_per_gas: unsafe { copy_array::<32>(max_fee_per_gas) },
+            gas_limit: unsafe { copy_array::<32>(gas_limit) },
+            destination: unsafe { copy_array::<ADDRESS_LENGTH>(destination) },
+            value: unsafe { copy_array::<32>(value) },
+            data: if data_length == 0 {
+                &[]
+            } else {
+                // SAFETY: the Kotlin binding guarantees a readable calldata buffer.
+                unsafe { slice::from_raw_parts(data, data_length) }
+            },
+        };
+        let signed = sign_eip1559_transaction(&private_key, &transaction)?;
+        // SAFETY: the caller promises enough output capacity for the encoded transaction.
+        unsafe {
+            ptr::copy_nonoverlapping(signed.as_ptr(), output, signed.len());
+            *output_length = signed.len();
+        }
+        Ok(())
+    })
+}
+
+struct Eip1559Transaction<'a> {
+    chain_id: u64,
+    nonce: [u8; 32],
+    max_priority_fee_per_gas: [u8; 32],
+    max_fee_per_gas: [u8; 32],
+    gas_limit: [u8; 32],
+    destination: [u8; ADDRESS_LENGTH],
+    value: [u8; 32],
+    data: &'a [u8],
+}
+
+fn sign_eip1559_transaction(
+    private_key: &[u8; PRIVATE_KEY_LENGTH],
+    transaction: &Eip1559Transaction<'_>,
+) -> Result<Vec<u8>, Status> {
+    validate_eip1559_transaction(transaction)?;
+    let signing_payload = encode_eip1559_transaction(transaction, None);
+    let signing_hash: [u8; 32] = Keccak256::digest(&signing_payload).into();
+    let (y_parity, signature) = sign_recoverable(private_key, signing_hash)?;
+    Ok(encode_eip1559_transaction(
+        transaction,
+        Some((y_parity, &signature[..32], &signature[32..])),
+    ))
+}
+
+fn validate_eip1559_transaction(transaction: &Eip1559Transaction<'_>) -> Result<(), Status> {
+    if transaction.chain_id == 0
+        || transaction.max_priority_fee_per_gas > transaction.max_fee_per_gas
+    {
+        return Err(Status::InvalidTransaction);
+    }
+    Ok(())
+}
+
+fn sign_recoverable(
+    private_key: &[u8; PRIVATE_KEY_LENGTH],
+    signing_hash: [u8; 32],
+) -> Result<(u8, [u8; 64]), Status> {
+    let secp = secp256k1_context()?;
+    let mut secret_key =
+        SecretKey::from_slice(private_key).map_err(|_| Status::InvalidPrivateKey)?;
+    let message = Message::from_digest(signing_hash);
+    let signature = secp.sign_ecdsa_recoverable(&message, &secret_key);
+    secret_key.non_secure_erase();
+    let mut normalized = signature.to_standard();
+    let original = normalized.serialize_compact();
+    normalized.normalize_s();
+    if original != normalized.serialize_compact() {
+        return Err(Status::InternalPanic);
+    }
+    let (recovery_id, compact) = signature.serialize_compact();
+    let y_parity = u8::try_from(recovery_id.to_i32()).map_err(|_| Status::InternalPanic)?;
+    if y_parity > 1 {
+        return Err(Status::InternalPanic);
+    }
+    Ok((y_parity, compact))
+}
+
+fn encode_eip1559_transaction(
+    transaction: &Eip1559Transaction<'_>,
+    signature: Option<(u8, &[u8], &[u8])>,
+) -> Vec<u8> {
+    let nonce = quantity_bytes(&transaction.nonce);
+    let priority_fee = quantity_bytes(&transaction.max_priority_fee_per_gas);
+    let max_fee = quantity_bytes(&transaction.max_fee_per_gas);
+    let gas_limit = quantity_bytes(&transaction.gas_limit);
+    let value = quantity_bytes(&transaction.value);
+    let mut payload_length = transaction.chain_id.length()
+        + nonce.length()
+        + priority_fee.length()
+        + max_fee.length()
+        + gas_limit.length()
+        + transaction.destination.length()
+        + value.length()
+        + transaction.data.length()
+        + 1;
+    if let Some((y_parity, r, s)) = signature {
+        payload_length +=
+            y_parity.length() + quantity_bytes_slice(r).length() + quantity_bytes_slice(s).length();
+    }
+
+    let mut encoded = Vec::with_capacity(payload_length + 10);
+    encoded.push(0x02);
+    Header {
+        list: true,
+        payload_length,
+    }
+    .encode(&mut encoded);
+    transaction.chain_id.encode(&mut encoded);
+    nonce.encode(&mut encoded);
+    priority_fee.encode(&mut encoded);
+    max_fee.encode(&mut encoded);
+    gas_limit.encode(&mut encoded);
+    transaction.destination.encode(&mut encoded);
+    value.encode(&mut encoded);
+    transaction.data.encode(&mut encoded);
+    Header {
+        list: true,
+        payload_length: 0,
+    }
+    .encode(&mut encoded);
+    if let Some((y_parity, r, s)) = signature {
+        y_parity.encode(&mut encoded);
+        quantity_bytes_slice(r).encode(&mut encoded);
+        quantity_bytes_slice(s).encode(&mut encoded);
+    }
+    encoded
+}
+
+fn quantity_bytes(value: &[u8; 32]) -> &[u8] {
+    quantity_bytes_slice(value)
+}
+
+fn quantity_bytes_slice(value: &[u8]) -> &[u8] {
+    let first_nonzero = value
+        .iter()
+        .position(|byte| *byte != 0)
+        .unwrap_or(value.len());
+    &value[first_nonzero..]
+}
+
+unsafe fn copy_array<const LENGTH: usize>(input: *const u8) -> [u8; LENGTH] {
+    let mut output = [0_u8; LENGTH];
+    // SAFETY: the caller of this helper guarantees `LENGTH` readable bytes.
+    unsafe { ptr::copy_nonoverlapping(input, output.as_mut_ptr(), LENGTH) };
+    output
+}
+
 fn secp256k1_context() -> Result<&'static Secp256k1<All>, Status> {
     SECP256K1_CONTEXT
         .get_or_init(|| {
@@ -252,7 +435,7 @@ mod jni_bridge {
     use jni::{
         JNIEnv,
         objects::{JByteArray, JClass, JIntArray},
-        sys::{jbyteArray, jint, jintArray},
+        sys::{jbyteArray, jint, jintArray, jlong},
     };
 
     #[unsafe(no_mangle)]
@@ -364,6 +547,110 @@ mod jni_bridge {
         }) as jint
     }
 
+    #[unsafe(no_mangle)]
+    #[allow(clippy::too_many_arguments)]
+    pub extern "system" fn Java_me_sdi_ethwallet_kotlin_NativeCrypto_nativeSignEip1559Transaction(
+        mut env: JNIEnv,
+        _class: JClass,
+        private_key: jbyteArray,
+        chain_id: jlong,
+        nonce: jbyteArray,
+        max_priority_fee_per_gas: jbyteArray,
+        max_fee_per_gas: jbyteArray,
+        gas_limit: jbyteArray,
+        destination: jbyteArray,
+        value: jbyteArray,
+        data: jbyteArray,
+        output: jbyteArray,
+        output_length: jintArray,
+    ) -> jint {
+        if chain_id <= 0 {
+            return Status::InvalidTransaction.code() as jint;
+        }
+        let private_key = match read_fixed_input(&mut env, private_key, PRIVATE_KEY_LENGTH) {
+            Ok(input) => input,
+            Err(status) => return status.code() as jint,
+        };
+        let nonce = match read_fixed_input(&mut env, nonce, 32) {
+            Ok(input) => input,
+            Err(status) => return status.code() as jint,
+        };
+        let priority_fee = match read_fixed_input(&mut env, max_priority_fee_per_gas, 32) {
+            Ok(input) => input,
+            Err(status) => return status.code() as jint,
+        };
+        let max_fee = match read_fixed_input(&mut env, max_fee_per_gas, 32) {
+            Ok(input) => input,
+            Err(status) => return status.code() as jint,
+        };
+        let gas_limit = match read_fixed_input(&mut env, gas_limit, 32) {
+            Ok(input) => input,
+            Err(status) => return status.code() as jint,
+        };
+        let destination = match read_fixed_input(&mut env, destination, ADDRESS_LENGTH) {
+            Ok(input) => input,
+            Err(status) => return status.code() as jint,
+        };
+        let value = match read_fixed_input(&mut env, value, 32) {
+            Ok(input) => input,
+            Err(status) => return status.code() as jint,
+        };
+        let data = match read_input_allow_empty(&mut env, data) {
+            Ok(input) => input,
+            Err(status) => return status.code() as jint,
+        };
+        if output.is_null() || output_length.is_null() {
+            return Status::InvalidArgument.code() as jint;
+        }
+        let output = unsafe { JByteArray::from_raw(output) };
+        let output_length = unsafe { JIntArray::from_raw(output_length) };
+        let capacity = match env.get_array_length(&output) {
+            Ok(length) if length > 0 => length as usize,
+            _ => return Status::InvalidArgument.code() as jint,
+        };
+        if env.get_array_length(&output_length).ok() != Some(1) {
+            return Status::InvalidArgument.code() as jint;
+        }
+        let mut output_bytes = Zeroizing::new(vec![0_i8; capacity]);
+        let mut actual_length = 0_usize;
+        // SAFETY: all input buffers have been copied to owned native memory with fixed lengths;
+        // output buffers remain valid for the duration of the call.
+        let status = unsafe {
+            ewc_sign_eip1559_transaction(
+                private_key.as_ptr().cast::<u8>(),
+                chain_id as u64,
+                nonce.as_ptr().cast::<u8>(),
+                priority_fee.as_ptr().cast::<u8>(),
+                max_fee.as_ptr().cast::<u8>(),
+                gas_limit.as_ptr().cast::<u8>(),
+                destination.as_ptr().cast::<u8>(),
+                value.as_ptr().cast::<u8>(),
+                data.as_ptr().cast::<u8>(),
+                data.len(),
+                output_bytes.as_mut_ptr().cast::<u8>(),
+                &mut actual_length,
+            )
+        };
+        if env
+            .set_byte_array_region(&output, 0, &output_bytes)
+            .is_err()
+        {
+            return Status::InvalidArgument.code() as jint;
+        }
+        if status == Status::Ok.code() {
+            let Ok(actual_length) = jint::try_from(actual_length) else {
+                return Status::InternalPanic.code() as jint;
+            };
+            if env
+                .set_int_array_region(&output_length, 0, &[actual_length])
+                .is_err()
+            {
+                return Status::InvalidArgument.code() as jint;
+            }
+        }
+        status as jint
+    }
+
     fn read_input(env: &mut JNIEnv, input: jbyteArray) -> Result<Zeroizing<Vec<i8>>, Status> {
         if input.is_null() {
             return Err(Status::InvalidArgument);
@@ -378,6 +665,37 @@ mod jni_bridge {
             return Err(Status::InvalidArgument);
         }
         Ok(bytes)
+    }
+
+    fn read_input_allow_empty(
+        env: &mut JNIEnv,
+        input: jbyteArray,
+    ) -> Result<Zeroizing<Vec<i8>>, Status> {
+        if input.is_null() {
+            return Err(Status::InvalidArgument);
+        }
+        let input = unsafe { JByteArray::from_raw(input) };
+        let length = match env.get_array_length(&input) {
+            Ok(length) if length >= 0 => length as usize,
+            _ => return Err(Status::InvalidArgument),
+        };
+        let mut bytes = Zeroizing::new(vec![0_i8; length]);
+        if length > 0 && env.get_byte_array_region(&input, 0, &mut bytes).is_err() {
+            return Err(Status::InvalidArgument);
+        }
+        Ok(bytes)
+    }
+
+    fn read_fixed_input(
+        env: &mut JNIEnv,
+        input: jbyteArray,
+        expected_length: usize,
+    ) -> Result<Zeroizing<Vec<i8>>, Status> {
+        let input = read_input(env, input)?;
+        if input.len() != expected_length {
+            return Err(Status::InvalidArgument);
+        }
+        Ok(input)
     }
 
     fn write_fixed_output(
@@ -399,5 +717,88 @@ mod jni_bridge {
             return Status::InvalidArgument.code();
         }
         status
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const EXPECTED_SIGNED_TRANSACTION: &str = "02f87583aa36a707843b9aca008477359400825208943535353535353535353535353535353535353535880de0b6b3a764000080c080a0d203a655156d8a48583b27eb743fe8c6dfb5c0862763a80d3e07e55b718e4038a005c95b32d2ba7ad56455b64735834e041792bac244223533971db91a19c6caa3";
+
+    #[test]
+    fn signs_web3j_eip1559_reference_vector() {
+        let mut private_key = [0_u8; 32];
+        private_key[31] = 1;
+        let transaction = reference_transaction();
+
+        let signed = sign_eip1559_transaction(&private_key, &transaction).unwrap();
+
+        assert_eq!(decode_hex(EXPECTED_SIGNED_TRANSACTION), signed);
+    }
+
+    #[test]
+    fn rejects_invalid_eip1559_transaction_fields() {
+        let mut transaction = reference_transaction();
+        transaction.chain_id = 0;
+        assert_eq!(
+            Err(Status::InvalidTransaction),
+            validate_eip1559_transaction(&transaction),
+        );
+
+        transaction.chain_id = 1;
+        transaction.max_priority_fee_per_gas = quantity("02");
+        transaction.max_fee_per_gas = quantity("01");
+        assert_eq!(
+            Err(Status::InvalidTransaction),
+            validate_eip1559_transaction(&transaction),
+        );
+    }
+
+    #[test]
+    fn encodes_zero_quantities_as_empty_rlp_strings() {
+        let transaction = Eip1559Transaction {
+            chain_id: 1,
+            nonce: [0; 32],
+            max_priority_fee_per_gas: [0; 32],
+            max_fee_per_gas: [0; 32],
+            gas_limit: [0; 32],
+            destination: [0x11; 20],
+            value: [0; 32],
+            data: &[],
+        };
+
+        assert_eq!(
+            decode_hex("02dd01808080809411111111111111111111111111111111111111118080c0"),
+            encode_eip1559_transaction(&transaction, None),
+        );
+    }
+
+    fn reference_transaction() -> Eip1559Transaction<'static> {
+        Eip1559Transaction {
+            chain_id: 11_155_111,
+            nonce: quantity("07"),
+            max_priority_fee_per_gas: quantity("3b9aca00"),
+            max_fee_per_gas: quantity("77359400"),
+            gas_limit: quantity("5208"),
+            destination: [0x35; 20],
+            value: quantity("0de0b6b3a7640000"),
+            data: &[],
+        }
+    }
+
+    fn quantity(hex: &str) -> [u8; 32] {
+        let decoded = decode_hex(hex);
+        let mut quantity = [0_u8; 32];
+        quantity[32 - decoded.len()..].copy_from_slice(&decoded);
+        quantity
+    }
+
+    fn decode_hex(hex: &str) -> Vec<u8> {
+        assert_eq!(0, hex.len() % 2);
+        (0..hex.len())
+            .step_by(2)
+            .map(|index| u8::from_str_radix(&hex[index..index + 2], 16).unwrap())
+            .collect()
     }
 }

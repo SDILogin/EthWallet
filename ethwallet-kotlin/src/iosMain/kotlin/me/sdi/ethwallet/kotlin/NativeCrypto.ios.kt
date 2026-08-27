@@ -6,6 +6,7 @@ import ethwallet_crypto.ewc_abi_version
 import ethwallet_crypto.ewc_create_mnemonic
 import ethwallet_crypto.ewc_derive_address
 import ethwallet_crypto.ewc_derive_private_key
+import ethwallet_crypto.ewc_sign_eip1559_transaction
 import ethwallet_crypto.ewc_validate_mnemonic
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.UByteVar
@@ -84,6 +85,74 @@ internal actual object NativeCrypto {
         }
     }
 
+    actual fun signEip1559Transaction(
+        privateKey: ByteArray,
+        chainId: Long,
+        nonce: ByteArray,
+        maxPriorityFeePerGas: ByteArray,
+        maxFeePerGas: ByteArray,
+        gasLimit: ByteArray,
+        destination: ByteArray,
+        value: ByteArray,
+        data: ByteArray,
+    ): ByteArray {
+        ensureNativeLibrary()
+        require(chainId > 0) { "EIP-1559 chain ID must be positive" }
+        requireNativePrivateKeyLength(privateKey)
+        requireNativeTransactionFieldLengths(
+            nonce,
+            maxPriorityFeePerGas,
+            maxFeePerGas,
+            gasLimit,
+            destination,
+            value,
+        )
+        val output = ByteArray(nativeSignedTransactionCapacity(data.size))
+        try {
+            val length = memScoped {
+                val nativeLength = alloc<ULongVar>()
+                val status = privateKey.usePinned { privateKeyPinned ->
+                    nonce.usePinned { noncePinned ->
+                        maxPriorityFeePerGas.usePinned { priorityFeePinned ->
+                            maxFeePerGas.usePinned { maxFeePinned ->
+                                gasLimit.usePinned { gasLimitPinned ->
+                                    destination.usePinned { destinationPinned ->
+                                        value.usePinned { valuePinned ->
+                                            withOptionalPinnedInput(data) { dataPointer ->
+                                                output.usePinned { outputPinned ->
+                                                    ewc_sign_eip1559_transaction(
+                                                        privateKeyPinned.addressOf(0).reinterpret(),
+                                                        chainId.toULong(),
+                                                        noncePinned.addressOf(0).reinterpret(),
+                                                        priorityFeePinned.addressOf(0).reinterpret(),
+                                                        maxFeePinned.addressOf(0).reinterpret(),
+                                                        gasLimitPinned.addressOf(0).reinterpret(),
+                                                        destinationPinned.addressOf(0).reinterpret(),
+                                                        valuePinned.addressOf(0).reinterpret(),
+                                                        dataPointer,
+                                                        data.size.toULong(),
+                                                        outputPinned.addressOf(0).reinterpret(),
+                                                        nativeLength.ptr,
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                checkNativeStatus(status)
+                nativeLength.value.toLong()
+            }
+            check(length in 1..output.size.toLong()) { "Native signed transaction length is invalid" }
+            return output.copyOf(length.toInt())
+        } finally {
+            output.fill(0)
+        }
+    }
+
     private fun ensureNativeLibrary() {
         nativeLibrary.value
     }
@@ -98,5 +167,14 @@ internal actual object NativeCrypto {
         return input.usePinned { pinned ->
             operation(pinned.addressOf(0).reinterpret())
         }
+    }
+
+    private fun <T> withOptionalPinnedInput(
+        input: ByteArray,
+        operation: (CPointer<UByteVar>?) -> T,
+    ): T = if (input.isEmpty()) {
+        operation(null)
+    } else {
+        input.usePinned { pinned -> operation(pinned.addressOf(0).reinterpret()) }
     }
 }

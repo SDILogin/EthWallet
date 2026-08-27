@@ -9,8 +9,9 @@ publish = false
 crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
+alloy-rlp = "0.3.12"
 bip39 = { version = "2.2.2", default-features = false, features = ["std", "zeroize"] }
-bitcoin = { version = "0.32.102", default-features = false, features = ["std"] }
+bitcoin = { version = "0.32.102", default-features = false, features = ["secp-recovery", "std"] }
 getrandom = "0.4.3"
 sha3 = { version = "0.12.0", default-features = false }
 zeroize = "1.9.0"

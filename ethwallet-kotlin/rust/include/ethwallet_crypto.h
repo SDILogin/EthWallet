@@ -18,6 +18,7 @@ typedef enum ewc_status {
     EWC_STATUS_INVALID_ARGUMENT = 4,
     EWC_STATUS_ENTROPY_FAILURE = 5,
     EWC_STATUS_INTERNAL_PANIC = 6,
+    EWC_STATUS_INVALID_TRANSACTION = 7,
 } ewc_status;
 
 uint32_t ewc_abi_version(void);
@@ -33,6 +34,21 @@ int32_t ewc_derive_private_key(
 );
 
 int32_t ewc_derive_address(const uint8_t private_key[32], uint8_t output[20]);
+
+int32_t ewc_sign_eip1559_transaction(
+    const uint8_t private_key[32],
+    uint64_t chain_id,
+    const uint8_t nonce[32],
+    const uint8_t max_priority_fee_per_gas[32],
+    const uint8_t max_fee_per_gas[32],
+    const uint8_t gas_limit[32],
+    const uint8_t destination[20],
+    const uint8_t value[32],
+    const uint8_t *data,
+    size_t data_length,
+    uint8_t *output,
+    size_t *output_length
+);
 
 #ifdef __cplusplus
 }

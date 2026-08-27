@@ -39,6 +39,53 @@ internal actual object NativeCrypto {
         nativeDeriveAddress(privateKey, output)
     }
 
+    actual fun signEip1559Transaction(
+        privateKey: ByteArray,
+        chainId: Long,
+        nonce: ByteArray,
+        maxPriorityFeePerGas: ByteArray,
+        maxFeePerGas: ByteArray,
+        gasLimit: ByteArray,
+        destination: ByteArray,
+        value: ByteArray,
+        data: ByteArray,
+    ): ByteArray {
+        ensureNativeLibrary()
+        require(chainId > 0) { "EIP-1559 chain ID must be positive" }
+        requireNativePrivateKeyLength(privateKey)
+        requireNativeTransactionFieldLengths(
+            nonce,
+            maxPriorityFeePerGas,
+            maxFeePerGas,
+            gasLimit,
+            destination,
+            value,
+        )
+        val output = ByteArray(nativeSignedTransactionCapacity(data.size))
+        val outputLength = IntArray(1)
+        try {
+            checkNativeStatus(
+                nativeSignEip1559Transaction(
+                    privateKey,
+                    chainId,
+                    nonce,
+                    maxPriorityFeePerGas,
+                    maxFeePerGas,
+                    gasLimit,
+                    destination,
+                    value,
+                    data,
+                    output,
+                    outputLength,
+                ),
+            )
+            check(outputLength[0] in 1..output.size) { "Native signed transaction length is invalid" }
+            return output.copyOf(outputLength[0])
+        } finally {
+            output.fill(0)
+        }
+    }
+
     private fun ensureNativeLibrary() {
         nativeLibrary.value
     }
@@ -69,5 +116,20 @@ internal actual object NativeCrypto {
     private external fun nativeDeriveAddress(
         privateKey: ByteArray,
         output: ByteArray,
+    ): Int
+
+    @JvmStatic
+    private external fun nativeSignEip1559Transaction(
+        privateKey: ByteArray,
+        chainId: Long,
+        nonce: ByteArray,
+        maxPriorityFeePerGas: ByteArray,
+        maxFeePerGas: ByteArray,
+        gasLimit: ByteArray,
+        destination: ByteArray,
+        value: ByteArray,
+        data: ByteArray,
+        output: ByteArray,
+        outputLength: IntArray,
     ): Int
 }
