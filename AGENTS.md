@@ -6,6 +6,13 @@ EthWallet is a Kotlin Multiplatform Ethereum wallet for Android, Desktop, and iO
 
 Keep answers exact and clear. Be concise and give minimal full answers (e.g., in code reviews list only findings without fluff like "Key Strengths"). The project owner is an experienced Android developer, so avoid explaining basic Android SDK concepts unless asked.
 
+## Agent Board
+
+- Never reference an Agent Board task by ID alone.
+- Always include the exact task title after the ID, using the format `#20 Implement transfer submission orchestration`.
+- Read the task through the Agent Board MCP before referencing it; do not guess, shorten, or paraphrase its title.
+- Always use the Agent Board MCP for every board operation, including reading, creating, claiming, noting, updating, releasing, and completing tasks. Never use a browser, screen capture or recording, UI automation, direct HTTP, or the board database.
+
 ## Modules
 
 - `:shared`: KMP code. Most UI, ViewModels, business logic, models, DI, and shared data code live here.

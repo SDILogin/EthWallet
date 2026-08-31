@@ -2,6 +2,13 @@
 
 Kotlin Multiplatform Ethereum wallet for Android, Desktop, and iOS.
 
+## Agent Board
+
+- Never reference an Agent Board task by ID alone.
+- Always include the exact task title after the ID, using the format `#20 Implement transfer submission orchestration`.
+- Read the task through the Agent Board MCP before referencing it; do not guess, shorten, or paraphrase its title.
+- Always use the Agent Board MCP for every board operation, including reading, creating, claiming, noting, updating, releasing, and completing tasks. Never use a browser, screen capture or recording, UI automation, direct HTTP, or the board database.
+
 ## Stack
 
 - Jetpack Compose Multiplatform
