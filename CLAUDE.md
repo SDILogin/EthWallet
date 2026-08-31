@@ -67,8 +67,8 @@ The `SepoliaE2e` JUnit category is excluded from normal test tasks. Run it expli
 ```
 
 The ignored and untracked root `local.properties` must contain non-empty `seed_1` and `seed_2`
-entries. This performs a real Sepolia transfer and spends test ETH. It requires macOS and the
-host Rust JNI library; normal unit tests exclude this category. Never print these properties or
-copy them into source code, BuildConfig, Gradle inputs, command-line arguments, generated assets,
-test APKs, or logs. The test must interact only through the UI; its hardware-only Koin fakes must
-not replace the real Ethereum, Room, ViewModel, repository, or UI components.
+entries. This performs a real Sepolia transfer and spends test ETH. It requires Apple Silicon
+macOS and the host Rust JNI library; normal unit tests exclude this category. Never print these
+properties or copy them into source code, BuildConfig, Gradle inputs, command-line arguments,
+generated assets, test APKs, or logs. The test must interact only through the UI; its hardware-only
+Koin fakes must not replace the real Ethereum, Room, ViewModel, repository, or UI components.

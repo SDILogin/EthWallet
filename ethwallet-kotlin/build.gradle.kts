@@ -132,11 +132,6 @@ val buildRustMacosArm64 = registerCargoBuild(
     target = "aarch64-apple-darwin",
     libraryFileName = "lib$nativeLibraryName.dylib",
 )
-val buildRustMacosX64 = registerCargoBuild(
-    taskName = "buildRustMacosX64",
-    target = "x86_64-apple-darwin",
-    libraryFileName = "lib$nativeLibraryName.dylib",
-)
 val buildRustIosArm64 = registerCargoBuild(
     taskName = "buildRustIosArm64",
     target = "aarch64-apple-ios",
@@ -155,15 +150,11 @@ val buildRustIosX64 = registerCargoBuild(
 
 val packageRustMacosLibraries = tasks.register<Sync>("packageRustMacosLibraries") {
     group = "rust"
-    description = "Packages macOS Rust libraries as JVM resources."
-    dependsOn(buildRustMacosArm64, buildRustMacosX64)
+    description = "Packages the Apple Silicon macOS Rust library as a JVM resource."
+    dependsOn(buildRustMacosArm64)
     from(rustTargetDirectory.map { it.dir("aarch64-apple-darwin/release") }) {
         include("lib$nativeLibraryName.dylib")
         into("native/macos/aarch64")
-    }
-    from(rustTargetDirectory.map { it.dir("x86_64-apple-darwin/release") }) {
-        include("lib$nativeLibraryName.dylib")
-        into("native/macos/x86_64")
     }
     into(generatedNativeDirectory.map { it.dir("jvmResources") })
 }
@@ -299,15 +290,12 @@ tasks.matching { it.name == "jvmProcessResources" }.configureEach {
 }
 
 tasks.withType<Test>().matching { it.name == "testAndroidHostTest" }.configureEach {
+    val hostOs = System.getProperty("os.name")
     val hostArchitecture = System.getProperty("os.arch").lowercase()
-    val (rustBuildTask, rustTarget) = when (hostArchitecture) {
-        "aarch64", "arm64" -> buildRustMacosArm64 to "aarch64-apple-darwin"
-        "x86_64", "amd64" -> buildRustMacosX64 to "x86_64-apple-darwin"
-        else -> null to null
-    }
-    if (rustBuildTask != null && rustTarget != null) {
-        dependsOn(rustBuildTask)
-        val nativeDirectory = rustTargetDirectory.map { it.dir("$rustTarget/release").asFile }
+    val supportedHost = hostOs.equals("Mac OS X", ignoreCase = true) && hostArchitecture in setOf("aarch64", "arm64")
+    if (supportedHost) {
+        dependsOn(buildRustMacosArm64)
+        val nativeDirectory = rustTargetDirectory.map { it.dir("aarch64-apple-darwin/release").asFile }
         doFirst {
             val existing = System.getProperty("java.library.path").orEmpty()
             val combined = listOf(nativeDirectory.get().absolutePath, existing)
@@ -317,7 +305,7 @@ tasks.withType<Test>().matching { it.name == "testAndroidHostTest" }.configureEa
         }
     } else {
         doFirst {
-            throw UnsupportedOperationException("Android host tests require an Intel or Apple Silicon macOS host")
+            throw UnsupportedOperationException("Android host tests require Apple Silicon macOS")
         }
     }
 }

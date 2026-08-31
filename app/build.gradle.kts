@@ -180,11 +180,11 @@ val validateSepoliaE2eEnvironment = tasks.register("validateSepoliaE2eEnvironmen
         check(sepoliaE2eEnabled.get()) {
             "Sepolia E2E is disabled. Run with -PsepoliaE2e=true."
         }
-        check(System.getProperty("os.name").startsWith("Mac", ignoreCase = true)) {
-            "Sepolia E2E Android host tests currently require macOS."
+        check(System.getProperty("os.name").equals("Mac OS X", ignoreCase = true)) {
+            "Sepolia E2E Android host tests require Apple Silicon macOS."
         }
-        check(System.getProperty("os.arch").lowercase() in setOf("aarch64", "arm64", "x86_64", "amd64")) {
-            "Sepolia E2E Android host tests require Intel or Apple Silicon macOS."
+        check(System.getProperty("os.arch").lowercase() in setOf("aarch64", "arm64")) {
+            "Sepolia E2E Android host tests require Apple Silicon macOS."
         }
         check(localPropertiesFile.asFile.isFile) {
             "Missing root local.properties."
@@ -225,22 +225,14 @@ tasks.withType<Test>().configureEach {
         dependsOn(validateSepoliaE2eEnvironment)
         systemProperty(localPropertiesPathProperty, localPropertiesFile.asFile.absolutePath)
 
+        val hostOs = System.getProperty("os.name")
         val hostArchitecture = System.getProperty("os.arch").lowercase()
-        val (rustBuildTask, rustTarget) = when (hostArchitecture) {
-            "aarch64", "arm64" -> {
-                ":ethwallet-kotlin:buildRustMacosArm64" to "aarch64-apple-darwin"
-            }
-            "x86_64", "amd64" -> {
-                ":ethwallet-kotlin:buildRustMacosX64" to "x86_64-apple-darwin"
-            }
-            else -> {
-                null to null
-            }
-        }
-        if (rustBuildTask != null && rustTarget != null) {
-            dependsOn(rustBuildTask)
+        val supportedHost = hostOs.equals("Mac OS X", ignoreCase = true) &&
+            hostArchitecture in setOf("aarch64", "arm64")
+        if (supportedHost) {
+            dependsOn(":ethwallet-kotlin:buildRustMacosArm64")
             val nativeDirectory = rootProject.layout.projectDirectory
-                .dir("ethwallet-kotlin/build/rust/target/$rustTarget/release")
+                .dir("ethwallet-kotlin/build/rust/target/aarch64-apple-darwin/release")
                 .asFile
             val javaLibraryPath = listOf(
                 nativeDirectory.absolutePath,
@@ -249,7 +241,7 @@ tasks.withType<Test>().configureEach {
             systemProperty("java.library.path", javaLibraryPath)
         } else {
             doFirst {
-                error("Sepolia E2E Android host tests require Intel or Apple Silicon macOS.")
+                error("Sepolia E2E Android host tests require Apple Silicon macOS.")
             }
         }
     }

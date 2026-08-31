@@ -56,7 +56,7 @@ compose.desktop {
     application {
         mainClass = "me.sdi.ethwallet.desktop.MainKt"
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg)
             packageName = "EthWallet"
             packageVersion = "1.0.0"
         }

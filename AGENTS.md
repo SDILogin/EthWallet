@@ -2,7 +2,7 @@
 
 ## Project
 
-EthWallet is a Kotlin Multiplatform Ethereum wallet for Android, Desktop, and iOS.
+EthWallet is a Kotlin Multiplatform Ethereum wallet for Android, Apple Silicon macOS Desktop, and iOS.
 
 Keep answers exact and clear. Be concise and give minimal full answers (e.g., in code reviews list only findings without fluff like "Key Strengths"). The project owner is an experienced Android developer, so avoid explaining basic Android SDK concepts unless asked.
 

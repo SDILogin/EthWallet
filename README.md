@@ -1,13 +1,14 @@
 # EthWallet
 
-EthWallet is an Android application built using Kotlin and Jetpack Compose that serves as an Ethereum wallet. This project adheres to modern Android development practices and is structured to support Kotlin Multiplatform (KMP) via a shared module.
+EthWallet is an Ethereum wallet for Android and Apple Silicon macOS, built with Kotlin Multiplatform and Compose.
 
 ## Project Structure
 
 The project is organized into the following modules:
 
 - **`:app`**: The primary Android application module containing the UI code (Jetpack Compose) and Android-specific implementations.
-- **`:shared`**: A Kotlin Multiplatform module designed to house business logic, data models, and platform-agnostic code shared between targets (currently Android, potentially iOS/Desktop in the future).
+- **`:shared`**: Business logic, data models, and platform-agnostic code shared by Android and desktop.
+- **`:desktopApp`**: The Apple Silicon macOS desktop entry point and DMG packaging.
 
 ## Prerequisites
 
@@ -48,7 +49,7 @@ seed_2=<receiver recovery phrase>
 ```
 
 Do not add quotes around the phrases. The Gradle preflight verifies that `local.properties` is
-ignored and untracked without printing either value. Run the test only on macOS:
+ignored and untracked without printing either value. Run the test only on Apple Silicon macOS:
 
 ```bash
 ./gradlew --no-daemon --no-build-cache -PsepoliaE2e=true \
@@ -59,7 +60,7 @@ ignored and untracked without printing either value. Run the test only on macOS:
 The opt-in task builds the host Rust JNI library and passes only the absolute `local.properties`
 path to the test JVM. Seed phrases are read at test runtime and are never placed in BuildConfig,
 generated sources, command-line arguments, Gradle inputs, test APKs, or logs. The test requires
-macOS and the host Rust JNI library; normal unit tests exclude this category.
+Apple Silicon macOS and the host Rust JNI library; normal unit tests exclude this category.
 
 ### Code Formatting
 This project uses **Spotless** and **ktlint** to enforce code style.

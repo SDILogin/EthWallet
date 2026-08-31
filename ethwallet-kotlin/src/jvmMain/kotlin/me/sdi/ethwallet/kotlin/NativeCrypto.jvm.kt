@@ -5,7 +5,7 @@ import java.nio.file.Files
 
 internal actual object NativeCrypto {
     private val nativeLibrary = lazy {
-        loadMacOsLibrary()
+        loadAppleSiliconMacOsLibrary()
         checkAbiVersion()
     }
 
@@ -89,17 +89,16 @@ internal actual object NativeCrypto {
         nativeLibrary.value
     }
 
-    private fun loadMacOsLibrary() {
+    private fun loadAppleSiliconMacOsLibrary() {
         if (!System.getProperty("os.name").equals("Mac OS X", ignoreCase = true)) {
             throw UnsupportedOperationException("ethwallet_crypto JVM support is currently macOS-only")
         }
 
-        val architecture = when (System.getProperty("os.arch").lowercase()) {
-            "aarch64", "arm64" -> "aarch64"
-            "x86_64", "amd64" -> "x86_64"
-            else -> throw UnsupportedOperationException("Unsupported macOS architecture")
+        when (System.getProperty("os.arch").lowercase()) {
+            "aarch64", "arm64" -> Unit
+            else -> throw UnsupportedOperationException("ethwallet_crypto JVM support requires Apple Silicon")
         }
-        val resourcePath = "/native/macos/$architecture/libethwallet_crypto.dylib"
+        val resourcePath = "/native/macos/aarch64/libethwallet_crypto.dylib"
         val resource = checkNotNull(NativeCrypto::class.java.getResourceAsStream(resourcePath)) {
             "Missing packaged native library: $resourcePath"
         }
