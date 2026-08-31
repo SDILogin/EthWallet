@@ -1,10 +1,11 @@
 package me.sdi.ethwallet.core
 
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
+import me.sdi.ethwallet.kotlin.PrivateKey
 import java.math.BigInteger
 
 /**
- * Single abstraction over the underlying web3j library: balance reads, fee suggestions,
+ * Single abstraction over the underlying Ethereum client: balance reads, fee suggestions,
  * transaction signing/broadcasting and wallet derivation all live behind this interface so
  * a future library swap only touches its implementation.
  */
@@ -20,7 +21,7 @@ interface EthManager {
      * @param contractAddress [EthContractAddress] for a plain ETH transfer, otherwise the ERC-20 token contract.
      */
     suspend fun sendTransfer(
-        privateKey: BigInteger,
+        privateKey: PrivateKey,
         contractAddress: EthAddress,
         destinationAddress: EthAddress,
         amount: BigInteger,
@@ -29,10 +30,10 @@ interface EthManager {
         maxFeePerGas: BigInteger,
     ): String
 
-    fun createWallet(): EthCreationResult
+    suspend fun createWallet(): EthCreationResult
 
     /**
      * @throws IllegalArgumentException if the mnemonic is not a valid BIP-39 phrase.
      */
-    fun importWallet(mnemonic: String): EthCreationResult
+    suspend fun importWallet(mnemonic: String): EthCreationResult
 }

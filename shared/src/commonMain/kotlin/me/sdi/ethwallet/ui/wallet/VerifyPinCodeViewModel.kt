@@ -197,8 +197,12 @@ class VerifyPinCodeViewModel(
         biometricJob = viewModelScope.launch {
             try {
                 when (val result = biometricUnlock.unlock()) {
-                    is BiometricResult.Success -> onUnlocked()
-                    is BiometricResult.Cancelled -> Unit
+                    is BiometricResult.Success -> {
+                        onUnlocked()
+                    }
+                    is BiometricResult.Cancelled -> {
+                        Unit
+                    }
                     is BiometricResult.Invalidated -> {
                         viewState.update {
                             it.copy(
@@ -280,7 +284,9 @@ class VerifyPinCodeViewModel(
 
     private suspend fun handleInvalidPin() {
         when (val result = pinAttemptsGuard.onFailedAttempt()) {
-            is PinLockState.Tampered -> handleTamperDetected()
+            is PinLockState.Tampered -> {
+                handleTamperDetected()
+            }
             is PinLockState.Active -> {
                 val locked = result.lockRemaining > Duration.ZERO
                 viewState.update {

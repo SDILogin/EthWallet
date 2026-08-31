@@ -1,9 +1,9 @@
 package me.sdi.ethwallet.core
 
-import java.math.BigInteger
+import me.sdi.ethwallet.kotlin.PrivateKey
 
 data class EthCreationResult(
     val address: EthAddress,
-    val privateKey: BigInteger,
+    val privateKey: PrivateKey,
     val seedPhrase: List<String>,
 )

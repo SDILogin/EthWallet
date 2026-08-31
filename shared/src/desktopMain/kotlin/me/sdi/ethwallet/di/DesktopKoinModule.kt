@@ -5,8 +5,6 @@ import androidx.datastore.preferences.core.Preferences
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import me.sdi.ethwallet.core.ChainConfig
-import me.sdi.ethwallet.core.EthManager
-import me.sdi.ethwallet.core.Web3jEthManager
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.DataCleanerPinArtifacts
@@ -54,8 +52,6 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single { chainConfig }
 
     single<HttpClient> { createHttpClient(OkHttp.create()) }
-
-    single<EthManager> { Web3jEthManager.create(get()) }
 
     single<PinCodeStorage> {
         PinCodeStorageSoftware(

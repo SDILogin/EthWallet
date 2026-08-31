@@ -4,15 +4,14 @@ import android.util.Base64
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import me.sdi.ethwallet.kotlin.PrivateKey
 import org.junit.After
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.math.BigInteger
 import java.security.GeneralSecurityException
 import java.security.KeyStore
 import java.security.SecureRandom
@@ -37,13 +36,24 @@ class KeyStoreEncryptorTest {
         val cipherText = encryptor.encryptPrivateKey(PRIVATE_KEY, ADDRESS)
         val decrypted = encryptor.decryptPrivateKey(cipherText, ADDRESS)
 
-        assertEquals("Round-trip must recover the original private key", PRIVATE_KEY, decrypted)
+        val expectedBytes = PRIVATE_KEY.copyBytes()
+        val decryptedBytes = decrypted.copyBytes()
+        try {
+            assertTrue(decryptedBytes.contentEquals(expectedBytes), "Round-trip must recover the original private key")
+        } finally {
+            expectedBytes.fill(0)
+            decryptedBytes.fill(0)
+            decrypted.clear()
+        }
 
         val inner = stripOuterKeystoreLayer(cipherText, ADDRESS)
+        val privateKeyBytes = PRIVATE_KEY.copyBytes()
         assertFalse(
             "Stripping only the outer Keystore layer must not reveal the plaintext key",
-            inner.contentEquals(PRIVATE_KEY.toByteArray()),
+            inner.contentEquals(privateKeyBytes),
         )
+        inner.fill(0)
+        privateKeyBytes.fill(0)
     }
 
     @Test
@@ -114,7 +124,11 @@ class KeyStoreEncryptorTest {
         private const val MASTER_KEK_LENGTH = 32
         private const val ETH_ALIAS_PREFIX = "eth_wallet_key_"
         private const val ADDRESS = "0x1234567890abcdef1234567890abcdef12345678"
-        private val PRIVATE_KEY =
-            BigInteger("4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318", 16)
+        private val PRIVATE_KEY = PrivateKey.fromBytes(
+            "4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318"
+                .chunked(2)
+                .map { it.toInt(16).toByte() }
+                .toByteArray(),
+        )
     }
 }

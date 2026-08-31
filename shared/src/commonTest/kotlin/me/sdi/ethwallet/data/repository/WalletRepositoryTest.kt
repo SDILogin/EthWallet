@@ -8,6 +8,7 @@ import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
+import me.sdi.ethwallet.kotlin.PrivateKey
 import java.math.BigInteger
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -35,12 +36,12 @@ class WalletRepositoryTest {
         ethManager = FakeEthManager().also {
             it.creationResult = EthCreationResult(
                 address = EthAddress(createdAddress),
-                privateKey = createdPrivateKey,
+                privateKey = privateKey(createdPrivateKey),
                 seedPhrase = createdSeedPhrase,
             )
             it.importResult = EthCreationResult(
                 address = EthAddress(importedAddress),
-                privateKey = importedPrivateKey,
+                privateKey = privateKey(importedPrivateKey),
                 seedPhrase = importedSeedPhrase,
             )
         }
@@ -152,5 +153,18 @@ class WalletRepositoryTest {
             "encrypted-created",
             walletRepository.getEncryptedPrivateKey(EthAddress(createdAddress)),
         )
+    }
+
+    private fun privateKey(value: BigInteger): PrivateKey {
+        val source = value.toByteArray()
+        val bytes = ByteArray(32)
+        val sourceStart = if (source.size > bytes.size) source.size - bytes.size else 0
+        source.copyInto(bytes, bytes.size - (source.size - sourceStart), sourceStart)
+        source.fill(0)
+        return try {
+            PrivateKey.fromBytes(bytes)
+        } finally {
+            bytes.fill(0)
+        }
     }
 }

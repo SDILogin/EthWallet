@@ -6,7 +6,7 @@ import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.Logger
-import java.math.BigInteger
+import me.sdi.ethwallet.kotlin.PrivateKey
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -40,7 +40,7 @@ class KeyStoreEncryptor(
         private const val ETHEREUM_KEY_ALIAS_PREFIX = "eth_wallet_key_"
     }
 
-    override suspend fun encryptPrivateKey(privateKey: BigInteger, address: String): String {
+    override suspend fun encryptPrivateKey(privateKey: PrivateKey, address: String): String {
         val keyAlias = generateKeyAlias(address).also {
             Logger.debug("KeyStoreEncryptor") {
                 "Encrypting private key for address $address with alias $it"
@@ -54,31 +54,42 @@ class KeyStoreEncryptor(
 
             val iv = cipher.iv
             val kek = pinSession.getOrThrow()
-            val privateKeyEncryptedWithoutHardwareSecureModule = KekCipher.encrypt(
-                key = kek,
-                plaintext = privateKey.toByteArray(),
-            )
-            val privateKeyEncryptedWithHardwareSecureModule = cipher
-                .doFinal(privateKeyEncryptedWithoutHardwareSecureModule)
-
-            val combined = ByteArray(iv.size + privateKeyEncryptedWithHardwareSecureModule.size)
-            System.arraycopy(iv, 0, combined, 0, iv.size)
-            System.arraycopy(
-                privateKeyEncryptedWithHardwareSecureModule,
-                0,
-                combined,
-                iv.size,
-                privateKeyEncryptedWithHardwareSecureModule.size,
-            )
-
-            Base64.encodeToString(combined, Base64.DEFAULT)
+            val plaintext = privateKey.copyBytes()
+            try {
+                val privateKeyEncryptedWithoutHardwareSecureModule = KekCipher.encrypt(
+                    key = kek,
+                    plaintext = plaintext,
+                )
+                try {
+                    val privateKeyEncryptedWithHardwareSecureModule = cipher
+                        .doFinal(privateKeyEncryptedWithoutHardwareSecureModule)
+                    try {
+                        val combined = ByteArray(iv.size + privateKeyEncryptedWithHardwareSecureModule.size)
+                        System.arraycopy(iv, 0, combined, 0, iv.size)
+                        System.arraycopy(
+                            privateKeyEncryptedWithHardwareSecureModule,
+                            0,
+                            combined,
+                            iv.size,
+                            privateKeyEncryptedWithHardwareSecureModule.size,
+                        )
+                        return@withContext Base64.encodeToString(combined, Base64.DEFAULT)
+                    } finally {
+                        privateKeyEncryptedWithHardwareSecureModule.fill(0)
+                    }
+                } finally {
+                    privateKeyEncryptedWithoutHardwareSecureModule.fill(0)
+                }
+            } finally {
+                plaintext.fill(0)
+            }
         }
     }
 
     override suspend fun decryptPrivateKey(
         encryptedBase64: String,
         address: String,
-    ): BigInteger = withContext(Dispatchers.Default) {
+    ): PrivateKey = withContext(Dispatchers.Default) {
         val encryptedData = Base64.decode(encryptedBase64, Base64.DEFAULT)
         val iv = encryptedData.copyOfRange(0, GCM_IV_LENGTH)
         val encrypted = encryptedData.copyOfRange(GCM_IV_LENGTH, encryptedData.size)
@@ -100,9 +111,17 @@ class KeyStoreEncryptor(
         cipher.init(Cipher.DECRYPT_MODE, androidKeyStoreBackedSecretKey, spec)
 
         val privateKeyEncryptedWithHardwareSecureModule = cipher.doFinal(encrypted)
-
-        val kek = pinSession.getOrThrow()
-        BigInteger(KekCipher.decrypt(kek, privateKeyEncryptedWithHardwareSecureModule))
+        try {
+            val kek = pinSession.getOrThrow()
+            val decryptedBytes = KekCipher.decrypt(kek, privateKeyEncryptedWithHardwareSecureModule)
+            try {
+                PrivateKey.fromBytes(decryptedBytes)
+            } finally {
+                decryptedBytes.fill(0)
+            }
+        } finally {
+            privateKeyEncryptedWithHardwareSecureModule.fill(0)
+        }
     }
 
     private fun generateKeyAlias(address: String) = "$ETHEREUM_KEY_ALIAS_PREFIX${address.lowercase()}"

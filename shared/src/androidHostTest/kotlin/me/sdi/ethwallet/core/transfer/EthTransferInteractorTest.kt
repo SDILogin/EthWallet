@@ -14,6 +14,8 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.kotlin.PrivateKey
+import me.sdi.ethwallet.kotlin.deriveAddress
 import me.sdi.ethwallet.ui.daiOnMainnet
 import me.sdi.ethwallet.ui.usdtOnMainnet
 import java.math.BigInteger
@@ -146,11 +148,12 @@ class EthTransferInteractorTest {
 
     @Test
     fun should_successfully_transfer_ETH_with_sufficient_balance() = runTest(timeout = 10.seconds) {
-        setUpEthTransferMocks()
+        val privateKey = setUpEthTransferMocks()
 
         val result = transferInteractor.transfer(transferData())
 
         assertEquals("0xabc123def456", result)
+        assertPrivateKeyCleared(privateKey)
     }
 
     @Test
@@ -217,7 +220,7 @@ class EthTransferInteractorTest {
 
     @Test
     fun should_wrap_eth_manager_failure_as_transaction_failed() = runTest(timeout = 10.seconds) {
-        setUpEthTransferMocks()
+        val privateKey = setUpEthTransferMocks()
         coEvery {
             ethManager.sendTransfer(any(), EthContractAddress, testDestinationAddress, any(), any(), any(), any())
         } throws RuntimeException("node rejected the transaction")
@@ -227,11 +230,12 @@ class EthTransferInteractorTest {
         ) {
             transferInteractor.transfer(transferData())
         }
+        assertPrivateKeyCleared(privateKey)
     }
 
     @Test
     fun should_propagate_cancellation_exception_unwrapped() = runTest(timeout = 10.seconds) {
-        setUpEthTransferMocks()
+        val privateKey = setUpEthTransferMocks()
         coEvery {
             ethManager.sendTransfer(any(), EthContractAddress, testDestinationAddress, any(), any(), any(), any())
         } throws CancellationException("cancelled")
@@ -241,6 +245,7 @@ class EthTransferInteractorTest {
         ) {
             transferInteractor.transfer(transferData())
         }
+        assertPrivateKeyCleared(privateKey)
     }
 
     @Test
@@ -257,7 +262,7 @@ class EthTransferInteractorTest {
         every { balanceProvider.observe(sender) } returns flowOf(mapOf(EthContractAddress to 2.eth.toWei().value))
         coEvery { balanceProvider.forceUpdate(sender) } returns Unit
         coEvery { walletRepository.getEncryptedPrivateKey(sender) } returns "encrypted_key"
-        coEvery { privateKeyEncryptor.decryptPrivateKey("encrypted_key", sender.toString()) } returns BigInteger("123456789")
+        coEvery { privateKeyEncryptor.decryptPrivateKey("encrypted_key", sender.toString()) } returns privateKey123()
 
         transferInteractor.transfer(transferData(sender = sender))
 
@@ -267,11 +272,13 @@ class EthTransferInteractorTest {
         coVerify { privateKeyEncryptor.decryptPrivateKey("encrypted_key", sender.toString()) }
     }
 
-    private fun setUpEthTransferMocks() {
+    private fun setUpEthTransferMocks(): PrivateKey {
+        val privateKey = privateKey123()
         every { balanceProvider.observe(testWalletAddress) } returns flowOf(mapOf(EthContractAddress to 2.eth.toWei().value))
         coEvery { balanceProvider.forceUpdate(testWalletAddress) } returns Unit
         coEvery { walletRepository.getEncryptedPrivateKey(testWalletAddress) } returns "encrypted_key"
-        coEvery { privateKeyEncryptor.decryptPrivateKey("encrypted_key", testWalletAddress.toString()) } returns BigInteger("123456789")
+        coEvery { privateKeyEncryptor.decryptPrivateKey("encrypted_key", testWalletAddress.toString()) } returns privateKey
+        return privateKey
     }
 
     private fun setUpErc20TransferMocks() {
@@ -283,9 +290,19 @@ class EthTransferInteractorTest {
         )
         coEvery { balanceProvider.forceUpdate(testWalletAddress) } returns Unit
         coEvery { walletRepository.getEncryptedPrivateKey(testWalletAddress) } returns "encrypted_key"
-        coEvery { privateKeyEncryptor.decryptPrivateKey("encrypted_key", testWalletAddress.toString()) } returns BigInteger("123456789")
+        coEvery { privateKeyEncryptor.decryptPrivateKey("encrypted_key", testWalletAddress.toString()) } returns privateKey123()
         coEvery {
             ethManager.sendTransfer(any(), usdtOnMainnet.ethAddress, testDestinationAddress, any(), any(), any(), any())
         } returns "0xdef456abc789"
+    }
+
+    private fun privateKey123(): PrivateKey = PrivateKey.fromBytes(
+        ByteArray(32).also { it[31] = 123 },
+    )
+
+    private suspend fun assertPrivateKeyCleared(privateKey: PrivateKey) {
+        assertFailsWith<IllegalStateException> {
+            privateKey.deriveAddress()
+        }
     }
 }

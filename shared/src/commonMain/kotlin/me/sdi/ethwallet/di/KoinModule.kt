@@ -12,13 +12,18 @@ import kotlinx.serialization.json.Json
 import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthBalanceProvider
+import me.sdi.ethwallet.core.EthManager
+import me.sdi.ethwallet.core.EthManagerKotlin
 import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.core.FiatRateProviderBinance
+import me.sdi.ethwallet.core.JsonRpcTransportKtor
 import me.sdi.ethwallet.core.security.InMemoryPinSession
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.kotlin.EthereumNetwork
+import me.sdi.ethwallet.kotlin.JsonRpcTransport
 import me.sdi.ethwallet.ui.receive.ReceiveQrViewModel
 import me.sdi.ethwallet.ui.send.SendViewModel
 import me.sdi.ethwallet.ui.settings.SettingsViewModel
@@ -37,6 +42,10 @@ expect fun platformModule(chainConfig: ChainConfig): Module
 
 val commonModule = module {
     single<CoroutineScope> { CoroutineScope(SupervisorJob()) }
+
+    single<JsonRpcTransport> { JsonRpcTransportKtor(get(), get<ChainConfig>().rpcUrl) }
+    single { EthereumNetwork(get<ChainConfig>().chainId, get()) }
+    single<EthManager> { EthManagerKotlin(get()) }
 
     factory<WalletRepository> {
         WalletRepository(

@@ -4,8 +4,6 @@ import android.content.Context
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import me.sdi.ethwallet.core.ChainConfig
-import me.sdi.ethwallet.core.EthManager
-import me.sdi.ethwallet.core.Web3jEthManager
 import me.sdi.ethwallet.core.security.AndroidBiometricUnlock
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerAndroidKeyStore
@@ -56,7 +54,6 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
 
     single<HttpClient> { createHttpClient(OkHttp.create()) }
 
-    single<EthManager> { Web3jEthManager.create(get()) }
     factory<TransferInteractor> { EthTransferInteractor(get(), get(), get(), get()) }
 
     single<PinAttemptsGuard> { KeyStorePinAttemptsGuard(context = androidContext()) }

@@ -37,7 +37,7 @@ Keep answers exact and clear. Be concise and give minimal full answers (e.g., in
 - Kotlin Coroutines. Always rethrow `CancellationException`.
 - Ktor for networking.
 - Room and DataStore for local persistence.
-- Web3j for Ethereum integration.
+- `ethwallet-kotlin` for Ethereum integration.
 - Rust for cross-platform Ethereum cryptography.
 - Spotless with ktlint for formatting.
 

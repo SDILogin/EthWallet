@@ -237,6 +237,7 @@ class FeeSuggestionTest {
         assertSame(cancellation, thrown)
     }
 }
+
 private fun network(transport: JsonRpcTransport) = EthereumNetwork(chainId = 1L, transport = transport)
 
 private fun standardFeeHistoryResponse(

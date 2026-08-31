@@ -1,4 +1,6 @@
+import org.gradle.api.tasks.testing.Test
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -80,6 +82,9 @@ kotlin {
                 implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.ktor.client.logging)
 
+                // Ethereum client
+                api(project(":ethwallet-kotlin"))
+
                 // Koin
                 implementation(libs.koin.core)
                 implementation(libs.koin.compose)
@@ -101,9 +106,6 @@ kotlin {
                 implementation(libs.compose.adaptive.layout)
                 implementation(libs.compose.adaptive.navigation)
                 implementation(libs.compose.adaptive.navigation3)
-
-                // Web3j
-                implementation(libs.web3j.core)
             }
         }
         val commonTest = getByName("commonTest") {
@@ -165,4 +167,27 @@ dependencies {
 
 tasks.matching { it.name.startsWith("compileTestKotlinDesktop") || it.name.startsWith("desktopTest") }.configureEach {
     enabled = false
+}
+
+tasks.withType<Test>().matching { it.name == "testAndroidHostTest" }.configureEach {
+    val hostOs = System.getProperty("os.name")
+    val hostArchitecture = System.getProperty("os.arch").lowercase()
+    val supportedHost = hostOs.equals("Mac OS X", ignoreCase = true) && hostArchitecture in setOf("aarch64", "arm64")
+    if (supportedHost) {
+        dependsOn(":ethwallet-kotlin:buildRustMacosArm64")
+        val nativeDirectory = rootProject.layout.projectDirectory
+            .dir("ethwallet-kotlin/build/rust/target/aarch64-apple-darwin/release")
+            .asFile
+        doFirst {
+            val existing = System.getProperty("java.library.path").orEmpty()
+            val combined = listOf(nativeDirectory.absolutePath, existing)
+                .filter(String::isNotEmpty)
+                .joinToString(File.pathSeparator)
+            systemProperty("java.library.path", combined)
+        }
+    } else {
+        doFirst {
+            throw UnsupportedOperationException("Android host tests require Apple Silicon macOS")
+        }
+    }
 }

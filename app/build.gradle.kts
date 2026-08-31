@@ -45,6 +45,9 @@ extensions.configure<ApplicationExtension>("android") {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
+        ndk {
+            abiFilters += setOf("arm64-v8a", "x86_64")
+        }
     }
 
     testOptions {
@@ -128,9 +131,6 @@ dependencies {
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-
-    // Web3j
-    implementation(libs.web3j.core)
 
     // Ktor
     implementation(libs.ktor.client.okhttp)

@@ -19,7 +19,6 @@ runtime = "1.11.1"
 spotless = "8.8.0"
 ui = "1.11.1"
 uiToolingPreview = "1.11.1"
-web3j = "4.8.9-android"
 robolectric = "4.16.1"
 splashscreen = "1.2.0"
 navigation3Kmp = "1.1.1"
@@ -65,7 +64,6 @@ androidx-fragment = { group = "androidx.fragment", name = "fragment-ktx", versio
 navigation3-ui-kmp = { group = "org.jetbrains.androidx.navigation3", name = "navigation3-ui", version.ref = "navigation3Kmp" }
 lifecycle-viewmodel-navigation3-kmp = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewModelNav3Kmp" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinSerialization" }
-web3j-core = { group = "org.web3j", name = "core", version.ref = "web3j" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "core" }
 

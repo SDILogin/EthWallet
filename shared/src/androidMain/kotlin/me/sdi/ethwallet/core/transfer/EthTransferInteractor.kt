@@ -12,6 +12,7 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.kotlin.PrivateKey
 import java.math.BigInteger
 
 class EthTransferInteractor(
@@ -45,6 +46,8 @@ class EthTransferInteractor(
                 throw e
             } catch (e: Exception) {
                 throw TransferException.TransactionFailed("Transfer failed: ${e.message}")
+            } finally {
+                privateKey.clear()
             }
         }
     }
@@ -111,7 +114,7 @@ class EthTransferInteractor(
         }
     }
 
-    private suspend fun decryptPrivateKey(address: EthAddress): BigInteger {
+    private suspend fun decryptPrivateKey(address: EthAddress): PrivateKey {
         val encryptedPrivateKey = walletRepository.getEncryptedPrivateKey(address)
         return withContext(Dispatchers.Default) {
             privateKeyEncryptor.decryptPrivateKey(

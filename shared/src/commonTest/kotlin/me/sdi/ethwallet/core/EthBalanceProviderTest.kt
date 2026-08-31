@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.database.dao.InMemoryTokenBalanceDao
 import me.sdi.ethwallet.database.entity.TokenBalanceEntity
+import me.sdi.ethwallet.kotlin.PrivateKey
 import me.sdi.ethwallet.ui.usdtOnMainnet
 import java.math.BigInteger
 import kotlin.test.BeforeTest
@@ -19,7 +20,7 @@ class EthBalanceProviderTest {
         override suspend fun fetchFeeSuggestion() = throw NotImplementedError()
 
         override suspend fun sendTransfer(
-            privateKey: BigInteger,
+            privateKey: PrivateKey,
             contractAddress: EthAddress,
             destinationAddress: EthAddress,
             amount: BigInteger,
@@ -28,9 +29,9 @@ class EthBalanceProviderTest {
             maxFeePerGas: BigInteger,
         ) = throw NotImplementedError()
 
-        override fun createWallet() = throw NotImplementedError()
+        override suspend fun createWallet() = throw NotImplementedError()
 
-        override fun importWallet(mnemonic: String) = throw NotImplementedError()
+        override suspend fun importWallet(mnemonic: String) = throw NotImplementedError()
 
         fun setBalance(address: EthAddress, balances: Map<EthAddress, Result<BigInteger>>) {
             balance[address] = balances

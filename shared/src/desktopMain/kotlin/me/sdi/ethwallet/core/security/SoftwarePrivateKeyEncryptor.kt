@@ -1,6 +1,6 @@
 package me.sdi.ethwallet.core.security
 
-import java.math.BigInteger
+import me.sdi.ethwallet.kotlin.PrivateKey
 import kotlin.io.encoding.Base64
 
 /**
@@ -13,9 +13,21 @@ import kotlin.io.encoding.Base64
 class SoftwarePrivateKeyEncryptor(
     private val pinSession: PinSession,
 ) : PrivateKeyEncryptor {
-    override suspend fun encryptPrivateKey(privateKey: BigInteger, address: String): String =
-        Base64.encode(KekCipher.encrypt(pinSession.getOrThrow(), privateKey.toByteArray()))
+    override suspend fun encryptPrivateKey(privateKey: PrivateKey, address: String): String {
+        val plaintext = privateKey.copyBytes()
+        return try {
+            Base64.encode(KekCipher.encrypt(pinSession.getOrThrow(), plaintext))
+        } finally {
+            plaintext.fill(0)
+        }
+    }
 
-    override suspend fun decryptPrivateKey(encryptedBase64: String, address: String): BigInteger =
-        BigInteger(KekCipher.decrypt(pinSession.getOrThrow(), Base64.decode(encryptedBase64)))
+    override suspend fun decryptPrivateKey(encryptedBase64: String, address: String): PrivateKey {
+        val decryptedBytes = KekCipher.decrypt(pinSession.getOrThrow(), Base64.decode(encryptedBase64))
+        return try {
+            PrivateKey.fromBytes(decryptedBytes)
+        } finally {
+            decryptedBytes.fill(0)
+        }
+    }
 }

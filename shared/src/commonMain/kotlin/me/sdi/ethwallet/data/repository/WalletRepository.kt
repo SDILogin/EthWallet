@@ -38,17 +38,21 @@ class WalletRepository(
         Logger.debug(TAG) { "Importing wallet" }
 
         val creationResult: EthCreationResult = ethManager.importWallet(mnemonic)
-        val encryptedKeyBase64 = privateKeyEncryptor.encryptPrivateKey(
-            privateKey = creationResult.privateKey,
-            address = creationResult.address.toString(),
-        )
-        walletDao.insertWallet(
-            WalletEntity(
+        try {
+            val encryptedKeyBase64 = privateKeyEncryptor.encryptPrivateKey(
+                privateKey = creationResult.privateKey,
                 address = creationResult.address.toString(),
-                encryptedPrivateKeyBase64 = encryptedKeyBase64,
-                label = label,
-            ),
-        )
+            )
+            walletDao.insertWallet(
+                WalletEntity(
+                    address = creationResult.address.toString(),
+                    encryptedPrivateKeyBase64 = encryptedKeyBase64,
+                    label = label,
+                ),
+            )
+        } finally {
+            creationResult.privateKey.clear()
+        }
     }
 
     fun observeAllWallets(): Flow<List<EthWallet>> = walletDao.observeAllWallets().map { dbEntities ->

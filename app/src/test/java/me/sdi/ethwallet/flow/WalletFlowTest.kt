@@ -38,6 +38,7 @@ import me.sdi.ethwallet.flow.pageobjects.OnboardingPage
 import me.sdi.ethwallet.flow.pageobjects.SetPinCodePage
 import me.sdi.ethwallet.flow.pageobjects.WalletPage
 import me.sdi.ethwallet.flow.pageobjects.WalletsListPage
+import me.sdi.ethwallet.kotlin.PrivateKey
 import me.sdi.ethwallet.ui.EthWalletApp
 import me.sdi.ethwallet.ui.daiOnSepolia
 import me.sdi.ethwallet.ui.usdcOnSepolia
@@ -159,7 +160,7 @@ class WalletFlowTest : KoinTest {
                 override suspend fun fetchFeeSuggestion(): FeeSuggestion = throw NotImplementedError()
 
                 override suspend fun sendTransfer(
-                    privateKey: BigInteger,
+                    privateKey: PrivateKey,
                     contractAddress: EthAddress,
                     destinationAddress: EthAddress,
                     amount: BigInteger,
@@ -168,10 +169,10 @@ class WalletFlowTest : KoinTest {
                     maxFeePerGas: BigInteger,
                 ): String = throw NotImplementedError()
 
-                override fun createWallet(): EthCreationResult {
+                override suspend fun createWallet(): EthCreationResult {
                     return EthCreationResult(
                         address = EthAddress("0x71C7656EC7ab88b098defB751B7401B5f6d8976F"),
-                        privateKey = BigInteger.ONE,
+                        privateKey = PrivateKey.fromBytes(ByteArray(32).also { it[31] = 1 }),
                         seedPhrase = listOf(
                             "word1",
                             "word2",
@@ -189,18 +190,31 @@ class WalletFlowTest : KoinTest {
                     )
                 }
 
-                override fun importWallet(mnemonic: String): EthCreationResult = createWallet()
+                override suspend fun importWallet(mnemonic: String): EthCreationResult = createWallet()
             }
         }
         single<PinCodeStorage> { pinCodeStorage }
         single<PrivateKeyEncryptor> {
             object : PrivateKeyEncryptor {
-                override suspend fun encryptPrivateKey(privateKey: BigInteger, address: String): String {
-                    return privateKey.toString(16)
+                override suspend fun encryptPrivateKey(privateKey: PrivateKey, address: String): String {
+                    val bytes = privateKey.copyBytes()
+                    return try {
+                        bytes.joinToString("") { "%02x".format(it) }
+                    } finally {
+                        bytes.fill(0)
+                    }
                 }
 
-                override suspend fun decryptPrivateKey(encryptedBase64: String, address: String): BigInteger {
-                    return BigInteger(encryptedBase64, 16)
+                override suspend fun decryptPrivateKey(encryptedBase64: String, address: String): PrivateKey {
+                    val bytes = ByteArray(32)
+                    val decoded = encryptedBase64.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+                    decoded.copyInto(bytes, bytes.size - decoded.size)
+                    decoded.fill(0)
+                    return try {
+                        PrivateKey.fromBytes(bytes)
+                    } finally {
+                        bytes.fill(0)
+                    }
                 }
             }
         }

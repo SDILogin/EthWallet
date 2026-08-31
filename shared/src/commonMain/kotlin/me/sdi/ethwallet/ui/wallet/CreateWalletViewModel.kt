@@ -33,21 +33,37 @@ class CreateWalletViewModel(
     private val newsChannel = Channel<CreateWalletNews>(Channel.BUFFERED)
     val news: Flow<CreateWalletNews> = newsChannel.receiveAsFlow().onEach { Logger.debug(TAG) { "News: $it" } }
 
+    private val lifecycleLock = Any()
+    private var cleared = false
     private var ethCreationResult: EthCreationResult? = null
 
     init {
         viewState
-            .onEach { Logger.debug(TAG) { "ViewState: $it" } }
+            .onEach { state ->
+                Logger.debug(TAG) {
+                    "ViewState(label=${state.label}, isSaving=${state.isSaving}, hasSeedPhrase=${state.seedPhrase.isNotEmpty()})"
+                }
+            }
             .launchIn(viewModelScope)
 
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val ethCreationResult = ethManager.createWallet().also {
-                    this@CreateWalletViewModel.ethCreationResult = it
+                val generatedResult = ethManager.createWallet()
+                val accepted = synchronized(lifecycleLock) {
+                    if (cleared) {
+                        false
+                    } else {
+                        ethCreationResult = generatedResult
+                        true
+                    }
+                }
+                if (!accepted) {
+                    generatedResult.privateKey.clear()
+                    return@withContext
                 }
 
                 viewState.update {
-                    it.copy(seedPhrase = ethCreationResult.seedPhrase)
+                    it.copy(seedPhrase = generatedResult.seedPhrase)
                 }
             }
         }
@@ -72,6 +88,8 @@ class CreateWalletViewModel(
         viewModelScope.launch {
             try {
                 walletRepository.saveWallet(ethCreationResult, label = label)
+                ethCreationResult.privateKey.clear()
+                this@CreateWalletViewModel.ethCreationResult = null
                 newsChannel.send(CreateWalletNews.WalletCreated)
             } catch (e: CancellationException) {
                 throw e
@@ -80,6 +98,15 @@ class CreateWalletViewModel(
                 viewState.update { it.copy(isSaving = false) }
             }
         }
+    }
+
+    override fun onCleared() {
+        synchronized(lifecycleLock) {
+            cleared = true
+            ethCreationResult?.privateKey?.clear()
+            ethCreationResult = null
+        }
+        super.onCleared()
     }
 
     companion object {

@@ -2,6 +2,8 @@ package me.sdi.ethwallet.flow.e2e.environment
 
 import android.app.Application
 import me.sdi.ethwallet.core.ChainConfig
+import me.sdi.ethwallet.core.EthManager
+import me.sdi.ethwallet.core.EthManagerKotlin
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.DataCleanerRoomDb
@@ -16,11 +18,11 @@ import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.di.appModules
+import me.sdi.ethwallet.kotlin.PrivateKey
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
-import java.math.BigInteger
 import kotlin.time.Duration
 
 internal interface SepoliaE2e
@@ -29,10 +31,13 @@ internal class SepoliaE2eTestApplication : Application()
 
 internal fun startSepoliaE2eKoin(application: Application) {
     stopKoin()
-    startKoin {
+    val koinApplication = startKoin {
         androidContext(application)
         allowOverride(true)
         modules(appModules(SEPOLIA_CHAIN_CONFIG) + sepoliaE2eHardwareModule)
+    }
+    check(koinApplication.koin.get<EthManager>() is EthManagerKotlin) {
+        "Sepolia E2E must resolve EthManagerKotlin"
     }
 }
 
@@ -102,19 +107,26 @@ private class InMemoryPinCodeStorage(
 }
 
 private class InMemoryPrivateKeyEncryptor : PrivateKeyEncryptor {
-    private val keysByAddress = mutableMapOf<String, BigInteger>()
+    private val keysByAddress = mutableMapOf<String, ByteArray>()
 
-    override suspend fun encryptPrivateKey(privateKey: BigInteger, address: String): String {
-        keysByAddress[address] = privateKey
+    override suspend fun encryptPrivateKey(privateKey: PrivateKey, address: String): String {
+        keysByAddress[address]?.fill(0)
+        keysByAddress[address] = privateKey.copyBytes()
         return address
     }
 
-    override suspend fun decryptPrivateKey(encryptedBase64: String, address: String): BigInteger {
+    override suspend fun decryptPrivateKey(encryptedBase64: String, address: String): PrivateKey {
         check(encryptedBase64 == address) { "Private key address binding is invalid" }
-        return checkNotNull(keysByAddress[address]) { "Private key is unavailable" }
+        val bytes = checkNotNull(keysByAddress[address]).copyOf()
+        return try {
+            PrivateKey.fromBytes(bytes)
+        } finally {
+            bytes.fill(0)
+        }
     }
 
     fun clear() {
+        keysByAddress.values.forEach { it.fill(0) }
         keysByAddress.clear()
     }
 }
