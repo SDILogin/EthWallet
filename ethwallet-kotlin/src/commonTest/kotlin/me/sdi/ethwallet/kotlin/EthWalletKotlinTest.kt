@@ -140,10 +140,10 @@ class EthWalletKotlinTest {
     }
 
     @Test
-    fun rpcOperationsRemainStubs() = runTest {
+    fun sendTransferRemainsStub() = runTest {
         val network = EthereumNetwork(
             chainId = 1L,
-            transport = JsonRpcTransport { error("Transport must not be used by stubs") },
+            transport = JsonRpcTransport { error("Transport must not be used by the stub") },
         )
         val address = EthAddress(CANONICAL_ETHEREUM_ADDRESS)
         val privateKey = PrivateKey.fromBytes(ByteArray(32).also { it[31] = 1 })
@@ -156,9 +156,6 @@ class EthWalletKotlinTest {
             maxFeePerGas = UInt256("0x2"),
         )
 
-        assertSuspendFailsWith<NotImplementedError> {
-            EthWalletKotlin.getFeeSuggestion(network)
-        }
         assertSuspendFailsWith<NotImplementedError> {
             EthWalletKotlin.sendTransfer(network, privateKey, request)
         }

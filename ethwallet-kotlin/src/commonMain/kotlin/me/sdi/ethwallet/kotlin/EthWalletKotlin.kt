@@ -4,19 +4,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonArray
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.encodeToJsonElement
 
 private const val LATEST_BLOCK = "latest"
 private const val BALANCE_OF_SELECTOR = "0x70a08231"
 private const val ABI_WORD_HEX_LENGTH = 64
+private const val FEE_HISTORY_BLOCK_COUNT = 5
+private const val FEE_HISTORY_BLOCK_COUNT_QUANTITY = "0x5"
+private const val FEE_HISTORY_REWARD_PERCENTILE = 50.0
+private const val FEE_HISTORY_REWARD_PERCENTILE_COUNT = 1
 
 /**
  * Stateless entry point for Ethereum wallet operations.
  *
  * Wallet creation and key derivation are implemented by the platform-native Rust library.
- * Balance reads go through the caller's [JsonRpcTransport]. Fee suggestion and transfer
- * submission remain placeholders.
+ * Balance reads and fee suggestions go through the caller's [JsonRpcTransport]. Transfer
+ * submission remains a placeholder.
  */
 object EthWalletKotlin {
     suspend fun createWallet(): Mnemonic = withContext(Dispatchers.Default) {
@@ -56,8 +61,35 @@ object EthWalletKotlin {
         }
     }
 
-    suspend fun getFeeSuggestion(network: EthereumNetwork): FeeSuggestion = withContext(Dispatchers.IO) {
-        throw NotImplementedError("EthWalletKotlin skeleton")
+    suspend fun getFeeSuggestion(network: EthereumNetwork): FeeSuggestion {
+        val feeHistory = network.transport.call(
+            method = "eth_feeHistory",
+            params = buildJsonArray {
+                add(FEE_HISTORY_BLOCK_COUNT_QUANTITY)
+                add(LATEST_BLOCK)
+                addJsonArray {
+                    add(FEE_HISTORY_REWARD_PERCENTILE)
+                }
+            },
+        ).asFeeHistoryResult(
+            maximumBlockCount = FEE_HISTORY_BLOCK_COUNT,
+            rewardPercentileCount = FEE_HISTORY_REWARD_PERCENTILE_COUNT,
+        )
+
+        val rewards = feeHistory.rewards
+            .filter { it.hex != "0x0" }
+            .sortedWith(compareBy({ it.hex.length }, { it.hex }))
+
+        val priorityFeePerGas = if (rewards.isEmpty()) {
+            network.transport.call(method = "eth_maxPriorityFeePerGas", params = buildJsonArray {}).asQuantity()
+        } else {
+            rewards[rewards.size / 2]
+        }
+
+        return FeeSuggestion(
+            baseFeePerGas = feeHistory.nextBaseFeePerGas,
+            priorityFeePerGas = priorityFeePerGas,
+        )
     }
 
     suspend fun sendTransfer(
