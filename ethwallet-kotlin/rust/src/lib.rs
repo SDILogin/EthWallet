@@ -626,6 +626,8 @@ mod tests {
     use super::*;
 
     const EXPECTED_SIGNED_TRANSACTION: &str = "02f87583aa36a707843b9aca008477359400825208943535353535353535353535353535353535353535880de0b6b3a764000080c080a0d203a655156d8a48583b27eb743fe8c6dfb5c0862763a80d3e07e55b718e4038a005c95b32d2ba7ad56455b64735834e041792bac244223533971db91a19c6caa3";
+    const ERC20_TRANSFER_CALLDATA: &str = "a9059cbb0000000000000000000000009858effd232b4033e47d90003d41ec34ecaeda9400000000000000000000000000000000000000000000000000000000000f4240";
+    const EXPECTED_SIGNED_ERC20_TRANSACTION: &str = "02f8b283aa36a707843b9aca00847735940082fde894dac17f958d2ee523a2206206994597c13d831ec780b844a9059cbb0000000000000000000000009858effd232b4033e47d90003d41ec34ecaeda9400000000000000000000000000000000000000000000000000000000000f4240c001a0d2cff7062b64372a1d503044996f508acddf169dcb1d2828c7bb248b9fa2c35fa072a2c6dd35dcb2e00220e335e7bbfcd85786dea11b36716708cbbfcf2eb535a4";
 
     #[test]
     fn signs_web3j_eip1559_reference_vector() {
@@ -636,6 +638,24 @@ mod tests {
         let signed = sign_eip1559_transaction(&private_key, &transaction).unwrap();
 
         assert_eq!(decode_hex(EXPECTED_SIGNED_TRANSACTION), signed);
+    }
+
+    #[test]
+    fn signs_web3j_erc20_transfer_reference_vector() {
+        let mut private_key = [0_u8; 32];
+        private_key[31] = 1;
+        let data = decode_hex(ERC20_TRANSFER_CALLDATA);
+        let mut transaction = reference_transaction();
+        transaction.gas_limit = quantity("fde8");
+        transaction.destination = decode_hex("dac17f958d2ee523a2206206994597c13d831ec7")
+            .try_into()
+            .unwrap();
+        transaction.value = [0; 32];
+        transaction.data = &data;
+
+        let signed = sign_eip1559_transaction(&private_key, &transaction).unwrap();
+
+        assert_eq!(decode_hex(EXPECTED_SIGNED_ERC20_TRANSACTION), signed);
     }
 
     #[test]

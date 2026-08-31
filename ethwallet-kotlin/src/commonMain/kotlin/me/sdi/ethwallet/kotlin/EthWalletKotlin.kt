@@ -10,18 +10,19 @@ import kotlinx.serialization.json.encodeToJsonElement
 
 private const val LATEST_BLOCK = "latest"
 private const val BALANCE_OF_SELECTOR = "0x70a08231"
+private const val TRANSFER_SELECTOR = "0xa9059cbb"
 private const val ABI_WORD_HEX_LENGTH = 64
 private const val FEE_HISTORY_BLOCK_COUNT = 5
 private const val FEE_HISTORY_BLOCK_COUNT_QUANTITY = "0x5"
 private const val FEE_HISTORY_REWARD_PERCENTILE = 50.0
 private const val FEE_HISTORY_REWARD_PERCENTILE_COUNT = 1
+private const val PENDING_BLOCK = "pending"
 
 /**
  * Stateless entry point for Ethereum wallet operations.
  *
  * Wallet creation and key derivation are implemented by the platform-native Rust library.
- * Balance reads and fee suggestions go through the caller's [JsonRpcTransport]. Transfer
- * submission remains a placeholder.
+ * Network operations go through the caller's [JsonRpcTransport].
  */
 object EthWalletKotlin {
     suspend fun createWallet(): Mnemonic = withContext(Dispatchers.Default) {
@@ -96,9 +97,49 @@ object EthWalletKotlin {
         network: EthereumNetwork,
         privateKey: PrivateKey,
         request: TransferRequest,
-    ): TransactionHash = withContext(Dispatchers.IO) {
-        throw NotImplementedError("EthWalletKotlin skeleton")
+    ): TransactionHash {
+        val sender = privateKey.deriveAddress()
+        val nonce = network.transport.call(
+            method = "eth_getTransactionCount",
+            params = buildJsonArray {
+                add(sender.value)
+                add(PENDING_BLOCK)
+            },
+        ).asQuantity()
+        val transaction = request.toEip1559Transaction(network.chainId, nonce)
+        val signedTransaction = privateKey.signTransaction(transaction)
+        val rawTransaction = "0x${signedTransaction.toHexString()}"
+
+        return network.transport.call(
+            method = "eth_sendRawTransaction",
+            params = buildJsonArray { add(rawTransaction) },
+        ).asTransactionHash()
     }
+}
+
+private fun TransferRequest.toEip1559Transaction(
+    chainId: Long,
+    nonce: UInt256,
+): Eip1559TransactionPayload {
+    val (destination, value, data) = when (val asset = asset) {
+        Asset.Eth -> Triple(destination, amount, "0x")
+        is Asset.Erc20 -> Triple(
+            asset.contractAddress,
+            UInt256("0x0"),
+            TRANSFER_SELECTOR + destination.value.substring(2).padStart(ABI_WORD_HEX_LENGTH, '0') +
+                amount.hex.substring(2).padStart(ABI_WORD_HEX_LENGTH, '0'),
+        )
+    }
+    return Eip1559TransactionPayload(
+        chainId = chainId,
+        nonce = nonce,
+        maxPriorityFeePerGas = maxPriorityFeePerGas,
+        maxFeePerGas = maxFeePerGas,
+        gasLimit = gasUnits,
+        destination = destination,
+        value = value,
+        data = data,
+    )
 }
 
 suspend fun Mnemonic.derivePrivateKey(): PrivateKey = withContext(Dispatchers.Default) {

@@ -122,6 +122,23 @@ fn signs_the_web3j_eip1559_reference_vector_through_ffi() {
 }
 
 #[test]
+fn signs_the_web3j_erc20_transfer_reference_vector_through_ffi() {
+    let inputs = SigningInputs::erc20_reference();
+    let mut output = [0_u8; 512];
+    let mut output_length = 0;
+
+    let status = inputs.sign(&mut output, &mut output_length);
+
+    assert_eq!(STATUS_OK, status);
+    assert_eq!(
+        decode_hex(
+            "02f8b283aa36a707843b9aca00847735940082fde894dac17f958d2ee523a2206206994597c13d831ec780b844a9059cbb0000000000000000000000009858effd232b4033e47d90003d41ec34ecaeda9400000000000000000000000000000000000000000000000000000000000f4240c001a0d2cff7062b64372a1d503044996f508acddf169dcb1d2828c7bb248b9fa2c35fa072a2c6dd35dcb2e00220e335e7bbfcd85786dea11b36716708cbbfcf2eb535a4"
+        ),
+        output[..output_length],
+    );
+}
+
+#[test]
 fn signing_rejects_invalid_values_without_writing_output() {
     let mut inputs = SigningInputs::reference();
     inputs.chain_id = 0;
@@ -184,6 +201,19 @@ impl SigningInputs {
             value: quantity("0de0b6b3a7640000"),
             data: Vec::new(),
         }
+    }
+
+    fn erc20_reference() -> Self {
+        let mut inputs = Self::reference();
+        inputs.gas_limit = quantity("fde8");
+        inputs.destination = decode_hex("dac17f958d2ee523a2206206994597c13d831ec7")
+            .try_into()
+            .unwrap();
+        inputs.value = [0; 32];
+        inputs.data = decode_hex(
+            "a9059cbb0000000000000000000000009858effd232b4033e47d90003d41ec34ecaeda9400000000000000000000000000000000000000000000000000000000000f4240",
+        );
+        inputs
     }
 
     fn sign(&self, output: &mut [u8], output_length: &mut usize) -> i32 {

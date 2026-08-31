@@ -152,6 +152,21 @@ internal fun JsonElement.asQuantity(): UInt256 {
     }
 }
 
+internal fun JsonElement.asTransactionHash(): TransactionHash {
+    val hash = try {
+        jsonPrimitiveContent().also { value ->
+            require(value.matches(HEX_STRING_64_SYMBOLS_EXACTLY)) {
+                "Result is not a 32-byte transaction hash: '$value'"
+            }
+        }
+    } catch (exception: JsonRpcException) {
+        throw exception
+    } catch (exception: Exception) {
+        throw JsonRpcException.InvalidResponse(exception)
+    }
+    return TransactionHash(hash)
+}
+
 internal fun JsonElement.asAbiWord(): UInt256 {
     val hex = try {
         jsonPrimitiveContent().also { string ->

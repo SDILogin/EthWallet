@@ -138,28 +138,6 @@ class EthWalletKotlinTest {
         }
         PrivateKey.fromBytes(SECP256K1_ORDER_BYTES.decrementUnsigned()).clear()
     }
-
-    @Test
-    fun sendTransferRemainsStub() = runTest {
-        val network = EthereumNetwork(
-            chainId = 1L,
-            transport = JsonRpcTransport { error("Transport must not be used by the stub") },
-        )
-        val address = EthAddress(CANONICAL_ETHEREUM_ADDRESS)
-        val privateKey = PrivateKey.fromBytes(ByteArray(32).also { it[31] = 1 })
-        val request = TransferRequest(
-            destination = address,
-            asset = Asset.Eth,
-            amount = UInt256("0x1"),
-            gasUnits = UInt256("0x5208"),
-            maxPriorityFeePerGas = UInt256("0x1"),
-            maxFeePerGas = UInt256("0x2"),
-        )
-
-        assertSuspendFailsWith<NotImplementedError> {
-            EthWalletKotlin.sendTransfer(network, privateKey, request)
-        }
-    }
 }
 
 private val SECP256K1_ORDER_BYTES = byteArrayOf(
