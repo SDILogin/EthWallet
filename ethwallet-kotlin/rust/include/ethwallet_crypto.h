@@ -26,9 +26,12 @@ int32_t ewc_create_mnemonic(uint8_t *output, size_t *length);
 
 int32_t ewc_validate_mnemonic(const uint8_t *input, size_t length);
 
+/* Account and address indices must not exceed 2^31 - 1. */
 int32_t ewc_derive_private_key(
     const uint8_t *mnemonic,
     size_t mnemonic_length,
+    uint32_t account_index,
+    uint32_t address_index,
     uint8_t output[32]
 );
 

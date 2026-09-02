@@ -58,18 +58,25 @@ internal actual object NativeCrypto {
         )
     }
 
-    actual fun derivePrivateKey(mnemonic: ByteArray): ByteArray = nativeOutput(NATIVE_PRIVATE_KEY_LENGTH) { output ->
-        ensureNativeLibrary()
-        withPinnedInput(mnemonic) { input ->
-            output.usePinned { pinned ->
-                ewc_derive_private_key(
-                    input,
-                    mnemonic.size.toULong(),
-                    pinned.addressOf(0).reinterpret<UByteVar>(),
-                )
+    actual fun derivePrivateKey(
+        mnemonic: ByteArray,
+        accountIndex: UInt,
+        addressIndex: UInt,
+    ): ByteArray =
+        nativeOutput(NATIVE_PRIVATE_KEY_LENGTH) { output ->
+            ensureNativeLibrary()
+            withPinnedInput(mnemonic) { input ->
+                output.usePinned { pinned ->
+                    ewc_derive_private_key(
+                        input,
+                        mnemonic.size.toULong(),
+                        accountIndex,
+                        addressIndex,
+                        pinned.addressOf(0).reinterpret<UByteVar>(),
+                    )
+                }
             }
         }
-    }
 
     actual fun deriveAddress(privateKey: ByteArray): ByteArray = nativeOutput(NATIVE_ADDRESS_LENGTH) { output ->
         ensureNativeLibrary()

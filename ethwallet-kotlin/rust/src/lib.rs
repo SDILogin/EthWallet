@@ -10,7 +10,7 @@ use alloy_rlp::{Encodable, Header};
 use bip39::{Language, Mnemonic};
 use bitcoin::{
     NetworkKind,
-    bip32::{DerivationPath, Xpriv},
+    bip32::{ChildNumber, DerivationPath, Xpriv},
     secp256k1::{All, Message, PublicKey, Secp256k1, SecretKey},
 };
 use sha3::{Digest, Keccak256};
@@ -21,7 +21,6 @@ const PRIVATE_KEY_LENGTH: usize = 32;
 const ADDRESS_LENGTH: usize = 20;
 const ENTROPY_LENGTH: usize = 16;
 const MAX_12_WORD_MNEMONIC_LENGTH: usize = 107;
-const ETHEREUM_DERIVATION_PATH: &str = "m/44'/60'/0'/0/0";
 
 static SECP256K1_CONTEXT: OnceLock<Result<Secp256k1<All>, Status>> = OnceLock::new();
 
@@ -31,7 +30,6 @@ enum Status {
     Ok = 0,
     InvalidMnemonic = 1,
     InvalidPrivateKey = 2,
-    #[cfg(any(target_os = "android", target_os = "macos"))]
     InvalidArgument = 4,
     EntropyFailure = 5,
     InternalPanic = 6,
@@ -89,7 +87,8 @@ pub unsafe extern "C" fn ewc_validate_mnemonic(input: *const u8, length: usize) 
     })
 }
 
-/// Derives the private key at m/44'/60'/0'/0/0 from an English BIP-39 mnemonic.
+/// Derives the private key at m/44'/60'/account'/0/address from an English BIP-39 mnemonic.
+/// Account and address indices with the hardened bit already set are rejected.
 ///
 /// # Safety
 /// `mnemonic` must reference `mnemonic_length` readable bytes. `output` must reference exactly
@@ -98,6 +97,8 @@ pub unsafe extern "C" fn ewc_validate_mnemonic(input: *const u8, length: usize) 
 pub unsafe extern "C" fn ewc_derive_private_key(
     mnemonic: *const u8,
     mnemonic_length: usize,
+    account_index: u32,
+    address_index: u32,
     output: *mut u8,
 ) -> i32 {
     ffi_status(|| {
@@ -105,9 +106,14 @@ pub unsafe extern "C" fn ewc_derive_private_key(
         let mnemonic = unsafe { slice::from_raw_parts(mnemonic, mnemonic_length) };
         let mnemonic = parse_mnemonic(mnemonic)?;
         let seed = Zeroizing::new(mnemonic.to_seed_normalized(""));
-        let derivation_path: DerivationPath = ETHEREUM_DERIVATION_PATH
-            .parse()
-            .map_err(|_| Status::InternalPanic)?;
+        let derivation_path: DerivationPath = vec![
+            ChildNumber::from_hardened_idx(44).map_err(|_| Status::InternalPanic)?,
+            ChildNumber::from_hardened_idx(60).map_err(|_| Status::InternalPanic)?,
+            ChildNumber::from_hardened_idx(account_index).map_err(|_| Status::InvalidArgument)?,
+            ChildNumber::from_normal_idx(0).map_err(|_| Status::InternalPanic)?,
+            ChildNumber::from_normal_idx(address_index).map_err(|_| Status::InvalidArgument)?,
+        ]
+        .into();
         let secp = secp256k1_context()?;
 
         // `Xpriv` is `Copy` in rust-bitcoin, therefore zeroization cannot cover compiler-created
@@ -454,6 +460,8 @@ mod jni_bridge {
         mut env: JNIEnv,
         _class: JClass,
         mnemonic: jbyteArray,
+        account_index: jint,
+        address_index: jint,
         output: jbyteArray,
     ) -> jint {
         let mnemonic = match read_input(&mut env, mnemonic) {
@@ -466,6 +474,8 @@ mod jni_bridge {
                 ewc_derive_private_key(
                     mnemonic.as_ptr().cast::<u8>(),
                     mnemonic.len(),
+                    account_index as u32,
+                    address_index as u32,
                     result.as_mut_ptr().cast::<u8>(),
                 )
             }

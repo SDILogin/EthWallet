@@ -5,6 +5,7 @@ import kotlin.jvm.JvmInline
 internal val HEX_NUMBER_NO_LEADING_ZEROS_64_SYMBOLS_MAX = Regex("^0x(0|[1-9a-f][0-9a-f]{0,63})$")
 internal val HEX_STRING_40_SYMBOLS_EXACTLY = Regex("^0x[0-9a-fA-F]{40}$")
 internal val HEX_STRING_64_SYMBOLS_EXACTLY = Regex("^0x[0-9a-f]{64}$")
+private const val MAX_BIP32_CHILD_INDEX = 0x7fff_ffffu
 
 internal fun requireValidEthAddress(value: String, fieldName: String = "Ethereum address") {
     require(value.matches(HEX_STRING_40_SYMBOLS_EXACTLY)) {
@@ -20,6 +21,22 @@ class EthereumNetwork(
     val chainId: Long,
     val transport: JsonRpcTransport,
 )
+
+data class EthereumDerivationPath(
+    val accountIndex: UInt = 0u,
+    val addressIndex: UInt = 0u,
+) {
+    init {
+        require(accountIndex <= MAX_BIP32_CHILD_INDEX) {
+            "BIP-44 account index must not exceed $MAX_BIP32_CHILD_INDEX"
+        }
+        require(addressIndex <= MAX_BIP32_CHILD_INDEX) {
+            "BIP-44 address index must not exceed $MAX_BIP32_CHILD_INDEX"
+        }
+    }
+
+    override fun toString(): String = "m/44'/60'/$accountIndex'/0/$addressIndex"
+}
 
 @JvmInline
 value class UInt256(

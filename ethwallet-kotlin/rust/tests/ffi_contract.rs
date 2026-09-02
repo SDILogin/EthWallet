@@ -6,6 +6,7 @@ use ethwallet_crypto::{
 const STATUS_OK: i32 = 0;
 const STATUS_INVALID_MNEMONIC: i32 = 1;
 const STATUS_INVALID_PRIVATE_KEY: i32 = 2;
+const STATUS_INVALID_ARGUMENT: i32 = 4;
 const STATUS_INVALID_TRANSACTION: i32 = 7;
 
 const CANONICAL_MNEMONIC: &[u8] =
@@ -13,6 +14,14 @@ const CANONICAL_MNEMONIC: &[u8] =
 const CANONICAL_ETHEREUM_ADDRESS: [u8; 20] = [
     0x98, 0x58, 0xef, 0xfd, 0x23, 0x2b, 0x40, 0x33, 0xe4, 0x7d, 0x90, 0x00, 0x3d, 0x41, 0xec, 0x34,
     0xec, 0xae, 0xda, 0x94,
+];
+const ACCOUNT_ZERO_ADDRESS_ONE: [u8; 20] = [
+    0x6f, 0xac, 0x4d, 0x18, 0xc9, 0x12, 0x34, 0x3b, 0xf8, 0x6f, 0xa7, 0x04, 0x93, 0x64, 0xdd, 0x4e,
+    0x42, 0x4a, 0xb9, 0xc0,
+];
+const ACCOUNT_ONE_ADDRESS_ZERO: [u8; 20] = [
+    0x78, 0x83, 0x9f, 0x60, 0x54, 0xd7, 0xed, 0x13, 0x91, 0x8b, 0xae, 0x04, 0x73, 0xba, 0x31, 0xb1,
+    0xca, 0x9d, 0x72, 0x65,
 ];
 const PRIVATE_KEY_ONE_ETHEREUM_ADDRESS: [u8; 20] = [
     0x7e, 0x5f, 0x45, 0x52, 0x09, 0x1a, 0x69, 0x12, 0x5d, 0x5d, 0xfc, 0xb7, 0xb8, 0xc2, 0x65, 0x90,
@@ -41,6 +50,8 @@ fn derives_the_canonical_bip44_ethereum_address() {
         ewc_derive_private_key(
             CANONICAL_MNEMONIC.as_ptr(),
             CANONICAL_MNEMONIC.len(),
+            0,
+            0,
             private_key.as_mut_ptr(),
         )
     };
@@ -51,6 +62,54 @@ fn derives_the_canonical_bip44_ethereum_address() {
     assert_eq!(STATUS_OK, key_status);
     assert_eq!(STATUS_OK, address_status);
     assert_eq!(CANONICAL_ETHEREUM_ADDRESS, address);
+}
+
+#[test]
+fn derives_configurable_bip44_account_and_address_indices() {
+    for (account_index, address_index, expected_address) in [
+        (0, 1, ACCOUNT_ZERO_ADDRESS_ONE),
+        (1, 0, ACCOUNT_ONE_ADDRESS_ZERO),
+    ] {
+        let mut private_key = [0_u8; 32];
+        // SAFETY: all buffers meet the ABI sizes and remain valid for each call.
+        let key_status = unsafe {
+            ewc_derive_private_key(
+                CANONICAL_MNEMONIC.as_ptr(),
+                CANONICAL_MNEMONIC.len(),
+                account_index,
+                address_index,
+                private_key.as_mut_ptr(),
+            )
+        };
+        let mut address = [0_u8; 20];
+        // SAFETY: both fixed-size buffers meet the ABI requirements.
+        let address_status =
+            unsafe { ewc_derive_address(private_key.as_ptr(), address.as_mut_ptr()) };
+
+        assert_eq!(STATUS_OK, key_status);
+        assert_eq!(STATUS_OK, address_status);
+        assert_eq!(expected_address, address);
+    }
+}
+
+#[test]
+fn rejects_bip32_indices_with_the_hardened_bit_set_without_writing_output() {
+    for (account_index, address_index) in [(1_u32 << 31, 0), (0, 1_u32 << 31)] {
+        let mut private_key = [0xaa_u8; 32];
+        // SAFETY: all buffers meet the ABI sizes and remain valid for the call.
+        let status = unsafe {
+            ewc_derive_private_key(
+                CANONICAL_MNEMONIC.as_ptr(),
+                CANONICAL_MNEMONIC.len(),
+                account_index,
+                address_index,
+                private_key.as_mut_ptr(),
+            )
+        };
+
+        assert_eq!(STATUS_INVALID_ARGUMENT, status);
+        assert_eq!([0xaa_u8; 32], private_key);
+    }
 }
 
 #[test]
@@ -74,6 +133,8 @@ fn invalid_inputs_return_stable_statuses_without_writing_outputs() {
         ewc_derive_private_key(
             b"not a valid mnemonic".as_ptr(),
             20,
+            0,
+            0,
             private_key.as_mut_ptr(),
         )
     };

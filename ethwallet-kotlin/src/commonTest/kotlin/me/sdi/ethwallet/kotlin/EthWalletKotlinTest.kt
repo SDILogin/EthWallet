@@ -12,6 +12,11 @@ private const val CANONICAL_MNEMONIC =
 private const val CANONICAL_ETHEREUM_ADDRESS = "0x9858effd232b4033e47d90003d41ec34ecaeda94"
 private const val PRIVATE_KEY_ONE_ETHEREUM_ADDRESS = "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"
 
+// Hardcoded ethers.js compatibility vectors; the library has no ethers dependency.
+private const val ACCOUNT_ZERO_ADDRESS_ONE = "0x6fac4d18c912343bf86fa7049364dd4e424ab9c0"
+private const val ACCOUNT_ONE_ADDRESS_ZERO = "0x78839f6054d7ed13918bae0473ba31b1ca9d7265"
+private const val MAXIMUM_INDEX_ADDRESS = "0x6e40eb459b5f08be907f9c1ccacaf55780d5cea8"
+
 class EthWalletKotlinTest {
     @Test
     fun jsonRpcTransportSupportsSamConstruction() = runTest {
@@ -75,6 +80,46 @@ class EthWalletKotlinTest {
         val privateKey = Mnemonic.parse(CANONICAL_MNEMONIC).derivePrivateKey()
 
         assertEquals(CANONICAL_ETHEREUM_ADDRESS, privateKey.deriveAddress())
+    }
+
+    @Test
+    fun configurableBip44PathDerivesIndependentReferenceAddresses() = runTest {
+        val mnemonic = Mnemonic.parse(CANONICAL_MNEMONIC)
+
+        assertEquals(
+            ACCOUNT_ZERO_ADDRESS_ONE,
+            mnemonic.derivePrivateKey(EthereumDerivationPath(addressIndex = 1u)).deriveAddress(),
+        )
+        assertEquals(
+            ACCOUNT_ONE_ADDRESS_ZERO,
+            mnemonic.derivePrivateKey(EthereumDerivationPath(accountIndex = 1u)).deriveAddress(),
+        )
+        assertEquals(
+            MAXIMUM_INDEX_ADDRESS,
+            mnemonic.derivePrivateKey(
+                EthereumDerivationPath(
+                    accountIndex = Int.MAX_VALUE.toUInt(),
+                    addressIndex = Int.MAX_VALUE.toUInt(),
+                ),
+            ).deriveAddress(),
+        )
+    }
+
+    @Test
+    fun ethereumDerivationPathFormatsCanonicalBip44Path() {
+        assertEquals("m/44'/60'/7'/0/11", EthereumDerivationPath(7u, 11u).toString())
+    }
+
+    @Test
+    fun ethereumDerivationPathRejectsIndicesWithTheHardenedBitSet() {
+        val invalidIndex = 0x8000_0000u
+
+        assertFailsWith<IllegalArgumentException> {
+            EthereumDerivationPath(accountIndex = invalidIndex)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            EthereumDerivationPath(addressIndex = invalidIndex)
+        }
     }
 
     @Test

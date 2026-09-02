@@ -1,7 +1,6 @@
 package me.sdi.ethwallet.kotlin
 
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonArray
@@ -146,11 +145,21 @@ private fun TransferRequest.toEip1559Transaction(
     )
 }
 
-suspend fun Mnemonic.derivePrivateKey(): PrivateKey = withContext(Dispatchers.Default) {
+suspend fun Mnemonic.derivePrivateKey(): PrivateKey = derivePrivateKey(EthereumDerivationPath())
+
+suspend fun Mnemonic.derivePrivateKey(
+    derivationPath: EthereumDerivationPath,
+): PrivateKey = withContext(Dispatchers.Default) {
     requireUsable()
     val mnemonicBytes = copyAsciiBytes()
     try {
-        PrivateKey.fromNativeBytes(NativeCrypto.derivePrivateKey(mnemonicBytes))
+        PrivateKey.fromNativeBytes(
+            NativeCrypto.derivePrivateKey(
+                mnemonic = mnemonicBytes,
+                accountIndex = derivationPath.accountIndex,
+                addressIndex = derivationPath.addressIndex,
+            ),
+        )
     } finally {
         mnemonicBytes.fill(0)
     }

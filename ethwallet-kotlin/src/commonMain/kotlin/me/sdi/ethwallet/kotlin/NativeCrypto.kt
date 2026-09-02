@@ -5,7 +5,11 @@ internal expect object NativeCrypto {
 
     fun validateMnemonic(mnemonic: ByteArray)
 
-    fun derivePrivateKey(mnemonic: ByteArray): ByteArray
+    fun derivePrivateKey(
+        mnemonic: ByteArray,
+        accountIndex: UInt,
+        addressIndex: UInt,
+    ): ByteArray
 
     fun deriveAddress(privateKey: ByteArray): ByteArray
 

@@ -27,6 +27,14 @@ class NativeCryptoDeviceTest {
     }
 
     @Test
+    fun configurableBip44PathDerivesAnotherAccountAddress() = runBlocking {
+        val mnemonic = Mnemonic.parse(CANONICAL_MNEMONIC)
+        val privateKey = mnemonic.derivePrivateKey(EthereumDerivationPath(accountIndex = 1u, addressIndex = 1u))
+
+        assertEquals(ACCOUNT_ONE_ADDRESS_ONE, privateKey.deriveAddress())
+    }
+
+    @Test
     fun signsTheWeb3jEthEip1559ReferenceVector() = runBlocking {
         val privateKey = privateKeyOne()
         assertEquals(
@@ -90,6 +98,7 @@ private fun erc20ReferenceTransaction() = referenceTransaction().copy(
 private const val CANONICAL_MNEMONIC =
     "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 private const val CANONICAL_ETHEREUM_ADDRESS = "0x9858effd232b4033e47d90003d41ec34ecaeda94"
+private const val ACCOUNT_ONE_ADDRESS_ONE = "0x61c1a3dd47433e58033cc812e520c0ffd9007198"
 private const val EXPECTED_SIGNED_TRANSACTION =
     "02f87583aa36a707843b9aca008477359400825208943535353535353535353535353535353535353535880de0b6b3a764000080c080a0d203a655156d8a48583b27eb743fe8c6dfb5c0862763a80d3e07e55b718e4038a005c95b32d2ba7ad56455b64735834e041792bac244223533971db91a19c6caa3"
 private const val ERC20_TRANSFER_CALLDATA =
