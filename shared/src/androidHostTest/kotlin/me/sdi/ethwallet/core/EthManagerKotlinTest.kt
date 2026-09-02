@@ -38,13 +38,9 @@ class EthManagerKotlinTest {
 
         val result = manager.importWallet(mnemonic)
 
-        try {
-            assertEquals("0x9858effd232b4033e47d90003d41ec34ecaeda94", result.address.toString().lowercase())
-            assertEquals(List(11) { "abandon" } + "about", result.seedPhrase)
-            assertEquals(result.address, result.privateKey.deriveAddress().toAppAddress())
-        } finally {
-            result.privateKey.clear()
-        }
+        assertEquals("0x9858effd232b4033e47d90003d41ec34ecaeda94", result.address.toString().lowercase())
+        assertEquals(List(11) { "abandon" } + "about", result.seedPhrase)
+        assertEquals(result.address, EthAddress(result.privateKey.deriveAddress()))
     }
 
     @Test
@@ -63,18 +59,9 @@ class EthManagerKotlinTest {
         val created = manager.createWallet()
         val imported = manager.importWallet(created.seedPhrase.joinToString(" "))
 
-        val createdBytes = created.privateKey.copyBytes()
-        val importedBytes = imported.privateKey.copyBytes()
-        try {
-            assertEquals(12, created.seedPhrase.size)
-            assertEquals(created.address, imported.address)
-            assertEquals(createdBytes.toList(), importedBytes.toList())
-        } finally {
-            createdBytes.fill(0)
-            importedBytes.fill(0)
-            created.privateKey.clear()
-            imported.privateKey.clear()
-        }
+        assertEquals(12, created.seedPhrase.size)
+        assertEquals(created.address, imported.address)
+        assertEquals(created.privateKey.copyBytes().toList(), imported.privateKey.copyBytes().toList())
     }
 
     @Test
@@ -183,29 +170,20 @@ class EthManagerKotlinTest {
         }
         val manager = manager(transport)
 
-        val keyBytes = ByteArray(32).also { it[31] = 123 }
-        val privateKey = try {
-            PrivateKey.fromBytes(keyBytes)
-        } finally {
-            keyBytes.fill(0)
-        }
-        try {
-            val hash = manager.sendTransfer(
-                privateKey = privateKey,
-                contractAddress = EthContractAddress,
-                destinationAddress = destination,
-                amount = BigInteger.valueOf(7),
-                gasUnits = BigInteger.valueOf(21_000),
-                maxPriorityFeePerGas = BigInteger.valueOf(5),
-                maxFeePerGas = BigInteger.valueOf(100),
-            )
+        val privateKey = PrivateKey.fromBytes(ByteArray(32).also { it[31] = 123 })
+        val hash = manager.sendTransfer(
+            privateKey = privateKey,
+            contractAddress = EthContractAddress,
+            destinationAddress = destination,
+            amount = BigInteger.valueOf(7),
+            gasUnits = BigInteger.valueOf(21_000),
+            maxPriorityFeePerGas = BigInteger.valueOf(5),
+            maxFeePerGas = BigInteger.valueOf(100),
+        )
 
-            assertEquals("0x${"ab".repeat(32)}", hash)
-            assertEquals(listOf("eth_getTransactionCount", "eth_sendRawTransaction"), transport.methods)
-            assertTrue(privateKey.deriveAddress().value.startsWith("0x"))
-        } finally {
-            privateKey.clear()
-        }
+        assertEquals("0x${"ab".repeat(32)}", hash)
+        assertEquals(listOf("eth_getTransactionCount", "eth_sendRawTransaction"), transport.methods)
+        assertTrue(privateKey.deriveAddress().startsWith("0x"))
     }
 
     @Test
@@ -302,17 +280,8 @@ class EthManagerKotlinTest {
     )
 
     private suspend fun <T> withTestPrivateKey(block: suspend (PrivateKey) -> T): T {
-        val bytes = ByteArray(32).also { it[31] = 123 }
-        val privateKey = try {
-            PrivateKey.fromBytes(bytes)
-        } finally {
-            bytes.fill(0)
-        }
-        return try {
-            block(privateKey)
-        } finally {
-            privateKey.clear()
-        }
+        val privateKey = PrivateKey.fromBytes(ByteArray(32).also { it[31] = 123 })
+        return block(privateKey)
     }
 
     private class RecordingTransport(
@@ -352,5 +321,3 @@ class EthManagerKotlinTest {
     private fun abiWord(quantity: String): String =
         jsonStringResult("0x${quantity.removePrefix("0x").padStart(64, '0')}")
 }
-
-private fun me.sdi.ethwallet.kotlin.EthAddress.toAppAddress(): EthAddress = EthAddress(value)

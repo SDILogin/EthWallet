@@ -102,6 +102,7 @@ extensions.configure<ApplicationExtension>("android") {
 
 dependencies {
     implementation(project(":shared"))
+    implementation(project(":ethwallet-kotlin"))
     implementation(libs.compose.resources)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

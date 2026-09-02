@@ -83,7 +83,7 @@ kotlin {
                 implementation(libs.ktor.client.logging)
 
                 // Ethereum client
-                api(project(":ethwallet-kotlin"))
+                implementation(project(":ethwallet-kotlin"))
 
                 // Koin
                 implementation(libs.koin.core)

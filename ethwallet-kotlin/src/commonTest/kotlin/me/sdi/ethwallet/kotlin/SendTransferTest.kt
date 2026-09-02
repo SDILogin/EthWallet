@@ -13,6 +13,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -25,7 +26,7 @@ private val TRANSACTION_HASH = "0x${"a".repeat(64)}"
 class SendTransferTest {
     @Test
     fun sendEthTransferResolvesPendingNonceAndSubmitsSignedTransaction() = runTest {
-        val destination = EthAddress(ETH_DESTINATION)
+        val destination = ETH_DESTINATION
         val privateKey = privateKeyOne()
         val transport = TransferRecordingTransport(
             responses = listOf(successResponse("0x7"), successResponse(TRANSACTION_HASH)),
@@ -53,8 +54,8 @@ class SendTransferTest {
 
     @Test
     fun sendErc20TransferUsesContractDestinationZeroEthValueAndTransferCalldata() = runTest {
-        val recipient = EthAddress(ERC20_DESTINATION)
-        val contract = EthAddress(ERC20_CONTRACT)
+        val recipient = ERC20_DESTINATION
+        val contract = ERC20_CONTRACT
         val privateKey = privateKeyOne()
         val transport = TransferRecordingTransport(
             responses = listOf(successResponse("0x7"), successResponse(TRANSACTION_HASH)),
@@ -216,6 +217,32 @@ class SendTransferTest {
         assertEquals(1, transport.requests.size)
         assertEquals("eth_getTransactionCount", requestMethod(transport.requests.single()))
     }
+
+    @Test
+    fun transferRequestRejectsMalformedDestinationAddress() {
+        assertFailsWith<IllegalArgumentException> {
+            transferRequest(
+                destination = ETH_DESTINATION.dropLast(1),
+                asset = Asset.Eth,
+                amount = UInt256("0x1"),
+            )
+        }
+    }
+
+    @Test
+    fun signingPayloadRejectsMalformedDestinationAddress() {
+        assertFailsWith<IllegalArgumentException> {
+            Eip1559TransactionPayload(
+                chainId = 1,
+                nonce = UInt256("0x0"),
+                maxPriorityFeePerGas = UInt256("0x1"),
+                maxFeePerGas = UInt256("0x2"),
+                gasLimit = UInt256("0x5208"),
+                destination = ETH_DESTINATION.dropLast(1),
+                value = UInt256("0x1"),
+            )
+        }
+    }
 }
 
 private class TransferRecordingTransport(
@@ -243,7 +270,7 @@ private fun ethRequest(
     maxPriorityFeePerGas: UInt256 = UInt256("0x1"),
     maxFeePerGas: UInt256 = UInt256("0x2"),
 ) = transferRequest(
-    destination = EthAddress(ETH_DESTINATION),
+    destination = ETH_DESTINATION,
     asset = Asset.Eth,
     amount = UInt256("0x1"),
     maxPriorityFeePerGas = maxPriorityFeePerGas,
@@ -251,7 +278,7 @@ private fun ethRequest(
 )
 
 private fun transferRequest(
-    destination: EthAddress,
+    destination: String,
     asset: Asset,
     amount: UInt256,
     maxPriorityFeePerGas: UInt256 = UInt256("0x1"),
@@ -269,7 +296,7 @@ private suspend fun signedTransaction(
     privateKey: PrivateKey,
     chainId: Long,
     nonce: String,
-    destination: EthAddress,
+    destination: String,
     value: String,
     data: String = "0x",
 ): String = "0x${privateKey.signTransaction(

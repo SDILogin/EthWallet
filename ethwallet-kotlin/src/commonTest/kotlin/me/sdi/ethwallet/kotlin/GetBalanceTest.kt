@@ -39,8 +39,8 @@ private class RecordingTransport(
 }
 
 class GetBalanceTest {
-    private val owner = EthAddress(OWNER)
-    private val erc20 = Asset.Erc20(EthAddress(CONTRACT_ADDRESS))
+    private val owner = OWNER
+    private val erc20 = Asset.Erc20(CONTRACT_ADDRESS)
 
     @Test
     fun ethBalanceRequestIsEthGetBalanceAtLatestBlock() = runTest {
@@ -309,18 +309,22 @@ class GetBalanceTest {
     }
 
     @Test
-    fun ethAddressIsStoredLowercase() {
-        val mixedCase = "0x" + OWNER.substring(2).uppercase()
-
-        assertEquals(OWNER, EthAddress(mixedCase).value, "lowercased address")
-    }
-
-    @Test
-    fun ethAddressRejectsMalformedInput() {
+    fun getBalanceRejectsMalformedOwnerAddress() = runTest {
         val invalid = listOf(OWNER.dropLast(1), OWNER + "0", OWNER.substring(2), "0x" + "g".repeat(40))
 
         for (address in invalid) {
-            assertFailsWith<IllegalArgumentException>("Address $address") { EthAddress(address) }
+            assertSuspendFailsWith<IllegalArgumentException>("Address $address") {
+                EthWalletKotlin.getBalance(network(RecordingTransport(success("0x0"))), address, Asset.Eth)
+            }
+        }
+    }
+
+    @Test
+    fun erc20AssetRejectsMalformedContractAddress() {
+        val invalid = listOf(CONTRACT_ADDRESS.dropLast(1), CONTRACT_ADDRESS + "0", CONTRACT_ADDRESS.substring(2))
+
+        for (address in invalid) {
+            assertFailsWith<IllegalArgumentException>("Address $address") { Asset.Erc20(address) }
         }
     }
 

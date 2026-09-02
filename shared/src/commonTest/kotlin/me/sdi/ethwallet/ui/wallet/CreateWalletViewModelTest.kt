@@ -167,13 +167,14 @@ class CreateWalletViewModelTest {
         }
 
     private suspend fun awaitPrivateKeyCleared(privateKey: PrivateKey) {
-        withTimeout(5.seconds) {
-            while (true) {
-                val bytes = privateKey.copyBytes()
-                val cleared = bytes.all { it == 0.toByte() }
-                bytes.fill(0)
-                if (cleared) return@withTimeout
-                delay(10)
+        withContext(Dispatchers.Default) {
+            withTimeout(5.seconds) {
+                while (true) {
+                    val bytes = privateKey.copyBytes()
+                    val cleared = bytes.all { it == 0.toByte() }
+                    if (cleared) return@withTimeout
+                    delay(10)
+                }
             }
         }
     }

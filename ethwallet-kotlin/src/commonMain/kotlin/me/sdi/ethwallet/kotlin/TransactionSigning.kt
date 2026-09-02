@@ -12,12 +12,13 @@ data class Eip1559TransactionPayload(
     val maxPriorityFeePerGas: UInt256,
     val maxFeePerGas: UInt256,
     val gasLimit: UInt256,
-    val destination: EthAddress,
+    val destination: String,
     val value: UInt256,
     val data: String = "0x",
 ) {
     init {
         require(chainId > 0) { "EIP-1559 chain ID must be positive" }
+        requireValidEthAddress(destination, "Transaction destination")
         require(data.matches(HEX_DATA)) { "Transaction data must be 0x-prefixed hexadecimal bytes" }
     }
 }
@@ -34,7 +35,7 @@ suspend fun PrivateKey.signTransaction(payload: Eip1559TransactionPayload): Byte
                 maxPriorityFeePerGas = payload.maxPriorityFeePerGas.toNativeQuantity(),
                 maxFeePerGas = payload.maxFeePerGas.toNativeQuantity(),
                 gasLimit = payload.gasLimit.toNativeQuantity(),
-                destination = payload.destination.value.hexToByteArray(),
+                destination = payload.destination.hexToByteArray(),
                 value = payload.value.toNativeQuantity(),
                 data = payload.data.hexToByteArray(),
             )

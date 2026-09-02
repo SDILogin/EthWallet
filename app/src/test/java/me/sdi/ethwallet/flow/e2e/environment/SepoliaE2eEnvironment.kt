@@ -110,7 +110,6 @@ private class InMemoryPrivateKeyEncryptor : PrivateKeyEncryptor {
     private val keysByAddress = mutableMapOf<String, ByteArray>()
 
     override suspend fun encryptPrivateKey(privateKey: PrivateKey, address: String): String {
-        keysByAddress[address]?.fill(0)
         keysByAddress[address] = privateKey.copyBytes()
         return address
     }
@@ -118,15 +117,10 @@ private class InMemoryPrivateKeyEncryptor : PrivateKeyEncryptor {
     override suspend fun decryptPrivateKey(encryptedBase64: String, address: String): PrivateKey {
         check(encryptedBase64 == address) { "Private key address binding is invalid" }
         val bytes = checkNotNull(keysByAddress[address]).copyOf()
-        return try {
-            PrivateKey.fromBytes(bytes)
-        } finally {
-            bytes.fill(0)
-        }
+        return PrivateKey.fromBytes(bytes)
     }
 
     fun clear() {
-        keysByAddress.values.forEach { it.fill(0) }
         keysByAddress.clear()
     }
 }

@@ -4,7 +4,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -13,79 +12,53 @@ class NativeCryptoDeviceTest {
     @Test
     fun nativeLibraryLoadsThroughWalletCreationApi() = runBlocking {
         val mnemonic = EthWalletKotlin.createWallet()
-        try {
-            assertEquals(12, mnemonic.words.size)
-            val phrase = mnemonic.words.joinToString(" ") { it.copyCharsToString() }
-            val reparsed = Mnemonic.parse(phrase)
-            try {
-                assertEquals(phrase, reparsed.words.joinToString(" ") { it.copyCharsToString() })
-            } finally {
-                reparsed.clear()
-            }
-        } finally {
-            mnemonic.clear()
-        }
+        assertEquals(12, mnemonic.words.size)
+        val phrase = mnemonic.words.joinToString(" ") { it.copyCharsToString() }
+        val reparsed = Mnemonic.parse(phrase)
+        assertEquals(phrase, reparsed.words.joinToString(" ") { it.copyCharsToString() })
     }
 
     @Test
     fun canonicalMnemonicDerivesTheFirstEthereumBip44Address() = runBlocking {
-        val mnemonic = Mnemonic.parse("  ABANDON\tabandon abandon\nabandon abandon abandon abandon abandon abandon abandon abandon ABOUT ")
-        try {
-            val privateKey = mnemonic.derivePrivateKey()
-            try {
-                assertEquals(CANONICAL_ETHEREUM_ADDRESS, privateKey.deriveAddress().value)
-            } finally {
-                privateKey.clear()
-            }
-        } finally {
-            mnemonic.clear()
-        }
+        val mnemonic =
+            Mnemonic.parse("  ABANDON\tabandon abandon\nabandon abandon abandon abandon abandon abandon abandon abandon ABOUT ")
+        val privateKey = mnemonic.derivePrivateKey()
+        assertEquals(CANONICAL_ETHEREUM_ADDRESS, privateKey.deriveAddress())
     }
 
     @Test
     fun signsTheWeb3jEthEip1559ReferenceVector() = runBlocking {
         val privateKey = privateKeyOne()
-        try {
-            assertEquals(
-                EXPECTED_SIGNED_TRANSACTION,
-                privateKey.signTransaction(referenceTransaction()).toHexString(),
-            )
-        } finally {
-            privateKey.clear()
-        }
+        assertEquals(
+            EXPECTED_SIGNED_TRANSACTION,
+            privateKey.signTransaction(referenceTransaction()).toHexString(),
+        )
     }
 
     @Test
     fun signsTheWeb3jErc20Eip1559ReferenceVector() = runBlocking {
         val privateKey = privateKeyOne()
-        try {
-            assertEquals(
-                EXPECTED_SIGNED_ERC20_TRANSACTION,
-                privateKey.signTransaction(erc20ReferenceTransaction()).toHexString(),
-            )
-        } finally {
-            privateKey.clear()
-        }
+        assertEquals(
+            EXPECTED_SIGNED_ERC20_TRANSACTION,
+            privateKey.signTransaction(erc20ReferenceTransaction()).toHexString(),
+        )
     }
 
-    @Test
-    fun clearedMnemonicAndPrivateKeyRejectNativeOperations() = runBlocking {
+    @Test(expected = IllegalStateException::class)
+    fun clearedMnemonicRejectsPrivateKeyDerivation() = runBlocking {
         val mnemonic = Mnemonic.parse(CANONICAL_MNEMONIC)
         mnemonic.clear()
-        try {
-            mnemonic.derivePrivateKey()
-            fail("Cleared mnemonic must not derive a private key")
-        } catch (_: IllegalStateException) {
-        }
 
+        mnemonic.derivePrivateKey()
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun clearedPrivateKeyRejectsAddressDerivation() = runBlocking {
         val privateKey = privateKeyOne()
         privateKey.clear()
         assertArrayEquals(ByteArray(32), privateKey.copyBytes())
-        try {
-            privateKey.deriveAddress()
-            fail("Cleared private key must not derive an address")
-        } catch (_: IllegalStateException) {
-        }
+
+        privateKey.deriveAddress()
     }
 }
 
@@ -103,13 +76,13 @@ private fun referenceTransaction() = Eip1559TransactionPayload(
     maxPriorityFeePerGas = UInt256("0x3b9aca00"),
     maxFeePerGas = UInt256("0x77359400"),
     gasLimit = UInt256("0x5208"),
-    destination = EthAddress("0x3535353535353535353535353535353535353535"),
+    destination = "0x3535353535353535353535353535353535353535",
     value = UInt256("0xde0b6b3a7640000"),
 )
 
 private fun erc20ReferenceTransaction() = referenceTransaction().copy(
     gasLimit = UInt256("0xfde8"),
-    destination = EthAddress("0xdac17f958d2ee523a2206206994597c13d831ec7"),
+    destination = "0xdac17f958d2ee523a2206206994597c13d831ec7",
     value = UInt256("0x0"),
     data = "0x$ERC20_TRANSFER_CALLDATA",
 )

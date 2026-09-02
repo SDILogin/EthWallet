@@ -31,38 +31,42 @@ object EthWalletKotlin {
 
     suspend fun getBalance(
         network: EthereumNetwork,
-        owner: EthAddress,
+        owner: String,
         asset: Asset,
-    ): UInt256 = when (asset) {
-        Asset.Eth -> {
-            network.transport.call(
-                method = "eth_getBalance",
-                params = buildJsonArray {
-                    add(owner.value)
-                    add(LATEST_BLOCK)
-                },
-            ).asQuantity()
-        }
-        is Asset.Erc20 -> {
-            network.transport.call(
-                method = "eth_call",
-                params = buildJsonArray {
-                    val abiWordDigits = owner.value.substring(2).padStart(ABI_WORD_HEX_LENGTH, '0')
-                    add(
-                        jsonRpcJson.encodeToJsonElement(
-                            CallRequest(
-                                to = asset.contractAddress.value,
-                                data = BALANCE_OF_SELECTOR + abiWordDigits,
+    ): UInt256 {
+        requireValidEthAddress(owner, "Balance owner")
+        val normalizedOwner = owner.lowercase()
+        return when (asset) {
+            Asset.Eth -> {
+                network.transport.call(
+                    method = "eth_getBalance",
+                    params = buildJsonArray {
+                        add(normalizedOwner)
+                        add(LATEST_BLOCK)
+                    },
+                ).asQuantity()
+            }
+            is Asset.Erc20 -> {
+                network.transport.call(
+                    method = "eth_call",
+                    params = buildJsonArray {
+                        val abiWordDigits = normalizedOwner.substring(2).padStart(ABI_WORD_HEX_LENGTH, '0')
+                        add(
+                            jsonRpcJson.encodeToJsonElement(
+                                CallRequest(
+                                    to = asset.contractAddress.lowercase(),
+                                    data = BALANCE_OF_SELECTOR + abiWordDigits,
+                                ),
                             ),
-                        ),
-                    )
-                    add(LATEST_BLOCK)
-                },
-            ).asAbiWord()
+                        )
+                        add(LATEST_BLOCK)
+                    },
+                ).asAbiWord()
+            }
         }
     }
 
-    suspend fun getFeeSuggestion(network: EthereumNetwork): FeeSuggestion {
+    suspend fun getFeeSuggestion(network: EthereumNetwork): Eip1559FeeSuggestion {
         val feeHistory = network.transport.call(
             method = "eth_feeHistory",
             params = buildJsonArray {
@@ -87,7 +91,7 @@ object EthWalletKotlin {
             rewards[rewards.size / 2]
         }
 
-        return FeeSuggestion(
+        return Eip1559FeeSuggestion(
             baseFeePerGas = feeHistory.nextBaseFeePerGas,
             priorityFeePerGas = priorityFeePerGas,
         )
@@ -102,7 +106,7 @@ object EthWalletKotlin {
         val nonce = network.transport.call(
             method = "eth_getTransactionCount",
             params = buildJsonArray {
-                add(sender.value)
+                add(sender)
                 add(PENDING_BLOCK)
             },
         ).asQuantity()
@@ -126,7 +130,7 @@ private fun TransferRequest.toEip1559Transaction(
         is Asset.Erc20 -> Triple(
             asset.contractAddress,
             UInt256("0x0"),
-            TRANSFER_SELECTOR + destination.value.substring(2).padStart(ABI_WORD_HEX_LENGTH, '0') +
+            TRANSFER_SELECTOR + destination.substring(2).padStart(ABI_WORD_HEX_LENGTH, '0') +
                 amount.hex.substring(2).padStart(ABI_WORD_HEX_LENGTH, '0'),
         )
     }
@@ -152,13 +156,13 @@ suspend fun Mnemonic.derivePrivateKey(): PrivateKey = withContext(Dispatchers.De
     }
 }
 
-suspend fun PrivateKey.deriveAddress(): EthAddress = withContext(Dispatchers.Default) {
+suspend fun PrivateKey.deriveAddress(): String = withContext(Dispatchers.Default) {
     requireUsable()
     val privateKeyBytes = copyBytes()
     try {
         val address = NativeCrypto.deriveAddress(privateKeyBytes)
         try {
-            EthAddress("0x${address.toHexString()}")
+            "0x${address.toHexString()}"
         } finally {
             address.fill(0)
         }

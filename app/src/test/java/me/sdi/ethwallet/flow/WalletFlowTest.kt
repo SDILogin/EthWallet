@@ -197,24 +197,14 @@ class WalletFlowTest : KoinTest {
         single<PrivateKeyEncryptor> {
             object : PrivateKeyEncryptor {
                 override suspend fun encryptPrivateKey(privateKey: PrivateKey, address: String): String {
-                    val bytes = privateKey.copyBytes()
-                    return try {
-                        bytes.joinToString("") { "%02x".format(it) }
-                    } finally {
-                        bytes.fill(0)
-                    }
+                    return privateKey.copyBytes().joinToString("") { "%02x".format(it) }
                 }
 
                 override suspend fun decryptPrivateKey(encryptedBase64: String, address: String): PrivateKey {
                     val bytes = ByteArray(32)
                     val decoded = encryptedBase64.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
                     decoded.copyInto(bytes, bytes.size - decoded.size)
-                    decoded.fill(0)
-                    return try {
-                        PrivateKey.fromBytes(bytes)
-                    } finally {
-                        bytes.fill(0)
-                    }
+                    return PrivateKey.fromBytes(bytes)
                 }
             }
         }

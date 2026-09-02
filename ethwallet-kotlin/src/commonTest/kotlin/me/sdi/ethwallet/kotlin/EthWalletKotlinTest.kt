@@ -22,16 +22,16 @@ class EthWalletKotlinTest {
 
     @Test
     fun modelsRepresentEthAndErc20Assets() {
-        val address = EthAddress(CANONICAL_ETHEREUM_ADDRESS)
+        val address = CANONICAL_ETHEREUM_ADDRESS
 
         assertEquals(Asset.Eth, Asset.Eth)
         assertEquals(Asset.Erc20(address), Asset.Erc20(address))
         assertEquals(
-            FeeSuggestion(
+            Eip1559FeeSuggestion(
                 baseFeePerGas = UInt256("0x1"),
                 priorityFeePerGas = UInt256("0x2"),
             ),
-            FeeSuggestion(
+            Eip1559FeeSuggestion(
                 baseFeePerGas = UInt256("0x1"),
                 priorityFeePerGas = UInt256("0x2"),
             ),
@@ -74,7 +74,7 @@ class EthWalletKotlinTest {
     fun canonicalMnemonicDerivesTheFirstEthereumBip44Address() = runTest {
         val privateKey = Mnemonic.parse(CANONICAL_MNEMONIC).derivePrivateKey()
 
-        assertEquals(CANONICAL_ETHEREUM_ADDRESS, privateKey.deriveAddress().value)
+        assertEquals(CANONICAL_ETHEREUM_ADDRESS, privateKey.deriveAddress())
     }
 
     @Test
@@ -88,7 +88,7 @@ class EthWalletKotlinTest {
             returned.fill(7)
         }
         assertContentEquals(ByteArray(32).also { it[31] = 1 }, privateKey.copyBytes())
-        assertEquals(PRIVATE_KEY_ONE_ETHEREUM_ADDRESS, privateKey.deriveAddress().value)
+        assertEquals(PRIVATE_KEY_ONE_ETHEREUM_ADDRESS, privateKey.deriveAddress())
         assertEquals("PrivateKey(**redacted**)", privateKey.toString())
     }
 
@@ -136,7 +136,7 @@ class EthWalletKotlinTest {
         assertFailsWith<IllegalArgumentException> {
             PrivateKey.fromBytes(ByteArray(32) { 0xff.toByte() })
         }
-        PrivateKey.fromBytes(SECP256K1_ORDER_BYTES.decrementUnsigned()).clear()
+        PrivateKey.fromBytes(SECP256K1_ORDER_BYTES.decrementUnsigned())
     }
 }
 

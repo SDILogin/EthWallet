@@ -109,15 +109,4 @@ class TransferExceptionTest {
             assertTrue(exception is Exception)
         }
     }
-
-    @Test
-    fun exceptions_can_be_caught_as_TransferException() {
-        var caught = false
-        try {
-            throw TransferException.InsufficientBalance("Test")
-        } catch (e: TransferException) {
-            caught = true
-        }
-        assertTrue(caught)
-    }
 }

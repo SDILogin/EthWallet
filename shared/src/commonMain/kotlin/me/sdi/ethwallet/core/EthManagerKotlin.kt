@@ -19,7 +19,6 @@ import me.sdi.ethwallet.kotlin.derivePrivateKey
 import me.sdi.ethwallet.ui.supportedKnownTokens
 import java.math.BigInteger
 import me.sdi.ethwallet.kotlin.Asset as KotlinAsset
-import me.sdi.ethwallet.kotlin.EthAddress as KotlinEthAddress
 
 class EthManagerKotlin(
     private val network: EthereumNetwork,
@@ -30,8 +29,8 @@ class EthManagerKotlin(
                 token.ethAddress to balanceResult {
                     EthWalletKotlin.getBalance(
                         network = network,
-                        owner = address.toKotlinAddress(),
-                        asset = KotlinAsset.Erc20(token.ethAddress.toKotlinAddress()),
+                        owner = address.toString(),
+                        asset = KotlinAsset.Erc20(token.ethAddress.toString()),
                     ).toBigInteger()
                 }
             }
@@ -40,7 +39,7 @@ class EthManagerKotlin(
             EthContractAddress to balanceResult {
                 EthWalletKotlin.getBalance(
                     network = network,
-                    owner = address.toKotlinAddress(),
+                    owner = address.toString(),
                     asset = KotlinAsset.Eth,
                 ).toBigInteger()
             }
@@ -67,11 +66,11 @@ class EthManagerKotlin(
         maxFeePerGas: BigInteger,
     ): String {
         val request = TransferRequest(
-            destination = destinationAddress.toKotlinAddress(),
+            destination = destinationAddress.toString(),
             asset = if (contractAddress.isEthContract()) {
                 KotlinAsset.Eth
             } else {
-                KotlinAsset.Erc20(contractAddress.toKotlinAddress())
+                KotlinAsset.Erc20(contractAddress.toString())
             },
             amount = amount.toUInt256("amount"),
             gasUnits = gasUnits.toUInt256("gasUnits"),
@@ -103,7 +102,7 @@ class EthManagerKotlin(
             val address = derivedPrivateKey.deriveAddress()
             val seedPhrase = mnemonic.words.map { word -> word.copyWord() }
             EthCreationResult(
-                address = EthAddress(address.value),
+                address = EthAddress(address),
                 privateKey = derivedPrivateKey,
                 seedPhrase = seedPhrase,
             ).also {
@@ -116,8 +115,6 @@ class EthManagerKotlin(
             mnemonic.clear()
         }
     }
-
-    private fun EthAddress.toKotlinAddress(): KotlinEthAddress = KotlinEthAddress(toString())
 
     private fun EthAddress.isEthContract(): Boolean =
         toString().equals(EthContractAddress.toString(), ignoreCase = true)

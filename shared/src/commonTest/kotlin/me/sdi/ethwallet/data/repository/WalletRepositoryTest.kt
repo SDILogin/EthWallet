@@ -160,11 +160,6 @@ class WalletRepositoryTest {
         val bytes = ByteArray(32)
         val sourceStart = if (source.size > bytes.size) source.size - bytes.size else 0
         source.copyInto(bytes, bytes.size - (source.size - sourceStart), sourceStart)
-        source.fill(0)
-        return try {
-            PrivateKey.fromBytes(bytes)
-        } finally {
-            bytes.fill(0)
-        }
+        return PrivateKey.fromBytes(bytes)
     }
 }
