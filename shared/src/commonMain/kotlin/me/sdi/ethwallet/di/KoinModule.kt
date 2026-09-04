@@ -17,6 +17,8 @@ import me.sdi.ethwallet.core.EthManagerKotlin
 import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.core.FiatRateProviderBinance
 import me.sdi.ethwallet.core.JsonRpcTransportKtor
+import me.sdi.ethwallet.core.history.TransactionHistoryProvider
+import me.sdi.ethwallet.core.history.TransactionHistoryProviderBlockscout
 import me.sdi.ethwallet.core.security.InMemoryPinSession
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
@@ -46,6 +48,12 @@ val commonModule = module {
     single<JsonRpcTransport> { JsonRpcTransportKtor(get(), get<ChainConfig>().rpcUrl) }
     single { EthereumNetwork(get<ChainConfig>().chainId, get()) }
     single<EthManager> { EthManagerKotlin(get()) }
+    single<TransactionHistoryProvider> {
+        TransactionHistoryProviderBlockscout(
+            httpClient = get(),
+            baseUrl = get<ChainConfig>().transactionHistoryApiBaseUrl,
+        )
+    }
 
     factory<WalletRepository> {
         WalletRepository(

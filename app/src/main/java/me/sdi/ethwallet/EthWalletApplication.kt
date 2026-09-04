@@ -17,6 +17,7 @@ class EthWalletApplication : Application() {
             rpcUrl = BuildConfig.ETH_RPC_URL,
             chainId = BuildConfig.ETH_CHAIN_ID,
             explorerBaseUrl = BuildConfig.ETH_EXPLORER_BASE_URL,
+            transactionHistoryApiBaseUrl = BuildConfig.ETH_TRANSACTION_HISTORY_API_BASE_URL,
         )
 
         val koinApplication = startKoin {

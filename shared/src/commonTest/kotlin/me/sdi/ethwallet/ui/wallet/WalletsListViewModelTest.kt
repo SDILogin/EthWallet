@@ -89,7 +89,12 @@ class WalletsListViewModelTest {
                     fiatRateUpdates++
                 }
             },
-            chainConfig = ChainConfig("https://example.com", 1L, "https://example.com"),
+            chainConfig = ChainConfig(
+                rpcUrl = "https://example.com",
+                chainId = 1L,
+                explorerBaseUrl = "https://example.com",
+                transactionHistoryApiBaseUrl = "https://history.example.test",
+            ),
             backgroundDispatcher = testDispatcher,
         )
     }

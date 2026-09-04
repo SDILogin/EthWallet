@@ -61,6 +61,7 @@ extensions.configure<ApplicationExtension>("android") {
             buildConfigField("String", "ETH_RPC_URL", "\"https://ethereum-sepolia-rpc.publicnode.com\"")
             buildConfigField("long", "ETH_CHAIN_ID", "11155111L")
             buildConfigField("String", "ETH_EXPLORER_BASE_URL", "\"https://sepolia.etherscan.io\"")
+            buildConfigField("String", "ETH_TRANSACTION_HISTORY_API_BASE_URL", "\"https://eth-sepolia.blockscout.com\"")
         }
         release {
             isMinifyEnabled = true
@@ -69,6 +70,7 @@ extensions.configure<ApplicationExtension>("android") {
             buildConfigField("String", "ETH_RPC_URL", "\"https://ethereum-rpc.publicnode.com\"")
             buildConfigField("long", "ETH_CHAIN_ID", "1L")
             buildConfigField("String", "ETH_EXPLORER_BASE_URL", "\"https://etherscan.io\"")
+            buildConfigField("String", "ETH_TRANSACTION_HISTORY_API_BASE_URL", "\"https://eth.blockscout.com\"")
 
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

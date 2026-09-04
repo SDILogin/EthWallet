@@ -49,6 +49,7 @@ private val SEPOLIA_CHAIN_CONFIG = ChainConfig(
     rpcUrl = "https://ethereum-sepolia-rpc.publicnode.com",
     chainId = 11155111L,
     explorerBaseUrl = "https://sepolia.etherscan.io",
+    transactionHistoryApiBaseUrl = "https://eth-sepolia.blockscout.com",
 )
 
 private val sepoliaE2eHardwareModule = module {

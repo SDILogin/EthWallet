@@ -27,6 +27,8 @@ fun main() = application {
         rpcUrl = System.getProperty("eth.rpc.url") ?: "https://eth.llamarpc.com",
         chainId = System.getProperty("eth.chain.id")?.toLongOrNull() ?: 1L,
         explorerBaseUrl = System.getProperty("eth.explorer.base.url"),
+        transactionHistoryApiBaseUrl =
+            System.getProperty("eth.transaction.history.api.base.url") ?: "https://eth.blockscout.com",
     )
 
     KoinApplication(

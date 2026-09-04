@@ -28,6 +28,7 @@ class EthManagerKotlinTest {
         rpcUrl = "https://rpc.example.test",
         chainId = 1L,
         explorerBaseUrl = "https://explorer.example.test",
+        transactionHistoryApiBaseUrl = "https://history.example.test",
     )
 
     @Test

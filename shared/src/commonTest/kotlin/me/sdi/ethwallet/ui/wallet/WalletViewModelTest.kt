@@ -46,6 +46,7 @@ class WalletViewModelTest {
         rpcUrl = "https://eth.llamarpc.com",
         chainId = 1L,
         explorerBaseUrl = "https://etherscan.io",
+        transactionHistoryApiBaseUrl = "https://history.example.test",
     )
 
     // Flow state holders for mocking providers
