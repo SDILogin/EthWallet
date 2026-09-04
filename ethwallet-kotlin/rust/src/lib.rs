@@ -7,12 +7,9 @@ use std::{
 };
 
 use alloy_rlp::{Encodable, Header};
+use bip32::{ChildNumber, DerivationPath, XPrv};
 use bip39::{Language, Mnemonic};
-use bitcoin::{
-    NetworkKind,
-    bip32::{ChildNumber, DerivationPath, Xpriv},
-    secp256k1::{All, Message, PublicKey, Secp256k1, SecretKey},
-};
+use secp256k1::{All, Message, PublicKey, Secp256k1, SecretKey};
 use sha3::{Digest, Keccak256};
 use zeroize::Zeroizing;
 
@@ -106,26 +103,17 @@ pub unsafe extern "C" fn ewc_derive_private_key(
         let mnemonic = unsafe { slice::from_raw_parts(mnemonic, mnemonic_length) };
         let mnemonic = parse_mnemonic(mnemonic)?;
         let seed = Zeroizing::new(mnemonic.to_seed_normalized(""));
-        let derivation_path: DerivationPath = vec![
-            ChildNumber::from_hardened_idx(44).map_err(|_| Status::InternalPanic)?,
-            ChildNumber::from_hardened_idx(60).map_err(|_| Status::InternalPanic)?,
-            ChildNumber::from_hardened_idx(account_index).map_err(|_| Status::InvalidArgument)?,
-            ChildNumber::from_normal_idx(0).map_err(|_| Status::InternalPanic)?,
-            ChildNumber::from_normal_idx(address_index).map_err(|_| Status::InvalidArgument)?,
-        ]
-        .into();
-        let secp = secp256k1_context()?;
-
-        // `Xpriv` is `Copy` in rust-bitcoin, therefore zeroization cannot cover compiler-created
-        // copies. Keep it scoped to this derivation and never expose it over this ABI.
-        let mut master = Xpriv::new_master(NetworkKind::Main, seed.as_ref())
+        let mut derivation_path = DerivationPath::default();
+        derivation_path.extend([
+            ChildNumber::new(44, true).map_err(|_| Status::InternalPanic)?,
+            ChildNumber::new(60, true).map_err(|_| Status::InternalPanic)?,
+            ChildNumber::new(account_index, true).map_err(|_| Status::InvalidArgument)?,
+            ChildNumber::new(0, false).map_err(|_| Status::InternalPanic)?,
+            ChildNumber::new(address_index, false).map_err(|_| Status::InvalidArgument)?,
+        ]);
+        let child = XPrv::derive_from_path(&seed[..], &derivation_path)
             .map_err(|_| Status::InternalPanic)?;
-        let mut child = master
-            .derive_priv(secp, &derivation_path)
-            .map_err(|_| Status::InternalPanic)?;
-        master.private_key.non_secure_erase();
-        let private_key = Zeroizing::new(child.private_key.secret_bytes());
-        child.private_key.non_secure_erase();
+        let private_key = Zeroizing::new(child.to_bytes());
 
         // SAFETY: the Kotlin binding guarantees a writable 32-byte output buffer.
         unsafe { ptr::copy_nonoverlapping(private_key.as_ptr(), output, PRIVATE_KEY_LENGTH) };
