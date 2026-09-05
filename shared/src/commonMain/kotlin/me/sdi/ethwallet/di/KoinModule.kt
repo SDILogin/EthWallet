@@ -17,8 +17,12 @@ import me.sdi.ethwallet.core.EthManagerKotlin
 import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.core.FiatRateProviderBinance
 import me.sdi.ethwallet.core.JsonRpcTransportKtor
+import me.sdi.ethwallet.core.history.HistoryUpdateInteractor
+import me.sdi.ethwallet.core.history.HistoryUpdateInteractorDefault
 import me.sdi.ethwallet.core.history.TransactionHistoryProvider
 import me.sdi.ethwallet.core.history.TransactionHistoryProviderBlockscout
+import me.sdi.ethwallet.core.history.TransactionHistoryRepository
+import me.sdi.ethwallet.core.history.TransactionHistoryRepositoryRoom
 import me.sdi.ethwallet.core.security.InMemoryPinSession
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
@@ -52,6 +56,18 @@ val commonModule = module {
         TransactionHistoryProviderBlockscout(
             httpClient = get(),
             baseUrl = get<ChainConfig>().transactionHistoryApiBaseUrl,
+        )
+    }
+    single<TransactionHistoryRepository> {
+        TransactionHistoryRepositoryRoom(
+            transactionHistoryDao = get(),
+            chainConfig = get(),
+        )
+    }
+    factory<HistoryUpdateInteractor> {
+        HistoryUpdateInteractorDefault(
+            historyProvider = get(),
+            historyRepository = get(),
         )
     }
 

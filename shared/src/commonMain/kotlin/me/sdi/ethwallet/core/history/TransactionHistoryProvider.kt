@@ -48,3 +48,31 @@ enum class TransactionStatus {
     Confirmed,
     Failed,
 }
+
+sealed interface HistoryItem {
+    val transactionHash: String
+    val timestamp: String?
+    val from: EthAddress
+    val to: EthAddress?
+
+    data class NativeTransfer(
+        override val transactionHash: String,
+        override val timestamp: String?,
+        override val from: EthAddress,
+        override val to: EthAddress?,
+        val valueWei: String,
+        val status: TransactionStatus,
+    ) : HistoryItem
+
+    data class TokenTransfer(
+        override val transactionHash: String,
+        override val timestamp: String,
+        override val from: EthAddress,
+        override val to: EthAddress,
+        val logIndex: Int,
+        val tokenAddress: EthAddress,
+        val tokenSymbol: String?,
+        val tokenDecimals: Int?,
+        val value: String,
+    ) : HistoryItem
+}

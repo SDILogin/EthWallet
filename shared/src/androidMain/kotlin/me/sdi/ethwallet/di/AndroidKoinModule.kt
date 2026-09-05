@@ -24,6 +24,7 @@ import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.database.DatabaseBuilder
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
+import me.sdi.ethwallet.database.dao.TransactionHistoryDao
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.util.AppForegroundTracker
 import me.sdi.ethwallet.util.CurrentActivityHolder
@@ -36,6 +37,7 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<WalletDao> { get<AppDatabase>().walletDao() }
     single<TokenBalanceDao> { get<AppDatabase>().tokenBalanceDao() }
     single<FiatRateDao> { get<AppDatabase>().fiatRateDao() }
+    single<TransactionHistoryDao> { get<AppDatabase>().transactionHistoryDao() }
 
     single<PrivateKeyEncryptor> { KeyStoreEncryptor(pinSession = get()) }
 

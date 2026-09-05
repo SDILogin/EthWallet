@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "9ad225b312f0d56a52e85e1db2071efa",
+    "identityHash": "4ebd3d8d6e41bca54a462e6221d022af",
     "entities": [
       {
         "tableName": "wallets",
@@ -100,11 +100,110 @@
             "token_address"
           ]
         }
+      },
+      {
+        "tableName": "transaction_history",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chain_id` INTEGER NOT NULL, `wallet_address` TEXT NOT NULL, `transaction_hash` TEXT NOT NULL, `log_index` INTEGER NOT NULL, `type` TEXT NOT NULL, `timestamp` TEXT, `from_address` TEXT NOT NULL, `to_address` TEXT, `value` TEXT NOT NULL, `status` TEXT, `token_address` TEXT, `token_symbol` TEXT, `token_decimals` INTEGER, PRIMARY KEY(`chain_id`, `wallet_address`, `transaction_hash`, `log_index`))",
+        "fields": [
+          {
+            "fieldPath": "chainId",
+            "columnName": "chain_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "walletAddress",
+            "columnName": "wallet_address",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "transactionHash",
+            "columnName": "transaction_hash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "logIndex",
+            "columnName": "log_index",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "fromAddress",
+            "columnName": "from_address",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "toAddress",
+            "columnName": "to_address",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "value",
+            "columnName": "value",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tokenAddress",
+            "columnName": "token_address",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tokenSymbol",
+            "columnName": "token_symbol",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tokenDecimals",
+            "columnName": "token_decimals",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "chain_id",
+            "wallet_address",
+            "transaction_hash",
+            "log_index"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_transaction_history_chain_id_wallet_address",
+            "unique": false,
+            "columnNames": [
+              "chain_id",
+              "wallet_address"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transaction_history_chain_id_wallet_address` ON `${TABLE_NAME}` (`chain_id`, `wallet_address`)"
+          }
+        ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9ad225b312f0d56a52e85e1db2071efa')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4ebd3d8d6e41bca54a462e6221d022af')"
     ]
   }
 }

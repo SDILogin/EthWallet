@@ -3,11 +3,14 @@ package me.sdi.ethwallet.database
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
+import me.sdi.ethwallet.database.dao.TransactionHistoryDao
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.database.entity.FiatRateEntity
 import me.sdi.ethwallet.database.entity.TokenBalanceEntity
+import me.sdi.ethwallet.database.entity.TransactionHistoryEntity
 import me.sdi.ethwallet.database.entity.WalletEntity
 
 class AppDatabase private constructor() {
@@ -16,6 +19,8 @@ class AppDatabase private constructor() {
     fun tokenBalanceDao(): TokenBalanceDao = DesktopTokenBalanceDao()
 
     fun fiatRateDao(): FiatRateDao = DesktopFiatRateDao()
+
+    fun transactionHistoryDao(): TransactionHistoryDao = DesktopTransactionHistoryDao
 
     companion object {
         @Volatile
@@ -74,3 +79,24 @@ private class DesktopFiatRateDao : FiatRateDao {
 
     override suspend fun insertAll(fiatRates: List<FiatRateEntity>) {}
 }
+
+private object DesktopTransactionHistoryDao : TransactionHistoryDao {
+    private val items = MutableStateFlow<List<TransactionHistoryEntity>>(emptyList())
+
+    override fun observe(chainId: Long, walletAddress: String): Flow<List<TransactionHistoryEntity>> =
+        items.map { entities ->
+            entities
+                .filter { it.chainId == chainId && it.walletAddress == walletAddress }
+                .sortedWith(
+                    compareByDescending<TransactionHistoryEntity> { it.status == "Pending" }
+                        .thenByDescending { it.timestamp },
+                )
+        }
+
+    override suspend fun upsertAll(items: List<TransactionHistoryEntity>) {
+        val updatedKeys = items.mapTo(mutableSetOf(), TransactionHistoryEntity::key)
+        this.items.value = this.items.value.filterNot { it.key() in updatedKeys } + items
+    }
+}
+
+private fun TransactionHistoryEntity.key() = listOf(chainId, walletAddress, transactionHash, logIndex)
