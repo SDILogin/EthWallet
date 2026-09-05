@@ -2,6 +2,7 @@ package me.sdi.ethwallet.core.history
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.database.dao.TransactionHistoryDao
@@ -20,7 +21,7 @@ class TransactionHistoryRepositoryRoom(
     override fun observe(walletAddress: EthAddress): Flow<List<HistoryItem>> =
         transactionHistoryDao
             .observe(chainConfig.chainId, walletAddress.toString())
-            .map { entities -> entities.map(TransactionHistoryEntity::toHistoryItem) }
+            .map { entities -> entities.mapNotNull(TransactionHistoryEntity::toHistoryItemOrNull) }
 
     override suspend fun upsert(walletAddress: EthAddress, items: List<HistoryItem>) {
         transactionHistoryDao.upsertAll(
@@ -66,7 +67,14 @@ private fun HistoryItem.toEntity(chainId: Long, walletAddress: EthAddress): Tran
     )
 }
 
-private fun TransactionHistoryEntity.toHistoryItem(): HistoryItem = when (type) {
+private fun TransactionHistoryEntity.toHistoryItemOrNull(): HistoryItem? = try {
+    toHistoryItemOrThrow()
+} catch (e: Exception) {
+    Logger.warn("TransactionHistoryEntity", e) { "Failed to convert $this to HistoryItem" }
+    null
+}
+
+private fun TransactionHistoryEntity.toHistoryItemOrThrow(): HistoryItem = when (type) {
     TYPE_NATIVE -> HistoryItem.NativeTransfer(
         transactionHash = transactionHash,
         timestamp = timestamp,
