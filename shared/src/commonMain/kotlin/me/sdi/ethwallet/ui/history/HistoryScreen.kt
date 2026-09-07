@@ -1,0 +1,469 @@
+package me.sdi.ethwallet.ui.history
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import androidx.compose.ui.unit.dp
+import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.core.history.HistoryItem
+import me.sdi.ethwallet.core.history.TransactionStatus
+import me.sdi.ethwallet.kotlin.TransactionHash
+import me.sdi.ethwallet.resources.Res
+import me.sdi.ethwallet.resources.arrow_back_24px
+import me.sdi.ethwallet.resources.arrow_downward_24px
+import me.sdi.ethwallet.resources.arrow_outward_24px
+import me.sdi.ethwallet.resources.back
+import me.sdi.ethwallet.resources.cancel_24px
+import me.sdi.ethwallet.resources.history_24px
+import me.sdi.ethwallet.resources.history_amount_unavailable
+import me.sdi.ethwallet.resources.history_contract_creation
+import me.sdi.ethwallet.resources.history_date_unavailable
+import me.sdi.ethwallet.resources.history_empty_message
+import me.sdi.ethwallet.resources.history_empty_title
+import me.sdi.ethwallet.resources.history_failed
+import me.sdi.ethwallet.resources.history_from
+import me.sdi.ethwallet.resources.history_loading
+import me.sdi.ethwallet.resources.history_mainnet
+import me.sdi.ethwallet.resources.history_network
+import me.sdi.ethwallet.resources.history_new_contract
+import me.sdi.ethwallet.resources.history_pending
+import me.sdi.ethwallet.resources.history_receive_failed
+import me.sdi.ethwallet.resources.history_received
+import me.sdi.ethwallet.resources.history_receiving
+import me.sdi.ethwallet.resources.history_recent_note
+import me.sdi.ethwallet.resources.history_self
+import me.sdi.ethwallet.resources.history_send_failed
+import me.sdi.ethwallet.resources.history_sending
+import me.sdi.ethwallet.resources.history_sent
+import me.sdi.ethwallet.resources.history_sepolia
+import me.sdi.ethwallet.resources.history_this_wallet
+import me.sdi.ethwallet.resources.history_time_unavailable
+import me.sdi.ethwallet.resources.history_title
+import me.sdi.ethwallet.resources.history_to
+import me.sdi.ethwallet.resources.history_today
+import me.sdi.ethwallet.resources.history_transaction
+import me.sdi.ethwallet.resources.history_yesterday
+import me.sdi.ethwallet.resources.switch_account_24px
+import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.components.shimmer
+import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
+import java.util.Calendar
+import java.util.TimeZone
+
+@Composable
+fun HistoryScreen(
+    modifier: Modifier,
+    onHistoryItemClick: (transactionHash: TransactionHash, logIndex: Int) -> Unit,
+    walletAddress: EthAddress,
+    walletLabel: String,
+    chainId: Long,
+    historyItems: List<HistoryItem>?,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+    onBackPressed: () -> Unit,
+) {
+    Scaffold(
+        modifier = modifier,
+        topBar = { HistoryHeader(chainId = chainId, walletLabel = walletLabel, onBackPressed = onBackPressed) },
+    ) { contentPadding ->
+        Box(
+            modifier = Modifier.fillMaxSize().padding(contentPadding).consumeWindowInsets(contentPadding),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            val contentModifier = Modifier.widthIn(max = 720.dp).fillMaxSize()
+            if (historyItems == null) {
+                ShimmersSkeleton(modifier = contentModifier)
+            } else {
+                RefreshableContent(
+                    modifier = contentModifier,
+                    historyItems = historyItems,
+                    walletAddress = walletAddress,
+                    isRefreshing = isRefreshing,
+                    onRefresh = onRefresh,
+                    onHistoryItemClick = onHistoryItemClick,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HistoryHeader(
+    walletLabel: String,
+    chainId: Long,
+    onBackPressed: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val networkName = when (chainId) {
+        1L -> stringResource(Res.string.history_mainnet)
+        11155111L -> stringResource(Res.string.history_sepolia)
+        else -> stringResource(Res.string.history_network, chainId)
+    }
+    TopAppBar(
+        modifier = modifier,
+        navigationIcon = {
+            IconButton(onClick = onBackPressed) {
+                Icon(painterResource(Res.drawable.arrow_back_24px), stringResource(Res.string.back))
+            }
+        },
+        title = {
+            Column {
+                Text(stringResource(Res.string.history_title))
+                Text(
+                    text = "$walletLabel · $networkName",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun ShimmersSkeleton(modifier: Modifier = Modifier) {
+    val loadingDescription = stringResource(Res.string.history_loading)
+    LazyColumn(
+        modifier = modifier.semantics { contentDescription = loadingDescription },
+        contentPadding = PaddingValues(16.dp),
+        userScrollEnabled = false,
+    ) {
+        items(8) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Spacer(Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).shimmer())
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SkeletonLine(Modifier.fillMaxWidth(0.55f))
+                    SkeletonLine(Modifier.fillMaxWidth(0.8f))
+                }
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SkeletonLine(Modifier.width(72.dp))
+                    SkeletonLine(Modifier.width(40.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SkeletonLine(modifier: Modifier) {
+    Spacer(modifier.height(14.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).shimmer())
+}
+
+@Composable
+private fun RefreshableContent(
+    historyItems: List<HistoryItem>,
+    walletAddress: EthAddress,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+    onHistoryItemClick: (transactionHash: TransactionHash, logIndex: Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val timeZone = TimeZone.getDefault()
+    val rows = remember(historyItems, walletAddress) {
+        historyItems.map { it.toHistoryRow(walletAddress) }
+            .sortedWith(compareBy<HistoryRow> { it.status != TransactionStatus.Pending }.thenByDescending { it.timestampMillis })
+    }
+    val groups = remember(rows, timeZone.id) {
+        rows.groupBy { row ->
+            if (row.status == TransactionStatus.Pending) "pending" else row.timestampMillis?.let { historyDateKey(it, timeZone) }
+        }
+    }
+    val today = Calendar.getInstance(timeZone)
+    val todayKey = historyDateKey(today.timeInMillis, timeZone)
+    today.add(Calendar.DAY_OF_YEAR, -1)
+    val yesterdayKey = historyDateKey(today.timeInMillis, timeZone)
+
+    PullToRefreshBox(modifier = modifier, isRefreshing = isRefreshing, onRefresh = onRefresh) {
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 16.dp)) {
+            if (rows.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier.fillParentMaxSize().padding(32.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Icon(
+                            painterResource(Res.drawable.history_24px),
+                            null,
+                            Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(stringResource(Res.string.history_empty_title), style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(Res.string.history_empty_message),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            } else {
+                groups.forEach { (key, group) ->
+                    item(key = "header:$key", contentType = "header") {
+                        val title = when (key) {
+                            "pending" -> stringResource(Res.string.history_pending)
+                            todayKey -> stringResource(Res.string.history_today)
+                            yesterdayKey -> stringResource(Res.string.history_yesterday)
+                            null -> stringResource(Res.string.history_date_unavailable)
+                            else -> formatHistoryDate(requireNotNull(group.first().timestampMillis), timeZone)
+                        }
+                        Text(
+                            title,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    items(group, key = { it.key }, contentType = { "history" }) { row ->
+                        HistoryListItem(row, timeZone, onHistoryItemClick)
+                    }
+                }
+                item(key = "footer") {
+                    Text(
+                        stringResource(Res.string.history_recent_note),
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryListItem(
+    row: HistoryRow,
+    timeZone: TimeZone,
+    onHistoryItemClick: (transactionHash: TransactionHash, logIndex: Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val title = stringResource(
+        when (row.action) {
+            HistoryAction.Sent -> when (row.status) {
+                TransactionStatus.Pending -> Res.string.history_sending
+                TransactionStatus.Failed -> Res.string.history_send_failed
+                TransactionStatus.Confirmed -> Res.string.history_sent
+            }
+            HistoryAction.Received -> when (row.status) {
+                TransactionStatus.Pending -> Res.string.history_receiving
+                TransactionStatus.Failed -> Res.string.history_receive_failed
+                TransactionStatus.Confirmed -> Res.string.history_received
+            }
+            HistoryAction.Self -> Res.string.history_self
+            HistoryAction.Transaction -> Res.string.history_transaction
+            HistoryAction.ContractCreation -> Res.string.history_contract_creation
+        },
+    )
+    val counterparty = when {
+        row.action == HistoryAction.Self -> stringResource(Res.string.history_this_wallet)
+        row.counterparty == null -> stringResource(Res.string.history_new_contract)
+        else -> stringResource(
+            if (row.counterparty == row.item.from) Res.string.history_from else Res.string.history_to,
+            row.counterparty.shortHistoryAddress(),
+        )
+    }
+    val statusColor = when (row.status) {
+        TransactionStatus.Failed -> MaterialTheme.colorScheme.error
+        TransactionStatus.Pending -> MaterialTheme.colorScheme.primary
+        TransactionStatus.Confirmed -> MaterialTheme.colorScheme.onSurface
+    }
+    val time = row.timestampMillis?.let { formatHistoryTime(it, timeZone) }
+    val subtitle = when (row.status) {
+        TransactionStatus.Pending -> stringResource(Res.string.history_pending)
+        TransactionStatus.Failed -> listOfNotNull(stringResource(Res.string.history_failed), time).joinToString(" · ")
+        TransactionStatus.Confirmed -> time ?: stringResource(Res.string.history_time_unavailable)
+    }
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth()
+                .clickable(role = Role.Button) { onHistoryItemClick(TransactionHash(row.item.transactionHash), row.logIndex) }
+                .padding(horizontal = 16.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            HistoryItemIcon(row)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, color = statusColor)
+                Text(
+                    counterparty,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = row.amount?.let { "$it ${row.symbol}" } ?: stringResource(Res.string.history_amount_unavailable, row.symbol),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (row.action == HistoryAction.Received && row.status == TransactionStatus.Confirmed) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    textAlign = TextAlign.End,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (row.status == TransactionStatus.Confirmed) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        statusColor
+                    },
+                    textAlign = TextAlign.End,
+                )
+            }
+        }
+        HorizontalDivider(Modifier.padding(start = 68.dp, end = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+    }
+}
+
+@Composable
+private fun HistoryItemIcon(row: HistoryRow) {
+    val icon = when {
+        row.status == TransactionStatus.Failed -> Res.drawable.cancel_24px
+        row.status == TransactionStatus.Pending -> Res.drawable.history_24px
+        row.action == HistoryAction.Received -> Res.drawable.arrow_downward_24px
+        row.action == HistoryAction.Self -> Res.drawable.switch_account_24px
+        else -> Res.drawable.arrow_outward_24px
+    }
+    Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape), contentAlignment = Alignment.Center) {
+        Icon(
+            painterResource(icon),
+            null,
+            Modifier.size(24.dp),
+            tint = if (row.status == TransactionStatus.Failed) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+    }
+}
+
+private val previewWallet = EthAddress("0x1111111111111111111111111111111111111111")
+
+internal class HistoryPreviewProvider : PreviewParameterProvider<List<HistoryItem>?> {
+    override val values: Sequence<List<HistoryItem>?> = sequenceOf(
+        null,
+        emptyList(),
+        listOf(
+            HistoryItem.NativeTransfer(
+                "0x${"a".repeat(64)}",
+                null,
+                previewWallet,
+                EthAddress("0x2222222222222222222222222222222222222222"),
+                "15000000000000000",
+                TransactionStatus.Pending,
+            ),
+            HistoryItem.TokenTransfer(
+                "0x${"b".repeat(64)}",
+                "2026-09-07T07:32:00Z",
+                EthAddress("0x2222222222222222222222222222222222222222"),
+                previewWallet,
+                0,
+                EthAddress("0x3333333333333333333333333333333333333333"),
+                "USDC",
+                6,
+                "250000000",
+            ),
+            HistoryItem.NativeTransfer(
+                "0x${"c".repeat(64)}",
+                "2026-09-07T06:05:00Z",
+                previewWallet,
+                EthAddress("0x2222222222222222222222222222222222222222"),
+                "42000000000000000",
+                TransactionStatus.Confirmed,
+            ),
+            HistoryItem.NativeTransfer(
+                "0x${"d".repeat(64)}",
+                "2026-09-07T05:15:00Z",
+                previewWallet,
+                previewWallet,
+                "10000000000000000",
+                TransactionStatus.Confirmed,
+            ),
+            HistoryItem.NativeTransfer(
+                "0x${"e".repeat(64)}",
+                "2026-09-06T11:42:00Z",
+                previewWallet,
+                EthAddress("0x2222222222222222222222222222222222222222"),
+                "100000000000000000",
+                TransactionStatus.Failed,
+            ),
+        ),
+    )
+}
+
+@Composable
+@FormFactorPreviews
+private fun HistoryScreenPreview(
+    @PreviewParameter(HistoryPreviewProvider::class) items: List<HistoryItem>?,
+) {
+    EthWalletTheme {
+        HistoryScreen(
+            modifier = Modifier.fillMaxSize(),
+            onHistoryItemClick = { _, _ -> },
+            walletAddress = previewWallet,
+            walletLabel = "My Wallet",
+            chainId = 11155111L,
+            historyItems = items,
+            isRefreshing = false,
+            onRefresh = {},
+            onBackPressed = {},
+        )
+    }
+}
