@@ -28,6 +28,7 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.security.PinSession
+import me.sdi.ethwallet.ui.history.HistoryRoute
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.receive.ReceiveScreen
 import me.sdi.ethwallet.ui.send.SendScreen
@@ -189,6 +190,9 @@ fun EthWalletApp() {
                     onUpButtonClick = { backStack.removeLastOrNull() },
                     onReceiveButtonClick = { backStack.add(Destination.ReceiveQrScreen(destination.ethAddress)) },
                     onSendButtonClick = { backStack.add(Destination.SendScreen(destination.ethAddress)) },
+                    onHistoryButtonClick = { label ->
+                        backStack.add(Destination.HistoryScreen(destination.ethAddress, label))
+                    },
                     onEditButtonClick = { },
                     onTokenClick = { },
                 )
@@ -197,6 +201,14 @@ fun EthWalletApp() {
             entry<Destination.ReceiveQrScreen> { destination ->
                 ReceiveScreen(
                     walletAddress = EthAddress(destination.ethAddress),
+                    onBackPressed = { backStack.removeLastOrNull() },
+                )
+            }
+
+            entry<Destination.HistoryScreen> { destination ->
+                HistoryRoute(
+                    walletAddress = EthAddress(destination.ethAddress),
+                    walletLabel = destination.walletLabel,
                     onBackPressed = { backStack.removeLastOrNull() },
                 )
             }

@@ -67,6 +67,8 @@ import me.sdi.ethwallet.resources.arrow_downward_24px
 import me.sdi.ethwallet.resources.arrow_outward_24px
 import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.edit
+import me.sdi.ethwallet.resources.history_24px
+import me.sdi.ethwallet.resources.history_title
 import me.sdi.ethwallet.resources.ic_question_mark_56
 import me.sdi.ethwallet.resources.wallet_balance_error_message
 import me.sdi.ethwallet.resources.wallet_balance_error_title
@@ -99,6 +101,7 @@ fun WalletScreen(
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
     onReceiveButtonClick: () -> Unit,
     onSendButtonClick: () -> Unit,
+    onHistoryButtonClick: (walletLabel: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: WalletViewModel = koinViewModel(
@@ -126,6 +129,7 @@ fun WalletScreen(
         onTokenClick = onTokenClick,
         onReceiveButtonClick = onReceiveButtonClick,
         onSendButtonClick = onSendButtonClick,
+        onHistoryButtonClick = { onHistoryButtonClick(viewState.walletName) },
         modifier = modifier,
     )
 }
@@ -142,6 +146,7 @@ fun WalletScreenContent(
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
     onReceiveButtonClick: () -> Unit,
     onSendButtonClick: () -> Unit,
+    onHistoryButtonClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -207,6 +212,7 @@ fun WalletScreenContent(
                         isSendEnabled = viewState.balanceLoadState == WalletBalanceLoadState.Content,
                         onReceiveClick = onReceiveButtonClick,
                         onSendButtonClick = onSendButtonClick,
+                        onHistoryButtonClick = onHistoryButtonClick,
                     )
                 }
 
@@ -377,6 +383,7 @@ private fun ButtonsPanel(
     isSendEnabled: Boolean,
     onReceiveClick: () -> Unit,
     onSendButtonClick: () -> Unit,
+    onHistoryButtonClick: () -> Unit,
 ) {
     val receiveTitle = stringResource(Res.string.wallet_receive)
     val sendTitle = stringResource(Res.string.wallet_send)
@@ -403,6 +410,12 @@ private fun ButtonsPanel(
                 enabled = isSendEnabled,
             )
         }
+        Spacer(modifier = Modifier.width(32.dp))
+        CircularButtonWithTitle(
+            title = stringResource(Res.string.history_title),
+            icon = painterResource(Res.drawable.history_24px),
+            onClick = onHistoryButtonClick,
+        )
     }
 }
 
@@ -753,6 +766,7 @@ private fun WalletScreenContentPreview(
             onTokenClick = {},
             onReceiveButtonClick = {},
             onSendButtonClick = {},
+            onHistoryButtonClick = {},
             onRefresh = {},
             onRetry = {},
         )

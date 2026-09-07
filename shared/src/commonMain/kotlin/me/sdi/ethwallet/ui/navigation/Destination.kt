@@ -36,5 +36,8 @@ sealed interface Destination : NavKey {
     data class SendScreen(val ethAddress: String) : Destination
 
     @Serializable
+    data class HistoryScreen(val ethAddress: String, val walletLabel: String) : Destination
+
+    @Serializable
     data object SettingsScreen : Destination
 }
