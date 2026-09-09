@@ -1,6 +1,8 @@
 package me.sdi.ethwallet.di
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import me.sdi.ethwallet.core.ChainConfig
@@ -28,11 +30,13 @@ import me.sdi.ethwallet.database.dao.TransactionHistoryDao
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.util.AppForegroundTracker
 import me.sdi.ethwallet.util.CurrentActivityHolder
+import me.sdi.ethwallet.util.preferencesDataStore
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
 actual fun platformModule(chainConfig: ChainConfig): Module = module {
+    single<DataStore<Preferences>> { androidContext().preferencesDataStore }
     single<AppDatabase> { DatabaseBuilder.getInstance(androidContext()) }
     single<WalletDao> { get<AppDatabase>().walletDao() }
     single<TokenBalanceDao> { get<AppDatabase>().tokenBalanceDao() }

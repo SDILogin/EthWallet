@@ -38,12 +38,11 @@ fun HistoryRoute(
 
     HistoryScreen(
         modifier = Modifier.fillMaxSize(),
-        walletAddress = walletAddress,
         walletLabel = walletLabel,
         chainId = chainConfig.chainId,
-        historyItems = viewState.items,
-        isRefreshing = viewState.refreshing,
-        onRefresh = { viewModel.onEvent(HistoryEvent.Refresh) },
+        viewState = viewState,
+        onRetry = { viewModel.onEvent(HistoryUserAction.RetryInitialLoad) },
+        onRefresh = { viewModel.onEvent(HistoryUserAction.Refresh) },
         onBackPressed = onBackPressed,
         onHistoryItemClick = { _, _ -> },
     )

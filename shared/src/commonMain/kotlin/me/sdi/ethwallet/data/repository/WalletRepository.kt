@@ -6,6 +6,7 @@ import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthCreationResult
 import me.sdi.ethwallet.core.EthManager
+import me.sdi.ethwallet.core.history.HistoryInitializationStore
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.database.entity.WalletEntity
@@ -19,6 +20,7 @@ class WalletRepository(
     private val walletDao: WalletDao,
     private val ethManager: EthManager,
     private val privateKeyEncryptor: PrivateKeyEncryptor,
+    private val historyInitializationStore: HistoryInitializationStore,
 ) {
     suspend fun saveWallet(creationResult: EthCreationResult, label: String) {
         val encryptedKeyBase64 = privateKeyEncryptor.encryptPrivateKey(
@@ -66,6 +68,7 @@ class WalletRepository(
      */
     suspend fun deleteWallet(address: EthAddress) {
         Logger.debug(TAG) { "Deleting wallet with address $address" }
+        historyInitializationStore.clearWallet(address)
         walletDao.deleteWalletByAddress(address.toString())
     }
 

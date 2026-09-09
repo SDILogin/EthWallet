@@ -8,6 +8,7 @@ import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
+import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
 import me.sdi.ethwallet.kotlin.PrivateKey
 import java.math.BigInteger
 import kotlin.test.BeforeTest
@@ -28,7 +29,10 @@ class WalletRepositoryTest {
     private val importedPrivateKey = BigInteger("987654321098765432109876543210")
     private val importedSeedPhrase = List(12) { "imported$it" }
     private val walletLabel = "Test wallet"
-    private val mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+    private val mnemonic =
+        "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+
+    private val historyInitializationStoreInMemory = HistoryInitializationStoreInMemory()
 
     @BeforeTest
     fun setUp() {
@@ -46,7 +50,8 @@ class WalletRepositoryTest {
             )
         }
         privateKeyEncryptor = FakePrivateKeyEncryptor()
-        walletRepository = WalletRepository(walletDao, ethManager, privateKeyEncryptor)
+        walletRepository =
+            WalletRepository(walletDao, ethManager, privateKeyEncryptor, historyInitializationStoreInMemory)
     }
 
     @Test

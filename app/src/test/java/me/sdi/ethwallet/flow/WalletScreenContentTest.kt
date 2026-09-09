@@ -114,6 +114,7 @@ private class WalletScreenContentTestActivity : FragmentActivity() {
                     onTokenClick = {},
                     onReceiveButtonClick = {},
                     onSendButtonClick = {},
+                    onHistoryButtonClick = {},
                 )
             }
         }

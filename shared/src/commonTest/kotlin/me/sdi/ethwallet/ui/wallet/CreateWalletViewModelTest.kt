@@ -21,6 +21,7 @@ import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
+import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
 import me.sdi.ethwallet.kotlin.PrivateKey
 import me.sdi.ethwallet.kotlin.deriveAddress
 import java.math.BigInteger
@@ -73,7 +74,12 @@ class CreateWalletViewModelTest {
                     )
             }
         privateKeyEncryptor = FakePrivateKeyEncryptor()
-        walletRepository = WalletRepository(walletDao, ethManager, privateKeyEncryptor)
+        walletRepository = WalletRepository(
+            walletDao = walletDao,
+            ethManager = ethManager,
+            privateKeyEncryptor = privateKeyEncryptor,
+            historyInitializationStore = HistoryInitializationStoreInMemory(),
+        )
         createViewModel()
     }
 

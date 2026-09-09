@@ -17,6 +17,8 @@ import me.sdi.ethwallet.core.EthManagerKotlin
 import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.core.FiatRateProviderBinance
 import me.sdi.ethwallet.core.JsonRpcTransportKtor
+import me.sdi.ethwallet.core.history.HistoryInitializationStore
+import me.sdi.ethwallet.core.history.HistoryInitializationStoreDataStore
 import me.sdi.ethwallet.core.history.HistoryUpdateInteractor
 import me.sdi.ethwallet.core.history.HistoryUpdateInteractorDefault
 import me.sdi.ethwallet.core.history.TransactionHistoryProvider
@@ -48,6 +50,7 @@ import me.sdi.ethwallet.Logger as WalletLogger
 expect fun platformModule(chainConfig: ChainConfig): Module
 
 val commonModule = module {
+    single<HistoryInitializationStore> { HistoryInitializationStoreDataStore(get()) }
     single<CoroutineScope> { CoroutineScope(SupervisorJob()) }
 
     single<JsonRpcTransport> { JsonRpcTransportKtor(get(), get<ChainConfig>().rpcUrl) }
@@ -69,6 +72,7 @@ val commonModule = module {
         HistoryUpdateInteractorDefault(
             historyProvider = get(),
             historyRepository = get(),
+            initializationStore = get(),
         )
     }
 
@@ -77,6 +81,7 @@ val commonModule = module {
             walletDao = get(),
             ethManager = get(),
             privateKeyEncryptor = get(),
+            historyInitializationStore = get(),
         )
     }
 
@@ -97,6 +102,9 @@ val commonModule = module {
             walletAddress = params.get(),
             historyRepository = get(),
             historyUpdateInteractor = get(),
+            chainId = get<ChainConfig>().chainId,
+            historyInitializationStore = get(),
+            walletAccounts = get<WalletRepository>().observeAllWallets(),
         )
     }
 

@@ -28,6 +28,7 @@ import me.sdi.ethwallet.fakes.FakeFiatRateProvider
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeTransferInteractor
 import me.sdi.ethwallet.fakes.FakeWalletDao
+import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
 import me.sdi.ethwallet.ui.usdtOnMainnet
 import me.sdi.ethwallet.util.formatUsdCurrency
 import java.math.BigDecimal
@@ -50,6 +51,7 @@ class SendViewModelTest {
     private lateinit var fiatRateProvider: FakeFiatRateProvider
     private lateinit var walletDao: FakeWalletDao
     private lateinit var walletRepository: WalletRepository
+    private val historyInitializationStoreInMemory = HistoryInitializationStoreInMemory()
     private lateinit var viewModel: SendViewModel
     private val activeViewModels = mutableListOf<SendViewModel>()
     private val collectedNews = mutableListOf<SendNews>()
@@ -73,7 +75,12 @@ class SendViewModelTest {
         transferInteractor = FakeTransferInteractor()
         fiatRateProvider = FakeFiatRateProvider()
         walletDao = FakeWalletDao()
-        walletRepository = WalletRepository(walletDao, FakeEthManager(), FakePrivateKeyEncryptor())
+        walletRepository = WalletRepository(
+            walletDao = walletDao,
+            ethManager = FakeEthManager(),
+            privateKeyEncryptor = FakePrivateKeyEncryptor(),
+            historyInitializationStore = historyInitializationStoreInMemory,
+        )
         activeViewModels.clear()
         viewModel = newViewModel()
     }

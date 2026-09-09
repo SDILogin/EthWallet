@@ -20,6 +20,7 @@ import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
+import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
 import me.sdi.ethwallet.ui.daiOnMainnet
 import me.sdi.ethwallet.ui.usdcOnMainnet
 import me.sdi.ethwallet.ui.usdtOnMainnet
@@ -86,7 +87,12 @@ class WalletViewModelTest {
         balanceUpdateFailure = null
         fiatRateUpdateFailure = null
         walletDao = FakeWalletDao()
-        walletRepository = WalletRepository(walletDao, FakeEthManager(), FakePrivateKeyEncryptor())
+        walletRepository = WalletRepository(
+            walletDao = walletDao,
+            ethManager = FakeEthManager(),
+            privateKeyEncryptor = FakePrivateKeyEncryptor(),
+            historyInitializationStore = HistoryInitializationStoreInMemory(),
+        )
     }
 
     @AfterTest

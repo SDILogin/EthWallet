@@ -21,6 +21,7 @@ import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
+import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
 import me.sdi.ethwallet.ui.daiOnMainnet
 import me.sdi.ethwallet.ui.usdcOnMainnet
 import me.sdi.ethwallet.ui.usdtOnMainnet
@@ -71,7 +72,12 @@ class WalletsListViewModelTest {
         balanceRefreshFailures.clear()
         fiatRateUpdates = 0
         viewModel = WalletsListViewModel(
-            walletRepository = WalletRepository(walletDao, FakeEthManager(), FakePrivateKeyEncryptor()),
+            walletRepository = WalletRepository(
+                walletDao = walletDao,
+                ethManager = FakeEthManager(),
+                privateKeyEncryptor = FakePrivateKeyEncryptor(),
+                historyInitializationStore = HistoryInitializationStoreInMemory(),
+            ),
             balanceProvider = object : BalanceProvider {
                 override fun observe(address: EthAddress): Flow<Map<EthAddress, BigInteger>> = balances.getValue(address)
 

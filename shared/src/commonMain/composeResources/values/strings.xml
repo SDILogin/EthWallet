@@ -179,7 +179,6 @@
     <string name="history_receive_failed">Receive failed</string>
     <string name="history_self">Self transfer</string>
     <string name="history_transaction">Transaction</string>
-    <string name="history_contract_creation">Contract creation</string>
     <string name="history_this_wallet">To this wallet</string>
     <string name="history_new_contract">New contract</string>
     <string name="history_from">From %1$s</string>

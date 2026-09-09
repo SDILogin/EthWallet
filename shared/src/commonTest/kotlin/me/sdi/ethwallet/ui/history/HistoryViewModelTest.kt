@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -18,12 +19,20 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.core.history.HistoryInitializationStore
 import me.sdi.ethwallet.core.history.HistoryItem
 import me.sdi.ethwallet.core.history.HistoryUpdateInteractor
 import me.sdi.ethwallet.core.history.TransactionHistoryRepository
 import me.sdi.ethwallet.core.history.TransactionStatus
+import me.sdi.ethwallet.data.repository.EthWallet
+import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.di.commonModule
+import me.sdi.ethwallet.fakes.FakeEthManager
+import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
+import me.sdi.ethwallet.fakes.FakeWalletDao
+import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
 import org.koin.core.parameter.parametersOf
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
@@ -32,7 +41,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -50,6 +59,10 @@ class HistoryViewModelTest {
         valueWei = "100",
         status = TransactionStatus.Confirmed,
     )
+
+    private val historyInitializationStoreInMemory = HistoryInitializationStoreInMemory()
+    private val chainId = 1L
+    private val accounts = MutableStateFlow<List<EthWallet>>(emptyList())
 
     @BeforeTest
     fun setUp() {
@@ -70,18 +83,17 @@ class HistoryViewModelTest {
         updater.action = { updateGate.await() }
         val vm = createViewModel()
 
-        assertNull(vm.viewState.value.items)
-        assertFalse(vm.viewState.value.refreshing)
+        assertEquals(HistoryViewState.Loading, vm.viewState.value)
         runCurrent()
 
         assertEquals(listOf(wallet), repository.observedAddresses)
         assertEquals(listOf(wallet), updater.addresses)
-        assertEquals(listOf(item), vm.viewState.value.items)
-        assertFalse(vm.viewState.value.refreshing)
+        assertEquals(listOf(requireNotNull(item.toHistoryRow(wallet))), assertIs<HistoryViewState.Content>(vm.viewState.value).items)
+        assertFalse((vm.viewState.value as? HistoryViewState.Content)?.refreshing == true)
 
         updateGate.complete(Unit)
         runCurrent()
-        assertFalse(vm.viewState.value.refreshing)
+        assertFalse((vm.viewState.value as? HistoryViewState.Content)?.refreshing == true)
     }
 
     @Test
@@ -91,12 +103,11 @@ class HistoryViewModelTest {
         val vm = createViewModel()
         runCurrent()
 
-        assertFalse(vm.viewState.value.refreshing)
-        assertNull(vm.viewState.value.items)
+        assertEquals(HistoryViewState.Loading, vm.viewState.value)
 
         readGate.complete(Unit)
         runCurrent()
-        assertEquals(emptyList(), vm.viewState.value.items)
+        assertEquals(emptyList(), assertIs<HistoryViewState.Content>(vm.viewState.value).items)
     }
 
     @Test
@@ -107,21 +118,21 @@ class HistoryViewModelTest {
         val gate = CompletableDeferred<Unit>()
         updater.action = { gate.await() }
 
-        vm.onEvent(HistoryEvent.Refresh)
+        vm.onEvent(HistoryUserAction.Refresh)
         runCurrent()
-        assertEquals(listOf(item), vm.viewState.value.items)
-        assertTrue(vm.viewState.value.refreshing)
+        assertEquals(listOf(requireNotNull(item.toHistoryRow(wallet))), assertIs<HistoryViewState.Content>(vm.viewState.value).items)
+        assertTrue(assertIs<HistoryViewState.Content>(vm.viewState.value).refreshing)
         repository.items.value = emptyList()
         runCurrent()
-        assertEquals(emptyList(), vm.viewState.value.items)
+        assertEquals(emptyList(), assertIs<HistoryViewState.Content>(vm.viewState.value).items)
 
         val updatedItem = item.copy(valueWei = "200")
         repository.items.value = listOf(updatedItem)
         runCurrent()
         gate.complete(Unit)
         runCurrent()
-        assertEquals(listOf(updatedItem), vm.viewState.value.items)
-        assertFalse(vm.viewState.value.refreshing)
+        assertEquals(listOf(requireNotNull(updatedItem.toHistoryRow(wallet))), assertIs<HistoryViewState.Content>(vm.viewState.value).items)
+        assertFalse((vm.viewState.value as? HistoryViewState.Content)?.refreshing == true)
     }
 
     @Test
@@ -131,18 +142,18 @@ class HistoryViewModelTest {
         val gate = CompletableDeferred<Unit>()
         updater.action = { gate.await() }
 
-        vm.onEvent(HistoryEvent.Refresh)
-        vm.onEvent(HistoryEvent.Refresh)
+        vm.onEvent(HistoryUserAction.Refresh)
+        vm.onEvent(HistoryUserAction.Refresh)
         runCurrent()
-        vm.onEvent(HistoryEvent.Refresh)
+        vm.onEvent(HistoryUserAction.Refresh)
         runCurrent()
 
         assertEquals(listOf(wallet, wallet), updater.addresses)
-        assertTrue(vm.viewState.value.refreshing)
+        assertTrue(assertIs<HistoryViewState.Content>(vm.viewState.value).refreshing)
         gate.complete(Unit)
         runCurrent()
-        assertFalse(vm.viewState.value.refreshing)
-        vm.onEvent(HistoryEvent.Refresh)
+        assertFalse((vm.viewState.value as? HistoryViewState.Content)?.refreshing == true)
+        vm.onEvent(HistoryUserAction.Refresh)
         runCurrent()
         assertEquals(3, updater.addresses.size)
     }
@@ -153,11 +164,11 @@ class HistoryViewModelTest {
         val vm = createViewModel()
         runCurrent()
         updater.action = { error("Refresh failed") }
-        vm.onEvent(HistoryEvent.Refresh)
+        vm.onEvent(HistoryUserAction.Refresh)
         runCurrent()
 
-        assertEquals(listOf(item), vm.viewState.value.items)
-        assertFalse(vm.viewState.value.refreshing)
+        assertEquals(listOf(requireNotNull(item.toHistoryRow(wallet))), assertIs<HistoryViewState.Content>(vm.viewState.value).items)
+        assertFalse((vm.viewState.value as? HistoryViewState.Content)?.refreshing == true)
         val news = mutableListOf<HistoryNews>()
         val firstCollector = backgroundScope.launch { vm.news.collect(news::add) }
         runCurrent()
@@ -170,23 +181,26 @@ class HistoryViewModelTest {
     }
 
     @Test
-    fun initial_update_failure_emits_news_and_allows_pull_to_refresh() = runTest(dispatcher) {
+    fun initial_update_failure_shows_error_and_retry_loads_empty_content() = runTest(dispatcher) {
         updater.action = { error("Offline") }
         val vm = createViewModel()
         val news = mutableListOf<HistoryNews>()
         backgroundScope.launch { vm.news.collect(news::add) }
         runCurrent()
-        assertEquals(listOf<HistoryNews>(HistoryNews.ShowRefreshError), news)
-        assertFalse(vm.viewState.value.refreshing)
-        assertEquals(emptyList(), vm.viewState.value.items)
+        assertEquals(HistoryViewState.Error, vm.viewState.value)
+        assertEquals(emptyList(), news)
 
-        updater.action = {}
-        vm.onEvent(HistoryEvent.Refresh)
+        val gate = CompletableDeferred<Unit>()
+        updater.action = { gate.await() }
+        vm.onEvent(HistoryUserAction.RetryInitialLoad)
         runCurrent()
+        assertEquals(HistoryViewState.Loading, vm.viewState.value)
 
+        gate.complete(Unit)
+        runCurrent()
         assertEquals(listOf(wallet, wallet), updater.addresses)
-        assertFalse(vm.viewState.value.refreshing)
-        assertEquals(listOf<HistoryNews>(HistoryNews.ShowRefreshError), news)
+        assertEquals(HistoryViewState.Content(emptyList(), refreshing = false), vm.viewState.value)
+        assertEquals(emptyList(), news)
     }
 
     @Test
@@ -196,15 +210,57 @@ class HistoryViewModelTest {
         backgroundScope.launch { vm.news.collect(news::add) }
         runCurrent()
         updater.action = { throw CancellationException("Cancelled") }
-        vm.onEvent(HistoryEvent.Refresh)
+        vm.onEvent(HistoryUserAction.Refresh)
         runCurrent()
 
-        assertFalse(vm.viewState.value.refreshing)
+        assertFalse((vm.viewState.value as? HistoryViewState.Content)?.refreshing == true)
         assertEquals(emptyList(), news)
         updater.action = {}
-        vm.onEvent(HistoryEvent.Refresh)
+        vm.onEvent(HistoryUserAction.Refresh)
         runCurrent()
         assertEquals(3, updater.addresses.size)
+    }
+
+    @Test
+    fun failed_retry_returns_to_error_without_toast() = runTest(dispatcher) {
+        updater.action = { error("Offline") }
+        val vm = createViewModel()
+        val news = mutableListOf<HistoryNews>()
+        backgroundScope.launch { vm.news.collect(news::add) }
+        runCurrent()
+        assertEquals(HistoryViewState.Error, vm.viewState.value)
+
+        vm.onEvent(HistoryUserAction.RetryInitialLoad)
+        runCurrent()
+        assertEquals(2, updater.addresses.size)
+        assertEquals(HistoryViewState.Error, vm.viewState.value)
+        assertEquals(emptyList(), news)
+    }
+
+    @Test
+    fun retry_failure_preserves_items_arriving_during_retry_and_emits_news() = runTest(dispatcher) {
+        updater.action = { error("Offline") }
+        val vm = createViewModel()
+        val news = mutableListOf<HistoryNews>()
+        backgroundScope.launch { vm.news.collect(news::add) }
+        runCurrent()
+        assertEquals(HistoryViewState.Error, vm.viewState.value)
+
+        val gate = CompletableDeferred<Unit>()
+        updater.action = {
+            gate.await()
+            error("Still offline")
+        }
+        vm.onEvent(HistoryUserAction.RetryInitialLoad)
+        runCurrent()
+        assertEquals(HistoryViewState.Loading, vm.viewState.value)
+        repository.items.value = listOf(item)
+        runCurrent()
+        gate.complete(Unit)
+        runCurrent()
+
+        assertEquals(HistoryViewState.Content(listOf(requireNotNull(item.toHistoryRow(wallet))), false), vm.viewState.value)
+        assertEquals(listOf<HistoryNews>(HistoryNews.ShowRefreshError), news)
     }
 
     @Test
@@ -233,12 +289,23 @@ class HistoryViewModelTest {
 
     @Test
     fun koin_passes_wallet_parameter_to_history_dependencies() = runTest(dispatcher) {
+        historyInitializationStoreInMemory.markInitialized(chainId, wallet)
         val app = koinApplication {
             modules(
                 commonModule,
                 module {
+                    single {
+                        WalletRepository(
+                            FakeWalletDao(),
+                            FakeEthManager(),
+                            FakePrivateKeyEncryptor(),
+                            historyInitializationStoreInMemory,
+                        )
+                    }
                     single<TransactionHistoryRepository> { repository }
                     factory<HistoryUpdateInteractor> { updater }
+                    single<HistoryInitializationStore> { historyInitializationStoreInMemory }
+                    single { ChainConfig("https://unused.invalid", chainId, null, "https://unused.invalid") }
                 },
             )
         }
@@ -257,13 +324,13 @@ class HistoryViewModelTest {
 
     @Test
     fun construction_and_news_collection_do_not_start_work() = runTest(dispatcher) {
+        historyInitializationStoreInMemory.markInitialized(chainId, wallet)
         val vm = createViewModel(subscribe = false)
         backgroundScope.launch { vm.news.collect {} }
         runCurrent()
         assertEquals(emptyList(), repository.observedAddresses)
         assertEquals(emptyList(), updater.addresses)
-        assertNull(vm.viewState.value.items)
-        assertFalse(vm.viewState.value.refreshing)
+        assertEquals(HistoryViewState.Loading, vm.viewState.value)
 
         backgroundScope.launch { vm.viewState.collect {} }
         runCurrent()
@@ -272,19 +339,59 @@ class HistoryViewModelTest {
     }
 
     @Test
-    fun empty_database_emission_marks_list_loaded_while_initial_update_is_running() = runTest(dispatcher) {
+    fun empty_cache_keeps_shimmers_until_initial_update_succeeds_with_empty_history() = runTest(dispatcher) {
         val gate = CompletableDeferred<Unit>()
         updater.action = { gate.await() }
         val vm = createViewModel()
         runCurrent()
-        assertEquals(emptyList(), vm.viewState.value.items)
+        assertEquals(HistoryViewState.Loading, vm.viewState.value, "An empty cache must not finish initial loading")
         assertEquals(1, updater.addresses.size)
-        assertFalse(vm.viewState.value.refreshing)
+        assertFalse((vm.viewState.value as? HistoryViewState.Content)?.refreshing == true)
 
         gate.complete(Unit)
         runCurrent()
-        assertEquals(emptyList(), vm.viewState.value.items)
-        assertFalse(vm.viewState.value.refreshing)
+        assertEquals(emptyList(), assertIs<HistoryViewState.Content>(vm.viewState.value).items)
+        assertFalse((vm.viewState.value as? HistoryViewState.Content)?.refreshing == true)
+    }
+
+    @Test
+    fun first_network_items_replace_shimmers_without_an_intermediate_empty_state() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        updater.action = {
+            gate.await()
+            repository.items.value = listOf(item)
+        }
+        val vm = createViewModel()
+        val states = mutableListOf<HistoryViewState>()
+        backgroundScope.launch { vm.viewState.collect(states::add) }
+        runCurrent()
+
+        gate.complete(Unit)
+        runCurrent()
+
+        assertEquals(listOf(requireNotNull(item.toHistoryRow(wallet))), assertIs<HistoryViewState.Content>(vm.viewState.value).items)
+        assertTrue(states.isNotEmpty())
+        assertTrue(
+            states.none { it is HistoryViewState.Content && it.items.isEmpty() },
+            "First load must transition from shimmers to Room items without flashing empty content",
+        )
+        assertTrue(states.none { it is HistoryViewState.Content && it.refreshing }, "Startup must not show the P2R indicator")
+    }
+
+    @Test
+    fun reopening_after_cancelled_initial_update_keeps_shimmers_for_uninitialized_empty_cache() = runTest(dispatcher) {
+        updater.action = { awaitCancellation() }
+        createViewModel()
+        runCurrent()
+        store.clear()
+        runCurrent()
+
+        val reopened = createViewModel()
+        runCurrent()
+
+        assertEquals(listOf(wallet, wallet), updater.addresses)
+        assertEquals(HistoryViewState.Loading, reopened.viewState.value, "A cancelled update must not initialize empty history")
+        assertFalse((reopened.viewState.value as? HistoryViewState.Content)?.refreshing == true)
     }
 
     @Test
@@ -293,19 +400,20 @@ class HistoryViewModelTest {
         runCurrent()
         val gate = CompletableDeferred<Unit>()
         updater.action = { gate.await() }
-        vm.onEvent(HistoryEvent.Refresh)
+        vm.onEvent(HistoryUserAction.Refresh)
         runCurrent()
-        assertEquals(emptyList(), vm.viewState.value.items)
-        assertTrue(vm.viewState.value.refreshing)
+        assertEquals(emptyList(), assertIs<HistoryViewState.Content>(vm.viewState.value).items)
+        assertTrue(assertIs<HistoryViewState.Content>(vm.viewState.value).refreshing)
 
         gate.complete(Unit)
         runCurrent()
-        assertEquals(emptyList(), vm.viewState.value.items)
-        assertFalse(vm.viewState.value.refreshing)
+        assertEquals(emptyList(), assertIs<HistoryViewState.Content>(vm.viewState.value).items)
+        assertFalse((vm.viewState.value as? HistoryViewState.Content)?.refreshing == true)
     }
 
     @Test
     fun multiple_subscribers_and_resubscription_share_one_initial_update_and_observation() = runTest(dispatcher) {
+        historyInitializationStoreInMemory.markInitialized(chainId, wallet)
         val vm = createViewModel(subscribe = false)
         val first = backgroundScope.launch { vm.viewState.collect {} }
         val second = backgroundScope.launch { vm.viewState.collect {} }
@@ -325,6 +433,7 @@ class HistoryViewModelTest {
 
     @Test
     fun resubscription_after_timeout_replaces_observation_and_updates_once() = runTest(dispatcher) {
+        historyInitializationStoreInMemory.markInitialized(chainId, wallet)
         val vm = createViewModel(subscribe = false)
         val first = backgroundScope.launch { vm.viewState.collect {} }
         runCurrent()
@@ -344,12 +453,13 @@ class HistoryViewModelTest {
         assertEquals(1, repository.activeObservers)
         assertEquals(listOf(wallet, wallet), repository.observedAddresses)
         assertEquals(listOf(wallet, wallet), updater.addresses)
-        assertEquals(listOf(item), vm.viewState.value.items)
-        assertFalse(vm.viewState.value.refreshing)
+        assertEquals(listOf(requireNotNull(item.toHistoryRow(wallet))), assertIs<HistoryViewState.Content>(vm.viewState.value).items)
+        assertFalse((vm.viewState.value as? HistoryViewState.Content)?.refreshing == true)
     }
 
     @Test
     fun clearing_viewModel_cancels_pending_database_read_without_news() = runTest(dispatcher) {
+        historyInitializationStoreInMemory.markInitialized(chainId, wallet)
         repository.beforeObserve = { awaitCancellation() }
         val vm = createViewModel()
         val news = mutableListOf<HistoryNews>()
@@ -364,12 +474,51 @@ class HistoryViewModelTest {
 
         assertEquals(0, repository.activeObservers)
         assertEquals(listOf(wallet), repository.observedAddresses)
-        assertNull(vm.viewState.value.items)
+        assertEquals(HistoryViewState.Loading, vm.viewState.value)
         assertEquals(emptyList(), news)
     }
 
+    @Test
+    fun account_changes_reclassify_cached_transfers_without_network_update() = runTest(dispatcher) {
+        repository.items.value = listOf(item)
+        val vm = createViewModel()
+        runCurrent()
+        assertEquals(TransactionType.Sent, assertIs<HistoryViewState.Content>(vm.viewState.value).items.single().action)
+
+        accounts.value = listOf(EthWallet("Other account", requireNotNull(item.to)))
+        runCurrent()
+        val row = assertIs<HistoryViewState.Content>(vm.viewState.value).items.single()
+        assertEquals(TransactionType.Self, row.action)
+        assertEquals(item.to, row.counterparty)
+        assertEquals(listOf(wallet), updater.addresses)
+
+        accounts.value = emptyList()
+        runCurrent()
+        assertEquals(TransactionType.Sent, assertIs<HistoryViewState.Content>(vm.viewState.value).items.single().action)
+    }
+
+    @Test
+    fun mapping_excludes_contract_creation_zero_native_value_and_unrelated_transfers() = runTest(dispatcher) {
+        repository.items.value = listOf(
+            item,
+            item.copy(to = null),
+            item.copy(valueWei = "0"),
+            item.copy(from = requireNotNull(item.to)),
+        )
+        val vm = createViewModel()
+        runCurrent()
+        assertEquals(listOf(requireNotNull(item.toHistoryRow(wallet))), assertIs<HistoryViewState.Content>(vm.viewState.value).items)
+    }
+
     private fun TestScope.createViewModel(subscribe: Boolean = true): HistoryViewModel =
-        HistoryViewModel(wallet, repository, updater).also {
+        HistoryViewModel(
+            walletAddress = wallet,
+            historyRepository = repository,
+            historyUpdateInteractor = updater,
+            historyInitializationStore = historyInitializationStoreInMemory,
+            chainId = chainId,
+            walletAccounts = accounts,
+        ).also {
             store.put("history", it)
             if (subscribe) backgroundScope.launch { it.viewState.collect {} }
         }
@@ -396,13 +545,14 @@ class HistoryViewModelTest {
         }
     }
 
-    private class FakeHistoryUpdateInteractor : HistoryUpdateInteractor {
+    private inner class FakeHistoryUpdateInteractor : HistoryUpdateInteractor {
         val addresses = mutableListOf<EthAddress>()
         var action: suspend () -> Unit = {}
 
-        override suspend fun update(walletAddress: EthAddress) {
+        override suspend fun update(chainId: Long, walletAddress: EthAddress) {
             addresses += walletAddress
             action()
+            historyInitializationStoreInMemory.markInitialized(chainId, walletAddress)
         }
     }
 }

@@ -34,8 +34,8 @@ class HistoryPresentationTest {
 
     @Test
     fun outgoing_native_uses_recipient_and_negative_amount() {
-        val row = native.toHistoryRow(wallet)
-        assertEquals(HistoryAction.Sent, row.action)
+        val row = native.requiredRow(wallet)
+        assertEquals(TransactionType.Sent, row.action)
         assertEquals(other, row.counterparty)
         assertEquals("-0.042", row.amount)
         assertEquals("ETH", row.symbol)
@@ -44,8 +44,8 @@ class HistoryPresentationTest {
 
     @Test
     fun incoming_token_uses_sender_not_token_contract() {
-        val row = token.toHistoryRow(wallet)
-        assertEquals(HistoryAction.Received, row.action)
+        val row = token.requiredRow(wallet)
+        assertEquals(TransactionType.Received, row.action)
         assertEquals(other, row.counterparty)
         assertEquals("+250", row.amount)
         assertEquals("USDC", row.symbol)
@@ -55,16 +55,16 @@ class HistoryPresentationTest {
     @Test
     fun direction_ignores_address_case_and_self_has_no_sign() {
         val mixedCaseWallet = EthAddress("0x${"A".repeat(40)}")
-        assertEquals(HistoryAction.Sent, native.toHistoryRow(mixedCaseWallet).action)
-        val row = native.copy(to = mixedCaseWallet).toHistoryRow(wallet)
-        assertEquals(HistoryAction.Self, row.action)
+        assertEquals(TransactionType.Sent, native.requiredRow(mixedCaseWallet).action)
+        val row = native.copy(to = mixedCaseWallet).requiredRow(wallet)
+        assertEquals(TransactionType.Self, row.action)
         assertEquals("0.042", row.amount)
     }
 
     @Test
     fun pending_and_failed_amounts_are_not_completed_balance_changes() {
         listOf(TransactionStatus.Pending, TransactionStatus.Failed).forEach { status ->
-            val row = native.copy(status = status).toHistoryRow(wallet)
+            val row = native.copy(status = status).requiredRow(wallet)
             assertEquals(status, row.status)
             assertEquals("0.042", row.amount)
         }
@@ -72,15 +72,13 @@ class HistoryPresentationTest {
 
     @Test
     fun zero_native_value_and_contract_creation_are_not_labelled_sent() {
-        assertEquals(HistoryAction.Transaction, native.copy(valueWei = "0").toHistoryRow(wallet).action)
-        val contract = native.copy(to = null).toHistoryRow(wallet)
-        assertEquals(HistoryAction.ContractCreation, contract.action)
-        assertNull(contract.counterparty)
+        assertNull(native.copy(valueWei = "0").toHistoryRow(wallet))
+        assertNull(native.copy(to = null).toHistoryRow(wallet))
     }
 
     @Test
     fun unknown_token_metadata_is_not_guessed() {
-        val row = token.copy(tokenDecimals = null, tokenSymbol = null).toHistoryRow(wallet)
+        val row = token.copy(tokenDecimals = null, tokenSymbol = null).requiredRow(wallet)
         assertNull(row.amount)
         assertEquals(token.tokenAddress.shortHistoryAddress(), row.symbol)
     }
@@ -98,20 +96,22 @@ class HistoryPresentationTest {
 
     @Test
     fun missing_or_invalid_timestamp_stays_unknown() {
-        assertNull(native.copy(timestamp = null).toHistoryRow(wallet).timestampMillis)
-        assertNull(native.copy(timestamp = "not a timestamp").toHistoryRow(wallet).timestampMillis)
+        assertNull(native.copy(timestamp = null).requiredRow(wallet).timestampMillis)
+        assertNull(native.copy(timestamp = "not a timestamp").requiredRow(wallet).timestampMillis)
     }
 
     @Test
     fun date_grouping_uses_local_day() {
-        val timestamp = requireNotNull(native.toHistoryRow(wallet).timestampMillis)
+        val timestamp = requireNotNull(native.requiredRow(wallet).timestampMillis)
         assertEquals("2026-09-07", historyDateKey(timestamp, TimeZone.getTimeZone("UTC")))
         assertEquals("2026-09-08", historyDateKey(timestamp, TimeZone.getTimeZone("Asia/Bangkok")))
     }
 
     @Test
     fun transfer_keys_keep_multiple_logs_in_same_transaction_distinct() {
-        assertNotEquals(native.toHistoryRow(wallet).key, token.toHistoryRow(wallet).key)
-        assertNotEquals(token.toHistoryRow(wallet).key, token.copy(logIndex = 5).toHistoryRow(wallet).key)
+        assertNotEquals(native.requiredRow(wallet).key, token.requiredRow(wallet).key)
+        assertNotEquals(token.requiredRow(wallet).key, token.copy(logIndex = 5).requiredRow(wallet).key)
     }
+
+    private fun HistoryItem.requiredRow(address: EthAddress) = requireNotNull(toHistoryRow(address))
 }

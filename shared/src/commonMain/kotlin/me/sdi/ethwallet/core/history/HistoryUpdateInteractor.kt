@@ -5,14 +5,15 @@ import kotlinx.coroutines.coroutineScope
 import me.sdi.ethwallet.core.EthAddress
 
 interface HistoryUpdateInteractor {
-    suspend fun update(walletAddress: EthAddress)
+    suspend fun update(chainId: Long, walletAddress: EthAddress)
 }
 
 class HistoryUpdateInteractorDefault(
     private val historyProvider: TransactionHistoryProvider,
     private val historyRepository: TransactionHistoryRepository,
+    private val initializationStore: HistoryInitializationStore,
 ) : HistoryUpdateInteractor {
-    override suspend fun update(walletAddress: EthAddress) {
+    override suspend fun update(chainId: Long, walletAddress: EthAddress) {
         val (transactions, tokenTransfers) = coroutineScope {
             val transactions = async { historyProvider.getTransactions(walletAddress).items }
             val tokenTransfers = async { historyProvider.getTokenTransfers(walletAddress).items }
@@ -23,6 +24,7 @@ class HistoryUpdateInteractorDefault(
             walletAddress = walletAddress,
             items = normalizeHistory(transactions, tokenTransfers),
         )
+        initializationStore.markInitialized(chainId, walletAddress)
     }
 }
 

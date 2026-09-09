@@ -16,6 +16,7 @@ import me.sdi.ethwallet.fakes.FakeEthManager
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
+import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -44,6 +45,7 @@ class SetPinCodeViewModelWithStorageTest {
             walletDao = walletDao,
             ethManager = ethManager,
             privateKeyEncryptor = FakePrivateKeyEncryptor(),
+            historyInitializationStore = HistoryInitializationStoreInMemory(),
         )
         biometricUnlock = FakeBiometricUnlock()
         viewModel = SetPinCodeViewModel(pinCodeStorage, walletRepository, biometricUnlock)

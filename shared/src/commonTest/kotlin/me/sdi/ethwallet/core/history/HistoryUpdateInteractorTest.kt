@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -12,6 +13,9 @@ class HistoryUpdateInteractorTest {
     private val wallet = EthAddress("0x1111111111111111111111111111111111111111")
     private val receiver = EthAddress("0x2222222222222222222222222222222222222222")
     private val token = EthAddress("0x3333333333333333333333333333333333333333")
+
+    private val chainId = 1L
+    private val historyInitializationStore = HistoryInitializationStoreInMemory()
 
     @Test
     fun update_normalizes_both_feeds_before_single_upsert() = runTest {
@@ -29,7 +33,8 @@ class HistoryUpdateInteractorTest {
         )
         val repository = RecordingHistoryRepository()
 
-        HistoryUpdateInteractorDefault(provider, repository).update(wallet)
+        HistoryUpdateInteractorDefault(provider, repository, historyInitializationStore)
+            .update(chainId, wallet)
 
         assertEquals(1, repository.upsertCalls.size)
         val call = repository.upsertCalls.single()
@@ -51,7 +56,8 @@ class HistoryUpdateInteractorTest {
         val repository = RecordingHistoryRepository()
 
         val thrown = assertFailsWith<IllegalStateException> {
-            HistoryUpdateInteractorDefault(provider, repository).update(wallet)
+            HistoryUpdateInteractorDefault(provider, repository, historyInitializationStore)
+                .update(chainId, wallet)
         }
 
         assertEquals(failure.message, thrown.message)
