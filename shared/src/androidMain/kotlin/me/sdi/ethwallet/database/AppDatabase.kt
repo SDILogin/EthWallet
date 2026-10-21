@@ -7,11 +7,11 @@ import androidx.room.RoomDatabase
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
-import me.sdi.ethwallet.database.dao.TransactionHistoryDao
+import me.sdi.ethwallet.database.dao.TransferHistoryDao
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.database.entity.FiatRateEntity
 import me.sdi.ethwallet.database.entity.TokenBalanceEntity
-import me.sdi.ethwallet.database.entity.TransactionHistoryEntity
+import me.sdi.ethwallet.database.entity.TransferHistoryEntity
 import me.sdi.ethwallet.database.entity.WalletEntity
 
 @Database(
@@ -19,7 +19,7 @@ import me.sdi.ethwallet.database.entity.WalletEntity
         WalletEntity::class,
         TokenBalanceEntity::class,
         FiatRateEntity::class,
-        TransactionHistoryEntity::class,
+        TransferHistoryEntity::class,
     ],
     version = 1,
     exportSchema = true,
@@ -31,7 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun fiatRateDao(): FiatRateDao
 
-    abstract fun transactionHistoryDao(): TransactionHistoryDao
+    abstract fun transferHistoryDao(): TransferHistoryDao
 
     companion object {
         private const val DATABASE_NAME = "ethwallet_db"

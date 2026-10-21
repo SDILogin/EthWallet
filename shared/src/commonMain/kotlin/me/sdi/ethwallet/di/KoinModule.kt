@@ -21,10 +21,10 @@ import me.sdi.ethwallet.core.history.HistoryInitializationStore
 import me.sdi.ethwallet.core.history.HistoryInitializationStoreDataStore
 import me.sdi.ethwallet.core.history.HistoryUpdateInteractor
 import me.sdi.ethwallet.core.history.HistoryUpdateInteractorDefault
-import me.sdi.ethwallet.core.history.TransactionHistoryProvider
-import me.sdi.ethwallet.core.history.TransactionHistoryProviderBlockscout
-import me.sdi.ethwallet.core.history.TransactionHistoryRepository
-import me.sdi.ethwallet.core.history.TransactionHistoryRepositoryRoom
+import me.sdi.ethwallet.core.history.TransferHistoryRepository
+import me.sdi.ethwallet.core.history.TransferHistoryRepositoryRoom
+import me.sdi.ethwallet.core.history.TransfersHistoryProvider
+import me.sdi.ethwallet.core.history.TransfersHistoryProviderBlockscout
 import me.sdi.ethwallet.core.security.InMemoryPinSession
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
@@ -56,15 +56,15 @@ val commonModule = module {
     single<JsonRpcTransport> { JsonRpcTransportKtor(get(), get<ChainConfig>().rpcUrl) }
     single { EthereumNetwork(get<ChainConfig>().chainId, get()) }
     single<EthManager> { EthManagerKotlin(get()) }
-    single<TransactionHistoryProvider> {
-        TransactionHistoryProviderBlockscout(
+    single<TransfersHistoryProvider> {
+        TransfersHistoryProviderBlockscout(
             httpClient = get(),
             baseUrl = get<ChainConfig>().transactionHistoryApiBaseUrl,
         )
     }
-    single<TransactionHistoryRepository> {
-        TransactionHistoryRepositoryRoom(
-            transactionHistoryDao = get(),
+    single<TransferHistoryRepository> {
+        TransferHistoryRepositoryRoom(
+            transferHistoryDao = get(),
             chainConfig = get(),
         )
     }

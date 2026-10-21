@@ -8,8 +8,8 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.ChainConfig
-import me.sdi.ethwallet.core.history.TransactionHistoryProvider
-import me.sdi.ethwallet.core.history.TransactionHistoryProviderBlockscout
+import me.sdi.ethwallet.core.history.TransfersHistoryProvider
+import me.sdi.ethwallet.core.history.TransfersHistoryProviderBlockscout
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.fakes.FakeBiometricUnlock
@@ -86,6 +86,6 @@ class KoinModuleTest {
             )
         }.koin
 
-        assertIs<TransactionHistoryProviderBlockscout>(koin.get<TransactionHistoryProvider>())
+        assertIs<TransfersHistoryProviderBlockscout>(koin.get<TransfersHistoryProvider>())
     }
 }

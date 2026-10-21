@@ -4,13 +4,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
-import me.sdi.ethwallet.database.dao.TransactionHistoryDao
+import me.sdi.ethwallet.database.dao.TransferHistoryDao
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.database.entity.FiatRateEntity
 import me.sdi.ethwallet.database.entity.TokenBalanceEntity
-import me.sdi.ethwallet.database.entity.TransactionHistoryEntity
+import me.sdi.ethwallet.database.entity.TransferHistoryEntity
 import me.sdi.ethwallet.database.entity.WalletEntity
 
 class AppDatabase private constructor() {
@@ -20,7 +21,7 @@ class AppDatabase private constructor() {
 
     fun fiatRateDao(): FiatRateDao = DesktopFiatRateDao()
 
-    fun transactionHistoryDao(): TransactionHistoryDao = DesktopTransactionHistoryDao
+    fun transferHistoryDao(): TransferHistoryDao = DesktopTransferHistoryDao
 
     companion object {
         @Volatile
@@ -80,23 +81,30 @@ private class DesktopFiatRateDao : FiatRateDao {
     override suspend fun insertAll(fiatRates: List<FiatRateEntity>) {}
 }
 
-private object DesktopTransactionHistoryDao : TransactionHistoryDao {
-    private val items = MutableStateFlow<List<TransactionHistoryEntity>>(emptyList())
+private object DesktopTransferHistoryDao : TransferHistoryDao {
+    private val items = MutableStateFlow<List<TransferHistoryEntity>>(emptyList())
 
-    override fun observe(chainId: Long, walletAddress: String): Flow<List<TransactionHistoryEntity>> =
+    override fun observe(chainId: Long, walletAddress: String): Flow<List<TransferHistoryEntity>> =
         items.map { entities ->
             entities
-                .filter { it.chainId == chainId && it.walletAddress == walletAddress }
+                .filter { it.chainId == chainId && it.walletAddress == walletAddress && it.status != "Failed" }
                 .sortedWith(
-                    compareByDescending<TransactionHistoryEntity> { it.status == "Pending" }
-                        .thenByDescending { it.timestamp },
+                    compareByDescending<TransferHistoryEntity> { it.status == "Pending" }
+                        .thenByDescending { it.timestamp }
+                        .thenBy { it.transactionHash }
+                        .thenBy { it.logIndex },
                 )
         }
 
-    override suspend fun upsertAll(items: List<TransactionHistoryEntity>) {
-        val updatedKeys = items.mapTo(mutableSetOf(), TransactionHistoryEntity::key)
-        this.items.value = this.items.value.filterNot { it.key() in updatedKeys } + items
+    override suspend fun readWalletTransfers(chainId: Long, walletAddress: String): List<TransferHistoryEntity> =
+        items.value.filter { it.chainId == chainId && it.walletAddress == walletAddress }
+
+    override suspend fun upsertAll(items: List<TransferHistoryEntity>) {
+        val updatedKeys = items.mapTo(mutableSetOf(), TransferHistoryEntity::key)
+        this.items.update { existing ->
+            existing.filterNot { it.key() in updatedKeys } + items.associateBy(TransferHistoryEntity::key).values
+        }
     }
 }
 
-private fun TransactionHistoryEntity.key() = listOf(chainId, walletAddress, transactionHash, logIndex)
+private fun TransferHistoryEntity.key() = listOf(chainId, walletAddress, transactionHash, logIndex)

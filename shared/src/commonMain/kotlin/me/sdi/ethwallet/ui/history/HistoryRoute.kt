@@ -43,6 +43,8 @@ fun HistoryRoute(
         viewState = viewState,
         onRetry = { viewModel.onEvent(HistoryUserAction.RetryInitialLoad) },
         onRefresh = { viewModel.onEvent(HistoryUserAction.Refresh) },
+        onLoadMore = { viewModel.onEvent(HistoryUserAction.LoadMore) },
+        onRetryLoadMore = { viewModel.onEvent(HistoryUserAction.RetryLoadMore) },
         onBackPressed = onBackPressed,
         onHistoryItemClick = { _, _ -> },
     )

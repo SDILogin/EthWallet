@@ -158,6 +158,8 @@
     <string name="mnemonic_long_press_to_copy">* Long-press to copy</string>
     <string name="mnemonic_clipboard_label">seedPhrase</string>
     <!-- History Screen -->
+    <string name="history_transaction_fee">Transaction fee: %1$s ETH</string>
+    <string name="history_estimated_transaction_fee">Transaction fee (estimated): %1$s ETH</string>
     <string name="history_title">History</string>
     <string name="history_mainnet">Ethereum Mainnet</string>
     <string name="history_sepolia">Sepolia testnet</string>
@@ -170,7 +172,8 @@
     <string name="history_yesterday">Yesterday</string>
     <string name="history_date_unavailable">Date unavailable</string>
     <string name="history_time_unavailable">Time unavailable</string>
-    <string name="history_recent_note">Recent activity · Times shown in your local timezone</string>
+    <string name="history_end">End of history · Times shown in your local timezone</string>
+    <string name="history_load_more_error">Could not load more transactions</string>
     <string name="history_sending">Sending</string>
     <string name="history_send_failed">Send failed</string>
     <string name="history_sent">Sent</string>

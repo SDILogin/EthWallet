@@ -1,28 +1,31 @@
 package me.sdi.ethwallet.ui.history
 
 import me.sdi.ethwallet.core.EthAddress
-import me.sdi.ethwallet.core.history.HistoryItem
+import me.sdi.ethwallet.core.history.TransactionFee
 import me.sdi.ethwallet.core.history.TransactionStatus
+import me.sdi.ethwallet.core.history.Transfer
+import me.sdi.ethwallet.core.transfer.toWei
 import java.util.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
+import kotlin.time.Instant
 
 class HistoryPresentationTest {
     private val wallet = EthAddress("0x${"a".repeat(40)}")
     private val other = EthAddress("0x${"b".repeat(40)}")
-    private val native = HistoryItem.NativeTransfer(
-        transactionHash = "0x${"c".repeat(64)}",
-        timestamp = "2026-09-07T23:30:00Z",
+    private val native = Transfer.Eth(
+        hash = "0x${"c".repeat(64)}",
+        timestamp = Instant.parse("2026-09-07T23:30:00Z").toEpochMilliseconds(),
         from = wallet,
         to = other,
-        valueWei = "42000000000000000",
+        valueWei = "42000000000000000".toBigInteger().toWei(),
         status = TransactionStatus.Confirmed,
     )
-    private val token = HistoryItem.TokenTransfer(
-        transactionHash = native.transactionHash,
-        timestamp = requireNotNull(native.timestamp),
+    private val token = Transfer.Erc20(
+        hash = native.hash,
+        timestamp = native.timestamp,
         from = other,
         to = wallet,
         logIndex = 4,
@@ -35,7 +38,7 @@ class HistoryPresentationTest {
     @Test
     fun outgoing_native_uses_recipient_and_negative_amount() {
         val row = native.requiredRow(wallet)
-        assertEquals(TransactionType.Sent, row.action)
+        assertEquals(TransferDirection.Sent, row.action)
         assertEquals(other, row.counterparty)
         assertEquals("-0.042", row.amount)
         assertEquals("ETH", row.symbol)
@@ -45,7 +48,7 @@ class HistoryPresentationTest {
     @Test
     fun incoming_token_uses_sender_not_token_contract() {
         val row = token.requiredRow(wallet)
-        assertEquals(TransactionType.Received, row.action)
+        assertEquals(TransferDirection.Received, row.action)
         assertEquals(other, row.counterparty)
         assertEquals("+250", row.amount)
         assertEquals("USDC", row.symbol)
@@ -55,31 +58,31 @@ class HistoryPresentationTest {
     @Test
     fun direction_ignores_address_case_and_self_has_no_sign() {
         val mixedCaseWallet = EthAddress("0x${"A".repeat(40)}")
-        assertEquals(TransactionType.Sent, native.requiredRow(mixedCaseWallet).action)
+        assertEquals(TransferDirection.Sent, native.requiredRow(mixedCaseWallet).action)
         val row = native.copy(to = mixedCaseWallet).requiredRow(wallet)
-        assertEquals(TransactionType.Self, row.action)
+        assertEquals(TransferDirection.Self, row.action)
         assertEquals("0.042", row.amount)
     }
 
     @Test
-    fun pending_and_failed_amounts_are_not_completed_balance_changes() {
-        listOf(TransactionStatus.Pending, TransactionStatus.Failed).forEach { status ->
-            val row = native.copy(status = status).requiredRow(wallet)
-            assertEquals(status, row.status)
-            assertEquals("0.042", row.amount)
-        }
+    fun pending_amount_has_no_completed_balance_change_sign() {
+        val row = native.copy(status = TransactionStatus.Pending).requiredRow(wallet)
+        assertEquals(TransactionStatus.Pending, row.status)
+        assertEquals("0.042", row.amount)
     }
 
     @Test
-    fun zero_native_value_and_contract_creation_are_not_labelled_sent() {
-        assertNull(native.copy(valueWei = "0").toHistoryRow(wallet))
-        assertNull(native.copy(to = null).toHistoryRow(wallet))
+    fun zero_values_and_failed_attempts_are_hidden() {
+        assertNull(native.copy(valueWei = "0".toBigInteger().toWei()).toHistoryRow(wallet))
+        assertNull(native.copy(status = TransactionStatus.Failed).toHistoryRow(wallet))
+        assertNull(token.copy(value = "0").toHistoryRow(wallet))
+        assertNull(token.copy(status = TransactionStatus.Failed).toHistoryRow(wallet))
     }
 
     @Test
-    fun unknown_token_metadata_is_not_guessed() {
-        val row = token.copy(tokenDecimals = null, tokenSymbol = null).requiredRow(wallet)
-        assertNull(row.amount)
+    fun missing_token_symbol_uses_contract_address() {
+        val row = token.copy(tokenSymbol = null).requiredRow(wallet)
+        assertEquals("+250", row.amount)
         assertEquals(token.tokenAddress.shortHistoryAddress(), row.symbol)
     }
 
@@ -95,14 +98,8 @@ class HistoryPresentationTest {
     }
 
     @Test
-    fun missing_or_invalid_timestamp_stays_unknown() {
-        assertNull(native.copy(timestamp = null).requiredRow(wallet).timestampMillis)
-        assertNull(native.copy(timestamp = "not a timestamp").requiredRow(wallet).timestampMillis)
-    }
-
-    @Test
     fun date_grouping_uses_local_day() {
-        val timestamp = requireNotNull(native.requiredRow(wallet).timestampMillis)
+        val timestamp = native.requiredRow(wallet).timestampMillis
         assertEquals("2026-09-07", historyDateKey(timestamp, TimeZone.getTimeZone("UTC")))
         assertEquals("2026-09-08", historyDateKey(timestamp, TimeZone.getTimeZone("Asia/Bangkok")))
     }
@@ -113,5 +110,22 @@ class HistoryPresentationTest {
         assertNotEquals(token.requiredRow(wallet).key, token.copy(logIndex = 5).requiredRow(wallet).key)
     }
 
-    private fun HistoryItem.requiredRow(address: EthAddress) = requireNotNull(toHistoryRow(address))
+    @Test
+    fun full_fee_is_shown_for_outgoing_and_self_transfers_only() {
+        val fee = TransactionFee("21000000000000".toBigInteger().toWei(), estimated = true)
+        val outgoing = native.copy(fee = fee).requiredRow(wallet)
+        assertEquals("0.000021", outgoing.transactionFee)
+        assertEquals(true, outgoing.feeEstimated)
+        val self = native.copy(to = wallet, fee = fee).requiredRow(wallet)
+        assertEquals("0.000021", self.transactionFee)
+        assertNull(native.copy(fee = fee).requiredRow(other).transactionFee)
+        assertEquals(false, native.copy(fee = fee).requiredRow(other).feeEstimated)
+        val outgoingToken = token.copy(from = wallet, to = other, fee = fee)
+        assertEquals(
+            outgoingToken.requiredRow(wallet).transactionFee,
+            outgoingToken.copy(logIndex = 5).requiredRow(wallet).transactionFee,
+        )
+    }
+
+    private fun Transfer.requiredRow(address: EthAddress) = requireNotNull(toHistoryRow(address))
 }

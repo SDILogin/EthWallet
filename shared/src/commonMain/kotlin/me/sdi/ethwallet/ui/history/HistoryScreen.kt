@@ -18,9 +18,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -31,7 +33,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,8 +48,9 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.core.EthAddress
-import me.sdi.ethwallet.core.history.HistoryItem
 import me.sdi.ethwallet.core.history.TransactionStatus
+import me.sdi.ethwallet.core.history.Transfer
+import me.sdi.ethwallet.core.transfer.toWei
 import me.sdi.ethwallet.kotlin.TransactionHash
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
@@ -55,11 +60,13 @@ import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.cancel_24px
 import me.sdi.ethwallet.resources.history_24px
 import me.sdi.ethwallet.resources.history_amount_unavailable
-import me.sdi.ethwallet.resources.history_date_unavailable
 import me.sdi.ethwallet.resources.history_empty_message
 import me.sdi.ethwallet.resources.history_empty_title
+import me.sdi.ethwallet.resources.history_end
+import me.sdi.ethwallet.resources.history_estimated_transaction_fee
 import me.sdi.ethwallet.resources.history_failed
 import me.sdi.ethwallet.resources.history_from
+import me.sdi.ethwallet.resources.history_load_more_error
 import me.sdi.ethwallet.resources.history_loading
 import me.sdi.ethwallet.resources.history_mainnet
 import me.sdi.ethwallet.resources.history_network
@@ -68,7 +75,6 @@ import me.sdi.ethwallet.resources.history_pending
 import me.sdi.ethwallet.resources.history_receive_failed
 import me.sdi.ethwallet.resources.history_received
 import me.sdi.ethwallet.resources.history_receiving
-import me.sdi.ethwallet.resources.history_recent_note
 import me.sdi.ethwallet.resources.history_refresh_error
 import me.sdi.ethwallet.resources.history_self
 import me.sdi.ethwallet.resources.history_send_failed
@@ -76,11 +82,10 @@ import me.sdi.ethwallet.resources.history_sending
 import me.sdi.ethwallet.resources.history_sent
 import me.sdi.ethwallet.resources.history_sepolia
 import me.sdi.ethwallet.resources.history_this_wallet
-import me.sdi.ethwallet.resources.history_time_unavailable
 import me.sdi.ethwallet.resources.history_title
 import me.sdi.ethwallet.resources.history_to
 import me.sdi.ethwallet.resources.history_today
-import me.sdi.ethwallet.resources.history_transaction
+import me.sdi.ethwallet.resources.history_transaction_fee
 import me.sdi.ethwallet.resources.history_yesterday
 import me.sdi.ethwallet.resources.switch_account_24px
 import me.sdi.ethwallet.resources.wallet_retry
@@ -89,8 +94,10 @@ import me.sdi.ethwallet.ui.components.shimmer
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import java.math.BigInteger
 import java.util.Calendar
 import java.util.TimeZone
+import kotlin.time.Instant
 
 @Composable
 fun HistoryScreen(
@@ -101,6 +108,8 @@ fun HistoryScreen(
     viewState: HistoryViewState,
     onRetry: () -> Unit,
     onRefresh: () -> Unit,
+    onLoadMore: () -> Unit,
+    onRetryLoadMore: () -> Unit,
     onBackPressed: () -> Unit,
 ) {
     Scaffold(
@@ -112,25 +121,30 @@ fun HistoryScreen(
             contentAlignment = Alignment.TopCenter,
         ) {
             val contentModifier = Modifier.widthIn(max = 720.dp).fillMaxSize()
-            if (viewState is HistoryViewState.Error) {
-                Column(
-                    modifier = contentModifier,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Text(stringResource(Res.string.history_refresh_error))
-                    Button(onClick = onRetry) { Text(stringResource(Res.string.wallet_retry)) }
+            when (viewState) {
+                is HistoryViewState.Error -> {
+                    Column(
+                        modifier = contentModifier,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(stringResource(Res.string.history_refresh_error))
+                        Button(onClick = onRetry) { Text(stringResource(Res.string.wallet_retry)) }
+                    }
                 }
-            } else if (viewState is HistoryViewState.Loading) {
-                ShimmersSkeleton(modifier = contentModifier)
-            } else if (viewState is HistoryViewState.Content) {
-                RefreshableContent(
-                    modifier = contentModifier,
-                    rows = viewState.items,
-                    isRefreshing = viewState.refreshing,
-                    onRefresh = onRefresh,
-                    onHistoryItemClick = onHistoryItemClick,
-                )
+                is HistoryViewState.Loading -> ShimmersSkeleton(modifier = contentModifier)
+                is HistoryViewState.Content -> {
+                    RefreshableContent(
+                        modifier = contentModifier,
+                        rows = viewState.items,
+                        isRefreshing = viewState.refreshing,
+                        onRefresh = onRefresh,
+                        pagination = viewState.pagination,
+                        onLoadMore = onLoadMore,
+                        onRetryLoadMore = onRetryLoadMore,
+                        onHistoryItemClick = onHistoryItemClick,
+                    )
+                }
             }
         }
     }
@@ -214,22 +228,33 @@ private fun SkeletonLine(modifier: Modifier) {
 private fun RefreshableContent(
     rows: List<HistoryRow>,
     isRefreshing: Boolean,
+    pagination: HistoryPagination,
     onRefresh: () -> Unit,
+    onLoadMore: () -> Unit,
+    onRetryLoadMore: () -> Unit,
     onHistoryItemClick: (transactionHash: TransactionHash, logIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val loadingDescription = stringResource(Res.string.history_loading)
+    val listState = rememberLazyListState()
+    LaunchedEffect(listState, pagination, isRefreshing, rows.size) {
+        if (pagination !is HistoryPagination.Idle) return@LaunchedEffect
+        if (!pagination.hasMore) return@LaunchedEffect
+        if (isRefreshing) return@LaunchedEffect
+        snapshotFlow {
+            val layout = listState.layoutInfo
+            rows.isEmpty() || (layout.visibleItemsInfo.lastOrNull()?.index ?: -1) >= layout.totalItemsCount - 1
+        }.collect { nearEnd ->
+            if (nearEnd) onLoadMore()
+        }
+    }
     val timeZone = TimeZone.getDefault()
     val groups = remember(rows, timeZone.id) {
         rows.groupBy { row ->
             if (row.status == TransactionStatus.Pending) {
                 "pending"
             } else {
-                row.timestampMillis?.let {
-                    historyDateKey(
-                        it,
-                        timeZone,
-                    )
-                }
+                historyDateKey(row.timestampMillis, timeZone)
             }
         }
     }
@@ -239,8 +264,12 @@ private fun RefreshableContent(
     val yesterdayKey = historyDateKey(today.timeInMillis, timeZone)
 
     PullToRefreshBox(modifier = modifier, isRefreshing = isRefreshing, onRefresh = onRefresh) {
-        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 16.dp)) {
-            if (rows.isEmpty()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 16.dp),
+        ) {
+            if (rows.isEmpty() && !pagination.hasMore) {
                 item {
                     Column(
                         modifier = Modifier.fillParentMaxSize().padding(32.dp),
@@ -274,8 +303,7 @@ private fun RefreshableContent(
                             "pending" -> stringResource(Res.string.history_pending)
                             todayKey -> stringResource(Res.string.history_today)
                             yesterdayKey -> stringResource(Res.string.history_yesterday)
-                            null -> stringResource(Res.string.history_date_unavailable)
-                            else -> formatHistoryDate(requireNotNull(group.first().timestampMillis), timeZone)
+                            else -> formatHistoryDate(group.first().timestampMillis, timeZone)
                         }
                         Text(
                             title,
@@ -288,14 +316,37 @@ private fun RefreshableContent(
                         HistoryListItem(row, timeZone, onHistoryItemClick)
                     }
                 }
-                item(key = "footer") {
-                    Text(
-                        stringResource(Res.string.history_recent_note),
-                        modifier = Modifier.fillMaxWidth().padding(24.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
+            }
+            item(key = if (rows.isEmpty()) "empty-footer" else "footer") {
+                Column(
+                    Modifier.fillMaxWidth().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    when (pagination) {
+                        HistoryPagination.Uninitialized -> Unit
+                        is HistoryPagination.Loading -> {
+                            CircularProgressIndicator(
+                                Modifier.size(24.dp).semantics {
+                                    contentDescription = loadingDescription
+                                },
+                            )
+                        }
+                        is HistoryPagination.Failed -> {
+                            Text(stringResource(Res.string.history_load_more_error), textAlign = TextAlign.Center)
+                            Button(onClick = onRetryLoadMore) { Text(stringResource(Res.string.wallet_retry)) }
+                        }
+                        is HistoryPagination.Idle -> {
+                            if (!pagination.hasMore && rows.isNotEmpty()) {
+                                Text(
+                                    stringResource(Res.string.history_end),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -311,21 +362,22 @@ private fun HistoryListItem(
 ) {
     val title = stringResource(
         when (row.action) {
-            TransactionType.Sent -> when (row.status) {
+            TransferDirection.Sent -> when (row.status) {
                 TransactionStatus.Pending -> Res.string.history_sending
                 TransactionStatus.Failed -> Res.string.history_send_failed
                 TransactionStatus.Confirmed -> Res.string.history_sent
             }
-            TransactionType.Received -> when (row.status) {
+            TransferDirection.Received -> when (row.status) {
                 TransactionStatus.Pending -> Res.string.history_receiving
                 TransactionStatus.Failed -> Res.string.history_receive_failed
                 TransactionStatus.Confirmed -> Res.string.history_received
             }
-            TransactionType.Self -> Res.string.history_self
+            TransferDirection.Self -> Res.string.history_self
         },
     )
     val counterparty = when {
-        row.item.from.toString().equals(row.item.to.toString(), ignoreCase = true) -> stringResource(Res.string.history_this_wallet)
+        row.item.from.toString()
+            .equals(row.item.to.toString(), ignoreCase = true) -> stringResource(Res.string.history_this_wallet)
         row.counterparty == null -> stringResource(Res.string.history_new_contract)
         else -> stringResource(
             if (row.counterparty == row.item.from) Res.string.history_from else Res.string.history_to,
@@ -337,18 +389,18 @@ private fun HistoryListItem(
         TransactionStatus.Pending -> MaterialTheme.colorScheme.primary
         TransactionStatus.Confirmed -> MaterialTheme.colorScheme.onSurface
     }
-    val time = row.timestampMillis?.let { formatHistoryTime(it, timeZone) }
+    val time = formatHistoryTime(row.timestampMillis, timeZone)
     val subtitle = when (row.status) {
         TransactionStatus.Pending -> stringResource(Res.string.history_pending)
         TransactionStatus.Failed -> listOfNotNull(stringResource(Res.string.history_failed), time).joinToString(" · ")
-        TransactionStatus.Confirmed -> time ?: stringResource(Res.string.history_time_unavailable)
+        TransactionStatus.Confirmed -> time
     }
     Column(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth()
                 .clickable(role = Role.Button) {
                     onHistoryItemClick(
-                        TransactionHash(row.item.transactionHash),
+                        TransactionHash(row.item.hash),
                         row.logIndex,
                     )
                 }
@@ -376,7 +428,7 @@ private fun HistoryListItem(
                     text = row.amount?.let { "$it ${row.symbol}" }
                         ?: stringResource(Res.string.history_amount_unavailable, row.symbol),
                     style = MaterialTheme.typography.titleSmall,
-                    color = if (row.action == TransactionType.Received && row.status == TransactionStatus.Confirmed) {
+                    color = if (row.action == TransferDirection.Received && row.status == TransactionStatus.Confirmed) {
                         MaterialTheme.colorScheme.primary
                     } else {
                         MaterialTheme.colorScheme.onSurface
@@ -385,6 +437,17 @@ private fun HistoryListItem(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                row.transactionFee?.let { fee ->
+                    Text(
+                        stringResource(
+                            if (row.feeEstimated) Res.string.history_estimated_transaction_fee else Res.string.history_transaction_fee,
+                            fee,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.End,
+                    )
+                }
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
@@ -409,8 +472,8 @@ private fun HistoryItemIcon(row: HistoryRow) {
     val icon = when {
         row.status == TransactionStatus.Failed -> Res.drawable.cancel_24px
         row.status == TransactionStatus.Pending -> Res.drawable.history_24px
-        row.action == TransactionType.Received -> Res.drawable.arrow_downward_24px
-        row.action == TransactionType.Self -> Res.drawable.switch_account_24px
+        row.action == TransferDirection.Received -> Res.drawable.arrow_downward_24px
+        row.action == TransferDirection.Self -> Res.drawable.switch_account_24px
         else -> Res.drawable.arrow_outward_24px
     }
     Box(
@@ -432,22 +495,22 @@ private fun HistoryItemIcon(row: HistoryRow) {
 
 private val previewWallet = EthAddress("0x1111111111111111111111111111111111111111")
 
-internal class HistoryPreviewProvider : PreviewParameterProvider<List<HistoryItem>?> {
-    override val values: Sequence<List<HistoryItem>?> = sequenceOf(
+internal class HistoryPreviewProvider : PreviewParameterProvider<List<Transfer>?> {
+    override val values: Sequence<List<Transfer>?> = sequenceOf(
         null,
         emptyList(),
         listOf(
-            HistoryItem.NativeTransfer(
+            Transfer.Eth(
                 "0x${"a".repeat(64)}",
-                null,
+                Instant.parse("2026-09-07T08:00:00Z").toEpochMilliseconds(),
                 previewWallet,
                 EthAddress("0x2222222222222222222222222222222222222222"),
-                "15000000000000000",
+                BigInteger("15000000000000000").toWei(),
                 TransactionStatus.Pending,
             ),
-            HistoryItem.TokenTransfer(
+            Transfer.Erc20(
                 "0x${"b".repeat(64)}",
-                "2026-09-07T07:32:00Z",
+                Instant.parse("2026-09-07T07:32:00Z").toEpochMilliseconds(),
                 EthAddress("0x2222222222222222222222222222222222222222"),
                 previewWallet,
                 0,
@@ -456,28 +519,28 @@ internal class HistoryPreviewProvider : PreviewParameterProvider<List<HistoryIte
                 6,
                 "250000000",
             ),
-            HistoryItem.NativeTransfer(
+            Transfer.Eth(
                 "0x${"c".repeat(64)}",
-                "2026-09-07T06:05:00Z",
+                Instant.parse("2026-09-07T06:05:00Z").toEpochMilliseconds(),
                 previewWallet,
                 EthAddress("0x2222222222222222222222222222222222222222"),
-                "42000000000000000",
+                BigInteger("42000000000000000").toWei(),
                 TransactionStatus.Confirmed,
             ),
-            HistoryItem.NativeTransfer(
+            Transfer.Eth(
                 "0x${"d".repeat(64)}",
-                "2026-09-07T05:15:00Z",
+                Instant.parse("2026-09-07T05:15:00Z").toEpochMilliseconds(),
                 previewWallet,
                 previewWallet,
-                "10000000000000000",
+                BigInteger("10000000000000000").toWei(),
                 TransactionStatus.Confirmed,
             ),
-            HistoryItem.NativeTransfer(
+            Transfer.Eth(
                 "0x${"e".repeat(64)}",
-                "2026-09-06T11:42:00Z",
+                Instant.parse("2026-09-06T11:42:00Z").toEpochMilliseconds(),
                 previewWallet,
                 EthAddress("0x2222222222222222222222222222222222222222"),
-                "100000000000000000",
+                BigInteger("100000000000000000").toWei(),
                 TransactionStatus.Failed,
             ),
         ),
@@ -487,7 +550,7 @@ internal class HistoryPreviewProvider : PreviewParameterProvider<List<HistoryIte
 @Composable
 @FormFactorPreviews
 private fun HistoryScreenPreview(
-    @PreviewParameter(HistoryPreviewProvider::class) items: List<HistoryItem>?,
+    @PreviewParameter(HistoryPreviewProvider::class) items: List<Transfer>?,
 ) {
     EthWalletTheme {
         HistoryScreen(
@@ -497,8 +560,7 @@ private fun HistoryScreenPreview(
             chainId = 11155111L,
             viewState = items?.let {
                 HistoryViewState.Content(
-                    it.mapNotNull {
-                        item ->
+                    it.mapNotNull { item ->
                         item.toHistoryRow(previewWallet)
                     },
                     false,
@@ -506,6 +568,8 @@ private fun HistoryScreenPreview(
             } ?: HistoryViewState.Loading,
             onRetry = {},
             onRefresh = {},
+            onLoadMore = {},
+            onRetryLoadMore = {},
             onBackPressed = {},
         )
     }

@@ -1,0 +1,100 @@
+{
+  "items": [
+    {
+      "block_hash": "0xca8b2d5068d2aa3ee4d8b075b9cf1ebbe068c2cc3e6cccfc6bebd573c7c57664",
+      "block_number": 26023411,
+      "from": {
+        "ens_domain_name": null,
+        "hash": "0x1d16e7aA7bb56AC1602c19DbA960053Af8A46dad",
+        "implementations": [],
+        "is_contract": false,
+        "is_scam": false,
+        "is_verified": false,
+        "metadata": null,
+        "name": null,
+        "private_tags": [],
+        "proxy_type": null,
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "log_index": 630,
+      "method": "0x711bc67b",
+      "timestamp": "2026-09-21T04:09:59.000000Z",
+      "to": {
+        "ens_domain_name": null,
+        "hash": "0x97CCDBea4632140639aD5eA9b944aa034eb15fD4",
+        "implementations": [],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": {
+          "tags": [
+            {
+              "meta": {
+                "projectName": "Across Protocol",
+                "tagIcon ": "https://blockscout-icons.s3.us-east-1.amazonaws.com/OLI_tag_logo.svg",
+                "tagUrl": "https://scout-app.kleros.io/single-tags/0x2577bf64bc75949a9cb010c39ba54ce9c64cc368f80564cc82f44862887837b3",
+                "textColor": "#C163D4",
+                "tooltipAttribution": "https://www.openlabelsinitiative.org?utm_source=blockscout",
+                "tooltipAttributionIcon": "https://blockscout-icons.s3.us-east-1.amazonaws.com/OLI_tag_logo.svg",
+                "tooltipDescription": "The official Across Protocol's SpokePoolPeriphery contract on Ethereum",
+                "tooltipUrl": "https://across.to/",
+                "verifiedDomains": [
+                  "across.to",
+                  "ekubo.org",
+                  "app.hyperswap.exchange"
+                ]
+              },
+              "name": "SpokePoolPeriphery",
+              "ordinal": 10,
+              "slug": "spokepoolperiphery-1",
+              "tagType": "name"
+            },
+            {
+              "meta": {
+                "appID": "across-protocol"
+              },
+              "name": "Across",
+              "ordinal": 0,
+              "slug": "across",
+              "tagType": "protocol"
+            }
+          ]
+        },
+        "name": "SpokePoolPeriphery",
+        "private_tags": [],
+        "proxy_type": null,
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "token": {
+        "address_hash": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "circulating_market_cap": "74229577749.05455",
+        "circulating_supply": null,
+        "decimals": "6",
+        "exchange_rate": "0.999766",
+        "holders_count": "9341826",
+        "icon_url": "https://raw.githubusercontent.com/ulyanas/frontend-configs/add-usdc-eurc-latest-token-icons/configs/token-icons/USDC_latest.svg",
+        "name": "USDC",
+        "reputation": "ok",
+        "symbol": "USDC",
+        "total_supply": "49831254406430515",
+        "type": "ERC-20",
+        "volume_24h": "14163380442.17034"
+      },
+      "token_type": "ERC-20",
+      "total": {
+        "decimals": "6",
+        "value": "10500000"
+      },
+      "transaction_hash": "0x58b3067125f62a203693bab64aa18bfde0a23e3c3d18514abe982c0f490adc19",
+      "type": "token_transfer"
+    }
+  ],
+  "next_page_params": {
+    "index": 676,
+    "block_number": 24203162
+  }
+}

@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "4ebd3d8d6e41bca54a462e6221d022af",
+    "identityHash": "634d48ede168aceff1cda2030b103e19",
     "entities": [
       {
         "tableName": "wallets",
@@ -103,7 +103,7 @@
       },
       {
         "tableName": "transaction_history",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chain_id` INTEGER NOT NULL, `wallet_address` TEXT NOT NULL, `transaction_hash` TEXT NOT NULL, `log_index` INTEGER NOT NULL, `type` TEXT NOT NULL, `timestamp` TEXT, `from_address` TEXT NOT NULL, `to_address` TEXT, `value` TEXT NOT NULL, `status` TEXT, `token_address` TEXT, `token_symbol` TEXT, `token_decimals` INTEGER, PRIMARY KEY(`chain_id`, `wallet_address`, `transaction_hash`, `log_index`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chain_id` INTEGER NOT NULL, `wallet_address` TEXT NOT NULL, `transaction_hash` TEXT NOT NULL, `log_index` INTEGER NOT NULL, `type` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `from_address` TEXT NOT NULL, `to_address` TEXT, `value` TEXT NOT NULL, `status` TEXT NOT NULL, `fee_wei` TEXT, `fee_estimated` INTEGER NOT NULL, `token_address` TEXT, `token_symbol` TEXT, `token_decimals` INTEGER, PRIMARY KEY(`chain_id`, `wallet_address`, `transaction_hash`, `log_index`))",
         "fields": [
           {
             "fieldPath": "chainId",
@@ -138,7 +138,8 @@
           {
             "fieldPath": "timestamp",
             "columnName": "timestamp",
-            "affinity": "TEXT"
+            "affinity": "INTEGER",
+            "notNull": true
           },
           {
             "fieldPath": "fromAddress",
@@ -160,7 +161,19 @@
           {
             "fieldPath": "status",
             "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "feeWei",
+            "columnName": "fee_wei",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "feeEstimated",
+            "columnName": "fee_estimated",
+            "affinity": "INTEGER",
+            "notNull": true
           },
           {
             "fieldPath": "tokenAddress",
@@ -203,7 +216,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4ebd3d8d6e41bca54a462e6221d022af')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '634d48ede168aceff1cda2030b103e19')"
     ]
   }
 }
