@@ -106,7 +106,7 @@ val buildRustAndroid = tasks.register<Exec>("buildRustAndroid") {
         "arm64-v8a",
         "-t",
         "x86_64",
-        "-p",
+        "--platform",
         "24",
         "-o",
         generatedNativeDirectory.get().dir("android/jniLibs").asFile.absolutePath,
