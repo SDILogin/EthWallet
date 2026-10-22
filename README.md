@@ -35,6 +35,22 @@ To run instrumented (Android) tests:
 ./gradlew connectedAndroidTest
 ```
 
+### Compose Hot Reload MCP
+
+The project-scoped Codex configuration in `.codex/config.toml` starts the experimental
+Compose Hot Reload MCP server for `:desktopApp`. Open this repository as a trusted
+project and restart Codex after adding or changing the configuration.
+
+Start the desktop app with Hot Reload in a separate terminal:
+
+```bash
+./gradlew :desktopApp:hotRunDesktop
+```
+
+Codex can then inspect the Compose semantic tree, capture screenshots, click, type,
+scroll, and read runtime logs. The MCP server waits for the app and reconnects when
+it restarts. Codex starts the server automatically; do not launch a second server manually.
+
 ### Desktop UI smoke test
 
 ```bash
