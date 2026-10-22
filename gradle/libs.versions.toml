@@ -37,6 +37,7 @@ fragment = "1.8.5"
 
 [libraries]
 androidx-compose-ui-test = { module = "androidx.compose.ui:ui-test" }
+compose-ui-test-junit4 = { module = "org.jetbrains.compose.ui:ui-test-junit4", version.ref = "composePlugin" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "runtime" }

@@ -28,6 +28,13 @@ kotlin {
     }
 
     sourceSets {
+        getByName("desktopTest") {
+            dependencies {
+                implementation(libs.compose.ui.test.junit4)
+                implementation(libs.androidx.datastore.preferences.core)
+                implementation(libs.junit)
+            }
+        }
         getByName("desktopMain") {
             dependencies {
                 implementation(compose.desktop.currentOs)

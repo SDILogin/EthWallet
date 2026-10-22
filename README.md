@@ -35,6 +35,15 @@ To run instrumented (Android) tests:
 ./gradlew connectedAndroidTest
 ```
 
+### Desktop UI smoke test
+
+```bash
+./gradlew :desktopApp:desktopTest
+```
+
+The test renders the desktop Compose UI and checks onboarding and navigation to PIN setup.
+It uses temporary PIN storage and requires no wallet seeds or network access.
+
 ### Live Sepolia UI E2E
 
 The live wallet-transfer test is a Robolectric Android host test that uses the real application UI,
