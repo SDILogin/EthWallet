@@ -29,6 +29,7 @@ import kotlinx.serialization.modules.polymorphic
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.ui.history.HistoryRoute
+import me.sdi.ethwallet.ui.history.TransactionDetailsRoute
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.receive.ReceiveScreen
 import me.sdi.ethwallet.ui.send.SendScreen
@@ -209,6 +210,18 @@ fun EthWalletApp() {
                 HistoryRoute(
                     walletAddress = EthAddress(destination.ethAddress),
                     walletLabel = destination.walletLabel,
+                    onTransactionClick = { hash, logIndex ->
+                        backStack.add(Destination.TransactionDetails(destination.ethAddress, hash, logIndex))
+                    },
+                    onBackPressed = { backStack.removeLastOrNull() },
+                )
+            }
+
+            entry<Destination.TransactionDetails> { destination ->
+                TransactionDetailsRoute(
+                    walletAddress = EthAddress(destination.ethAddress),
+                    transactionHash = destination.transactionHash,
+                    logIndex = destination.logIndex,
                     onBackPressed = { backStack.removeLastOrNull() },
                 )
             }

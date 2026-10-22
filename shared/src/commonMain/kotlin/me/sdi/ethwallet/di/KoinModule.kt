@@ -35,6 +35,7 @@ import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.kotlin.EthereumNetwork
 import me.sdi.ethwallet.kotlin.JsonRpcTransport
 import me.sdi.ethwallet.ui.history.HistoryViewModel
+import me.sdi.ethwallet.ui.history.TransactionDetailsViewModel
 import me.sdi.ethwallet.ui.receive.ReceiveQrViewModel
 import me.sdi.ethwallet.ui.send.SendViewModel
 import me.sdi.ethwallet.ui.settings.SettingsViewModel
@@ -100,6 +101,15 @@ val commonModule = module {
 
     factory<BalanceProvider> { EthBalanceProvider(get(), get()) }
     factory<FiatRateProvider> { FiatRateProviderBinance(get(), get()) }
+
+    viewModel<TransactionDetailsViewModel> { params ->
+        TransactionDetailsViewModel(
+            walletAddress = params.get(),
+            transactionHash = params.get(),
+            logIndex = params.get(),
+            repository = get(),
+        )
+    }
 
     viewModel<HistoryViewModel> { params ->
         HistoryViewModel(
