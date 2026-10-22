@@ -27,6 +27,8 @@ import me.sdi.ethwallet.core.history.TransfersHistoryProvider
 import me.sdi.ethwallet.core.history.TransfersHistoryProviderBlockscout
 import me.sdi.ethwallet.core.security.InMemoryPinSession
 import me.sdi.ethwallet.core.security.PinSession
+import me.sdi.ethwallet.core.transfer.EthTransferInteractor
+import me.sdi.ethwallet.core.transfer.TransferInteractor
 import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.data.repository.WalletRepository
@@ -50,6 +52,8 @@ import me.sdi.ethwallet.Logger as WalletLogger
 expect fun platformModule(chainConfig: ChainConfig): Module
 
 val commonModule = module {
+    factory<TransferInteractor> { EthTransferInteractor(get(), get(), get(), get()) }
+
     single<HistoryInitializationStore> { HistoryInitializationStoreDataStore(get()) }
     single<CoroutineScope> { CoroutineScope(SupervisorJob()) }
 

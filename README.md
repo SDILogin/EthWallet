@@ -71,6 +71,18 @@ path to the test JVM. Seed phrases are read at test runtime and are never placed
 generated sources, command-line arguments, Gradle inputs, test APKs, or logs. The test requires
 Apple Silicon macOS and the host Rust JNI library; normal unit tests exclude this category.
 
+The desktop version uses the same `seed_1` and `seed_2` configuration:
+
+```bash
+./gradlew -PsepoliaE2e=true :desktopApp:sepoliaE2eTest --console=plain
+```
+
+It runs the desktop Compose UI with desktop crypto, software PIN storage, and private-key encryption.
+PIN preferences use a temporary directory, and wallets use the desktop in-memory database.
+The scenario imports both wallets, sends `0.000001` Sepolia ETH, and checks the receiver's balance.
+Each run spends testnet funds. Normal `:desktopApp:desktopTest` runs exclude this test, even with
+`-PsepoliaE2e=true`. Live test results are never reused from the Gradle cache.
+
 ### Code Formatting
 This project uses **Spotless** and **ktlint** to enforce code style.
 

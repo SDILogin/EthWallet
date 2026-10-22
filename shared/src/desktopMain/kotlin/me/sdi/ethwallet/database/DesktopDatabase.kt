@@ -64,12 +64,20 @@ private class DesktopWalletDao : WalletDao {
 }
 
 private class DesktopTokenBalanceDao : TokenBalanceDao {
+    private val balances = MutableStateFlow<List<TokenBalanceEntity>>(emptyList())
+
     override suspend fun read(walletAddress: String, tokenAddress: String): TokenBalanceEntity? =
-        null
+        balances.value.firstOrNull { it.walletAddress == walletAddress && it.tokenAddress == tokenAddress }
 
-    override fun observe(walletAddress: String): Flow<List<TokenBalanceEntity>> = flowOf(emptyList())
+    override fun observe(walletAddress: String): Flow<List<TokenBalanceEntity>> =
+        balances.map { items -> items.filter { it.walletAddress == walletAddress } }
 
-    override suspend fun insertAll(tokenBalances: List<TokenBalanceEntity>) {}
+    override suspend fun insertAll(tokenBalances: List<TokenBalanceEntity>) {
+        val updates = tokenBalances.associateBy { it.walletAddress to it.tokenAddress }
+        balances.update { existing ->
+            existing.filterNot { (it.walletAddress to it.tokenAddress) in updates } + updates.values
+        }
+    }
 }
 
 private class DesktopFiatRateDao : FiatRateDao {

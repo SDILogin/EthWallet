@@ -20,8 +20,6 @@ import me.sdi.ethwallet.core.security.PinCodeStorageDataStore
 import me.sdi.ethwallet.core.security.PinSessionDataCleaner
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
-import me.sdi.ethwallet.core.transfer.EthTransferInteractor
-import me.sdi.ethwallet.core.transfer.TransferInteractor
 import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.database.DatabaseBuilder
 import me.sdi.ethwallet.database.dao.FiatRateDao
@@ -59,8 +57,6 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single { chainConfig }
 
     single<HttpClient> { createHttpClient(OkHttp.create()) }
-
-    factory<TransferInteractor> { EthTransferInteractor(get(), get(), get(), get()) }
 
     single<PinAttemptsGuard> { KeyStorePinAttemptsGuard(context = androidContext()) }
 
