@@ -108,6 +108,7 @@ val commonModule = module {
             transactionHash = params.get(),
             logIndex = params.get(),
             repository = get(),
+            walletRepository = get<WalletRepository>(),
         )
     }
 

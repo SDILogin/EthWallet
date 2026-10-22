@@ -3,6 +3,7 @@ package me.sdi.ethwallet.core.history
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
@@ -12,6 +13,8 @@ import me.sdi.ethwallet.database.entity.TransferHistoryEntity
 
 interface TransferHistoryRepository {
     fun observe(walletAddress: EthAddress): Flow<List<Transfer>>
+
+    fun observe(walletAddress: EthAddress, trxHash: String, logIndex: Int): Flow<Transfer>
 
     suspend fun read(walletAddress: EthAddress): List<Transfer>
 
@@ -25,6 +28,12 @@ class TransferHistoryRepositoryRoom(
     override fun observe(walletAddress: EthAddress): Flow<List<Transfer>> =
         transferHistoryDao.observe(chainConfig.chainId, walletAddress.normalized())
             .map { entities -> entities.mapNotNull(TransferHistoryEntity::toTransferOrNull) }
+
+    override fun observe(walletAddress: EthAddress, trxHash: String, logIndex: Int): Flow<Transfer> {
+        return transferHistoryDao
+            .observe(chainConfig.chainId, walletAddress.normalized(), trxHash.lowercase(), logIndex)
+            .mapNotNull { it.toTransferOrNull() }
+    }
 
     override suspend fun read(walletAddress: EthAddress): List<Transfer> =
         transferHistoryDao.readWalletTransfers(

@@ -864,6 +864,9 @@ class HistoryViewModelTest {
             }
         }
 
+        override fun observe(walletAddress: EthAddress, trxHash: String, logIndex: Int): Flow<Transfer> =
+            error("Single-transfer observation is not used by this test")
+
         override suspend fun read(walletAddress: EthAddress): List<Transfer> = items.value
 
         override suspend fun upsert(walletAddress: EthAddress, items: List<Transfer>) {

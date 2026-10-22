@@ -229,6 +229,9 @@ class HistoryUpdateInteractorTest {
 
         override fun observe(walletAddress: EthAddress): Flow<List<Transfer>> = flowOf(visible())
 
+        override fun observe(walletAddress: EthAddress, trxHash: String, logIndex: Int): Flow<Transfer> =
+            error("Single-transfer observation is not used by this test")
+
         override suspend fun read(walletAddress: EthAddress) = items
 
         override suspend fun upsert(walletAddress: EthAddress, items: List<Transfer>) {

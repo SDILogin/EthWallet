@@ -101,6 +101,18 @@ class EthAddressTest {
     }
 
     @Test
+    fun lowercase_returns_normalized_address_without_changing_original() {
+        val original = "0xAbCdEf1234567890AbCdEf1234567890AbCdEf12"
+        val address = EthAddress(original)
+        val normalized = address.lowercase()
+
+        assertEquals(EthAddress(original.lowercase()), normalized)
+        assertEquals(normalized, normalized.lowercase())
+        assertEquals(normalized.hashCode(), EthAddress(original.lowercase()).hashCode())
+        assertEquals(original, address.toString())
+    }
+
+    @Test
     fun EthContractAddress_should_be_valid_zero_address() {
         assertEquals("0x0000000000000000000000000000000000000000", EthContractAddress.toString())
     }

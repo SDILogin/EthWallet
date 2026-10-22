@@ -67,7 +67,6 @@ import me.sdi.ethwallet.resources.history_received
 import me.sdi.ethwallet.resources.history_self
 import me.sdi.ethwallet.resources.history_sent
 import me.sdi.ethwallet.resources.history_sepolia
-import me.sdi.ethwallet.resources.history_this_wallet
 import me.sdi.ethwallet.resources.history_transaction_fee
 import me.sdi.ethwallet.resources.transaction_details_addresses
 import me.sdi.ethwallet.resources.transaction_details_confirmed
@@ -138,14 +137,15 @@ fun TransactionDetailsScreen(
                     stringResource(Res.string.transaction_details_unavailable),
                     Modifier.align(Alignment.Center),
                 )
-                is TransactionDetailsState.Content -> DetailsContent(state.transfer, walletAddress, chainConfig)
+                is TransactionDetailsState.Content -> DetailsContent(state, walletAddress, chainConfig)
             }
         }
     }
 }
 
 @Composable
-private fun DetailsContent(transfer: Transfer, walletAddress: EthAddress, chainConfig: ChainConfig) {
+private fun DetailsContent(state: TransactionDetailsState.Content, walletAddress: EthAddress, chainConfig: ChainConfig) {
+    val transfer = state.transfer
     val outgoing = transfer.from.toString().equals(walletAddress.toString(), ignoreCase = true)
     val self = transfer.from.toString().equals(transfer.to.toString(), ignoreCase = true)
     val direction = when {
@@ -240,13 +240,13 @@ private fun DetailsContent(transfer: Transfer, walletAddress: EthAddress, chainC
             CopyValue(
                 stringResource(Res.string.transaction_details_from),
                 transfer.from.toString(),
-                transfer.from.toString().equals(walletAddress.toString(), true),
+                state.fromWalletLabel,
             )
             HorizontalDivider()
             CopyValue(
                 stringResource(Res.string.transaction_details_to),
                 transfer.to.toString(),
-                transfer.to.toString().equals(walletAddress.toString(), true),
+                state.toWalletLabel,
             )
         }
         DetailsCard { CopyValue(stringResource(Res.string.transaction_details_hash), transfer.hash) }
@@ -292,7 +292,7 @@ private fun DetailValue(label: String, value: String) {
 
 @Suppress("DEPRECATION")
 @Composable
-private fun CopyValue(label: String, value: String, thisWallet: Boolean = false) {
+private fun CopyValue(label: String, value: String, walletLabel: String? = null) {
     val clipboard = LocalClipboardManager.current
     Row(
         Modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
@@ -300,7 +300,7 @@ private fun CopyValue(label: String, value: String, thisWallet: Boolean = false)
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                if (thisWallet) "$label · ${stringResource(Res.string.history_this_wallet)}" else label,
+                walletLabel?.let { "$label · $it" } ?: label,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -329,7 +329,7 @@ internal class TransactionDetailsPreviewProvider : PreviewParameterProvider<Tran
     )
 
     override val values: Sequence<TransactionDetailsState> = sequenceOf(
-        TransactionDetailsState.Content(tokenTransfer),
+        TransactionDetailsState.Content(tokenTransfer, fromWalletLabel = "Main wallet", toWalletLabel = "Savings"),
         TransactionDetailsState.Content(
             Transfer.Eth(
                 hash = tokenTransfer.hash,

@@ -12,6 +12,10 @@ value class EthAddress(private val validEthAddress: String) {
         return validEthAddress
     }
 
+    fun lowercase(): EthAddress {
+        return EthAddress(validEthAddress.lowercase())
+    }
+
     companion object {
         private val FORMAT_REGEX = Regex("^0x[0-9a-fA-F]{40}$")
 
