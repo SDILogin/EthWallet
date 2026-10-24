@@ -21,6 +21,9 @@ sealed interface Destination : NavKey {
     data object ImportWalletScreen : Destination
 
     @Serializable
+    data object TokensListScreen : Destination
+
+    @Serializable
     data class WalletScreen(val ethAddress: String) : Destination
 
     @Serializable

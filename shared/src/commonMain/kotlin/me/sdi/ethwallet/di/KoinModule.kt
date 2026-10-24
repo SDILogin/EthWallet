@@ -42,6 +42,7 @@ import me.sdi.ethwallet.ui.settings.SettingsViewModel
 import me.sdi.ethwallet.ui.wallet.CreateWalletViewModel
 import me.sdi.ethwallet.ui.wallet.ImportWalletViewModel
 import me.sdi.ethwallet.ui.wallet.SetPinCodeViewModel
+import me.sdi.ethwallet.ui.wallet.TokensListViewModel
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeViewModel
 import me.sdi.ethwallet.ui.wallet.WalletViewModel
 import me.sdi.ethwallet.ui.wallet.WalletsListViewModel
@@ -158,6 +159,10 @@ val commonModule = module {
         ImportWalletViewModel(
             walletRepository = get(),
         )
+    }
+
+    viewModel<TokensListViewModel> {
+        TokensListViewModel(chainConfig = get())
     }
 
     viewModel<WalletViewModel> { params ->

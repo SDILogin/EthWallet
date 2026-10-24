@@ -38,6 +38,7 @@ import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
 import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
+import me.sdi.ethwallet.ui.wallet.TokensListScreen
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
@@ -194,8 +195,15 @@ fun EthWalletApp() {
                     onHistoryButtonClick = { label ->
                         backStack.add(Destination.HistoryScreen(destination.ethAddress, label))
                     },
-                    onEditButtonClick = { },
+                    onEditButtonClick = { backStack.add(Destination.TokensListScreen) },
                     onTokenClick = { },
+                )
+            }
+
+            entry<Destination.TokensListScreen> {
+                TokensListScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onBackPressed = { backStack.removeLastOrNull() },
                 )
             }
 

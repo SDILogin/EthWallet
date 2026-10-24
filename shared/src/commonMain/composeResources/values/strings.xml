@@ -58,6 +58,9 @@
     <string name="wallet_refresh_error">Couldn't refresh wallet data</string>
     <string name="wallet_retry">Retry</string>
 
+    <!-- Tokens List Screen -->
+    <string name="tokens_list_title">Manage tokens</string>
+
     <!-- Send Screen -->
     <string name="send_title">Send</string>
     <string name="send_clear_form">Clear Form</string>
