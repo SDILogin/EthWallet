@@ -58,7 +58,6 @@ import me.sdi.ethwallet.resources.arrow_outward_24px
 import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.copy_all_24px
 import me.sdi.ethwallet.resources.history_amount_unavailable
-import me.sdi.ethwallet.resources.history_estimated_transaction_fee
 import me.sdi.ethwallet.resources.history_failed
 import me.sdi.ethwallet.resources.history_mainnet
 import me.sdi.ethwallet.resources.history_network
@@ -67,14 +66,15 @@ import me.sdi.ethwallet.resources.history_received
 import me.sdi.ethwallet.resources.history_self
 import me.sdi.ethwallet.resources.history_sent
 import me.sdi.ethwallet.resources.history_sepolia
-import me.sdi.ethwallet.resources.history_transaction_fee
 import me.sdi.ethwallet.resources.transaction_details_addresses
 import me.sdi.ethwallet.resources.transaction_details_confirmed
 import me.sdi.ethwallet.resources.transaction_details_contract
 import me.sdi.ethwallet.resources.transaction_details_copy
 import me.sdi.ethwallet.resources.transaction_details_date
 import me.sdi.ethwallet.resources.transaction_details_error
+import me.sdi.ethwallet.resources.transaction_details_estimated_fee
 import me.sdi.ethwallet.resources.transaction_details_explorer
+import me.sdi.ethwallet.resources.transaction_details_fee
 import me.sdi.ethwallet.resources.transaction_details_from
 import me.sdi.ethwallet.resources.transaction_details_hash
 import me.sdi.ethwallet.resources.transaction_details_metadata
@@ -225,13 +225,11 @@ private fun DetailsContent(state: TransactionDetailsState.Content, walletAddress
             )
             transfer.fee?.let { fee ->
                 HorizontalDivider()
-                Text(
+                DetailValue(
                     stringResource(
-                        if (fee.estimated) Res.string.history_estimated_transaction_fee else Res.string.history_transaction_fee,
-                        formatHistoryAmount(fee.value.value.toString(), 18).orEmpty(),
+                        if (fee.estimated) Res.string.transaction_details_estimated_fee else Res.string.transaction_details_fee,
                     ),
-                    Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyMedium,
+                    "${formatHistoryAmount(fee.value.value.toString(), 18).orEmpty()} ETH",
                 )
             }
         }
@@ -285,7 +283,7 @@ private fun DetailsCard(content: @Composable ColumnScope.() -> Unit) {
 @Composable
 private fun DetailValue(label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, Modifier.weight(1f), textAlign = TextAlign.End)
     }
 }

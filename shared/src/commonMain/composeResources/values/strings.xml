@@ -158,6 +158,8 @@
     <string name="mnemonic_long_press_to_copy">* Long-press to copy</string>
     <string name="mnemonic_clipboard_label">seedPhrase</string>
     <!-- History Screen -->
+    <string name="history_fee_short">Fee: %1$s ETH</string>
+    <string name="history_estimated_fee_short">Est. fee: %1$s ETH</string>
     <string name="history_transaction_fee">Transaction fee: %1$s ETH</string>
     <string name="history_estimated_transaction_fee">Transaction fee (estimated): %1$s ETH</string>
     <string name="history_title">History</string>
@@ -194,6 +196,8 @@
     <string name="transaction_details_error">Could not load transaction</string>
     <string name="transaction_details_confirmed">Confirmed</string>
     <string name="transaction_details_network">Network</string>
+    <string name="transaction_details_fee">Transaction fee</string>
+    <string name="transaction_details_estimated_fee">Estimated fee</string>
     <string name="transaction_details_date">Date</string>
     <string name="transaction_details_addresses">Addresses</string>
     <string name="transaction_details_from">From</string>

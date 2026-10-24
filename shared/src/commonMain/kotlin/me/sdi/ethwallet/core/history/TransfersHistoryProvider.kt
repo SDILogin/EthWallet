@@ -77,3 +77,6 @@ sealed interface Transfer {
 internal val Transfer.logIndex: Int get() = (this as? Transfer.Erc20)?.logIndex ?: -1
 
 internal val Transfer.identity: Pair<String, Int> get() = hash.lowercase() to logIndex
+
+// EIP-7708 emits native ETH transfer logs from this address using the ERC-20 event format.
+internal const val ETH_TRANSFER_LOG_ADDRESS = "0xfffffffffffffffffffffffffffffffffffffffe"

@@ -41,6 +41,31 @@ class TransferHistoryDaoTest {
     }
 
     @Test
+    fun cached_system_eth_logs_are_hidden_but_native_and_real_token_transfers_remain() = runTest {
+        val config = ChainConfig("https://rpc.example.test", 1, null, "https://history.example.test")
+        val repository = TransferHistoryRepositoryRoom(dao, config)
+        val native = entity("native")
+        val token = entity("token").copy(
+            type = "ERC20",
+            logIndex = 1,
+            tokenAddress = "0x${"3".repeat(40)}",
+            tokenSymbol = "USDC",
+            tokenDecimals = 6,
+        )
+        dao.upsertAll(
+            listOf(
+                native,
+                token,
+                token.copy(transactionHash = "system", tokenAddress = "0xfffffffffffffffffffffffffffffffffffffffe"),
+                token.copy(transactionHash = "mixed", tokenAddress = "0xffffFFFfFFffffffffffffffFfFFFfffFFFfFFfE"),
+            ),
+        )
+        val wallet = EthAddress(WALLET)
+        assertEquals(setOf("native", "token"), repository.observe(wallet).first().map { it.hash }.toSet())
+        assertEquals(setOf("native", "token"), repository.read(wallet).map { it.hash }.toSet())
+    }
+
+    @Test
     fun observe_filters_by_chain_and_wallet_and_orders_pending_first() = runTest {
         val confirmed = entity(
             hash = "confirmed",

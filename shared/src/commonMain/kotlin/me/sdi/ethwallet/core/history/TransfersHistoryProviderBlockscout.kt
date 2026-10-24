@@ -48,6 +48,7 @@ class TransfersHistoryProviderBlockscout(
         val tokenItems = mutableListOf<Transfer>()
         for (item in tokenPage?.items.orEmpty()) {
             if ((item.tokenType ?: item.token.type) != "ERC-20") continue
+            if (item.token.addressHash.equals(ETH_TRANSFER_LOG_ADDRESS, ignoreCase = true)) continue
             val amount = requireNotNull(item.total?.value).nonNegativeInteger()
             if (amount.signum() == 0) continue
             val from = EthAddress(item.from.hash)

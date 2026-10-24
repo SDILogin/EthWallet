@@ -63,8 +63,9 @@ import me.sdi.ethwallet.resources.history_amount_unavailable
 import me.sdi.ethwallet.resources.history_empty_message
 import me.sdi.ethwallet.resources.history_empty_title
 import me.sdi.ethwallet.resources.history_end
-import me.sdi.ethwallet.resources.history_estimated_transaction_fee
+import me.sdi.ethwallet.resources.history_estimated_fee_short
 import me.sdi.ethwallet.resources.history_failed
+import me.sdi.ethwallet.resources.history_fee_short
 import me.sdi.ethwallet.resources.history_from
 import me.sdi.ethwallet.resources.history_load_more_error
 import me.sdi.ethwallet.resources.history_loading
@@ -85,7 +86,6 @@ import me.sdi.ethwallet.resources.history_this_wallet
 import me.sdi.ethwallet.resources.history_title
 import me.sdi.ethwallet.resources.history_to
 import me.sdi.ethwallet.resources.history_today
-import me.sdi.ethwallet.resources.history_transaction_fee
 import me.sdi.ethwallet.resources.history_yesterday
 import me.sdi.ethwallet.resources.switch_account_24px
 import me.sdi.ethwallet.resources.wallet_retry
@@ -440,7 +440,7 @@ private fun HistoryListItem(
                 row.transactionFee?.let { fee ->
                     Text(
                         stringResource(
-                            if (row.feeEstimated) Res.string.history_estimated_transaction_fee else Res.string.history_transaction_fee,
+                            if (row.feeEstimated) Res.string.history_estimated_fee_short else Res.string.history_fee_short,
                             fee,
                         ),
                         style = MaterialTheme.typography.bodySmall,

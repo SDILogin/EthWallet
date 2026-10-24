@@ -1,6 +1,5 @@
 package me.sdi.ethwallet.core.history
 
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
@@ -71,15 +70,17 @@ private fun Transfer.toEntity(chainId: Long, walletAddress: EthAddress) = Transf
     tokenDecimals = (this as? Transfer.Erc20)?.tokenDecimals,
 )
 
-private fun TransferHistoryEntity.toTransferOrNull(): Transfer? = try {
-    toTransfer()
-} catch (e: Exception) {
-    if (e is CancellationException) throw e
-    Logger.warn("TransferHistoryEntity", e) { "Failed to decode cached history record" }
-    null
+private fun TransferHistoryEntity.toTransferOrNull(): Transfer? {
+    if (type == "ERC20" && tokenAddress.equals(ETH_TRANSFER_LOG_ADDRESS, ignoreCase = true)) return null
+    return try {
+        toTransferOrThrow()
+    } catch (e: Exception) {
+        Logger.warn("TransferHistoryEntity", e) { "Failed to decode cached history record" }
+        null
+    }
 }
 
-private fun TransferHistoryEntity.toTransfer(): Transfer {
+private fun TransferHistoryEntity.toTransferOrThrow(): Transfer {
     val fee = feeWei?.let { TransactionFee(it.toBigInteger().toWei(), feeEstimated) }
     val status = TransactionStatus.valueOf(status)
     return when (type) {
@@ -100,7 +101,7 @@ private fun TransferHistoryEntity.toTransfer(): Transfer {
             logIndex = logIndex,
             tokenAddress = EthAddress(requireNotNull(tokenAddress)),
             tokenSymbol = tokenSymbol,
-            tokenDecimals = requireNotNull(tokenDecimals),
+            tokenDecimals = checkNotNull(tokenDecimals),
             value = value,
             status = status,
             fee = fee,

@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.update
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
@@ -103,6 +104,22 @@ private object DesktopTransferHistoryDao : TransferHistoryDao {
                         .thenBy { it.logIndex },
                 )
         }
+
+    override fun observe(
+        chainId: Long,
+        walletAddress: String,
+        trxHash: String,
+        logIndex: Int,
+    ): Flow<TransferHistoryEntity> {
+        return items.mapNotNull { entities ->
+            entities.firstOrNull {
+                it.chainId == chainId &&
+                    it.walletAddress == walletAddress &&
+                    it.transactionHash == trxHash &&
+                    it.logIndex == logIndex
+            }
+        }
+    }
 
     override suspend fun readWalletTransfers(chainId: Long, walletAddress: String): List<TransferHistoryEntity> =
         items.value.filter { it.chainId == chainId && it.walletAddress == walletAddress }

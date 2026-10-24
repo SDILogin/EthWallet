@@ -28,6 +28,27 @@ class TransferHistoryProviderBlockscoutTest {
     private val next = """{"block_number":123,"index":4,"items_count":50,"key":"a b","unused":null}"""
 
     @Test
+    fun system_eth_logs_are_excluded_without_losing_native_transfer_or_pagination() = runTest {
+        val provider = provider { request ->
+            if (request.url.encodedPath.endsWith("/transactions")) {
+                page(transaction())
+            } else {
+                page(
+                    token(tokenAddress = ETH_TRANSFER_LOG_ADDRESS, decimals = "null"),
+                    token(tokenAddress = "0xffffFFFfFFffffffffffffffFfFFFfffFFFfFFfE", logIndex = 8),
+                    token(logIndex = 9),
+                    next = next,
+                )
+            }
+        }
+        val result = provider.getTransfers(wallet)
+        assertEquals(1, result.eth!!.items.size)
+        assertIs<Transfer.Eth>(result.eth.items.single())
+        assertEquals(listOf(9), result.erc20!!.items.map { (it as Transfer.Erc20).logIndex })
+        assertIs<TransfersPageRequest.Next>(result.erc20.nextRequest)
+    }
+
+    @Test
     fun maps_both_sources_and_forwards_each_complete_cursor() = runTest {
         val requests = mutableListOf<HttpRequestData>()
         val provider = provider { request ->
@@ -269,10 +290,11 @@ class TransferHistoryProviderBlockscoutTest {
         decimals: String = "\"6\"",
         value: String = "\"1500000\"",
         timestamp: String = time,
+        tokenAddress: String = "0x${"3".repeat(40)}",
     ) = """{
         "transaction_hash":"$hash","log_index":$logIndex,"timestamp":"$timestamp",
         "from":{"hash":"$from"},"to":{"hash":"$to"},
-        "token":{"address_hash":"0x${"3".repeat(40)}","symbol":"USDC","decimals":$decimals,"type":"$type"},
+        "token":{"address_hash":"$tokenAddress","symbol":"USDC","decimals":$decimals,"type":"$type"},
         "total":{"value":$value,"decimals":$decimals}
     }"""
 }
