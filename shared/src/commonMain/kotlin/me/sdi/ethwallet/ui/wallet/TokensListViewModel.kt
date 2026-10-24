@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import me.sdi.ethwallet.core.ChainConfig
+import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.ui.KnownToken
 import me.sdi.ethwallet.ui.supportedKnownTokens
 
@@ -26,6 +27,21 @@ class TokensListViewModel(chainConfig: ChainConfig) : ViewModel() {
     fun onEvent(event: TokensListEvent) {
         when (event) {
             is TokensListEvent.OnTokenVisibilityChanged -> onTokenVisibilityOnMainChanged(event.newListItemState)
+            is TokensListEvent.OnTokenMoved -> onTokenMoved(event.tokenAddress, event.toIndex)
+        }
+    }
+
+    private fun onTokenMoved(tokenAddress: EthAddress, toIndex: Int) {
+        _viewState.update { state ->
+            val items = state.tokenListItems
+            val fromIndex = items.indexOfFirst { it.knownToken.ethAddress == tokenAddress }
+            if (fromIndex == -1 || toIndex !in items.indices || fromIndex == toIndex) {
+                state
+            } else {
+                val reorderedItems = items.toMutableList()
+                reorderedItems.add(toIndex, reorderedItems.removeAt(fromIndex))
+                state.copy(tokenListItems = reorderedItems)
+            }
         }
     }
 
@@ -46,6 +62,11 @@ class TokensListViewModel(chainConfig: ChainConfig) : ViewModel() {
 }
 
 sealed interface TokensListEvent {
+    data class OnTokenMoved(
+        val tokenAddress: EthAddress,
+        val toIndex: Int,
+    ) : TokensListEvent
+
     data class OnTokenVisibilityChanged(
         val newListItemState: TokenListItem,
     ) : TokensListEvent

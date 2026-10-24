@@ -96,6 +96,24 @@ class TokensListScreenTest {
     }
 
     @Test
+    fun dragging_token_down_and_back_up_updates_order_and_preserves_checked_state() {
+        tokensListPage.toggleToken("USDT")
+        tokensListPage.assertTokenOrder("USDT", "USDC", "DAI")
+
+        tokensListPage.dragTokenTo("USDT", "DAI")
+
+        tokensListPage.assertTokenOrder("USDC", "DAI", "USDT")
+        tokensListPage.assertTokenChecked("USDT", checked = false)
+        tokensListPage.assertTokenChecked("USDC", checked = true)
+        tokensListPage.assertTokenChecked("DAI", checked = true)
+
+        tokensListPage.dragTokenTo("USDT", "USDC")
+
+        tokensListPage.assertTokenOrder("USDT", "USDC", "DAI")
+        tokensListPage.assertTokenChecked("USDT", checked = false)
+    }
+
+    @Test
     fun clicking_up_calls_back_callback_once() {
         composeTestRule.runOnIdle { assertEquals(0, upClickCount) }
 

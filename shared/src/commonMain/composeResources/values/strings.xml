@@ -60,6 +60,7 @@
 
     <!-- Tokens List Screen -->
     <string name="tokens_list_title">Manage tokens</string>
+    <string name="tokens_list_reorder">Reorder %1$s</string>
 
     <!-- Send Screen -->
     <string name="send_title">Send</string>
