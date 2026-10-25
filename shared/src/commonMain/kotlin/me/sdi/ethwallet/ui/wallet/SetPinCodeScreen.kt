@@ -49,7 +49,6 @@ import me.sdi.ethwallet.resources.pin_confirm_title
 import me.sdi.ethwallet.resources.pin_create_subtitle
 import me.sdi.ethwallet.resources.pin_create_title
 import me.sdi.ethwallet.resources.pin_reset
-import me.sdi.ethwallet.ui.components.ScrollableColumn
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -121,17 +120,15 @@ private fun SetPinCodeScreen(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        ScrollableColumn(
+        Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Spacer(modifier = Modifier.weight(1f))
-
             Column(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                Spacer(modifier = Modifier.height(64.dp))
                 Title(isConfirmationMode = viewState.isConfirmationMode)
                 Spacer(modifier = Modifier.height(8.dp))
                 Subtitle(isConfirmationMode = viewState.isConfirmationMode)
@@ -145,8 +142,6 @@ private fun SetPinCodeScreen(
                     onClick = { onEvent(SetPinCodeEvent.OnResetClick) },
                 )
             }
-
-            Spacer(modifier = Modifier.weight(1f))
 
             NumberPad(
                 onNumberClick = { number -> onEvent(SetPinCodeEvent.OnDigitClick(number)) },

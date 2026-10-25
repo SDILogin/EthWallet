@@ -96,7 +96,6 @@ import me.sdi.ethwallet.resources.wallets_list_add_wallet
 import me.sdi.ethwallet.resources.wallets_list_selected_wallet_icon
 import me.sdi.ethwallet.resources.wallets_list_title
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
-import me.sdi.ethwallet.ui.components.ScrollableColumn
 import me.sdi.ethwallet.ui.components.shimmer
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
@@ -229,7 +228,7 @@ private fun WalletsListScreenContent(
                     modifier = Modifier.align(Alignment.Center),
                 )
             } else if (uiState.wallets.isEmpty()) {
-                ScrollableColumn(
+                Column(
                     modifier = Modifier
                         .padding(innerPadding)
                         .padding(16.dp)
