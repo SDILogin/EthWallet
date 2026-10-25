@@ -8,6 +8,7 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.DataCleanerPinArtifacts
+import me.sdi.ethwallet.core.security.DataCleanerRoomDb
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PinCodeStorageSoftware
@@ -32,7 +33,7 @@ import java.io.File
 import kotlin.time.Duration
 
 actual fun platformModule(chainConfig: ChainConfig): Module = module {
-    single<AppDatabase> { DesktopDatabaseBuilder.getInstance() }
+    single<AppDatabase> { DesktopDatabaseBuilder.build(walletDirectory()) }
     single<WalletDao> { get<AppDatabase>().walletDao() }
     single<TokenBalanceDao> { get<AppDatabase>().tokenBalanceDao() }
     single<FiatRateDao> { get<AppDatabase>().fiatRateDao() }
@@ -45,6 +46,7 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     factory<DataCleaner> {
         DataCleanerComposite(
             listOf(
+                DataCleanerRoomDb(get()),
                 DataCleanerPinArtifacts(get()),
                 PinSessionDataCleaner(get()),
             ),
