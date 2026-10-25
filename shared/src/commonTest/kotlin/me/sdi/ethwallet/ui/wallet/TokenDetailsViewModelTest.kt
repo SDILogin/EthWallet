@@ -13,8 +13,10 @@ import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.fakes.FakeFiatRateProvider
 import me.sdi.ethwallet.ui.daiOnMainnet
 import me.sdi.ethwallet.ui.usdcOnMainnet
+import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -47,11 +49,44 @@ class TokenDetailsViewModelTest {
     }
 
     @Test
+    fun depegUpdatesFiatValueWithoutChangingBalance() = runTest(dispatcher) {
+        val fiatProvider = FakeFiatRateProvider()
+        val viewModel = TokenDetailsViewModel(
+            walletAddress = walletAddress,
+            tokenAddress = usdcOnMainnet.ethAddress,
+            balanceProvider = provider,
+            chainConfig = ChainConfig("", 1L, null, ""),
+            fiatRateProvider = fiatProvider,
+        )
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.viewState.collect {} }
+        balances.value = mapOf(usdcOnMainnet.ethAddress to BigInteger("100123456"))
+        runCurrent()
+        assertEquals("100.123456", viewModel.viewState.value.balance)
+        assertNull(viewModel.viewState.value.fiatValue)
+
+        fiatProvider.rates.value = mapOf(usdcOnMainnet.ethAddress to BigDecimal("0.87"))
+        runCurrent()
+        assertEquals("100.123456", viewModel.viewState.value.balance)
+        assertEquals("$87.11", viewModel.viewState.value.fiatValue)
+
+        fiatProvider.rates.value = mapOf(usdcOnMainnet.ethAddress to BigDecimal("1.02"))
+        runCurrent()
+        assertEquals("100.123456", viewModel.viewState.value.balance)
+        assertEquals("$102.13", viewModel.viewState.value.fiatValue)
+
+        balances.value = emptyMap()
+        runCurrent()
+        assertNull(viewModel.viewState.value.balance)
+        assertNull(viewModel.viewState.value.fiatValue)
+    }
+
+    @Test
     fun selectedTokenBalanceUpdatesWithoutChangingMetadata() = runTest(dispatcher) {
         val viewModel = TokenDetailsViewModel(
             walletAddress = walletAddress,
             tokenAddress = usdcOnMainnet.ethAddress,
             balanceProvider = provider,
+            fiatRateProvider = FakeFiatRateProvider(),
             chainConfig = ChainConfig("", 1L, null, ""),
         )
         val initial = viewModel.viewState.value

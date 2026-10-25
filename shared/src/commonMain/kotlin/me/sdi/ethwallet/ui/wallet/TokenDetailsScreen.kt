@@ -50,6 +50,7 @@ import me.sdi.ethwallet.resources.token_details_information
 import me.sdi.ethwallet.resources.token_details_network
 import me.sdi.ethwallet.resources.token_details_standard
 import me.sdi.ethwallet.resources.token_details_unavailable
+import me.sdi.ethwallet.resources.wallet_fiat_unavailable
 import me.sdi.ethwallet.resources.wallet_receive
 import me.sdi.ethwallet.resources.wallet_send
 import me.sdi.ethwallet.ui.ETH_MAINNET_CHAIN_ID
@@ -128,6 +129,11 @@ fun TokenDetailsScreenContent(
                 text = viewState.balance?.let { "$it ${viewState.symbol}" }
                     ?: stringResource(Res.string.token_details_unavailable),
                 style = MaterialTheme.typography.headlineLarge,
+            )
+            Text(
+                text = viewState.fiatValue ?: stringResource(Res.string.wallet_fiat_unavailable),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(
                 modifier = Modifier.widthIn(max = 420.dp),

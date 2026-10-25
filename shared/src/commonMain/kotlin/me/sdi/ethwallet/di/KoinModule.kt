@@ -15,7 +15,7 @@ import me.sdi.ethwallet.core.EthBalanceProvider
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.EthManagerKotlin
 import me.sdi.ethwallet.core.FiatRateProvider
-import me.sdi.ethwallet.core.FiatRateProviderBinance
+import me.sdi.ethwallet.core.FiatRateProviderCoinbase
 import me.sdi.ethwallet.core.JsonRpcTransportKtor
 import me.sdi.ethwallet.core.history.HistoryInitializationStore
 import me.sdi.ethwallet.core.history.HistoryInitializationStoreDataStore
@@ -102,7 +102,7 @@ val commonModule = module {
     }
 
     factory<BalanceProvider> { EthBalanceProvider(get(), get()) }
-    factory<FiatRateProvider> { FiatRateProviderBinance(get(), get()) }
+    factory<FiatRateProvider> { FiatRateProviderCoinbase(get(), get()) }
 
     viewModel<TransactionDetailsViewModel> { params ->
         TransactionDetailsViewModel(
@@ -171,6 +171,7 @@ val commonModule = module {
             walletAddress = params.get(0),
             tokenAddress = params.get(1),
             balanceProvider = get(),
+            fiatRateProvider = get(),
             chainConfig = get(),
         )
     }
