@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import java.math.BigDecimal
 
 /**
- * Price provider for fiat currencies, specifically for Ethereum (ETH).
+ * USD price provider for ETH and supported tokens.
  */
 interface FiatRateProvider {
     /**
@@ -13,7 +13,7 @@ interface FiatRateProvider {
     suspend fun forceUpdate()
 
     /**
-     * Observes fiat rates from the database for the given token addresses.
+     * Observes cached fiat rates. Tokens without quotes are omitted.
      *
      * @return Flow emitting a map of token addresses to their USD rates.
      */

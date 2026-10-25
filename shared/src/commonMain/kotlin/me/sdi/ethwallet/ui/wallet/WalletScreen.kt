@@ -372,6 +372,7 @@ private fun TokenCard(
             tokenName = token.name,
             tokenSymbol = token.ticker,
             tokenBalance = token.amount,
+            fiatValue = token.usdValue?.let { token.usdValueFormatted },
             modifier = Modifier.padding(16.dp),
         )
     }
@@ -586,6 +587,7 @@ private fun TokenItem(
     tokenName: String,
     tokenSymbol: String,
     tokenBalance: String,
+    fiatValue: String?,
     modifier: Modifier = Modifier,
 ) {
     val tokenIcon: DrawableResource = remember(tokenAddress) {
@@ -619,12 +621,19 @@ private fun TokenItem(
             )
         }
 
-        Text(
-            text = tokenBalance,
-            fontWeight = FontWeight.Medium,
-            fontSize = 18.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = "$tokenBalance $tokenSymbol",
+                fontWeight = FontWeight.Medium,
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = fiatValue ?: stringResource(Res.string.wallet_fiat_unavailable),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
