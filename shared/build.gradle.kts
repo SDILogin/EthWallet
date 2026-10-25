@@ -150,6 +150,7 @@ kotlin {
         }
         val desktopMain = getByName("desktopMain") {
             dependencies {
+                implementation(libs.androidx.sqlite.bundled)
                 implementation(compose.desktop.currentOs)
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.okhttp)

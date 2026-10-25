@@ -1,10 +1,9 @@
 package me.sdi.ethwallet.database
 
-import android.content.Context
+import androidx.room.ConstructedBy
 import androidx.room.Database
-import androidx.room.Room
 import androidx.room.RoomDatabase
-import me.sdi.ethwallet.Logger
+import androidx.room.RoomDatabaseConstructor
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.dao.TransferHistoryDao
@@ -24,6 +23,7 @@ import me.sdi.ethwallet.database.entity.WalletEntity
     version = 1,
     exportSchema = true,
 )
+@ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun walletDao(): WalletDao
 
@@ -32,26 +32,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun fiatRateDao(): FiatRateDao
 
     abstract fun transferHistoryDao(): TransferHistoryDao
+}
 
-    companion object {
-        private const val DATABASE_NAME = "ethwallet_db"
-
-        @Volatile
-        private var instance: AppDatabase? = null
-
-        fun getInstance(context: Context): AppDatabase {
-            return instance ?: synchronized(this) {
-                Logger.debug("Db") {
-                    "Creating new instance of AppDatabase"
-                }
-                val builder = Room.databaseBuilder<AppDatabase>(
-                    context = context.applicationContext,
-                    name = DATABASE_NAME,
-                )
-                builder.build().also {
-                    instance = it
-                }
-            }
-        }
-    }
+@Suppress("KotlinNoActualForExpect")
+expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase> {
+    override fun initialize(): AppDatabase
 }
