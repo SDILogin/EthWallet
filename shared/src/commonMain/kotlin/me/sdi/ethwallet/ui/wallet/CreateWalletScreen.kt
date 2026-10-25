@@ -1,17 +1,21 @@
 package me.sdi.ethwallet.ui.wallet
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -62,7 +66,6 @@ import me.sdi.ethwallet.resources.wallet_label_placeholder
 import me.sdi.ethwallet.resources.wallet_label_supporting
 import me.sdi.ethwallet.resources.warning_24px
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
-import me.sdi.ethwallet.ui.components.ScrollableColumn
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -161,63 +164,73 @@ private fun CreateWalletScreenContent(
             )
         }
 
-        ScrollableColumn(
+        Column(
             modifier =
                 Modifier
                     .fillMaxSize()
+                    .imePadding()
                     .padding(innerPadding)
                     .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.weight(1f))
-            WalletLabelTextField(
-                value = viewState.label,
-                onValueChange = { onEvent(CreateWalletEvent.LabelChanged(it)) },
-                enabled = !viewState.isSaving,
-            )
+            Column(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    WalletLabelTextField(
+                        value = viewState.label,
+                        onValueChange = { onEvent(CreateWalletEvent.LabelChanged(it)) },
+                        enabled = !viewState.isSaving,
+                    )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-            BasicText(
-                text = stringResource(Res.string.create_wallet_recovery_phrase_title),
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    color = MaterialTheme.colorScheme.onBackground,
-                ),
-                maxLines = 1,
-            )
+                    BasicText(
+                        text = stringResource(Res.string.create_wallet_recovery_phrase_title),
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            color = MaterialTheme.colorScheme.onBackground,
+                        ),
+                        maxLines = 1,
+                    )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-            BasicText(
-                modifier = Modifier.widthIn(max = 420.dp),
-                text = stringResource(Res.string.create_wallet_recovery_phrase_instruction),
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onBackground,
-                ),
-                maxLines = 1,
-            )
+                    BasicText(
+                        modifier = Modifier.widthIn(max = 420.dp),
+                        text = stringResource(Res.string.create_wallet_recovery_phrase_instruction),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        ),
+                        maxLines = 1,
+                    )
 
-            Spacer(modifier = Modifier.height(8.dp))
-            MnemonicCard(
-                seedPhrase = viewState.seedPhrase,
-                modifier =
-                    Modifier
-                        .widthIn(max = 420.dp)
-                        .fillMaxWidth(),
-                onCopied = {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = copiedMessage,
-                            duration = SnackbarDuration.Short,
-                        )
-                    }
-                },
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            SecurityWarning()
-            Spacer(modifier = Modifier.height(8.dp))
-            Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    MnemonicCard(
+                        seedPhrase = viewState.seedPhrase,
+                        modifier =
+                            Modifier
+                                .widthIn(max = 420.dp)
+                                .fillMaxWidth(),
+                        onCopied = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = copiedMessage,
+                                    duration = SnackbarDuration.Short,
+                                )
+                            }
+                        },
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    SecurityWarning()
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                Spacer(modifier = Modifier.weight(1f))
+            }
             NextButton(
                 enabled = viewState.isLabelValid && !viewState.isSaving,
                 onClick = {

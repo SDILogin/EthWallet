@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,7 +30,6 @@ import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.ic_eth_logo
 import me.sdi.ethwallet.resources.onboarding_title
 import me.sdi.ethwallet.resources.pin_create_title
-import me.sdi.ethwallet.ui.components.ScrollableColumn
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.getKoin
@@ -52,7 +52,7 @@ fun OnboardingScreen(
     }
 
     Scaffold(modifier = modifier) { paddingValues ->
-        ScrollableColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)

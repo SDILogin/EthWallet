@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -40,7 +41,6 @@ import me.sdi.ethwallet.resources.pin_confirm_title
 import me.sdi.ethwallet.resources.pin_create_subtitle
 import me.sdi.ethwallet.resources.pin_create_title
 import me.sdi.ethwallet.resources.pin_reset
-import me.sdi.ethwallet.ui.components.ScrollableColumn
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -111,17 +111,15 @@ private fun SetPinCodeScreen(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        ScrollableColumn(
+        Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Spacer(modifier = Modifier.weight(1f))
-
             Column(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                Spacer(modifier = Modifier.height(64.dp))
                 Title(isConfirmationMode = viewState.isConfirmationMode)
                 Spacer(modifier = Modifier.height(8.dp))
                 Subtitle(isConfirmationMode = viewState.isConfirmationMode)
@@ -135,8 +133,6 @@ private fun SetPinCodeScreen(
                     onClick = { onEvent(SetPinCodeEvent.OnResetClick) },
                 )
             }
-
-            Spacer(modifier = Modifier.weight(1f))
 
             PinNumberPad(
                 onNumberClick = { number -> onEvent(SetPinCodeEvent.OnDigitClick(number)) },

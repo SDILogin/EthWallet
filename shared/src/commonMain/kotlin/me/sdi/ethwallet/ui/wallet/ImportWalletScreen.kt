@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui.wallet
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,8 +9,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,7 +47,6 @@ import me.sdi.ethwallet.resources.import_wallet_title
 import me.sdi.ethwallet.resources.wallet_label
 import me.sdi.ethwallet.resources.wallet_label_placeholder
 import me.sdi.ethwallet.resources.wallet_label_supporting
-import me.sdi.ethwallet.ui.components.ScrollableColumn
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -83,7 +85,7 @@ fun ImportWalletScreen(
             )
         },
     ) { innerPadding ->
-        ScrollableColumn(
+        Column(
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -92,71 +94,79 @@ fun ImportWalletScreen(
                     .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Column(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = stringResource(Res.string.import_wallet_enter_recovery_phrase),
-                style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center,
-            )
+                    Text(
+                        text = stringResource(Res.string.import_wallet_enter_recovery_phrase),
+                        style = MaterialTheme.typography.headlineMedium,
+                        textAlign = TextAlign.Center,
+                    )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = stringResource(Res.string.import_wallet_instruction),
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.widthIn(max = 420.dp),
-            )
+                    Text(
+                        text = stringResource(Res.string.import_wallet_instruction),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.widthIn(max = 420.dp),
+                    )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-            OutlinedTextField(
-                value = viewState.label,
-                onValueChange = { viewModel.onEvent(ImportWalletEvent.LabelChanged(it)) },
-                label = { Text(stringResource(Res.string.wallet_label)) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 420.dp)
-                    .testTag("wallet-label-input"),
-                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
-                placeholder = { Text(stringResource(Res.string.wallet_label_placeholder)) },
-                supportingText = { Text(stringResource(Res.string.wallet_label_supporting)) },
-                isError = viewState.label.isNotEmpty() && !isWalletLabelValid(normalizeWalletLabel(viewState.label)),
-                enabled = !viewState.isLoading,
-                singleLine = true,
-            )
+                    OutlinedTextField(
+                        value = viewState.label,
+                        onValueChange = { viewModel.onEvent(ImportWalletEvent.LabelChanged(it)) },
+                        label = { Text(stringResource(Res.string.wallet_label)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 420.dp)
+                            .testTag("wallet-label-input"),
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                        placeholder = { Text(stringResource(Res.string.wallet_label_placeholder)) },
+                        supportingText = { Text(stringResource(Res.string.wallet_label_supporting)) },
+                        isError = viewState.label.isNotEmpty() && !isWalletLabelValid(normalizeWalletLabel(viewState.label)),
+                        enabled = !viewState.isLoading,
+                        singleLine = true,
+                    )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-            val supportingText =
-                if (viewState.isError) {
-                    stringResource(Res.string.import_wallet_invalid_recovery_phrase)
-                } else {
-                    stringResource(Res.string.import_wallet_recovery_phrase_supporting)
+                    val supportingText =
+                        if (viewState.isError) {
+                            stringResource(Res.string.import_wallet_invalid_recovery_phrase)
+                        } else {
+                            stringResource(Res.string.import_wallet_recovery_phrase_supporting)
+                        }
+
+                    OutlinedTextField(
+                        value = viewState.mnemonic,
+                        onValueChange = { viewModel.onEvent(ImportWalletEvent.MnemonicChanged(it)) },
+                        label = { Text(stringResource(Res.string.import_wallet_recovery_phrase_label)) },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .widthIn(max = 420.dp),
+                        keyboardOptions =
+                            KeyboardOptions.Default.copy(
+                                imeAction = ImeAction.Done,
+                            ),
+                        placeholder = { Text(stringResource(Res.string.import_wallet_recovery_phrase_placeholder)) },
+                        supportingText = { Text(supportingText) },
+                        isError = viewState.isError,
+                        enabled = !viewState.isLoading,
+                        maxLines = 3,
+                    )
                 }
-
-            OutlinedTextField(
-                value = viewState.mnemonic,
-                onValueChange = { viewModel.onEvent(ImportWalletEvent.MnemonicChanged(it)) },
-                label = { Text(stringResource(Res.string.import_wallet_recovery_phrase_label)) },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = 420.dp),
-                keyboardOptions =
-                    KeyboardOptions.Default.copy(
-                        imeAction = ImeAction.Done,
-                    ),
-                placeholder = { Text(stringResource(Res.string.import_wallet_recovery_phrase_placeholder)) },
-                supportingText = { Text(supportingText) },
-                isError = viewState.isError,
-                enabled = !viewState.isLoading,
-                maxLines = 3,
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
+                Spacer(modifier = Modifier.weight(1f))
+            }
             Button(
                 onClick = { viewModel.onEvent(ImportWalletEvent.ImportClicked) },
                 modifier =

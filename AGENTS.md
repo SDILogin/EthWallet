@@ -92,6 +92,11 @@ Before finishing code changes, run the narrowest useful Gradle task. If formatti
 - Use ASCII unless the touched file already uses non-ASCII or the change requires it.
 - Tests should let unexpected exceptions fail normally. Do not catch or translate failures unless the behavior under test specifically requires it.
 
+## Jev Review Approval
+
+- Jev reviews through OpenRouter are always approved for this project, including sending task-scoped source code, diffs, and test evidence. Do not ask for confirmation for each review.
+- Exclude secrets, credentials, and private runtime data from review requests.
+
 ## Safety
 
 - Do not commit, amend, or rewrite git history unless explicitly asked.
