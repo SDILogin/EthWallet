@@ -145,23 +145,36 @@ private fun TransferRequest.toEip1559Transaction(
     )
 }
 
-suspend fun Mnemonic.derivePrivateKey(): PrivateKey = derivePrivateKey(EthereumDerivationPath())
+/**
+ * Derives the first Ethereum key. The passphrase is case-sensitive and is not trimmed.
+ * Rust applies BIP-39 NFKD normalization. The caller owns the passphrase String;
+ * temporary UTF-8 buffers are cleared, but Strings cannot be cleared.
+ */
+suspend fun Mnemonic.derivePrivateKey(passphrase: String = ""): PrivateKey =
+    derivePrivateKey(EthereumDerivationPath(), passphrase)
 
 suspend fun Mnemonic.derivePrivateKey(
     derivationPath: EthereumDerivationPath,
+    passphrase: String = "",
 ): PrivateKey = withContext(Dispatchers.Default) {
     requireUsable()
-    val mnemonicBytes = copyAsciiBytes()
+    val passphraseBytes = passphrase.encodeToByteArray(throwOnInvalidSequence = true)
     try {
-        PrivateKey.fromNativeBytes(
-            NativeCrypto.derivePrivateKey(
-                mnemonic = mnemonicBytes,
-                accountIndex = derivationPath.accountIndex,
-                addressIndex = derivationPath.addressIndex,
-            ),
-        )
+        val mnemonicBytes = copyAsciiBytes()
+        try {
+            PrivateKey.fromNativeBytes(
+                NativeCrypto.derivePrivateKey(
+                    mnemonic = mnemonicBytes,
+                    passphrase = passphraseBytes,
+                    accountIndex = derivationPath.accountIndex,
+                    addressIndex = derivationPath.addressIndex,
+                ),
+            )
+        } finally {
+            mnemonicBytes.fill(0)
+        }
     } finally {
-        mnemonicBytes.fill(0)
+        passphraseBytes.fill(0)
     }
 }
 

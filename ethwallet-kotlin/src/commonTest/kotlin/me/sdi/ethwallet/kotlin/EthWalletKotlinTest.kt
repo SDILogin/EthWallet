@@ -5,6 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 private const val CANONICAL_MNEMONIC =
@@ -80,6 +81,35 @@ class EthWalletKotlinTest {
         val privateKey = Mnemonic.parse(CANONICAL_MNEMONIC).derivePrivateKey()
 
         assertEquals(CANONICAL_ETHEREUM_ADDRESS, privateKey.deriveAddress())
+    }
+
+    @Test
+    fun passphraseDerivationMatchesOfficialSeedAtDefaultAndCustomPaths() = runTest {
+        val mnemonic = Mnemonic.parse(CANONICAL_MNEMONIC)
+        // Ethereum BIP-44 keys derived from the first official BIP-39 TREZOR seed vector.
+        assertEquals(
+            "62f1d86b246c81bdd8f6c166d56896a4a5e1eddbcaebe06480e5c0bc74c28224",
+            mnemonic.derivePrivateKey(passphrase = "TREZOR").copyBytes().toHexString(),
+        )
+        assertEquals(
+            "ef8dab9146cca357f32c1a0e1e46b132b63b36c426a15cd5453e98d3d439216e",
+            mnemonic.derivePrivateKey(EthereumDerivationPath(1u, 2u), "TREZOR").copyBytes().toHexString(),
+        )
+        assertEquals(CANONICAL_ETHEREUM_ADDRESS, mnemonic.derivePrivateKey(passphrase = "").deriveAddress())
+    }
+
+    @Test
+    fun passphrasesPreserveUtf8AndApplyNfkdAcrossNativeBindings() = runTest {
+        val mnemonic = Mnemonic.parse(CANONICAL_MNEMONIC)
+
+        suspend fun address(passphrase: String) = mnemonic.derivePrivateKey(passphrase).deriveAddress()
+
+        assertEquals(address("\u00e9\uD83D\uDD11"), address("e\u0301\uD83D\uDD11"))
+        assertEquals(address("TREZOR"), address("\uFF34\uFF32\uFF25\uFF3A\uFF2F\uFF32"))
+        assertNotEquals(address("TREZOR"), address("trezor"))
+        assertNotEquals(address("TREZOR"), address(" TREZOR "))
+        assertNotEquals(address("abc"), address("abc\u0000def"))
+        assertFailsWith<CharacterCodingException> { address("\uD800") }
     }
 
     @Test

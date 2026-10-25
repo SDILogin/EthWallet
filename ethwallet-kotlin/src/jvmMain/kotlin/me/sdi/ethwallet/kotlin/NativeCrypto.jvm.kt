@@ -29,11 +29,12 @@ internal actual object NativeCrypto {
 
     actual fun derivePrivateKey(
         mnemonic: ByteArray,
+        passphrase: ByteArray,
         accountIndex: UInt,
         addressIndex: UInt,
     ): ByteArray = nativeOutput(NATIVE_PRIVATE_KEY_LENGTH) { output ->
         ensureNativeLibrary()
-        nativeDerivePrivateKey(mnemonic, accountIndex.toInt(), addressIndex.toInt(), output)
+        nativeDerivePrivateKey(mnemonic, passphrase, accountIndex.toInt(), addressIndex.toInt(), output)
     }
 
     actual fun deriveAddress(privateKey: ByteArray): ByteArray = nativeOutput(NATIVE_ADDRESS_LENGTH) { output ->
@@ -144,6 +145,7 @@ internal actual object NativeCrypto {
     @JvmStatic
     private external fun nativeDerivePrivateKey(
         mnemonic: ByteArray,
+        passphrase: ByteArray,
         accountIndex: Int,
         addressIndex: Int,
         output: ByteArray,

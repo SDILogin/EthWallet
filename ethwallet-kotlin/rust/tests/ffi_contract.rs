@@ -50,6 +50,8 @@ fn derives_the_canonical_bip44_ethereum_address() {
         ewc_derive_private_key(
             CANONICAL_MNEMONIC.as_ptr(),
             CANONICAL_MNEMONIC.len(),
+            std::ptr::null(),
+            0,
             0,
             0,
             private_key.as_mut_ptr(),
@@ -76,6 +78,8 @@ fn derives_configurable_bip44_account_and_address_indices() {
             ewc_derive_private_key(
                 CANONICAL_MNEMONIC.as_ptr(),
                 CANONICAL_MNEMONIC.len(),
+                std::ptr::null(),
+                0,
                 account_index,
                 address_index,
                 private_key.as_mut_ptr(),
@@ -101,6 +105,8 @@ fn rejects_bip32_indices_with_the_hardened_bit_set_without_writing_output() {
             ewc_derive_private_key(
                 CANONICAL_MNEMONIC.as_ptr(),
                 CANONICAL_MNEMONIC.len(),
+                std::ptr::null(),
+                0,
                 account_index,
                 address_index,
                 private_key.as_mut_ptr(),
@@ -133,6 +139,8 @@ fn invalid_inputs_return_stable_statuses_without_writing_outputs() {
         ewc_derive_private_key(
             b"not a valid mnemonic".as_ptr(),
             20,
+            std::ptr::null(),
+            0,
             0,
             0,
             private_key.as_mut_ptr(),
@@ -312,4 +320,88 @@ fn decode_hex(hex: &str) -> Vec<u8> {
         .step_by(2)
         .map(|index| u8::from_str_radix(&hex[index..index + 2], 16).unwrap())
         .collect()
+}
+
+#[test]
+fn passphrases_use_utf8_nfkd_and_preserve_case_whitespace_and_nul() {
+    let derive = |passphrase: &[u8]| {
+        let mut output = [0; 32];
+        // SAFETY: the input slices and fixed output buffer remain valid for the call.
+        let status = unsafe {
+            ewc_derive_private_key(
+                CANONICAL_MNEMONIC.as_ptr(),
+                CANONICAL_MNEMONIC.len(),
+                passphrase.as_ptr(),
+                passphrase.len(),
+                0,
+                0,
+                output.as_mut_ptr(),
+            )
+        };
+        assert_eq!(STATUS_OK, status);
+        output
+    };
+    assert_eq!(
+        derive("\u{00e9}\u{1f511}".as_bytes()),
+        derive("e\u{0301}\u{1f511}".as_bytes())
+    );
+    assert_eq!(
+        derive(b"TREZOR"),
+        derive("\u{ff34}\u{ff32}\u{ff25}\u{ff3a}\u{ff2f}\u{ff32}".as_bytes())
+    );
+    assert_ne!(derive(b"TREZOR"), derive(b"trezor"));
+    assert_ne!(derive(b"TREZOR"), derive(b" TREZOR "));
+    assert_ne!(derive(b"abc"), derive(b"abc\0def"));
+
+    // Derive from the official BIP-39 seed independently of the passphrase conversion.
+    let seed_hex = "c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04";
+    let seed: Vec<u8> = seed_hex
+        .as_bytes()
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
+        .collect();
+    for (account, address) in [(0, 0), (1, 2)] {
+        let path = format!("m/44'/60'/{account}'/0/{address}")
+            .parse::<bip32::DerivationPath>()
+            .unwrap();
+        let expected = bip32::XPrv::derive_from_path(&seed, &path)
+            .unwrap()
+            .to_bytes();
+        let mut output = [0; 32];
+        // SAFETY: all input slices and the fixed output buffer remain valid for the call.
+        let status = unsafe {
+            ewc_derive_private_key(
+                CANONICAL_MNEMONIC.as_ptr(),
+                CANONICAL_MNEMONIC.len(),
+                b"TREZOR".as_ptr(),
+                6,
+                account,
+                address,
+                output.as_mut_ptr(),
+            )
+        };
+        assert_eq!(STATUS_OK, status);
+        assert_eq!(expected.as_slice(), output);
+    }
+}
+
+#[test]
+fn invalid_utf8_passphrase_does_not_write_output() {
+    let mut output = [0xaa; 32];
+    // SAFETY: all buffers are valid; the passphrase deliberately contains invalid UTF-8.
+    let status = unsafe {
+        ewc_derive_private_key(
+            CANONICAL_MNEMONIC.as_ptr(),
+            CANONICAL_MNEMONIC.len(),
+            [0xff].as_ptr(),
+            1,
+            0,
+            0,
+            output.as_mut_ptr(),
+        )
+    };
+    assert_eq!(STATUS_INVALID_ARGUMENT, status);
+    assert_eq!([0xaa; 32], output);
 }
