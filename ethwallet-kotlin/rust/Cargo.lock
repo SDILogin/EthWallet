@@ -246,6 +246,7 @@ dependencies = [
  "jni",
  "secp256k1 0.29.1",
  "sha3",
+ "unicode-normalization",
  "zeroize",
 ]
 

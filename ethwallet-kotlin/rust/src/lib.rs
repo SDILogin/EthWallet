@@ -11,6 +11,7 @@ use bip32::{ChildNumber, DerivationPath, XPrv};
 use bip39::{Language, Mnemonic};
 use secp256k1::{All, Message, PublicKey, Secp256k1, SecretKey};
 use sha3::{Digest, Keccak256};
+use unicode_normalization::UnicodeNormalization;
 use zeroize::Zeroizing;
 
 const ABI_VERSION: u32 = 1;
@@ -89,11 +90,14 @@ pub unsafe extern "C" fn ewc_validate_mnemonic(input: *const u8, length: usize) 
 ///
 /// # Safety
 /// `mnemonic` must reference `mnemonic_length` readable bytes. `output` must reference exactly
-/// 32 writable bytes. Both pointers must remain valid for the duration of this call.
+/// 32 writable bytes. `passphrase` must reference `passphrase_length` readable bytes,
+/// unless its length is zero, when it may be null. All pointers must remain valid during the call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ewc_derive_private_key(
     mnemonic: *const u8,
     mnemonic_length: usize,
+    passphrase: *const u8,
+    passphrase_length: usize,
     account_index: u32,
     address_index: u32,
     output: *mut u8,
@@ -102,7 +106,13 @@ pub unsafe extern "C" fn ewc_derive_private_key(
         // SAFETY: The caller promised `mnemonic_length` readable bytes at `mnemonic`.
         let mnemonic = unsafe { slice::from_raw_parts(mnemonic, mnemonic_length) };
         let mnemonic = parse_mnemonic(mnemonic)?;
-        let seed = Zeroizing::new(mnemonic.to_seed_normalized(""));
+        let passphrase = if passphrase_length == 0 {
+            &[]
+        } else {
+            // SAFETY: the caller guarantees a readable passphrase buffer of this length.
+            unsafe { slice::from_raw_parts(passphrase, passphrase_length) }
+        };
+        let seed = mnemonic_seed(&mnemonic, passphrase)?;
         let mut derivation_path = DerivationPath::default();
         derivation_path.extend([
             ChildNumber::new(44, true).map_err(|_| Status::InternalPanic)?,
@@ -353,6 +363,12 @@ fn ffi_status(operation: impl FnOnce() -> Result<(), Status>) -> i32 {
     }
 }
 
+fn mnemonic_seed(mnemonic: &Mnemonic, passphrase: &[u8]) -> Result<Zeroizing<[u8; 64]>, Status> {
+    let passphrase = std::str::from_utf8(passphrase).map_err(|_| Status::InvalidArgument)?;
+    let normalized = Zeroizing::new(passphrase.nfkd().collect::<String>());
+    Ok(Zeroizing::new(mnemonic.to_seed_normalized(&normalized)))
+}
+
 fn parse_mnemonic(input: &[u8]) -> Result<Mnemonic, Status> {
     let input = core::str::from_utf8(input).map_err(|_| Status::InvalidMnemonic)?;
     if !input.is_ascii() {
@@ -448,6 +464,7 @@ mod jni_bridge {
         mut env: JNIEnv,
         _class: JClass,
         mnemonic: jbyteArray,
+        passphrase: jbyteArray,
         account_index: jint,
         address_index: jint,
         output: jbyteArray,
@@ -456,12 +473,18 @@ mod jni_bridge {
             Ok(mnemonic) => mnemonic,
             Err(status) => return status as jint,
         };
+        let passphrase = match read_input(&mut env, passphrase) {
+            Ok(passphrase) => passphrase,
+            Err(status) => return status as jint,
+        };
         write_fixed_output(&mut env, output, PRIVATE_KEY_LENGTH, |result| {
-            // SAFETY: both owned native buffers have the fixed sizes required by the ABI.
+            // SAFETY: the input buffers remain valid and result contains 32 writable bytes.
             unsafe {
                 ewc_derive_private_key(
                     mnemonic.as_ptr().cast::<u8>(),
                     mnemonic.len(),
+                    passphrase.as_ptr().cast::<u8>(),
+                    passphrase.len(),
                     account_index as u32,
                     address_index as u32,
                     result.as_mut_ptr().cast::<u8>(),
@@ -719,5 +742,36 @@ mod tests {
             .step_by(2)
             .map(|index| u8::from_str_radix(&hex[index..index + 2], 16).unwrap())
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod passphrase_tests {
+    use super::*;
+
+    #[test]
+    fn official_bip39_passphrase_vectors() {
+        // BIP-39 reference vectors: https://github.com/trezor/python-mnemonic/blob/master/vectors.json
+        for (phrase, expected) in [
+            (
+                "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+                "c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04",
+            ),
+            (
+                "legal winner thank year wave sausage worth useful legal winner thank yellow",
+                "2e8905819b8723fe2c1d161860e5ee1830318dbf49a83bd451cfb8440c28bd6fa457fe1296106559a3c80937a1c1069be3a3a5bd381ee6260e8d9739fce1f607",
+            ),
+        ] {
+            let mnemonic = parse_mnemonic(phrase.as_bytes()).unwrap();
+            let seed = mnemonic_seed(&mnemonic, b"TREZOR").unwrap();
+            let expected: Vec<u8> = expected
+                .as_bytes()
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
+                .collect();
+            assert_eq!(expected, seed.as_slice());
+        }
     }
 }

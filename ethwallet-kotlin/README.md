@@ -7,6 +7,18 @@ supported.
 
 The desktop JVM library supports Apple Silicon macOS only.
 
+## BIP-39 passphrases
+
+`mnemonic.derivePrivateKey(passphrase = "...")` accepts an optional UTF-8
+BIP-39 passphrase. The overload with `EthereumDerivationPath` also accepts it.
+The default is empty, preserving existing wallet derivation. Rust applies NFKD
+normalization; case, whitespace, and embedded NUL characters are preserved.
+Every passphrase derives a wallet, so a wrong passphrase cannot be detected.
+
+Temporary UTF-8 and normalized passphrase buffers are cleared after derivation.
+The caller's Kotlin `String` cannot be cleared. Rebuild the native libraries
+together with the Kotlin bindings when updating the internal ABI.
+
 ## Secret handling
 
 The library keeps mnemonic, seed, private-key, and signing buffers scoped to the

@@ -7,6 +7,7 @@ internal expect object NativeCrypto {
 
     fun derivePrivateKey(
         mnemonic: ByteArray,
+        passphrase: ByteArray,
         accountIndex: UInt,
         addressIndex: UInt,
     ): ByteArray
