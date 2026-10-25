@@ -1,6 +1,5 @@
 package me.sdi.ethwallet.ui.wallet
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,10 +8,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +44,7 @@ import me.sdi.ethwallet.resources.import_wallet_title
 import me.sdi.ethwallet.resources.wallet_label
 import me.sdi.ethwallet.resources.wallet_label_placeholder
 import me.sdi.ethwallet.resources.wallet_label_supporting
+import me.sdi.ethwallet.ui.components.ScrollableColumn
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -85,14 +83,13 @@ fun ImportWalletScreen(
             )
         },
     ) { innerPadding ->
-        Column(
+        ScrollableColumn(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .imePadding()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(modifier = Modifier.height(16.dp))

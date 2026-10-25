@@ -49,6 +49,7 @@ import me.sdi.ethwallet.resources.pin_confirm_title
 import me.sdi.ethwallet.resources.pin_create_subtitle
 import me.sdi.ethwallet.resources.pin_create_title
 import me.sdi.ethwallet.resources.pin_reset
+import me.sdi.ethwallet.ui.components.ScrollableColumn
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -120,7 +121,8 @@ private fun SetPinCodeScreen(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Column(
+        ScrollableColumn(
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
