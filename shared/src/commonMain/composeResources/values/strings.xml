@@ -212,4 +212,11 @@
     <string name="transaction_details_metadata">ERC-20 · %1$d decimals · Event index %2$d</string>
     <string name="transaction_details_explorer">View in explorer</string>
     <string name="transaction_details_copy">Copy %1$s</string>
+    <string name="token_details_information">Token information</string>
+    <string name="token_details_network">Network</string>
+    <string name="token_details_standard">Token standard</string>
+    <string name="token_details_contract">Contract address</string>
+    <string name="token_details_decimals">Decimals</string>
+    <string name="token_details_unavailable">Balance unavailable</string>
+    <string name="token_details_history_description">View wallet transactions</string>
 </resources>
