@@ -130,6 +130,7 @@ kotlin {
 
                 // Ktor
                 implementation(libs.ktor.client.okhttp)
+                implementation(libs.okhttp)
 
                 // Koin
                 implementation(libs.koin.android)
@@ -151,6 +152,7 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.ktor.client.okhttp)
+                implementation(libs.okhttp)
 
                 // QR Code
                 implementation(libs.zxing.core)
