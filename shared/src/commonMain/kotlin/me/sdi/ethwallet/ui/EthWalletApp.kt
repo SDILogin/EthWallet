@@ -33,6 +33,7 @@ import me.sdi.ethwallet.ui.history.TransactionDetailsRoute
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.receive.ReceiveScreen
 import me.sdi.ethwallet.ui.send.SendScreen
+import me.sdi.ethwallet.ui.settings.ChangePinCodeScreen
 import me.sdi.ethwallet.ui.settings.SettingsScreen
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
@@ -259,6 +260,22 @@ fun EthWalletApp() {
                 SettingsScreen(
                     modifier = Modifier.fillMaxSize(),
                     onBack = { backStack.removeLastOrNull() },
+                    onChangePinClick = { backStack.add(Destination.ChangePinCodeScreen) },
+                )
+            }
+
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.ChangePinCodeScreen>(
+                metadata = extraPane(),
+            ) {
+                ChangePinCodeScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onBack = { backStack.removeLastOrNull() },
+                    onPinChanged = { backStack.removeLastOrNull() },
+                    onLogout = {
+                        backStack.clear()
+                        backStack.add(Destination.OnBoardingScreen)
+                    },
                 )
             }
         }

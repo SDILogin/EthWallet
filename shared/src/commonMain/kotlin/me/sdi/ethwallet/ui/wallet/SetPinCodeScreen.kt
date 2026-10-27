@@ -3,19 +3,12 @@ package me.sdi.ethwallet.ui.wallet
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -38,19 +31,16 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
-import me.sdi.ethwallet.resources.backspace_24px
 import me.sdi.ethwallet.resources.biometric_offer_enable
 import me.sdi.ethwallet.resources.biometric_offer_message
 import me.sdi.ethwallet.resources.biometric_offer_skip
 import me.sdi.ethwallet.resources.biometric_offer_title
-import me.sdi.ethwallet.resources.delete
 import me.sdi.ethwallet.resources.pin_confirm_subtitle
 import me.sdi.ethwallet.resources.pin_confirm_title
 import me.sdi.ethwallet.resources.pin_create_subtitle
 import me.sdi.ethwallet.resources.pin_create_title
 import me.sdi.ethwallet.resources.pin_reset
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -146,7 +136,7 @@ private fun SetPinCodeScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            NumberPad(
+            PinNumberPad(
                 onNumberClick = { number -> onEvent(SetPinCodeEvent.OnDigitClick(number)) },
                 onDeleteClick = { onEvent(SetPinCodeEvent.OnDeleteClick) },
                 modifier = Modifier.padding(bottom = 32.dp),
@@ -219,75 +209,6 @@ private fun ResetButton(visible: Boolean, onClick: () -> Unit) {
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.labelLarge,
         )
-    }
-}
-
-@Composable
-private fun NumberPad(
-    onNumberClick: (Int) -> Unit,
-    onDeleteClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            (1..3).forEach { number ->
-                NumberButton(number = number, enabled = true, onClick = { onNumberClick(number) })
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            (4..6).forEach { number ->
-                NumberButton(number = number, enabled = true, onClick = { onNumberClick(number) })
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            (7..9).forEach { number ->
-                NumberButton(number = number, enabled = true, onClick = { onNumberClick(number) })
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            Box(modifier = Modifier.size(72.dp)) {}
-
-            NumberButton(number = 0, enabled = true, onClick = { onNumberClick(0) })
-
-            IconButton(
-                onClick = onDeleteClick,
-                enabled = true,
-                modifier = Modifier.size(72.dp),
-                colors = IconButtonDefaults.iconButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                ),
-            ) {
-                Icon(
-                    painter = painterResource(Res.drawable.backspace_24px),
-                    contentDescription = stringResource(Res.string.delete),
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-        }
     }
 }
 

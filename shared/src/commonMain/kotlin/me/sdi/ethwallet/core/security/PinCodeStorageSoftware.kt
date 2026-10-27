@@ -64,10 +64,8 @@ class PinCodeStorageSoftware(
             return false
         }
 
-        var pinKey: ByteArray? = null
         return try {
-            pinKey = deriveKey(pinCode, Base64.decode(artifacts.salt))
-            val masterKek = KekCipher.decrypt(pinKey, Base64.decode(artifacts.wrappedKek))
+            val masterKek = unwrapKek(pinCode, artifacts)
             pinSession.set(masterKek)
             userActivityManager.onAppUnlocked()
             Logger.debug(TAG) { "PIN verification succeeded" }
@@ -78,9 +76,43 @@ class PinCodeStorageSoftware(
         } catch (e: IllegalArgumentException) {
             Logger.debug(TAG) { "PIN envelope is malformed: ${e.message}" }
             false
-        } finally {
-            pinKey?.fill(0)
         }
+    }
+
+    override suspend fun changePinCode(currentPin: String, newPin: String): Boolean {
+        val artifacts = readArtifacts()
+        if (artifacts == null) {
+            Logger.debug(TAG) { "No PIN code stored to change" }
+            return false
+        }
+
+        val masterKek = try {
+            unwrapKek(currentPin, artifacts)
+        } catch (e: GeneralSecurityException) {
+            Logger.debug(TAG) { "Current PIN verification failed: ${e.message}" }
+            return false
+        } catch (e: IllegalArgumentException) {
+            Logger.debug(TAG) { "PIN envelope is malformed: ${e.message}" }
+            return false
+        }
+
+        var newPinKey: ByteArray? = null
+        try {
+            val salt = randomBytes(SALT_LENGTH)
+            newPinKey = deriveKey(newPin, salt)
+            val wrappedKek = KekCipher.encrypt(newPinKey, masterKek)
+
+            dataStore.edit { preferences ->
+                preferences[PIN_KDF_SALT] = Base64.encode(salt)
+                preferences[PIN_WRAPPED_KEK] = Base64.encode(wrappedKek)
+            }
+        } finally {
+            newPinKey?.fill(0)
+            masterKek.fill(0)
+        }
+
+        Logger.debug(TAG) { "PIN code changed successfully" }
+        return true
     }
 
     override suspend fun hasPinCode(): Boolean = readArtifacts() != null
@@ -109,6 +141,16 @@ class PinCodeStorageSoftware(
                 spec.clearPassword()
             }
         }
+
+    private suspend fun unwrapKek(pinCode: String, artifacts: PinArtifacts): ByteArray {
+        var pinKey: ByteArray? = null
+        return try {
+            pinKey = deriveKey(pinCode, Base64.decode(artifacts.salt))
+            KekCipher.decrypt(pinKey, Base64.decode(artifacts.wrappedKek))
+        } finally {
+            pinKey?.fill(0)
+        }
+    }
 
     private suspend fun readArtifacts(): PinArtifacts? {
         val preferences = try {

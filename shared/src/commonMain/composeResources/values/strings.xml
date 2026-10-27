@@ -144,8 +144,17 @@
     <string name="settings_biometric_not_supported">Biometric unlock is not supported on this device</string>
     <string name="settings_biometric_not_enrolled">No biometrics enrolled on this device</string>
     <string name="settings_biometric_invalidated">Biometrics changed. Biometric unlock was reset — turn it on again.</string>
+    <string name="settings_change_pin">Change PIN</string>
+    <string name="settings_change_pin_description">Change the PIN used to unlock the app</string>
     <string name="settings_lock_app">Lock app</string>
     <string name="settings_lock_app_description">Close the session and ask for the PIN code</string>
+
+    <!-- Change PIN Screen -->
+    <string name="change_pin_title">Change PIN</string>
+    <string name="change_pin_enter_current">Enter current PIN</string>
+    <string name="change_pin_enter_new">Enter new PIN</string>
+    <string name="change_pin_confirm_new">Confirm new PIN</string>
+    <string name="change_pin_success">PIN changed</string>
 
     <!-- Import Wallet Screen -->
     <string name="import_wallet_title">Import Wallet</string>
