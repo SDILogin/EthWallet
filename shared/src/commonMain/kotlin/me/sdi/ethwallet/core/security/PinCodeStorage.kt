@@ -22,5 +22,12 @@ interface PinCodeStorage {
      */
     suspend fun hasPinCode(): Boolean
 
+    /**
+     * Re-wraps the existing master KEK under [newPin]. Leaves the session and the attempt guard untouched.
+     *
+     * @return False if no PIN is stored or [currentPin] does not unwrap the stored KEK.
+     */
+    suspend fun changePinCode(currentPin: String, newPin: String): Boolean
+
     suspend fun clearPinCode()
 }

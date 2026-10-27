@@ -168,6 +168,78 @@ class PinCodeStorageSoftwareTest {
         assertFalse(persistedArtifacts().contains(PIN), "The PIN must never be persisted")
     }
 
+    @Test
+    fun a_changed_pin_verifies_and_the_old_one_does_not() = runTest {
+        newStorage().storePinCode(PIN)
+        val pinSession = FakePinSession()
+        val userActivityManager = FakeUserActivityManager()
+
+        val changed = newStorage(pinSession, userActivityManager).changePinCode(PIN, NEW_PIN)
+
+        assertTrue(changed, "Changing the PIN with the correct current PIN should succeed")
+        assertNull(pinSession.lastKek, "Changing the PIN must not publish a KEK to the session")
+        assertEquals(0, userActivityManager.onAppUnlockedCallCount, "Changing the PIN must not unlock the app")
+        assertTrue(newStorage().verifyPinCode(NEW_PIN), "The new PIN should verify after the change")
+        assertFalse(newStorage().verifyPinCode(PIN), "The old PIN must no longer verify after the change")
+    }
+
+    @Test
+    fun a_pin_change_keeps_the_master_kek_and_existing_ciphertexts() = runTest {
+        val storeSession = FakePinSession()
+        newStorage(storeSession).storePinCode(PIN)
+        val kekBeforeChange = assertNotNull(storeSession.lastKek).copyOf()
+        val encryptedPayload = KekCipher.encrypt(kekBeforeChange, SAMPLE_PAYLOAD)
+
+        newStorage().changePinCode(PIN, NEW_PIN)
+        val unlockedSession = FakePinSession()
+        newStorage(unlockedSession).verifyPinCode(NEW_PIN)
+        val kekAfterChange = assertNotNull(unlockedSession.lastKek, "The new PIN should unlock a KEK")
+
+        assertContentEquals(kekBeforeChange, kekAfterChange, "The new PIN should unwrap the same master KEK")
+        assertContentEquals(
+            SAMPLE_PAYLOAD,
+            KekCipher.decrypt(kekAfterChange, encryptedPayload),
+            "Data encrypted before the change should still decrypt after unlocking with the new PIN",
+        )
+    }
+
+    @Test
+    fun a_wrong_current_pin_leaves_the_stored_envelope_unchanged() = runTest {
+        newStorage().storePinCode(PIN)
+        val before = dataStore.data.first()
+
+        val changed = newStorage().changePinCode(WRONG_PIN, NEW_PIN)
+
+        val after = dataStore.data.first()
+        assertFalse(changed, "A wrong current PIN must not change the PIN")
+        assertEquals(before[PIN_KDF_SALT], after[PIN_KDF_SALT], "A failed change must keep the stored salt")
+        assertEquals(before[PIN_WRAPPED_KEK], after[PIN_WRAPPED_KEK], "A failed change must keep the wrapped KEK")
+        assertTrue(newStorage().verifyPinCode(PIN), "The current PIN should still verify after a failed change")
+    }
+
+    @Test
+    fun changing_the_pin_fails_when_no_pin_is_stored() = runTest {
+        assertFalse(newStorage().changePinCode(PIN, NEW_PIN), "There is no PIN to change before one is stored")
+        assertFalse(newStorage().hasPinCode(), "A failed change must not create a PIN")
+    }
+
+    @Test
+    fun every_successful_change_uses_a_fresh_salt() = runTest {
+        newStorage().storePinCode(PIN)
+        val initialSalt = assertNotNull(dataStore.data.first()[PIN_KDF_SALT])
+
+        newStorage().changePinCode(PIN, NEW_PIN)
+        val firstChangeSalt = assertNotNull(dataStore.data.first()[PIN_KDF_SALT])
+        newStorage().changePinCode(NEW_PIN, PIN)
+        val secondChangeSalt = assertNotNull(dataStore.data.first()[PIN_KDF_SALT])
+
+        assertEquals(
+            3,
+            setOf(initialSalt, firstChangeSalt, secondChangeSalt).size,
+            "Each PIN change should store a new random salt",
+        )
+    }
+
     private fun newStorage(
         pinSession: PinSession = FakePinSession(),
         userActivityManager: UserActivityManager = FakeUserActivityManager(),
@@ -194,8 +266,11 @@ class PinCodeStorageSoftwareTest {
     private companion object {
         private const val PIN = "123456"
         private const val NEW_PIN = "999999"
+        private const val WRONG_PIN = "654321"
         private const val ARTIFACTS_FILE_NAME = "secure_pin_preferences.preferences_pb"
 
+        private val PIN_KDF_SALT = stringPreferencesKey("pin_kdf_salt")
         private val PIN_WRAPPED_KEK = stringPreferencesKey("pin_wrapped_kek")
+        private val SAMPLE_PAYLOAD = "wallet private key".encodeToByteArray()
     }
 }

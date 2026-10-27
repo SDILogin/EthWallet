@@ -28,6 +28,8 @@ import me.sdi.ethwallet.resources.settings_biometric_invalidated
 import me.sdi.ethwallet.resources.settings_biometric_not_enrolled
 import me.sdi.ethwallet.resources.settings_biometric_not_supported
 import me.sdi.ethwallet.resources.settings_biometric_title
+import me.sdi.ethwallet.resources.settings_change_pin
+import me.sdi.ethwallet.resources.settings_change_pin_description
 import me.sdi.ethwallet.resources.settings_lock_app
 import me.sdi.ethwallet.resources.settings_lock_app_description
 import me.sdi.ethwallet.resources.settings_title
@@ -41,6 +43,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onChangePinClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel(),
 ) {
@@ -49,6 +52,7 @@ fun SettingsScreen(
         viewState = viewState,
         onEvent = viewModel::onEvent,
         onBack = onBack,
+        onChangePinClick = onChangePinClick,
         modifier = modifier,
     )
 }
@@ -59,6 +63,7 @@ private fun SettingsScreen(
     viewState: SettingsViewState,
     onEvent: (SettingsEvent) -> Unit,
     onBack: () -> Unit,
+    onChangePinClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -79,6 +84,7 @@ private fun SettingsScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             BiometricSettingRow(viewState = viewState, onEvent = onEvent)
+            ChangePinRow(onClick = onChangePinClick)
             LockAppRow(onEvent = onEvent)
         }
     }
@@ -119,6 +125,26 @@ private fun BiometricSettingRow(
 }
 
 @Composable
+private fun ChangePinRow(onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.settings_change_pin),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Text(
+            text = stringResource(Res.string.settings_change_pin_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
 private fun LockAppRow(onEvent: (SettingsEvent) -> Unit) {
     Column(
         modifier = Modifier
@@ -153,6 +179,7 @@ private fun SettingsScreen_Preview() {
             viewState = SettingsViewState(isBiometricEnabled = true, isBiometricSwitchEnabled = true),
             onEvent = {},
             onBack = {},
+            onChangePinClick = {},
         )
     }
 }

@@ -38,7 +38,7 @@ class KeyStoreEncryptorTest {
 
         val expectedBytes = PRIVATE_KEY.copyBytes()
         val decryptedBytes = decrypted.copyBytes()
-        assertTrue(decryptedBytes.contentEquals(expectedBytes), "Round-trip must recover the original private key")
+        assertTrue("Round-trip must recover the original private key", decryptedBytes.contentEquals(expectedBytes))
 
         val inner = stripOuterKeystoreLayer(cipherText, ADDRESS)
         val privateKeyBytes = PRIVATE_KEY.copyBytes()
