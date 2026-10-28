@@ -13,14 +13,13 @@ Kotlin Multiplatform Ethereum wallet for Android, Desktop, and iOS.
 
 - Jetpack Compose Multiplatform
 - Koin for DI
-- Kotlin Coroutines (always rethrow CancellationException)
+- Kotlin Coroutines
 
-## ViewModel Pattern
+## Review Rules
 
-ViewModels use Events/State/News:
-- `onEvent(Event)` - User actions
-- `viewState: StateFlow` - UI state
-- `news: Channel` exposed as `Flow` - One-time effects (navigation, toasts)
+Follow these rules when writing code. Check every diff against them during review.
+
+@REVIEW.md
 
 ## ethwallet-kotlin Rust Interop
 
