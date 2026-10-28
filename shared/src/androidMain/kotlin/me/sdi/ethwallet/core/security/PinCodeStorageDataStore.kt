@@ -14,8 +14,8 @@ import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.util.preferencesDataStore
-import java.security.GeneralSecurityException
 import java.security.KeyStore
+import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -25,13 +25,12 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
 
 /**
- * [PinCodeStorage] backed by DataStore and AndroidKeyStore using an envelope scheme.
+ * [PinCodeStorage] backed by DataStore and AndroidKeyStore.
  *
- * A per-install [PBEKeySpec]-derived `pinKey` (PBKDF2WithHmacSHA256) wraps a random 256-bit master
- * KEK with software AES-256-GCM ([KekCipher]); that blob is wrapped again by an AndroidKeyStore GCM
- * key and persisted as `pin_wrapped_kek`, alongside the KDF salt (`pin_kdf_salt`). Verification is
- * decrypt-by-unwrap: a successful GCM unwrap both proves the PIN and yields the KEK, which is
- * published to the [PinSession] for the unlocked session. No PIN hash is stored.
+ * A random 256-bit master KEK is encrypted by the AndroidKeyStore GCM key `wallet_pin_code_key` and
+ * persisted as `keystore_wrapped_kek`. The PIN is an app-lock check only: it is stored as a salted
+ * PBKDF2WithHmacSHA256 verifier (`pin_verifier`, `pin_verifier_salt`) and does not take part in
+ * encrypting the KEK. A matching PIN publishes the KEK to the [PinSession] for the unlocked session.
  */
 class PinCodeStorageDataStore(
     context: Context,
@@ -54,8 +53,9 @@ class PinCodeStorageDataStore(
         private const val SALT_LENGTH = 16
         private const val MASTER_KEK_LENGTH = 32
 
-        private val PIN_KDF_SALT = stringPreferencesKey("pin_kdf_salt")
-        private val PIN_WRAPPED_KEK = stringPreferencesKey("pin_wrapped_kek")
+        private val PIN_VERIFIER_SALT = stringPreferencesKey("pin_verifier_salt")
+        private val PIN_VERIFIER = stringPreferencesKey("pin_verifier")
+        private val KEYSTORE_WRAPPED_KEK = stringPreferencesKey("keystore_wrapped_kek")
     }
 
     private val dataStore = context.preferencesDataStore
@@ -64,20 +64,14 @@ class PinCodeStorageDataStore(
         pinAttemptsGuard.bootstrap()
 
         val salt = randomBytes(SALT_LENGTH)
+        val verifier = deriveVerifier(pinCode, salt)
         val masterKek = randomBytes(MASTER_KEK_LENGTH)
-        val pinKey = deriveKey(pinCode, salt)
-        val wrappedBase64 = try {
-            encryptWithKeystore(
-                secretKey = getOrCreateSecretKey(),
-                payload = KekCipher.encrypt(pinKey, masterKek),
-            )
-        } finally {
-            pinKey.fill(0)
-        }
+        val wrappedKekBase64 = encryptWithKeystore(secretKey = getOrCreateSecretKey(), payload = masterKek)
 
         dataStore.edit { preferences ->
-            preferences[PIN_KDF_SALT] = Base64.encodeToString(salt, Base64.DEFAULT)
-            preferences[PIN_WRAPPED_KEK] = wrappedBase64
+            preferences[PIN_VERIFIER_SALT] = Base64.encodeToString(salt, Base64.DEFAULT)
+            preferences[PIN_VERIFIER] = Base64.encodeToString(verifier, Base64.DEFAULT)
+            preferences[KEYSTORE_WRAPPED_KEK] = wrappedKekBase64
         }
 
         pinSession.set(masterKek)
@@ -86,78 +80,45 @@ class PinCodeStorageDataStore(
     }
 
     override suspend fun verifyPinCode(pinCode: String): Boolean {
-        val artifacts = readArtifacts()
-        if (artifacts == null) {
-            Logger.debug(TAG) { "No PIN code stored for verification" }
-            return false
-        }
+        val artifacts = checkNotNull(readArtifacts()) { "No PIN code stored for verification" }
 
-        return try {
-            val masterKek = unwrapKek(pinCode, artifacts)
-            pinSession.set(masterKek)
-            userActivityManager.onAppUnlocked()
-            Logger.debug(TAG) { "PIN verification succeeded" }
-            true
-        } catch (e: GeneralSecurityException) {
-            Logger.debug(TAG) { "PIN verification failed: ${e.message}" }
-            false
-        } catch (e: IllegalArgumentException) {
-            Logger.debug(TAG) { "PIN envelope is malformed: ${e.message}" }
-            false
-        }
-    }
-
-    override suspend fun changePinCode(currentPin: String, newPin: String): Boolean {
-        val artifacts = readArtifacts()
-        if (artifacts == null) {
-            Logger.debug(TAG) { "No PIN code stored to change" }
-            return false
-        }
-
-        val masterKek = try {
-            unwrapKek(currentPin, artifacts)
-        } catch (e: GeneralSecurityException) {
-            Logger.debug(TAG) { "Current PIN verification failed: ${e.message}" }
-            return false
-        } catch (e: IllegalArgumentException) {
-            Logger.debug(TAG) { "PIN envelope is malformed: ${e.message}" }
-            return false
-        }
-
-        var newPinKey: ByteArray? = null
-        try {
-            val salt = randomBytes(SALT_LENGTH)
-            newPinKey = deriveKey(newPin, salt)
-            val wrappedBase64 = encryptWithKeystore(
-                secretKey = getOrCreateSecretKey(),
-                payload = KekCipher.encrypt(newPinKey, masterKek),
-            )
-
-            dataStore.edit { preferences ->
-                preferences[PIN_KDF_SALT] = Base64.encodeToString(salt, Base64.DEFAULT)
-                preferences[PIN_WRAPPED_KEK] = wrappedBase64
-            }
+        val verifier = deriveVerifier(pinCode, Base64.decode(artifacts.saltBase64, Base64.DEFAULT))
+        val matches = try {
+            MessageDigest.isEqual(verifier, Base64.decode(artifacts.verifierBase64, Base64.DEFAULT))
         } finally {
-            newPinKey?.fill(0)
-            masterKek.fill(0)
+            verifier.fill(0)
+        }
+        if (!matches) {
+            Logger.debug(TAG) { "PIN verification failed" }
+            return false
         }
 
-        Logger.debug(TAG) { "PIN code changed successfully" }
+        pinSession.set(decryptWithKeystore(artifacts.wrappedKekBase64))
+        userActivityManager.onAppUnlocked()
+        Logger.debug(TAG) { "PIN verification succeeded" }
         return true
     }
 
-    override suspend fun hasPinCode(): Boolean {
-        val preferences = dataStore.data.first()
-        val hasSalt = preferences.contains(PIN_KDF_SALT)
-        val hasWrapped = preferences.contains(PIN_WRAPPED_KEK)
-        val hasKey = loadKeyStore().containsAlias(PIN_KEY_ALIAS)
-        return hasSalt && hasWrapped && hasKey
+    override suspend fun changePinCode(newPin: String) {
+        val salt = randomBytes(SALT_LENGTH)
+        val verifier = deriveVerifier(newPin, salt)
+
+        dataStore.edit { preferences ->
+            checkNotNull(preferences[PIN_VERIFIER]) { "No PIN code stored to change" }
+            preferences[PIN_VERIFIER_SALT] = Base64.encodeToString(salt, Base64.DEFAULT)
+            preferences[PIN_VERIFIER] = Base64.encodeToString(verifier, Base64.DEFAULT)
+        }
+
+        Logger.debug(TAG) { "PIN code changed successfully" }
     }
+
+    override suspend fun hasPinCode(): Boolean = readArtifacts() != null
 
     override suspend fun clearPinCode() {
         dataStore.edit { preferences ->
-            preferences.remove(PIN_KDF_SALT)
-            preferences.remove(PIN_WRAPPED_KEK)
+            preferences.remove(PIN_VERIFIER_SALT)
+            preferences.remove(PIN_VERIFIER)
+            preferences.remove(KEYSTORE_WRAPPED_KEK)
         }
 
         withContext(dispatcher) {
@@ -175,34 +136,24 @@ class PinCodeStorageDataStore(
     }
 
     private suspend fun readArtifacts(): PinArtifacts? {
-        if (!hasPinCode()) {
+        val preferences = dataStore.data.first()
+        val saltBase64 = preferences[PIN_VERIFIER_SALT] ?: return null
+        val verifierBase64 = preferences[PIN_VERIFIER] ?: return null
+        val wrappedKekBase64 = preferences[KEYSTORE_WRAPPED_KEK] ?: return null
+        if (!loadKeyStore().containsAlias(PIN_KEY_ALIAS)) {
             return null
         }
 
-        val preferences = dataStore.data.first()
-        val saltBase64 = preferences[PIN_KDF_SALT]
-        val wrappedBase64 = preferences[PIN_WRAPPED_KEK]
-        return if (saltBase64 == null || wrappedBase64 == null) null else PinArtifacts(saltBase64, wrappedBase64)
+        return PinArtifacts(saltBase64, verifierBase64, wrappedKekBase64)
     }
 
-    private suspend fun unwrapKek(pinCode: String, artifacts: PinArtifacts): ByteArray {
-        var pinKey: ByteArray? = null
-        return try {
-            pinKey = deriveKey(pinCode, Base64.decode(artifacts.saltBase64, Base64.DEFAULT))
-            val innerBlob = decryptWithKeystore(artifacts.wrappedBase64)
-            KekCipher.decrypt(pinKey, innerBlob)
-        } finally {
-            pinKey?.fill(0)
-        }
-    }
-
-    private class PinArtifacts(val saltBase64: String, val wrappedBase64: String)
+    private class PinArtifacts(val saltBase64: String, val verifierBase64: String, val wrappedKekBase64: String)
 
     private suspend fun randomBytes(size: Int): ByteArray = withContext(dispatcher) {
         ByteArray(size).also(SecureRandom()::nextBytes)
     }
 
-    private suspend fun deriveKey(pinCode: String, salt: ByteArray): ByteArray =
+    private suspend fun deriveVerifier(pinCode: String, salt: ByteArray): ByteArray =
         withContext(dispatcher) {
             val spec = PBEKeySpec(pinCode.toCharArray(), salt, PBKDF2_ITERATIONS, PBKDF2_KEY_BITS)
             try {

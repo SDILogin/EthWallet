@@ -14,7 +14,7 @@ private const val POSIX_VIEW = "posix"
 private val OWNER_ONLY_DIRECTORY = PosixFilePermissions.fromString("rwx------")
 
 /**
- * Opens the preferences store holding the PIN envelope inside [directory], which is created (or
+ * Opens the preferences store holding the PIN verifier and master KEK inside [directory], which is created (or
  * tightened) so that only its owner may enter it.
  *
  * The protection has to sit on the directory: DataStore writes through a temporary file created

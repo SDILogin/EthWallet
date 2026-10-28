@@ -108,13 +108,8 @@ class WalletFlowTest : KoinTest {
 
         override suspend fun hasPinCode(): Boolean = storedPin != null
 
-        override suspend fun changePinCode(currentPin: String, newPin: String): Boolean {
-            if (storedPin != currentPin) {
-                return false
-            }
-
+        override suspend fun changePinCode(newPin: String) {
             storedPin = newPin
-            return true
         }
 
         override suspend fun clearPinCode() {

@@ -143,11 +143,7 @@ val commonModule = module {
     }
 
     viewModel<ChangePinCodeViewModel> {
-        ChangePinCodeViewModel(
-            pinCodeStorage = get(),
-            pinAttemptsGuard = get(),
-            dataCleaner = get(),
-        )
+        ChangePinCodeViewModel(pinCodeStorage = get())
     }
 
     viewModel<SettingsViewModel> {

@@ -272,10 +272,6 @@ fun EthWalletApp() {
                     modifier = Modifier.fillMaxSize(),
                     onBack = { backStack.removeLastOrNull() },
                     onPinChanged = { backStack.removeLastOrNull() },
-                    onLogout = {
-                        backStack.clear()
-                        backStack.add(Destination.OnBoardingScreen)
-                    },
                 )
             }
         }

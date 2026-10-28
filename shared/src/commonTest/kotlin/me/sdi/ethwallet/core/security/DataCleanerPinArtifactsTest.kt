@@ -25,16 +25,16 @@ class DataCleanerPinArtifactsTest {
 
     @Test
     fun clean_removes_the_stored_pin_artifacts() = runTest {
-        dataStore.edit { preferences -> preferences[PIN_KDF_SALT] = SALT }
+        dataStore.edit { preferences -> preferences[MASTER_KEK] = STORED_KEK }
 
         DataCleanerPinArtifacts(dataStore).clean()
 
         assertNull(
-            dataStore.data.first()[PIN_KDF_SALT],
+            dataStore.data.first()[MASTER_KEK],
             "Logout should remove the stored PIN artifacts",
         )
         assertFalse(
-            String(artifactsFile.readBytes(), Charsets.ISO_8859_1).contains(SALT),
+            String(artifactsFile.readBytes(), Charsets.ISO_8859_1).contains(STORED_KEK),
             "Logout should leave no readable PIN artifacts on disk",
         )
     }
@@ -50,9 +50,9 @@ class DataCleanerPinArtifactsTest {
     }
 
     private companion object {
-        private const val SALT = "c2FsdA=="
+        private const val STORED_KEK = "a2VrLWJ5dGVz"
         private const val ARTIFACTS_FILE_NAME = "secure_pin_preferences.preferences_pb"
 
-        private val PIN_KDF_SALT = stringPreferencesKey("pin_kdf_salt")
+        private val MASTER_KEK = stringPreferencesKey("master_kek")
     }
 }

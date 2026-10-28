@@ -8,10 +8,12 @@ interface PinCodeStorage {
     suspend fun storePinCode(pinCode: String)
 
     /**
-     * Verifies if a provided PIN code matches the stored PIN.
+     * Verifies if a provided PIN code matches the stored PIN. On a match, publishes the master KEK to
+     * the [PinSession] and unlocks the app.
      *
      * @param pinCode The PIN code to verify
      * @return True if the PIN matches the stored PIN, false otherwise
+     * @throws IllegalStateException if no PIN is stored.
      */
     suspend fun verifyPinCode(pinCode: String): Boolean
 
@@ -23,11 +25,12 @@ interface PinCodeStorage {
     suspend fun hasPinCode(): Boolean
 
     /**
-     * Re-wraps the existing master KEK under [newPin]. Leaves the session and the attempt guard untouched.
+     * Replaces the stored PIN verifier with one for [newPin]. The master KEK, the session and the
+     * attempt guard are left untouched.
      *
-     * @return False if no PIN is stored or [currentPin] does not unwrap the stored KEK.
+     * @throws IllegalStateException if no PIN is stored.
      */
-    suspend fun changePinCode(currentPin: String, newPin: String): Boolean
+    suspend fun changePinCode(newPin: String)
 
     suspend fun clearPinCode()
 }

@@ -151,10 +151,10 @@
 
     <!-- Change PIN Screen -->
     <string name="change_pin_title">Change PIN</string>
-    <string name="change_pin_enter_current">Enter current PIN</string>
     <string name="change_pin_enter_new">Enter new PIN</string>
     <string name="change_pin_confirm_new">Confirm new PIN</string>
     <string name="change_pin_success">PIN changed</string>
+    <string name="change_pin_error_mismatch">PINs don\'t match. Try again.</string>
 
     <!-- Import Wallet Screen -->
     <string name="import_wallet_title">Import Wallet</string>
