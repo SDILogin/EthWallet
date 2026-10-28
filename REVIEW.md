@@ -27,6 +27,14 @@
 - Repositories must be replaced with `InMemory` implementation in tests. Forbidden to mock repositories.
 - `InMemory` repositories implementation must be simple abstraction over collections without any complex logic. That's
   why repositories must be simple CRUDs.
+- Use named arguments when pass multiple primitive values. For example,
+  `private class PinArtifacts(val saltBase64: String, val wrappedBase64: String)` must be constructed using named
+  arguments.
+- Use `checkNotNull` (or `check`) for a state that the app flow guarantees. Do not return a fallback value for an
+  impossible state. For example, the PIN verification screen is shown only after a PIN storage check, so the stored PIN
+  artifacts are not null there.
+- Store time constants as primitives with a unit suffix: `private const val INDICATOR_ANIMATION_DELAY_MS = 300`.
+  Convert to Kotlin `Duration` only on the call side.
 
 ## Presentation logic
 
@@ -36,6 +44,12 @@
   A REALISTIC evidence that concurrent primitive is mandatory.
 - ViewModel `init` must be fast and error-safe. Actual initialization (for example initial data loading) must be
   triggered from inside `viewState.onStart {}`.
+- ViewModel must not keep user-visible text. Expose errors and messages as an `enum` (or a sealed type). Map them to
+  string resources on the Jetpack Compose layer, where localization is available.
+- One-time UI effects (shake, toast, navigation) must be sent through `news`. Do not use a state field (for example an
+  error id) as an animation trigger.
+- Do not ask again for data that the app state already guarantees. For example, Settings is available only in the
+  unlocked state, so the change PIN flow must not ask for the current PIN and must not use the PIN attempts guard.
 
 ## Jetpack compose style
 
@@ -49,6 +63,15 @@
 - `SubcomposeLayout` (or `BoxWithConstraints`) is a red flag. Always push back on it. `BoxWithConstratints` can be used
   only for adaptive layout creation and never to measure a UI element size (for size info retrieval use dedicated
   modifiers).
+- Collect `viewState` with `collectAsStateWithLifecycle()`, not with `collectAsState()`.
+- A state change must not move other UI elements. Keep conditional elements (for example an error `Text`) always in the
+  UI tree and control visibility with alpha.
+
+## Security
+
+- A security mechanism must protect against a realistic attacker. Do not add a mechanism that only makes the flow more
+  complex and gives an illusion of protection. For example, the app PIN must not take part in key encryption: an
+  attacker with access to the app process can brute-force a 6-digit PIN, and the PIN attempts guard does not run then.
 
 ## Business logic
 
