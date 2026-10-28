@@ -34,7 +34,7 @@ Keep answers exact and clear. Be concise and give minimal full answers (e.g., in
 - Android Gradle Plugin 9.x.
 - Compose Multiplatform and Jetpack Compose.
 - Koin for dependency injection.
-- Kotlin Coroutines. Always rethrow `CancellationException`.
+- Kotlin Coroutines.
 - Ktor for networking.
 - Room and DataStore for local persistence.
 - `ethwallet-kotlin` for Ethereum integration.
@@ -44,10 +44,7 @@ Keep answers exact and clear. Be concise and give minimal full answers (e.g., in
 ## Architecture
 
 - Prefer existing project patterns over new abstractions.
-- ViewModels use Events/State/News:
-  - `onEvent(Event)` for user actions.
-  - `viewState: StateFlow` for screen state.
-  - `news: Channel` (exposed as `Flow`) over `SharedFlow` for one-time effects such as navigation and toasts to prevent potential event loss.
+- Read `REVIEW.md` before writing code. Follow its rules when writing code. Check every diff against them during review.
 - Put platform-independent logic in `:shared` when practical.
 - Keep Android-only APIs in `:app` or `shared/src/androidMain`.
 - Keep Desktop-only APIs in `:desktopApp` or `shared/src/desktopMain`.
