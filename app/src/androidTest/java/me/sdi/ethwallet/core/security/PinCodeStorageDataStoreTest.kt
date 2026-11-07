@@ -104,19 +104,19 @@ class PinCodeStorageDataStoreTest {
         val storage = newStorage(InMemoryPinSession())
         storage.storePinCode(PIN)
 
-        context.preferencesDataStore.edit { it.remove(KEYSTORE_WRAPPED_KEK) }
+        context.preferencesDataStore.edit { it.remove(KEYSTORE_WRAPPED_MASTER_KEK) }
 
         assertFalse("hasPinCode must be false with the wrapped KEK missing", storage.hasPinCode())
     }
 
     @Test
-    fun missingVerifierIsNotAStoredPin() = runTest {
+    fun missingPinHashIsNotAStoredPin() = runTest {
         val storage = newStorage(InMemoryPinSession())
         storage.storePinCode(PIN)
 
-        context.preferencesDataStore.edit { it.remove(PIN_VERIFIER) }
+        context.preferencesDataStore.edit { it.remove(PIN_HASH) }
 
-        assertFalse("hasPinCode must be false with the verifier missing", storage.hasPinCode())
+        assertFalse("hasPinCode must be false with the PIN hash missing", storage.hasPinCode())
     }
 
     @Test
@@ -152,7 +152,7 @@ class PinCodeStorageDataStoreTest {
         val storeSession = InMemoryPinSession()
         newStorage(storeSession).storePinCode(PIN)
         val kekBeforeChange = storeSession.getOrThrow().copyOf()
-        val wrappedKekBeforeChange = context.preferencesDataStore.data.first()[KEYSTORE_WRAPPED_KEK]
+        val wrappedKekBeforeChange = context.preferencesDataStore.data.first()[KEYSTORE_WRAPPED_MASTER_KEK]
 
         newStorage(InMemoryPinSession()).changePinCode(NEW_PIN)
         val verifySession = InMemoryPinSession()
@@ -161,7 +161,7 @@ class PinCodeStorageDataStoreTest {
         assertEquals(
             "A PIN change must not rewrite the wrapped KEK",
             wrappedKekBeforeChange,
-            context.preferencesDataStore.data.first()[KEYSTORE_WRAPPED_KEK],
+            context.preferencesDataStore.data.first()[KEYSTORE_WRAPPED_MASTER_KEK],
         )
         assertArrayEquals(
             "The new PIN must unlock the master KEK from before the change",
@@ -190,7 +190,7 @@ class PinCodeStorageDataStoreTest {
     }
 
     @Test
-    fun everyChangeStoresAFreshSaltAndVerifier() = runTest {
+    fun everyChangeStoresAFreshSaltAndPinHash() = runTest {
         val storage = newStorage(InMemoryPinSession())
         storage.storePinCode(PIN)
         val before = context.preferencesDataStore.data.first()
@@ -198,26 +198,16 @@ class PinCodeStorageDataStoreTest {
         storage.changePinCode(PIN)
 
         val after = context.preferencesDataStore.data.first()
-        assertNotEquals("Each PIN change must use a new salt", before[PIN_VERIFIER_SALT], after[PIN_VERIFIER_SALT])
-        assertNotEquals("Each PIN change must store a new verifier", before[PIN_VERIFIER], after[PIN_VERIFIER])
+        assertNotEquals("Each PIN change must use a new salt", before[PIN_HASH_SALT], after[PIN_HASH_SALT])
+        assertNotEquals("Each PIN change must store a new PIN hash", before[PIN_HASH], after[PIN_HASH])
         assertTrue("Re-setting the same PIN must keep it valid", storage.verifyPinCode(PIN))
-    }
-
-    @Test
-    fun changingThePinWithNoPinCodeSetThrows() = runTest {
-        val storage = newStorage(InMemoryPinSession())
-
-        val error = runCatching { storage.changePinCode(NEW_PIN) }.exceptionOrNull()
-
-        assertTrue("Changing the PIN without a stored PIN is a programming error", error is IllegalStateException)
-        assertFalse("A failed change must not create a PIN", storage.hasPinCode())
     }
 
     private fun wipe() = runBlocking {
         context.preferencesDataStore.edit { preferences ->
-            preferences.remove(PIN_VERIFIER_SALT)
-            preferences.remove(PIN_VERIFIER)
-            preferences.remove(KEYSTORE_WRAPPED_KEK)
+            preferences.remove(PIN_HASH_SALT)
+            preferences.remove(PIN_HASH)
+            preferences.remove(KEYSTORE_WRAPPED_MASTER_KEK)
             preferences.remove(PIN_ATTEMPTS_POINTER)
             preferences.remove(PIN_ATTEMPTS_BLOB)
         }
@@ -240,9 +230,9 @@ class PinCodeStorageDataStoreTest {
         private const val ETH_ALIAS_PREFIX = "eth_wallet_key_"
         private const val ADDRESS = "0x1234567890abcdef1234567890abcdef12345678"
 
-        private val PIN_VERIFIER_SALT = stringPreferencesKey("pin_verifier_salt")
-        private val PIN_VERIFIER = stringPreferencesKey("pin_verifier")
-        private val KEYSTORE_WRAPPED_KEK = stringPreferencesKey("keystore_wrapped_kek")
+        private val PIN_HASH_SALT = stringPreferencesKey("pin_hash_salt")
+        private val PIN_HASH = stringPreferencesKey("pin_hash")
+        private val KEYSTORE_WRAPPED_MASTER_KEK = stringPreferencesKey("keystore_wrapped_master_kek")
         private val PIN_ATTEMPTS_POINTER = intPreferencesKey("pin_attempts_pointer")
         private val PIN_ATTEMPTS_BLOB = stringPreferencesKey("pin_attempts_blob")
         private val PRIVATE_KEY = PrivateKey.fromBytes(

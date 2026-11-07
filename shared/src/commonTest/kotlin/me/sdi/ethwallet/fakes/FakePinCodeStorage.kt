@@ -28,7 +28,6 @@ class FakePinCodeStorage : PinCodeStorage {
     override suspend fun changePinCode(newPin: String) {
         changePinCalledCount++
         if (shouldThrowException) throw SecurityException("Simulated change failure")
-        checkNotNull(storedPin) { "No PIN code stored to change" }
         storedPin = newPin
     }
 

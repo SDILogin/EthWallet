@@ -33,11 +33,11 @@ The random 256-bit master KEK is kept. `KeyStoreEncryptor`, `SoftwarePrivateKeyE
 `AndroidBiometricUnlock` (`bio_wrapped_kek`) consume it through `PinSession` exactly as before.
 
 - **Android** (`PinCodeStorageDataStore`): the KEK is encrypted only by the AndroidKeyStore AES-GCM key
-  `wallet_pin_code_key` and stored as `keystore_wrapped_kek`. `hasPinCode()` requires the verifier, its
+  `wallet_pin_code_key` and stored as `keystore_wrapped_master_kek`. `hasPinCode()` requires the PIN hash, its
   salt, the wrapped KEK and the key alias.
 - **Desktop** (`PinCodeStorageSoftware`): the KEK is stored as Base64 (`master_kek`) in the owner-only
   `pinArtifactsDataStore`. File permissions are its only protection.
-- **PIN verifier** (both platforms): `pin_verifier` is PBKDF2WithHmacSHA256(PIN, `pin_verifier_salt`) with
+- **PIN hash** (both platforms): `pin_hash` is PBKDF2WithHmacSHA256(PIN, `pin_hash_salt`) with
   the existing parameters (200 000 iterations, 256-bit output, 16-byte random salt). It is compared with
   `MessageDigest.isEqual`.
 
@@ -50,7 +50,7 @@ so logout also removes the new keys.
 
 - Precondition: a PIN is stored (the lock screen is shown only after the storage check); otherwise
   `checkNotNull` throws `IllegalStateException`.
-- Derive the verifier from `pinCode` and the stored salt. On a mismatch return `false`.
+- Derive the PIN hash from `pinCode` and the stored salt. On a mismatch return `false`.
 - On a match load the KEK (Android: decrypt with the keystore key), call `pinSession.set(kek)` and
   `userActivityManager.onAppUnlocked()`, return `true`.
 - A failure to load the KEK after a matching PIN is not a wrong PIN; it propagates as an exception and is
@@ -58,11 +58,9 @@ so logout also removes the new keys.
 
 ### `changePinCode(newPin)`
 
-- Precondition: a PIN is stored (Settings is reachable only while unlocked); otherwise `checkNotNull`
-  throws `IllegalStateException`.
-- Generate a fresh salt, derive the verifier for `newPin`, and write both in a **single**
-  `dataStore.edit`, so process death leaves either the old or the new PIN valid. The presence check runs
-  inside the same edit.
+- Precondition: a PIN is stored (Settings is reachable only while unlocked). It is not re-checked.
+- Generate a fresh salt, derive the PIN hash for `newPin`, and write both in a **single**
+  `dataStore.edit`, so process death leaves either the old or the new PIN valid.
 - The KEK, wallet keys, biometric artifacts, `PinSession` and `PinAttemptsGuard` are not touched.
 
 ## Flow
@@ -98,7 +96,7 @@ step returns to Settings without changes. If the session locks while the flow is
 - `PinCodeStorageSoftwareTest` (`shared/src/commonTest`) and `PinCodeStorageDataStoreTest`
   (`app/src/androidTest`, needs an emulator or device) cover: store/verify, wrong PIN, missing PIN
   precondition, a changed PIN verifies and the old one does not, the stored KEK is unchanged by a PIN
-  change, a fresh salt and verifier on every change. On Android, a private key encrypted with
+  change, a fresh salt and PIN hash on every change. On Android, a private key encrypted with
   `KeyStoreEncryptor` before the change decrypts after a lock and unlock with the new PIN.
 - `ChangePinCodeViewModelTest` covers the happy path, a confirmation mismatch with its shake news, a
   storage failure, and a keypad that ignores input while saving.

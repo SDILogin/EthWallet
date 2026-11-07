@@ -25,7 +25,7 @@ interface PinCodeStorage {
     suspend fun hasPinCode(): Boolean
 
     /**
-     * Replaces the stored PIN verifier with one for [newPin]. The master KEK, the session and the
+     * Replaces the stored PIN hash with one for [newPin]. The master KEK, the session and the
      * attempt guard are left untouched.
      *
      * @throws IllegalStateException if no PIN is stored.

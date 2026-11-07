@@ -174,24 +174,16 @@ class PinCodeStorageSoftwareTest {
     }
 
     @Test
-    fun every_change_stores_a_fresh_salt_and_verifier() = runTest {
+    fun every_change_stores_a_fresh_salt_and_pin_hash() = runTest {
         newStorage().storePinCode(PIN)
         val before = dataStore.data.first()
 
         newStorage().changePinCode(PIN)
 
         val after = dataStore.data.first()
-        assertNotEquals(before[PIN_VERIFIER_SALT], after[PIN_VERIFIER_SALT], "Each PIN change should use a new salt")
-        assertNotEquals(before[PIN_VERIFIER], after[PIN_VERIFIER], "Each PIN change should store a new verifier")
+        assertNotEquals(before[PIN_HASH_SALT], after[PIN_HASH_SALT], "Each PIN change should use a new salt")
+        assertNotEquals(before[PIN_HASH], after[PIN_HASH], "Each PIN change should store a new PIN hash")
         assertTrue(newStorage().verifyPinCode(PIN), "Re-setting the same PIN should keep it valid")
-    }
-
-    @Test
-    fun changing_the_pin_without_a_stored_pin_is_a_programming_error() = runTest {
-        assertFailsWith<IllegalStateException>("Settings are only reachable once a PIN is stored") {
-            newStorage().changePinCode(NEW_PIN)
-        }
-        assertFalse(newStorage().hasPinCode(), "A failed change must not create a PIN")
     }
 
     private fun newStorage(
@@ -217,8 +209,8 @@ class PinCodeStorageSoftwareTest {
         private const val WRONG_PIN = "654321"
         private const val ARTIFACTS_FILE_NAME = "secure_pin_preferences.preferences_pb"
 
-        private val PIN_VERIFIER_SALT = stringPreferencesKey("pin_verifier_salt")
-        private val PIN_VERIFIER = stringPreferencesKey("pin_verifier")
+        private val PIN_HASH_SALT = stringPreferencesKey("pin_hash_salt")
+        private val PIN_HASH = stringPreferencesKey("pin_hash")
         private val MASTER_KEK = stringPreferencesKey("master_kek")
     }
 }

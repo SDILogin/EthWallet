@@ -1,6 +1,7 @@
 package me.sdi.ethwallet.core.security
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -24,7 +25,7 @@ import kotlin.io.encoding.Base64
  * open the store through [pinArtifactsDataStore], which keeps it where only its owner can read it.
  * Anyone who can read the store, or the memory of the app process, has the KEK without the PIN.
  *
- * The PIN is an app-lock check only. It is stored as a salted PBKDF2WithHmacSHA256 verifier, which
+ * The PIN is an app-lock check only. It is stored as a salted PBKDF2WithHmacSHA256 PIN hash, which
  * can be brute forced offline by anyone who can read the store.
  */
 class PinCodeStorageSoftware(
@@ -36,13 +37,8 @@ class PinCodeStorageSoftware(
     override suspend fun storePinCode(pinCode: String) {
         pinAttemptsGuard.bootstrap()
 
-        val salt = randomBytes(SALT_LENGTH)
-        val verifier = deriveVerifier(pinCode, salt)
-        val masterKek = randomBytes(MASTER_KEK_LENGTH)
-
-        dataStore.edit { preferences ->
-            preferences[PIN_VERIFIER_SALT] = Base64.encode(salt)
-            preferences[PIN_VERIFIER] = Base64.encode(verifier)
+        val masterKek = randomBytes(MASTER_KEK_BYTES)
+        writePinHash(pinCode) { preferences ->
             preferences[MASTER_KEK] = Base64.encode(masterKek)
         }
 
@@ -53,11 +49,11 @@ class PinCodeStorageSoftware(
     override suspend fun verifyPinCode(pinCode: String): Boolean {
         val artifacts = readArtifacts()
 
-        val verifier = deriveVerifier(pinCode, Base64.decode(artifacts.salt))
+        val pinHash = hashPin(pinCode, Base64.decode(artifacts.pinHashSalt))
         val matches = try {
-            MessageDigest.isEqual(verifier, Base64.decode(artifacts.verifier))
+            MessageDigest.isEqual(pinHash, Base64.decode(artifacts.pinHash))
         } finally {
-            verifier.fill(0)
+            pinHash.fill(0)
         }
         if (!matches) {
             Logger.debug(TAG) { "PIN verification failed" }
@@ -71,15 +67,7 @@ class PinCodeStorageSoftware(
     }
 
     override suspend fun changePinCode(newPin: String) {
-        val salt = randomBytes(SALT_LENGTH)
-        val verifier = deriveVerifier(newPin, salt)
-
-        dataStore.edit { preferences ->
-            checkNotNull(preferences[PIN_VERIFIER]) { "No PIN code stored to change" }
-            preferences[PIN_VERIFIER_SALT] = Base64.encode(salt)
-            preferences[PIN_VERIFIER] = Base64.encode(verifier)
-        }
-
+        writePinHash(newPin)
         Logger.debug(TAG) { "PIN code changed successfully" }
     }
 
@@ -91,13 +79,13 @@ class PinCodeStorageSoftware(
             return false
         }
 
-        return PIN_VERIFIER_SALT in preferences && PIN_VERIFIER in preferences && MASTER_KEK in preferences
+        return PIN_HASH_SALT in preferences && PIN_HASH in preferences && MASTER_KEK in preferences
     }
 
     override suspend fun clearPinCode() {
         dataStore.edit { preferences ->
-            preferences.remove(PIN_VERIFIER_SALT)
-            preferences.remove(PIN_VERIFIER)
+            preferences.remove(PIN_HASH_SALT)
+            preferences.remove(PIN_HASH)
             preferences.remove(MASTER_KEK)
         }
 
@@ -109,11 +97,22 @@ class PinCodeStorageSoftware(
         ByteArray(size).also(SecureRandom()::nextBytes)
     }
 
-    private suspend fun deriveVerifier(pinCode: String, salt: ByteArray): ByteArray =
+    private suspend fun writePinHash(pinCode: String, alsoWrite: (MutablePreferences) -> Unit = {}) {
+        val salt = randomBytes(PIN_HASH_SALT_BYTES)
+        val pinHash = hashPin(pinCode, salt)
+
+        dataStore.edit { preferences ->
+            preferences[PIN_HASH_SALT] = Base64.encode(salt)
+            preferences[PIN_HASH] = Base64.encode(pinHash)
+            alsoWrite(preferences)
+        }
+    }
+
+    private suspend fun hashPin(pinCode: String, salt: ByteArray): ByteArray =
         withContext(Dispatchers.Default) {
-            val spec = PBEKeySpec(pinCode.toCharArray(), salt, PBKDF2_ITERATIONS, PBKDF2_KEY_BITS)
+            val spec = PBEKeySpec(pinCode.toCharArray(), salt, PIN_HASH_ITERATIONS, PIN_HASH_BITS)
             try {
-                val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM).also { ensureActive() }
+                val factory = SecretKeyFactory.getInstance(PIN_HASH_ALGORITHM).also { ensureActive() }
                 factory.generateSecret(spec).encoded.also { ensureActive() }
             } finally {
                 spec.clearPassword()
@@ -123,25 +122,25 @@ class PinCodeStorageSoftware(
     private suspend fun readArtifacts(): PinArtifacts {
         val preferences = dataStore.data.first()
         return PinArtifacts(
-            salt = checkNotNull(preferences[PIN_VERIFIER_SALT]) { "No PIN verifier salt stored" },
-            verifier = checkNotNull(preferences[PIN_VERIFIER]) { "No PIN verifier stored" },
+            pinHashSalt = checkNotNull(preferences[PIN_HASH_SALT]) { "No PIN hash salt stored" },
+            pinHash = checkNotNull(preferences[PIN_HASH]) { "No PIN hash stored" },
             masterKek = checkNotNull(preferences[MASTER_KEK]) { "No master KEK stored" },
         )
     }
 
-    private class PinArtifacts(val salt: String, val verifier: String, val masterKek: String)
+    private class PinArtifacts(val pinHashSalt: String, val pinHash: String, val masterKek: String)
 
     private companion object {
         private const val TAG = "PinCodeStorageSoftware"
 
-        private const val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
-        private const val PBKDF2_ITERATIONS = 200_000
-        private const val PBKDF2_KEY_BITS = 256
-        private const val SALT_LENGTH = 16
-        private const val MASTER_KEK_LENGTH = 32
+        private const val PIN_HASH_ALGORITHM = "PBKDF2WithHmacSHA256"
+        private const val PIN_HASH_ITERATIONS = 200_000
+        private const val PIN_HASH_BITS = 256
+        private const val PIN_HASH_SALT_BYTES = 16
+        private const val MASTER_KEK_BYTES = 32
 
-        private val PIN_VERIFIER_SALT = stringPreferencesKey("pin_verifier_salt")
-        private val PIN_VERIFIER = stringPreferencesKey("pin_verifier")
+        private val PIN_HASH_SALT = stringPreferencesKey("pin_hash_salt")
+        private val PIN_HASH = stringPreferencesKey("pin_hash")
         private val MASTER_KEK = stringPreferencesKey("master_kek")
     }
 }
