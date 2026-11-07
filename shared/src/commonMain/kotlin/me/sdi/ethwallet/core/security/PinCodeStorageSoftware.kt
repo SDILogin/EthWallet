@@ -51,7 +51,7 @@ class PinCodeStorageSoftware(
     }
 
     override suspend fun verifyPinCode(pinCode: String): Boolean {
-        val artifacts = checkNotNull(readArtifacts()) { "No PIN code stored for verification" }
+        val artifacts = readArtifacts()
 
         val verifier = deriveVerifier(pinCode, Base64.decode(artifacts.salt))
         val matches = try {
@@ -83,7 +83,16 @@ class PinCodeStorageSoftware(
         Logger.debug(TAG) { "PIN code changed successfully" }
     }
 
-    override suspend fun hasPinCode(): Boolean = readArtifacts() != null
+    override suspend fun hasPinCode(): Boolean {
+        val preferences = try {
+            dataStore.data.first()
+        } catch (e: IOException) {
+            Logger.warn(TAG, e) { "Failed to read the stored PIN artifacts" }
+            return false
+        }
+
+        return PIN_VERIFIER_SALT in preferences && PIN_VERIFIER in preferences && MASTER_KEK in preferences
+    }
 
     override suspend fun clearPinCode() {
         dataStore.edit { preferences ->
@@ -111,18 +120,13 @@ class PinCodeStorageSoftware(
             }
         }
 
-    private suspend fun readArtifacts(): PinArtifacts? {
-        val preferences = try {
-            dataStore.data.first()
-        } catch (e: IOException) {
-            Logger.warn(TAG, e) { "Failed to read the stored PIN artifacts" }
-            return null
-        }
-
-        val salt = preferences[PIN_VERIFIER_SALT] ?: return null
-        val verifier = preferences[PIN_VERIFIER] ?: return null
-        val masterKek = preferences[MASTER_KEK] ?: return null
-        return PinArtifacts(salt, verifier, masterKek)
+    private suspend fun readArtifacts(): PinArtifacts {
+        val preferences = dataStore.data.first()
+        return PinArtifacts(
+            salt = checkNotNull(preferences[PIN_VERIFIER_SALT]) { "No PIN verifier salt stored" },
+            verifier = checkNotNull(preferences[PIN_VERIFIER]) { "No PIN verifier stored" },
+            masterKek = checkNotNull(preferences[MASTER_KEK]) { "No master KEK stored" },
+        )
     }
 
     private class PinArtifacts(val salt: String, val verifier: String, val masterKek: String)

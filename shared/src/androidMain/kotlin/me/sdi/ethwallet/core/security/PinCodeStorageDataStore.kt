@@ -80,7 +80,7 @@ class PinCodeStorageDataStore(
     }
 
     override suspend fun verifyPinCode(pinCode: String): Boolean {
-        val artifacts = checkNotNull(readArtifacts()) { "No PIN code stored for verification" }
+        val artifacts = readArtifacts()
 
         val verifier = deriveVerifier(pinCode, Base64.decode(artifacts.saltBase64, Base64.DEFAULT))
         val matches = try {
@@ -112,7 +112,13 @@ class PinCodeStorageDataStore(
         Logger.debug(TAG) { "PIN code changed successfully" }
     }
 
-    override suspend fun hasPinCode(): Boolean = readArtifacts() != null
+    override suspend fun hasPinCode(): Boolean {
+        val preferences = dataStore.data.first()
+        return PIN_VERIFIER_SALT in preferences &&
+            PIN_VERIFIER in preferences &&
+            KEYSTORE_WRAPPED_KEK in preferences &&
+            loadKeyStore().containsAlias(PIN_KEY_ALIAS)
+    }
 
     override suspend fun clearPinCode() {
         dataStore.edit { preferences ->
@@ -135,16 +141,13 @@ class PinCodeStorageDataStore(
         pinSession.clear()
     }
 
-    private suspend fun readArtifacts(): PinArtifacts? {
+    private suspend fun readArtifacts(): PinArtifacts {
         val preferences = dataStore.data.first()
-        val saltBase64 = preferences[PIN_VERIFIER_SALT] ?: return null
-        val verifierBase64 = preferences[PIN_VERIFIER] ?: return null
-        val wrappedKekBase64 = preferences[KEYSTORE_WRAPPED_KEK] ?: return null
-        if (!loadKeyStore().containsAlias(PIN_KEY_ALIAS)) {
-            return null
-        }
-
-        return PinArtifacts(saltBase64, verifierBase64, wrappedKekBase64)
+        return PinArtifacts(
+            saltBase64 = checkNotNull(preferences[PIN_VERIFIER_SALT]) { "No PIN verifier salt stored" },
+            verifierBase64 = checkNotNull(preferences[PIN_VERIFIER]) { "No PIN verifier stored" },
+            wrappedKekBase64 = checkNotNull(preferences[KEYSTORE_WRAPPED_KEK]) { "No wrapped KEK stored" },
+        )
     }
 
     private class PinArtifacts(val saltBase64: String, val verifierBase64: String, val wrappedKekBase64: String)
