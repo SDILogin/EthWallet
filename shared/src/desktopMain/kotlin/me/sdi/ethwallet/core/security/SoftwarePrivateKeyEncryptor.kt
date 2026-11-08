@@ -8,7 +8,7 @@ import kotlin.io.encoding.Base64
  * master KEK of the current [PinSession], so signing is impossible while the app is locked.
  *
  * There is no hardware-backed layer on desktop: the KEK is stored next to the PIN hash and is
- * protected only by the permissions of [pinArtifactsDataStore] (see [PinCodeStorageSoftware]).
+ * protected only by the permissions of [pinArtifactsDataStore] (see [MasterKekStorageSoftware]).
  */
 class SoftwarePrivateKeyEncryptor(
     private val pinSession: PinSession,

@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
-import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.security.PinInteractor
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.data.repository.WalletRepository
@@ -86,12 +86,12 @@ sealed interface SetPinCodeEvent {
  * ViewModel for the Set Pin Code screen.
  * Handles PIN code setting and validation using Unidirectional Data Flow pattern.
  *
- * @param pinCodeStorage The storage implementation for saving and verifying PIN codes
+ * @param pinInteractor Sets the PIN and unlocks the app
  * @param walletRepository Persists the pending wallet once the PIN has been stored
  * @param biometricUnlock Backs the offer to enable biometric unlock once the PIN has been stored
  */
 class SetPinCodeViewModel(
-    private val pinCodeStorage: PinCodeStorage,
+    private val pinInteractor: PinInteractor,
     private val walletRepository: WalletRepository,
     private val biometricUnlock: BiometricUnlock,
 ) : ViewModel() {
@@ -265,7 +265,7 @@ class SetPinCodeViewModel(
 
             viewModelScope.launch {
                 try {
-                    pinCodeStorage.storePinCode(firstPin).also {
+                    pinInteractor.setPin(firstPin).also {
                         Logger.debug(TAG) { "PIN code stored successfully" }
                     }
 

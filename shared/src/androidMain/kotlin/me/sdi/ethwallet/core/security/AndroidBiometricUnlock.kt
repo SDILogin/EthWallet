@@ -44,7 +44,7 @@ import kotlin.coroutines.resume
  * [me.sdi.ethwallet.core.security.biometry.BiometricUnlock] backed by androidx.biometric and an AndroidKeyStore key that requires a strong
  * biometric for every use.
  *
- * The key wraps the same master KEK that [PinCodeStorageDataStore] keeps under its AndroidKeyStore key,
+ * The key wraps the same master KEK that [MasterKekStorageAndroidKeyStore] keeps under its AndroidKeyStore key,
  * and the wrapped blob is stored as `bio_wrapped_kek` in the same DataStore. Every `doFinal` runs on the
  * cipher handed back inside the prompt's `AuthenticationResult`, so an unauthorized cipher can never
  * produce the KEK. The key is created with `setInvalidatedByBiometricEnrollment(true)`, so enrolling

@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
-import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.security.PinInteractor
 import kotlin.time.Duration.Companion.milliseconds
 
 private const val TAG = "ChangePinCode"
@@ -24,7 +24,7 @@ private const val PIN_LENGTH = 6
 private const val INDICATOR_ANIMATION_DELAY_MS = 300
 
 class ChangePinCodeViewModel(
-    private val pinCodeStorage: PinCodeStorage,
+    private val pinInteractor: PinInteractor,
 ) : ViewModel() {
     val viewState: StateFlow<ChangePinCodeViewState>
         field = MutableStateFlow(ChangePinCodeViewState())
@@ -42,10 +42,6 @@ class ChangePinCodeViewModel(
 
     fun onEvent(event: ChangePinCodeEvent) {
         Logger.debug(TAG) { "onEvent: $event" }
-
-        if (viewState.value.isSaving) {
-            return
-        }
 
         when (event) {
             is ChangePinCodeEvent.OnDigitClick -> handleDigitClick(event.digit)
@@ -105,7 +101,7 @@ class ChangePinCodeViewModel(
             try {
                 coroutineScope {
                     launch(CoroutineName("IndicatorAnimation")) { delay(INDICATOR_ANIMATION_DELAY_MS.milliseconds) }
-                    pinCodeStorage.changePinCode(newPin)
+                    pinInteractor.changePin(newPin)
                 }
                 newsChannel.send(ChangePinCodeNews.PinChanged)
             } catch (e: Exception) {

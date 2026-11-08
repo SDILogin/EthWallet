@@ -26,6 +26,8 @@ import me.sdi.ethwallet.core.history.TransferHistoryRepositoryRoom
 import me.sdi.ethwallet.core.history.TransfersHistoryProvider
 import me.sdi.ethwallet.core.history.TransfersHistoryProviderBlockscout
 import me.sdi.ethwallet.core.security.InMemoryPinSession
+import me.sdi.ethwallet.core.security.PinInteractor
+import me.sdi.ethwallet.core.security.PinInteractorDefault
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.core.transfer.EthTransferInteractor
 import me.sdi.ethwallet.core.transfer.TransferInteractor
@@ -94,6 +96,16 @@ val commonModule = module {
 
     single<PinSession> { InMemoryPinSession() }
 
+    factory<PinInteractor> {
+        PinInteractorDefault(
+            pinCodeStorage = get(),
+            masterKekStorage = get(),
+            pinAttemptsGuard = get(),
+            pinSession = get(),
+            userActivityManager = get(),
+        )
+    }
+
     single<UserActivityManager> {
         ProcessLifetimeUserActivityManager(
             pinSession = get(),
@@ -127,7 +139,7 @@ val commonModule = module {
 
     viewModel<SetPinCodeViewModel> {
         SetPinCodeViewModel(
-            pinCodeStorage = get(),
+            pinInteractor = get(),
             walletRepository = get(),
             biometricUnlock = get(),
         )
@@ -135,7 +147,7 @@ val commonModule = module {
 
     viewModel<VerifyPinCodeViewModel> {
         VerifyPinCodeViewModel(
-            pinCodeStorage = get(),
+            pinInteractor = get(),
             dataCleaner = get(),
             pinAttemptsGuard = get(),
             biometricUnlock = get(),
@@ -143,7 +155,7 @@ val commonModule = module {
     }
 
     viewModel<ChangePinCodeViewModel> {
-        ChangePinCodeViewModel(pinCodeStorage = get())
+        ChangePinCodeViewModel(pinInteractor = get())
     }
 
     viewModel<SettingsViewModel> {

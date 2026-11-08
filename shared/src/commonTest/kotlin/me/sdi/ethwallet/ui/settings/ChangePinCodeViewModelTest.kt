@@ -1,6 +1,5 @@
 package me.sdi.ethwallet.ui.settings
 
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -13,15 +12,18 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.Logger
-import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.security.PinInteractorDefault
+import me.sdi.ethwallet.fakes.FakeMasterKekStorage
+import me.sdi.ethwallet.fakes.FakePinAttemptsGuard
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
+import me.sdi.ethwallet.fakes.FakePinSession
+import me.sdi.ethwallet.fakes.FakeUserActivityManager
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChangePinCodeViewModelTest {
@@ -105,37 +107,16 @@ class ChangePinCodeViewModelTest {
         assertEquals(CURRENT_PIN, pinCodeStorage.storedPin, "A failed save must keep the current PIN")
     }
 
-    @Test
-    fun keypad_ignores_input_while_saving() = runTest(testDispatcher) {
-        val changeResult = CompletableDeferred<Unit>()
-        val blockingStorage = object : PinCodeStorage by pinCodeStorage {
-            override suspend fun changePinCode(newPin: String) = changeResult.await()
-        }
-        viewModel = ChangePinCodeViewModel(blockingStorage)
-        runCurrent()
-        collectNews()
-
-        enterPin(NEW_PIN)
-        enterPin(NEW_PIN)
-
-        assertTrue(viewModel.viewState.value.isSaving, "Saving should be in progress")
-
-        viewModel.onEvent(ChangePinCodeEvent.OnDeleteClick)
-        viewModel.onEvent(ChangePinCodeEvent.OnDigitClick(1))
-        runCurrent()
-
-        val savingState = viewModel.viewState.value
-        assertEquals(ChangePinCodeStep.ConfirmNew, savingState.step, "Input while saving must not change the step")
-        assertEquals(NEW_PIN, savingState.confirmPin, "Input while saving must not change the confirmation")
-
-        changeResult.complete(Unit)
-        runCurrent()
-
-        assertEquals(listOf<ChangePinCodeNews>(ChangePinCodeNews.PinChanged), collectedNews, "User should be told the PIN changed")
-    }
-
     private fun TestScope.createViewModel() {
-        viewModel = ChangePinCodeViewModel(pinCodeStorage)
+        viewModel = ChangePinCodeViewModel(
+            PinInteractorDefault(
+                pinCodeStorage = pinCodeStorage,
+                masterKekStorage = FakeMasterKekStorage(),
+                pinAttemptsGuard = FakePinAttemptsGuard(),
+                pinSession = FakePinSession(),
+                userActivityManager = FakeUserActivityManager(),
+            ),
+        )
         runCurrent()
     }
 

@@ -10,11 +10,16 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import me.sdi.ethwallet.core.security.PinInteractorDefault
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.fakes.FakeBiometricUnlock
 import me.sdi.ethwallet.fakes.FakeEthManager
+import me.sdi.ethwallet.fakes.FakeMasterKekStorage
+import me.sdi.ethwallet.fakes.FakePinAttemptsGuard
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
+import me.sdi.ethwallet.fakes.FakePinSession
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
+import me.sdi.ethwallet.fakes.FakeUserActivityManager
 import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
 import kotlin.test.AfterTest
@@ -48,7 +53,14 @@ class SetPinCodeViewModelWithStorageTest {
             historyInitializationStore = HistoryInitializationStoreInMemory(),
         )
         biometricUnlock = FakeBiometricUnlock()
-        viewModel = SetPinCodeViewModel(pinCodeStorage, walletRepository, biometricUnlock)
+        val pinInteractor = PinInteractorDefault(
+            pinCodeStorage = pinCodeStorage,
+            masterKekStorage = FakeMasterKekStorage(),
+            pinAttemptsGuard = FakePinAttemptsGuard(),
+            pinSession = FakePinSession(),
+            userActivityManager = FakeUserActivityManager(),
+        )
+        viewModel = SetPinCodeViewModel(pinInteractor, walletRepository, biometricUnlock)
     }
 
     @AfterTest

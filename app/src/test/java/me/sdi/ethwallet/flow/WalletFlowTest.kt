@@ -21,10 +21,12 @@ import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.DataCleanerRoomDb
+import me.sdi.ethwallet.core.security.MasterKekStorage
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PinLockState
 import me.sdi.ethwallet.core.security.PinSession
+import me.sdi.ethwallet.core.security.PinSessionDataCleaner
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
@@ -85,26 +87,14 @@ class WalletFlowTest : KoinTest {
 
     private val pinSession: PinSession by inject()
 
-    /**
-     * Mirrors the real storage on the one point the lock depends on: storing or verifying a PIN
-     * publishes the master key to the session, and clearing the PIN drops it.
-     */
     private val pinCodeStorage = object : PinCodeStorage {
         var storedPin: String? = null
 
         override suspend fun storePinCode(pinCode: String) {
             storedPin = pinCode
-            pinSession.set(ByteArray(32) { 7 })
         }
 
-        override suspend fun verifyPinCode(pinCode: String): Boolean {
-            if (storedPin != pinCode) {
-                return false
-            }
-
-            pinSession.set(ByteArray(32) { 7 })
-            return true
-        }
+        override suspend fun verifyPinCode(pinCode: String): Boolean = storedPin == pinCode
 
         override suspend fun hasPinCode(): Boolean = storedPin != null
 
@@ -114,7 +104,18 @@ class WalletFlowTest : KoinTest {
 
         override suspend fun clearPinCode() {
             storedPin = null
-            pinSession.clear()
+        }
+    }
+
+    private val masterKekStorage = object : MasterKekStorage {
+        var storedKek: ByteArray? = null
+
+        override suspend fun create(): ByteArray = ByteArray(32) { 7 }.also { storedKek = it.copyOf() }
+
+        override suspend fun read(): ByteArray = checkNotNull(storedKek).copyOf()
+
+        override suspend fun clear() {
+            storedKek = null
         }
     }
 
@@ -198,6 +199,7 @@ class WalletFlowTest : KoinTest {
             }
         }
         single<PinCodeStorage> { pinCodeStorage }
+        single<MasterKekStorage> { masterKekStorage }
         single<PrivateKeyEncryptor> {
             object : PrivateKeyEncryptor {
                 override suspend fun encryptPrivateKey(privateKey: PrivateKey, address: String): String {
@@ -219,8 +221,10 @@ class WalletFlowTest : KoinTest {
                     object : DataCleaner {
                         override suspend fun clean() {
                             pinCodeStorage.clearPinCode()
+                            masterKekStorage.clear()
                         }
                     },
+                    PinSessionDataCleaner(get()),
                 ),
             )
         }
@@ -289,6 +293,7 @@ class WalletFlowTest : KoinTest {
                 appDatabase.clearAllTables()
             }
             pinCodeStorage.clearPinCode()
+            masterKekStorage.clear()
         }
 
         // Launch activity manually after Koin is properly initialized with mocks

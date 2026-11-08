@@ -10,10 +10,14 @@ import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.history.TransfersHistoryProvider
 import me.sdi.ethwallet.core.history.TransfersHistoryProviderBlockscout
+import me.sdi.ethwallet.core.security.MasterKekStorage
+import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.fakes.FakeBiometricUnlock
+import me.sdi.ethwallet.fakes.FakeMasterKekStorage
+import me.sdi.ethwallet.fakes.FakePinAttemptsGuard
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
 import me.sdi.ethwallet.ui.settings.ChangePinCodeViewModel
 import me.sdi.ethwallet.ui.settings.SettingsViewModel
@@ -79,13 +83,15 @@ class KoinModuleTest {
                 commonModule,
                 module {
                     single<PinCodeStorage> { pinCodeStorage }
+                    single<MasterKekStorage> { FakeMasterKekStorage() }
+                    single<PinAttemptsGuard> { FakePinAttemptsGuard() }
                 },
             )
         }.koin
 
         assertNotNull(
             koin.get<ChangePinCodeViewModel>(),
-            "Opening Change PIN should resolve its ViewModel from the registered PIN storage",
+            "Opening Change PIN should resolve its ViewModel through the PIN interactor",
         )
     }
 

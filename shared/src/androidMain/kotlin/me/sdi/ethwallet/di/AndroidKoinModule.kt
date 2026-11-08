@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import kotlinx.coroutines.Dispatchers
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.security.AndroidBiometricUnlock
 import me.sdi.ethwallet.core.security.DataCleaner
@@ -14,6 +15,8 @@ import me.sdi.ethwallet.core.security.DataCleanerDataStore
 import me.sdi.ethwallet.core.security.DataCleanerRoomDb
 import me.sdi.ethwallet.core.security.KeyStoreEncryptor
 import me.sdi.ethwallet.core.security.KeyStorePinAttemptsGuard
+import me.sdi.ethwallet.core.security.MasterKekStorage
+import me.sdi.ethwallet.core.security.MasterKekStorageAndroidKeyStore
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PinCodeStorageDataStore
@@ -61,12 +64,11 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<PinAttemptsGuard> { KeyStorePinAttemptsGuard(context = androidContext()) }
 
     single<PinCodeStorage> {
-        PinCodeStorageDataStore(
-            context = androidContext(),
-            userActivityManager = get(),
-            pinAttemptsGuard = get(),
-            pinSession = get(),
-        )
+        PinCodeStorageDataStore(context = androidContext(), dispatcher = Dispatchers.Default)
+    }
+
+    single<MasterKekStorage> {
+        MasterKekStorageAndroidKeyStore(context = androidContext(), dispatcher = Dispatchers.Default)
     }
 
     single { CurrentActivityHolder() }

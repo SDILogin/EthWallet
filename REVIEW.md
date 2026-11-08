@@ -10,6 +10,18 @@ Rules that code review checks. Each rule comes from earlier review feedback.
 - Do not add security layers that only look protective. If a layer does not stop a realistic
   attacker, remove it and keep the flow simple.
 
+## Architecture
+
+- A `Storage<Data>` is responsible only for persisting `Data`. Business logic such as sessions, auto-lock,
+  and attempt counters belongs in dedicated classes such as interactors.
+
+## Functions
+
+- Do not give private functions default parameter values; keep calls explicit. Default parameters are
+  allowed only in design-system components.
+- Prefer passing data (for example, a map of values to write) over callbacks. Callbacks make the
+  execution flow harder to read.
+
 ## Preconditions
 
 - When the navigation flow guarantees a precondition, assert it with `checkNotNull` / `check`.
@@ -17,6 +29,8 @@ Rules that code review checks. Each rule comes from earlier review feedback.
 
 ## ViewModels
 
+- Trace `onEvent` handlers and remove dead branches. Consider only realistic user scenarios: `OnStart`
+  after pull-to-refresh or a click on a disabled button are not realistic.
 - Do not hardcode user-facing strings in a ViewModel. Expose an `enum` (or sealed type) and map it
   to a string resource in the Compose layer, which can localize the text.
 - Send one-shot UI effects (shake animation, toast, navigation) through `news`. Do not trigger them

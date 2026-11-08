@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
-import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.security.PinInteractor
 import me.sdi.ethwallet.core.security.PinLockState
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
@@ -43,7 +43,7 @@ private const val BIOMETRIC_ERROR_MESSAGE = "Biometric unlock failed. Use your P
  * remaining attempts and lock countdown shown on screen.
  */
 class VerifyPinCodeViewModel(
-    private val pinCodeStorage: PinCodeStorage,
+    private val pinInteractor: PinInteractor,
     private val dataCleaner: DataCleaner,
     private val pinAttemptsGuard: PinAttemptsGuard,
     private val biometricUnlock: BiometricUnlock,
@@ -251,7 +251,7 @@ class VerifyPinCodeViewModel(
             try {
                 coroutineScope {
                     launch(CoroutineName("IndicatorAnimation")) { delay(300.milliseconds) }
-                    pinCodeStorage.verifyPinCode(pin).also { isValid ->
+                    pinInteractor.unlock(pin).also { isValid ->
                         if (isValid) {
                             onUnlocked()
                         } else {

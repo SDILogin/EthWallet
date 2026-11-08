@@ -24,7 +24,7 @@ import javax.crypto.spec.GCMParameterSpec
  * h -- hardware encryption with a non-exportable per-address AndroidKeyStore key. Makes epk useless
  *      outside of the device.
  * s -- software encryption with the random master KEK. The KEK is stored wrapped by an AndroidKeyStore
- *      key (see [PinCodeStorageDataStore]) and is held in the [PinSession] only while the app is
+ *      key (see [MasterKekStorageAndroidKeyStore]) and is held in the [PinSession] only while the app is
  *      unlocked. It does not depend on the PIN, so it does not protect against code running in the
  *      application process, which can unwrap the KEK through the AndroidKeyStore.
  *

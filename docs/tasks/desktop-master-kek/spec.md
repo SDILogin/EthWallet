@@ -6,7 +6,7 @@ done before Desktop persists wallets to disk.
 ## Background
 
 - Desktop supports only Apple Silicon macOS.
-- `PinCodeStorageSoftware` stores the random master KEK unencrypted as `master_kek` in the owner-only
+- `MasterKekStorageSoftware` stores the random master KEK unencrypted as `master_kek` in the owner-only
   `pinArtifactsDataStore` under `~/.ethwallet`. File permissions are its only protection.
 - `SoftwarePrivateKeyEncryptor` encrypts private keys with that KEK only (`KekCipher`), with no hardware layer.
 - The Desktop `AppDatabase` (`DesktopDatabase.kt`) keeps wallets, including encrypted private keys, in memory only.
@@ -26,10 +26,10 @@ must not let anyone decrypt wallet private keys.
   file copies: a Keychain item that is device-only and cannot migrate, or a key held in the Secure Enclave that wraps
   the KEK.
 - The PIN stays an app-lock check (`pin_hash`, `pin_hash_salt`). It is not used as key material.
-- `clearPinCode()` and the logout `DataCleaner` implementations must also delete the Keychain item or the Secure
+- `MasterKekStorage.clear()` and the logout `DataCleaner` implementations must also delete the Keychain item or the Secure
   Enclave key.
-- Update the KDoc of `PinCodeStorageSoftware` and `SoftwarePrivateKeyEncryptor` to describe the new protection.
-- Keep `PinCodeStorageSoftware` usable by tests that have no Keychain: inject the KEK protection behind an
+- Update the KDoc of `MasterKekStorageSoftware` and `SoftwarePrivateKeyEncryptor` to describe the new protection.
+- Keep `MasterKekStorageSoftware` usable by tests that have no Keychain: inject the KEK protection behind an
   interface, with an in-memory fake in `commonTest`.
 - Out of scope: persisting the Desktop wallet database. That work must depend on this task.
 
@@ -46,7 +46,7 @@ must not let anyone decrypt wallet private keys.
 
 - `~/.ethwallet` contains no unencrypted master KEK. A test asserts that the stored artifacts do not contain the
   KEK bytes.
-- Unit tests for `PinCodeStorageSoftware` with the fake KEK protection: store, verify, change PIN, clear.
+- Unit tests for `MasterKekStorageSoftware` with the fake KEK protection: create, read, clear.
 - Manual check on Apple Silicon macOS: set a PIN, restart the app, unlock, sign a transfer; copy `~/.ethwallet`
   to another user account or machine and confirm the KEK cannot be recovered from the copy.
 - Formatting, Desktop compilation, and shared tests pass.

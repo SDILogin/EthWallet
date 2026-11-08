@@ -17,7 +17,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.ensureActive
 import me.sdi.ethwallet.Logger
-import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.security.PinInteractor
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.ic_eth_logo
 import me.sdi.ethwallet.ui.navigation.Destination
@@ -47,9 +47,9 @@ fun SplashScreen(
 ) {
     val koin = getKoin()
     LaunchedEffect(Unit) {
-        val pinStorage = koin.get<PinCodeStorage>()
+        val pinInteractor = koin.get<PinInteractor>()
         val isPinSet = try {
-            pinStorage.hasPinCode()
+            pinInteractor.hasPin()
         } catch (e: Exception) {
             ensureActive()
 
