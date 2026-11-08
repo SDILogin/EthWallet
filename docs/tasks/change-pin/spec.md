@@ -33,8 +33,8 @@ The random 256-bit master KEK is kept. `KeyStoreEncryptor`, `SoftwarePrivateKeyE
 `AndroidBiometricUnlock` (`bio_wrapped_kek`) consume it through `PinSession` exactly as before.
 
 - **Android** (`PinCodeStorageDataStore`): the KEK is encrypted only by the AndroidKeyStore AES-GCM key
-  `wallet_pin_code_key` and stored as `keystore_wrapped_master_kek`. `hasPinCode()` requires the PIN hash, its
-  salt, the wrapped KEK and the key alias.
+  `wallet_pin_code_key` and stored as `keystore_wrapped_master_kek`. `hasPinCode()` checks only for the PIN hash:
+  the hash, its salt and the wrapped KEK are always written and removed together.
 - **Desktop** (`PinCodeStorageSoftware`): the KEK is stored as Base64 (`master_kek`) in the owner-only
   `pinArtifactsDataStore`. File permissions are its only protection.
 - **PIN hash** (both platforms): `pin_hash` is PBKDF2WithHmacSHA256(PIN, `pin_hash_salt`) with

@@ -100,16 +100,6 @@ class PinCodeStorageDataStoreTest {
     }
 
     @Test
-    fun missingWrappedKekIsNotAStoredPin() = runTest {
-        val storage = newStorage(InMemoryPinSession())
-        storage.storePinCode(PIN)
-
-        context.preferencesDataStore.edit { it.remove(KEYSTORE_WRAPPED_MASTER_KEK) }
-
-        assertFalse("hasPinCode must be false with the wrapped KEK missing", storage.hasPinCode())
-    }
-
-    @Test
     fun missingPinHashIsNotAStoredPin() = runTest {
         val storage = newStorage(InMemoryPinSession())
         storage.storePinCode(PIN)

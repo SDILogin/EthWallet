@@ -100,13 +100,7 @@ class PinCodeStorageDataStore(
         Logger.debug(TAG) { "PIN code changed successfully" }
     }
 
-    override suspend fun hasPinCode(): Boolean {
-        val preferences = dataStore.data.first()
-        return PIN_HASH_SALT in preferences &&
-            PIN_HASH in preferences &&
-            KEYSTORE_WRAPPED_MASTER_KEK in preferences &&
-            loadKeyStore().containsAlias(PIN_KEY_ALIAS)
-    }
+    override suspend fun hasPinCode(): Boolean = PIN_HASH in dataStore.data.first()
 
     override suspend fun clearPinCode() {
         dataStore.edit { preferences ->

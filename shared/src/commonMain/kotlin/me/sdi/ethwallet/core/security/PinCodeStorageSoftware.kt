@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.data.UserActivityManager
-import java.io.IOException
 import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
@@ -71,16 +70,7 @@ class PinCodeStorageSoftware(
         Logger.debug(TAG) { "PIN code changed successfully" }
     }
 
-    override suspend fun hasPinCode(): Boolean {
-        val preferences = try {
-            dataStore.data.first()
-        } catch (e: IOException) {
-            Logger.warn(TAG, e) { "Failed to read the stored PIN artifacts" }
-            return false
-        }
-
-        return PIN_HASH_SALT in preferences && PIN_HASH in preferences && MASTER_KEK in preferences
-    }
+    override suspend fun hasPinCode(): Boolean = PIN_HASH in dataStore.data.first()
 
     override suspend fun clearPinCode() {
         dataStore.edit { preferences ->
