@@ -1,54 +1,4 @@
-# Review Rules
-
-Rules that code review checks. Each rule comes from earlier review feedback.
-
-## Security
-
-- Do not use the PIN as encryption key material. The PIN is an app-lock check. Anyone with access to
-  the app process can brute-force a PIN-derived key offline, where the attempts guard never runs.
-  Protect secrets with the platform key store (AndroidKeyStore) or owner-only storage.
-- Do not add security layers that only look protective. If a layer does not stop a realistic
-  attacker, remove it and keep the flow simple.
-
-## Architecture
-
-- A `Storage<Data>` is responsible only for persisting `Data`. Business logic such as sessions, auto-lock,
-  and attempt counters belongs in dedicated classes such as interactors.
-
-## Functions
-
-- Do not give private functions default parameter values; keep calls explicit. Default parameters are
-  allowed only in design-system components.
-- Prefer passing data (for example, a map of values to write) over callbacks. Callbacks make the
-  execution flow harder to read.
-- Prefer positive conditions: `if (predicate()) { ... } else { ... }` over `if (!predicate())` with an early
-  return.
-
-## Preconditions
-
-- When the navigation flow guarantees a precondition, assert it with `checkNotNull` / `check`.
-  Do not return a fallback value such as `false` for a state that cannot happen.
-
-## ViewModels
-
-- Trace `onEvent` handlers and remove dead branches. Consider only realistic user scenarios: `OnStart`
-  after pull-to-refresh or a click on a disabled button are not realistic.
-- Do not hardcode user-facing strings in a ViewModel. Expose an `enum` (or sealed type) and map it
-  to a string resource in the Compose layer, which can localize the text.
-- Send one-shot UI effects (shake animation, toast, navigation) through `news`. Do not trigger them
-  by putting counters or IDs in the view state.
-- Declare constants as file-level `private const val`, not file-level `private val`. `Duration` is
-  not allowed in a `const`, so give time constants a unit suffix and a primitive value, for example
-  `private const val INDICATOR_ANIMATION_DELAY_MS = 300`, and convert to `Duration` where the value
-  is used (`delay(INDICATOR_ANIMATION_DELAY_MS.milliseconds)`).
-
-## Compose UI
-
-- Collect `StateFlow` in composables with `collectAsStateWithLifecycle()`, not `collectAsState()`.
-- Do not change the layout when state changes. A conditional element (an error or lock message, for
-  example) must always be in the UI tree. Control its visibility with alpha (`graphicsLayer` /
-  animated alpha) so nearby elements such as the PIN indicator do not jump.
-
+# Review rules
 
 ## Code style
 
@@ -77,15 +27,37 @@ Rules that code review checks. Each rule comes from earlier review feedback.
 - Repositories must be replaced with `InMemory` implementation in tests. Forbidden to mock repositories.
 - `InMemory` repositories implementation must be simple abstraction over collections without any complex logic. That's
   why repositories must be simple CRUDs.
+- A `Storage<Data>` is responsible only for persisting `Data`. Business logic such as sessions, auto-lock, and attempt
+  counters belongs in dedicated classes such as interactors.
+- Use named arguments when pass multiple primitive values. For example,
+  `private class PinArtifacts(val saltBase64: String, val wrappedBase64: String)` must be constructed using named
+  arguments.
+- Do not give private functions default parameter values; keep calls explicit. Default parameters are allowed only in
+  design-system components.
+- Prefer passing data (for example, a map of values to write) over callbacks. Callbacks make the execution flow harder
+  to read.
+- Prefer positive conditions: `if (predicate()) { ... } else { ... }` over `if (!predicate())` with an early return.
+- Use `checkNotNull` (or `check`) for a state that the app flow guarantees. Do not return a fallback value for an
+  impossible state. For example, the PIN verification screen is shown only after a PIN storage check, so the stored PIN
+  artifacts are not null there.
+- Declare constants as file-level `private const val`, not file-level `private val`. `Duration` cannot be a `const`, so
+  store time constants as primitives with a unit suffix: `private const val INDICATOR_ANIMATION_DELAY_MS = 300`.
+  Convert to Kotlin `Duration` only on the call side.
 
 ## Presentation logic
 
 - Assume that Start event arrives first. It is forbidden to handle unrealistic events flow like pull-to-refresh before
   OnStart.
+- Trace `onEvent` handlers and remove dead branches. Consider only realistic user scenarios: `OnStart` after
+  pull-to-refresh or a click on a disabled button are not realistic.
 - Concurrency primitives like Lock, synchronized blocks and so on must be treated as overengineering. Agent must provide
   A REALISTIC evidence that concurrent primitive is mandatory.
 - ViewModel `init` must be fast and error-safe. Actual initialization (for example initial data loading) must be
   triggered from inside `viewState.onStart {}`.
+- ViewModel must not keep user-visible text. Expose errors and messages as an `enum` (or a sealed type). Map them to
+  string resources on the Jetpack Compose layer, where localization is available.
+- One-time UI effects (shake, toast, navigation) must be sent through `news`. Do not use a state field (for example an
+  error id) as an animation trigger.
 
 ## Jetpack compose style
 
@@ -99,6 +71,15 @@ Rules that code review checks. Each rule comes from earlier review feedback.
 - `SubcomposeLayout` (or `BoxWithConstraints`) is a red flag. Always push back on it. `BoxWithConstratints` can be used
   only for adaptive layout creation and never to measure a UI element size (for size info retrieval use dedicated
   modifiers).
+- Collect `viewState` with `collectAsStateWithLifecycle()`, not with `collectAsState()`.
+- A state change must not move other UI elements. Keep conditional elements (for example an error `Text`) always in the
+  UI tree and control visibility with alpha.
+
+## Security
+
+- A security mechanism must protect against a realistic attacker. Do not add a mechanism that only makes the flow more
+  complex and gives an illusion of protection. For example, the app PIN must not take part in key encryption: an
+  attacker with access to the app process can brute-force a 6-digit PIN, and the PIN attempts guard does not run then.
 
 ## Business logic
 
