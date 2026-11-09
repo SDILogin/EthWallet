@@ -15,6 +15,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.isSensitiveData
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.backspace_24px
@@ -77,7 +79,7 @@ fun PinNumberPad(
             IconButton(
                 onClick = onDeleteClick,
                 enabled = enabled,
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier.size(72.dp).semantics { isSensitiveData = true },
                 colors = IconButtonDefaults.iconButtonColors(
                     contentColor = MaterialTheme.colorScheme.onBackground,
                 ),

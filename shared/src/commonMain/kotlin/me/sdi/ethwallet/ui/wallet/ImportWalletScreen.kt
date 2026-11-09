@@ -30,6 +30,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.isSensitiveData
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -153,7 +155,8 @@ fun ImportWalletScreen(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .widthIn(max = 420.dp),
+                                .widthIn(max = 420.dp)
+                                .semantics { isSensitiveData = true },
                         keyboardOptions =
                             KeyboardOptions.Default.copy(
                                 imeAction = ImeAction.Done,

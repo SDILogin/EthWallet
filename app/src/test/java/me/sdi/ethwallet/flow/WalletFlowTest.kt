@@ -3,9 +3,19 @@ package me.sdi.ethwallet.flow
 import android.app.Application
 import android.os.Build
 import androidx.activity.compose.setContent
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -84,6 +94,7 @@ class WalletFlowTest : KoinTest {
     private val setPinCodePage = SetPinCodePage(composeTestRule)
     private val walletPage = WalletPage(composeTestRule)
     private val walletsListPage = WalletsListPage(composeTestRule)
+    private val sensitiveData = SemanticsMatcher.expectValue(SemanticsProperties.IsSensitiveData, true)
 
     private val pinSession: PinSession by inject()
 
@@ -452,6 +463,86 @@ class WalletFlowTest : KoinTest {
 
         walletsListPage.assertSingleWallet()
         walletsListPage.assertSelectedIndicatorIsHidden()
+    }
+
+    @Test
+    fun setPinScreenMarksPinEntryAsSensitive() {
+        onboardingPage.clickCreatePinCode()
+        composeTestRule.waitUntilTextExists("1")
+
+        assertPinEntryIsSensitive()
+    }
+
+    @Test
+    fun verifyPinScreenMarksPinEntryAsSensitive() {
+        runInitialWalletCreationFlow()
+
+        lockApp()
+
+        assertPinEntryIsSensitive()
+    }
+
+    @Test
+    fun changePinScreenMarksPinEntryAsSensitive() {
+        runInitialWalletCreationFlow()
+        showWalletsList()
+
+        composeTestRule.clickContentDescription("Settings")
+        composeTestRule.waitUntilTextExists("Change PIN")
+        composeTestRule.clickText("Change PIN")
+        composeTestRule.waitUntilTextExists("1")
+
+        assertPinEntryIsSensitive()
+    }
+
+    @Test
+    fun createWalletScreenMarksRecoveryPhraseAsSensitive() {
+        onboardingPage.clickCreatePinCode()
+        setPinCodePage.enterPin(PIN)
+        setPinCodePage.enterPin(PIN)
+        walletsListPage.clickCreateWallet()
+
+        val recoveryPhrase = hasContentDescription("12 words mnemonic", substring = true)
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodes(recoveryPhrase).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNode(recoveryPhrase).assert(sensitiveData)
+    }
+
+    @Test
+    fun importWalletScreenMarksOnlyRecoveryPhraseInputAsSensitive() {
+        runInitialWalletCreationFlow()
+        showWalletsList()
+
+        walletsListPage.openAddWalletMenu()
+        walletsListPage.clickAddWalletImport()
+        composeTestRule.waitUntilTextExists("Enter Recovery Phrase")
+
+        composeTestRule.onAllNodes(hasSetTextAction() and sensitiveData, useUnmergedTree = true).assertCountEquals(1)
+        composeTestRule.onNodeWithTag("wallet-label-input")
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.IsSensitiveData))
+    }
+
+    @Test
+    fun sendScreenMarksTransferConfirmationAsSensitive() {
+        runInitialWalletCreationFlow()
+
+        walletsListPage.clickWallet("My Wallet")
+        walletPage.awaitVisible()
+        walletPage.clickSend()
+        composeTestRule.waitUntilTextExists("Receiver Address")
+
+        composeTestRule.onAllNodes(hasSetTextAction() and sensitiveData, useUnmergedTree = true).assertCountEquals(2)
+        composeTestRule.onNode(hasText("Send Transaction") and hasClickAction()).assert(sensitiveData)
+    }
+
+    private fun assertPinEntryIsSensitive() {
+        composeTestRule.onNodeWithContentDescription("0 of 6 digits entered").assert(sensitiveData)
+        for (digit in 0..9) {
+            composeTestRule.onNode(hasText(digit.toString()) and hasClickAction()).assert(sensitiveData)
+        }
+        composeTestRule.onNodeWithContentDescription("Delete").assert(sensitiveData).assertHasClickAction()
+        composeTestRule.onAllNodes(hasClickAction() and sensitiveData, useUnmergedTree = true).assertCountEquals(11)
     }
 
     /**

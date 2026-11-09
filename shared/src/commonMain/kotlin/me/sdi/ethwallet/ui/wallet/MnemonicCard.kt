@@ -27,6 +27,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.isSensitiveData
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextMeasurer
@@ -76,6 +77,7 @@ fun MnemonicCard(
             modifier
                 .semantics {
                     contentDescription = mnemonicDescription
+                    isSensitiveData = true
                 }
                 .styleable(styleState, EthWalletTheme.styles.mnemonicCardStyle, style)
                 .combinedClickable(
