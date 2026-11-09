@@ -20,7 +20,7 @@ class PinInteractorTest {
     private val masterKekStorage = FakeMasterKekStorage()
     private val pinSession = FakePinSession()
     private val userActivityManager = FakeUserActivityManager()
-    private val interactor = PinInteractorDefault(
+    private val interactor = PinInteractor(
         pinCodeStorage = pinCodeStorage,
         masterKekStorage = masterKekStorage,
         pinAttemptsGuard = FakePinAttemptsGuard(),

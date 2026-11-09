@@ -12,7 +12,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.Logger
-import me.sdi.ethwallet.core.security.PinInteractorDefault
+import me.sdi.ethwallet.core.security.PinInteractor
 import me.sdi.ethwallet.fakes.FakeMasterKekStorage
 import me.sdi.ethwallet.fakes.FakePinAttemptsGuard
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
@@ -109,7 +109,7 @@ class ChangePinCodeViewModelTest {
 
     private fun TestScope.createViewModel() {
         viewModel = ChangePinCodeViewModel(
-            PinInteractorDefault(
+            PinInteractor(
                 pinCodeStorage = pinCodeStorage,
                 masterKekStorage = FakeMasterKekStorage(),
                 pinAttemptsGuard = FakePinAttemptsGuard(),

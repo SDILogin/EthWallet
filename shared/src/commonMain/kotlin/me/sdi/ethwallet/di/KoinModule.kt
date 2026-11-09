@@ -27,7 +27,6 @@ import me.sdi.ethwallet.core.history.TransfersHistoryProvider
 import me.sdi.ethwallet.core.history.TransfersHistoryProviderBlockscout
 import me.sdi.ethwallet.core.security.InMemoryPinSession
 import me.sdi.ethwallet.core.security.PinInteractor
-import me.sdi.ethwallet.core.security.PinInteractorDefault
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.core.transfer.EthTransferInteractor
 import me.sdi.ethwallet.core.transfer.TransferInteractor
@@ -98,7 +97,7 @@ val commonModule = module {
     single<PinSession> { InMemoryPinSession() }
 
     factory<PinInteractor> {
-        PinInteractorDefault(
+        PinInteractor(
             pinCodeStorage = get(),
             masterKekStorage = get(),
             pinAttemptsGuard = get(),

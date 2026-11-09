@@ -11,7 +11,7 @@ Allow an unlocked user to change their PIN from the Settings screen.
 - `MasterKekStorage`: persists the master KEK (`create`, `read`, `clear`). Implemented by
   `MasterKekStorageAndroidKeyStore` (`shared/src/androidMain`) and `MasterKekStorageSoftware`
   (`shared/src/commonMain`, used by Desktop).
-- `PinInteractor` / `PinInteractorDefault` (`shared/src/commonMain/kotlin/me/sdi/ethwallet/core/security/`): the
+- `PinInteractor` (`shared/src/commonMain/kotlin/me/sdi/ethwallet/core/security/`): the
   PIN business logic on top of both storages, `PinAttemptsGuard`, `PinSession` and `UserActivityManager`.
   `SetPinCodeViewModel`, `VerifyPinCodeViewModel`, `ChangePinCodeViewModel` and `SplashScreen` use it instead of
   `PinCodeStorage`.

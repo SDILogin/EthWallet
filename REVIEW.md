@@ -21,6 +21,8 @@ Rules that code review checks. Each rule comes from earlier review feedback.
   allowed only in design-system components.
 - Prefer passing data (for example, a map of values to write) over callbacks. Callbacks make the
   execution flow harder to read.
+- Prefer positive conditions: `if (predicate()) { ... } else { ... }` over `if (!predicate())` with an early
+  return.
 
 ## Preconditions
 

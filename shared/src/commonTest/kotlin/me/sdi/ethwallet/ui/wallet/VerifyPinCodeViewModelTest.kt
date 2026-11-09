@@ -20,7 +20,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PinInteractor
-import me.sdi.ethwallet.core.security.PinInteractorDefault
 import me.sdi.ethwallet.core.security.PinLockState
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
@@ -742,7 +741,7 @@ class VerifyPinCodeViewModelTest {
     }
 
     private fun newPinInteractor(pinCodeStorage: PinCodeStorage): PinInteractor =
-        PinInteractorDefault(
+        PinInteractor(
             pinCodeStorage = pinCodeStorage,
             masterKekStorage = masterKekStorage,
             pinAttemptsGuard = pinAttemptsGuard,

@@ -67,7 +67,7 @@ class MasterKekStorageAndroidKeyStoreTest {
     fun privateKeyEncryptedBeforePinChangeDecryptsAfterUnlockWithNewPin() = runTest {
         val dispatcher = UnconfinedTestDispatcher()
         val session = InMemoryPinSession()
-        val interactor = PinInteractorDefault(
+        val interactor = PinInteractor(
             pinCodeStorage = PinCodeStorageDataStore(context = context, dispatcher = dispatcher),
             masterKekStorage = MasterKekStorageAndroidKeyStore(context = context, dispatcher = dispatcher),
             pinAttemptsGuard = KeyStorePinAttemptsGuard(context = context),

@@ -12,7 +12,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import me.sdi.ethwallet.core.security.PinInteractorDefault
+import me.sdi.ethwallet.core.security.PinInteractor
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.data.repository.WalletRepository
@@ -54,7 +54,7 @@ class SetPinCodeViewModelTest {
             historyInitializationStore = HistoryInitializationStoreInMemory(),
         )
         biometricUnlock = FakeBiometricUnlock()
-        val pinInteractor = PinInteractorDefault(
+        val pinInteractor = PinInteractor(
             pinCodeStorage = pinCodeStorage,
             masterKekStorage = FakeMasterKekStorage(),
             pinAttemptsGuard = FakePinAttemptsGuard(),
