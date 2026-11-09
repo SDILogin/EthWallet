@@ -51,6 +51,10 @@ watches this terminal. A human reviews your pull request and gives feedback only
      when it is true.
    - **Verification**: the commands you ran and their results.
    - The task reference.
+
+   Then request a review from `SDILogin`, because the human gets no email without this request:
+   `gh api repos/{owner}/{repo}/pulls/<pr-number>/requested_reviewers -f 'reviewers[]=SDILogin'`. Do not use
+   `gh pr create --reviewer`, because the agent token has only the `repo` scope.
 8. Watch the pull request for feedback in the background. Start the built-in `loop` skill with a 10-minute interval.
    Each iteration runs `.claude/skills/docker-agent/scripts/pr-comments.sh <pr-number>`. This script prints the PR
    state, followed by each new comment from other users as one JSON line. The script marks printed comments as
