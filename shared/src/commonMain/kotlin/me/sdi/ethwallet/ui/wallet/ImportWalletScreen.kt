@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
@@ -146,24 +147,28 @@ fun ImportWalletScreen(
                             stringResource(Res.string.import_wallet_recovery_phrase_supporting)
                         }
 
-                    OutlinedTextField(
-                        value = viewState.mnemonic,
-                        onValueChange = { viewModel.onEvent(ImportWalletEvent.MnemonicChanged(it)) },
-                        label = { Text(stringResource(Res.string.import_wallet_recovery_phrase_label)) },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .widthIn(max = 420.dp),
-                        keyboardOptions =
-                            KeyboardOptions.Default.copy(
-                                imeAction = ImeAction.Done,
-                            ),
-                        placeholder = { Text(stringResource(Res.string.import_wallet_recovery_phrase_placeholder)) },
-                        supportingText = { Text(supportingText) },
-                        isError = viewState.isError,
-                        enabled = !viewState.isLoading,
-                        maxLines = 3,
-                    )
+                    NoPersonalizedLearningInput {
+                        OutlinedTextField(
+                            value = viewState.mnemonic,
+                            onValueChange = { viewModel.onEvent(ImportWalletEvent.MnemonicChanged(it)) },
+                            label = { Text(stringResource(Res.string.import_wallet_recovery_phrase_label)) },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .widthIn(max = 420.dp),
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    keyboardType = KeyboardType.Password,
+                                    autoCorrectEnabled = false,
+                                    imeAction = ImeAction.Done,
+                                ),
+                            placeholder = { Text(stringResource(Res.string.import_wallet_recovery_phrase_placeholder)) },
+                            supportingText = { Text(supportingText) },
+                            isError = viewState.isError,
+                            enabled = !viewState.isLoading,
+                            maxLines = 3,
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.weight(1f))
             }
