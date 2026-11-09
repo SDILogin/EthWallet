@@ -1,0 +1,40 @@
+# One compose project per task: `docker compose -p ethwallet-<name> -f docker/compose.yaml up -d`.
+# Each project gets its own checkout and Gradle home. Claude auth, settings and MCP config come from
+# the shared claude-config volume. The shared Gradle cache is mounted read-only because Gradle does
+# not support one writable user home in several containers at once.
+services:
+  agent:
+    build: .
+    image: ethwallet-agent
+    platform: linux/amd64
+    init: true
+    environment:
+      - GH_TOKEN
+      - GIT_AUTHOR_NAME
+      - GIT_AUTHOR_EMAIL
+      - GIT_COMMITTER_NAME
+      - GIT_COMMITTER_EMAIL
+      - GITHUB_REPOSITORY=SDILogin/EthWallet
+      - CLAUDE_CONFIG_DIR=/home/ubuntu/.claude
+      - GRADLE_RO_DEP_CACHE=/opt/gradle-shared/caches
+    # Forwards the Agent Board MCP port from the host.
+    command: socat TCP-LISTEN:48212,bind=127.0.0.1,fork,reuseaddr TCP:host.docker.internal:48212
+    healthcheck:
+      test: ["CMD", "test", "-d", "/workspace/EthWallet/.git"]
+      interval: 2s
+      start_period: 10m
+    volumes:
+      - workspace:/workspace
+      - gradle:/home/ubuntu/.gradle
+      - claude-config:/home/ubuntu/.claude
+      - gradle-shared:/opt/gradle-shared:ro
+
+volumes:
+  workspace:
+  gradle:
+  claude-config:
+    external: true
+    name: ${CLAUDE_CONFIG_VOLUME:-claude-box_claude-config}
+  gradle-shared:
+    external: true
+    name: ${GRADLE_SHARED_VOLUME:-claude-box_gradle-cache}
