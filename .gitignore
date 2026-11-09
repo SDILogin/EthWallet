@@ -27,6 +27,8 @@ ethwallet-kotlin/rust/target/
 
 # Local configuration file (sdk path, etc)
 local.properties
+.env
+.claude/worktrees/
 
 # Android Studio
 *.iml

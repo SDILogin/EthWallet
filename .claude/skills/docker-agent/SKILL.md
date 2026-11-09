@@ -30,12 +30,19 @@ merged.
 ## Prerequisites
 
 - Docker Desktop is running. The first start builds the `ethwallet-agent` image from this skill's `docker/`.
-- `GH_TOKEN` is the agent GitHub account token, with Contents and Pull requests write access.
-- `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL` are set.
+- The `.env` file in the root of the main checkout sets `GH_TOKEN`, `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`,
+  `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL`. `GH_TOKEN` is the agent GitHub account token, with Contents and Pull
+  requests write access.
 - The external volume `claude-box_claude-config` holds a logged-in Claude config. In that config,
   `/workspace/EthWallet` is a trusted folder and the Agent Board MCP is set up. The external volume
   `claude-box_gradle-cache` is mounted as a read-only Gradle dependency cache. Override the volume names with
   `CLAUDE_CONFIG_VOLUME` and `GRADLE_SHARED_VOLUME`.
+
+## Environment check
+
+The script checks `.env` before it starts Docker. If a setting is missing, the script exits with code 3 and prints the
+setup instructions. Then stop. Show these instructions to the user, and do not start more agents. Do not get the values
+from other containers or files.
 
 ## Cleanup
 
