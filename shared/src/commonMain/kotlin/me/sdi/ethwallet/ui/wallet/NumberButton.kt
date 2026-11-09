@@ -10,8 +10,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.isSensitiveData
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -30,7 +28,7 @@ fun NumberButton(
     TextButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.size(72.dp).semantics { isSensitiveData = true },
+        modifier = modifier.size(72.dp),
         colors = ButtonDefaults.textButtonColors(
             contentColor = MaterialTheme.colorScheme.onBackground,
         ),

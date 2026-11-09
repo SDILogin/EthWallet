@@ -42,8 +42,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.isSensitiveData
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -238,7 +236,6 @@ private fun SendScreenContent(
                             stringResource(Res.string.send_fee_estimate, it)
                         },
                     onAmountChanged = { onEvent(SendEvent.OnTransferAmountChanged(it)) },
-                    modifier = Modifier.semantics { isSensitiveData = true },
                 )
             }
 
@@ -497,7 +494,7 @@ private fun ReceiverAddressInput(
                     }
                 }
             },
-            modifier = Modifier.fillMaxWidth().semantics { isSensitiveData = true },
+            modifier = Modifier.fillMaxWidth(),
             singleLine = false,
         )
     }
@@ -586,7 +583,7 @@ private fun SendButton(
     Button(
         onClick = onSendClick,
         enabled = enabled && !loading,
-        modifier = modifier.fillMaxWidth().semantics { isSensitiveData = true },
+        modifier = modifier.fillMaxWidth(),
     ) {
         if (loading) {
             CircularProgressIndicator(

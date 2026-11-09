@@ -32,8 +32,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.isSensitiveData
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
@@ -294,7 +292,7 @@ private fun VerifyNumberPad(
             if (showBiometricButton) {
                 TextButton(
                     onClick = onBiometricClick,
-                    modifier = Modifier.size(72.dp).semantics { isSensitiveData = true },
+                    modifier = Modifier.size(72.dp),
                     enabled = biometricEnabled,
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.onBackground,
@@ -314,7 +312,7 @@ private fun VerifyNumberPad(
 
             TextButton(
                 onClick = onDeleteClick,
-                modifier = Modifier.size(72.dp).semantics { isSensitiveData = true },
+                modifier = Modifier.size(72.dp),
                 enabled = enabled,
                 colors = ButtonDefaults.textButtonColors(
                     contentColor = MaterialTheme.colorScheme.onBackground,

@@ -2,12 +2,14 @@ package me.sdi.ethwallet.flow
 
 import android.app.Application
 import android.os.Build
+import android.text.InputType
+import android.view.inputmethod.EditorInfo
 import androidx.activity.compose.setContent
+import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
@@ -16,6 +18,8 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -75,6 +79,7 @@ import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import java.math.BigDecimal
 import java.math.BigInteger
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration
@@ -420,6 +425,57 @@ class WalletFlowTest : KoinTest {
     }
 
     @Test
+    fun recoveryPhraseFieldDisablesKeyboardLearningAndKeepsTextVisible() {
+        runInitialWalletCreationFlow()
+        showWalletsList()
+        walletsListPage.openAddWalletMenu()
+        walletsListPage.clickAddWalletImport()
+
+        val recoveryPhraseField = composeTestRule.onNode(hasText("Recovery Phrase") and hasSetTextAction())
+        recoveryPhraseField.performClick()
+        composeTestRule.waitForIdle()
+        val rootView = (recoveryPhraseField.fetchSemanticsNode().root as ViewRootForTest).view
+        val editorInfo = EditorInfo()
+        composeTestRule.runOnIdle { rootView.onCreateInputConnection(editorInfo) }
+
+        assertEquals(
+            InputType.TYPE_CLASS_TEXT,
+            editorInfo.inputType and InputType.TYPE_MASK_CLASS,
+            "Recovery phrase field should report a text input class",
+        )
+        assertEquals(
+            InputType.TYPE_TEXT_VARIATION_PASSWORD,
+            editorInfo.inputType and InputType.TYPE_MASK_VARIATION,
+            "Recovery phrase field should report a password variation",
+        )
+        assertEquals(
+            0,
+            editorInfo.inputType and InputType.TYPE_TEXT_FLAG_AUTO_CORRECT,
+            "Recovery phrase field should disable autocorrect",
+        )
+        assertEquals(
+            EditorInfo.IME_ACTION_DONE,
+            editorInfo.imeOptions and EditorInfo.IME_MASK_ACTION,
+            "Recovery phrase field should keep the Done action",
+        )
+        assertEquals(
+            EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING,
+            editorInfo.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING,
+            "Recovery phrase field should ask the keyboard not to learn typed words",
+        )
+
+        recoveryPhraseField.performTextInput(VISIBLE_RECOVERY_PHRASE)
+
+        val semantics = recoveryPhraseField.fetchSemanticsNode().config
+        assertEquals(
+            VISIBLE_RECOVERY_PHRASE,
+            semantics[SemanticsProperties.EditableText].text,
+            "Recovery phrase should stay readable after typing",
+        )
+        assertFalse(SemanticsProperties.Password in semantics, "Recovery phrase should not be masked")
+    }
+
+    @Test
     fun forgot_pin_logout_requires_confirmation_and_clears_local_data() {
         runInitialWalletCreationFlow()
 
@@ -466,24 +522,24 @@ class WalletFlowTest : KoinTest {
     }
 
     @Test
-    fun setPinScreenMarksPinEntryAsSensitive() {
+    fun setPinScreenMarksOnlyPinInputAsSensitive() {
         onboardingPage.clickCreatePinCode()
         composeTestRule.waitUntilTextExists("1")
 
-        assertPinEntryIsSensitive()
+        assertOnlyPinInputIsSensitive()
     }
 
     @Test
-    fun verifyPinScreenMarksPinEntryAsSensitive() {
+    fun verifyPinScreenMarksOnlyPinInputAsSensitive() {
         runInitialWalletCreationFlow()
 
         lockApp()
 
-        assertPinEntryIsSensitive()
+        assertOnlyPinInputIsSensitive()
     }
 
     @Test
-    fun changePinScreenMarksPinEntryAsSensitive() {
+    fun changePinScreenMarksOnlyPinInputAsSensitive() {
         runInitialWalletCreationFlow()
         showWalletsList()
 
@@ -492,7 +548,7 @@ class WalletFlowTest : KoinTest {
         composeTestRule.clickText("Change PIN")
         composeTestRule.waitUntilTextExists("1")
 
-        assertPinEntryIsSensitive()
+        assertOnlyPinInputIsSensitive()
     }
 
     @Test
@@ -523,26 +579,9 @@ class WalletFlowTest : KoinTest {
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.IsSensitiveData))
     }
 
-    @Test
-    fun sendScreenMarksTransferConfirmationAsSensitive() {
-        runInitialWalletCreationFlow()
-
-        walletsListPage.clickWallet("My Wallet")
-        walletPage.awaitVisible()
-        walletPage.clickSend()
-        composeTestRule.waitUntilTextExists("Receiver Address")
-
-        composeTestRule.onAllNodes(hasSetTextAction() and sensitiveData, useUnmergedTree = true).assertCountEquals(2)
-        composeTestRule.onNode(hasText("Send Transaction") and hasClickAction()).assert(sensitiveData)
-    }
-
-    private fun assertPinEntryIsSensitive() {
+    private fun assertOnlyPinInputIsSensitive() {
         composeTestRule.onNodeWithContentDescription("0 of 6 digits entered").assert(sensitiveData)
-        for (digit in 0..9) {
-            composeTestRule.onNode(hasText(digit.toString()) and hasClickAction()).assert(sensitiveData)
-        }
-        composeTestRule.onNodeWithContentDescription("Delete").assert(sensitiveData).assertHasClickAction()
-        composeTestRule.onAllNodes(hasClickAction() and sensitiveData, useUnmergedTree = true).assertCountEquals(11)
+        composeTestRule.onAllNodes(hasClickAction() and sensitiveData, useUnmergedTree = true).assertCountEquals(0)
     }
 
     /**
@@ -583,6 +622,7 @@ class WalletFlowTest : KoinTest {
 }
 
 private const val PIN = "112233"
+private const val VISIBLE_RECOVERY_PHRASE = "abandon ability able"
 
 class WalletFlowTestApplication : Application()
 

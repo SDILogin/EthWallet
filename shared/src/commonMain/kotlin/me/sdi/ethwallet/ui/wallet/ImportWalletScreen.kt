@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.isSensitiveData
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
@@ -148,25 +149,29 @@ fun ImportWalletScreen(
                             stringResource(Res.string.import_wallet_recovery_phrase_supporting)
                         }
 
-                    OutlinedTextField(
-                        value = viewState.mnemonic,
-                        onValueChange = { viewModel.onEvent(ImportWalletEvent.MnemonicChanged(it)) },
-                        label = { Text(stringResource(Res.string.import_wallet_recovery_phrase_label)) },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .widthIn(max = 420.dp)
-                                .semantics { isSensitiveData = true },
-                        keyboardOptions =
-                            KeyboardOptions.Default.copy(
-                                imeAction = ImeAction.Done,
-                            ),
-                        placeholder = { Text(stringResource(Res.string.import_wallet_recovery_phrase_placeholder)) },
-                        supportingText = { Text(supportingText) },
-                        isError = viewState.isError,
-                        enabled = !viewState.isLoading,
-                        maxLines = 3,
-                    )
+                    NoPersonalizedLearningInput {
+                        OutlinedTextField(
+                            value = viewState.mnemonic,
+                            onValueChange = { viewModel.onEvent(ImportWalletEvent.MnemonicChanged(it)) },
+                            label = { Text(stringResource(Res.string.import_wallet_recovery_phrase_label)) },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .widthIn(max = 420.dp)
+                                    .semantics { isSensitiveData = true },
+                            keyboardOptions =
+                                KeyboardOptions(
+                                    keyboardType = KeyboardType.Password,
+                                    autoCorrectEnabled = false,
+                                    imeAction = ImeAction.Done,
+                                ),
+                            placeholder = { Text(stringResource(Res.string.import_wallet_recovery_phrase_placeholder)) },
+                            supportingText = { Text(supportingText) },
+                            isError = viewState.isError,
+                            enabled = !viewState.isLoading,
+                            maxLines = 3,
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.weight(1f))
             }

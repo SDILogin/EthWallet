@@ -3,6 +3,7 @@
 set -euo pipefail
 
 readonly TUI_START_TIMEOUT_S=3
+readonly ENV_NOT_SET_EXIT_CODE=3
 
 if [ $# -ne 3 ]; then
   echo "Usage: $0 <name> <task-reference> <task-description>" >&2
@@ -17,16 +18,41 @@ if [[ ! "$name" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
   echo "Name must match [a-z0-9][a-z0-9-]*: $name" >&2
   exit 2
 fi
-: "${GH_TOKEN:?Set GH_TOKEN to the agent GitHub account token}"
-: "${GIT_AUTHOR_NAME:?Set GIT_AUTHOR_NAME}" "${GIT_AUTHOR_EMAIL:?Set GIT_AUTHOR_EMAIL}"
-: "${GIT_COMMITTER_NAME:?Set GIT_COMMITTER_NAME}" "${GIT_COMMITTER_EMAIL:?Set GIT_COMMITTER_EMAIL}"
 
 readonly skill_dir="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
+readonly repo_root="$(dirname "$(git -C "$skill_dir" rev-parse --path-format=absolute --git-common-dir)")"
+readonly env_file="$repo_root/.env"
+
+missing_env_keys=()
+for key in GH_TOKEN GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL; do
+  if [ ! -f "$env_file" ] || ! grep -Eq "^$key=[^[:space:]]" "$env_file"; then
+    missing_env_keys+=("$key")
+  fi
+done
+
+if [ "${#missing_env_keys[@]}" -ne 0 ]; then
+  cat >&2 <<EOF
+Agent not started. Missing settings in $env_file:
+  ${missing_env_keys[*]}
+
+Setup:
+1. Create $env_file. Git ignores this file.
+2. Add these lines with real values:
+   GH_TOKEN=<token of the agent GitHub account, with Contents and Pull requests write access>
+   GIT_AUTHOR_NAME=<commit author name>
+   GIT_AUTHOR_EMAIL=<commit author email>
+   GIT_COMMITTER_NAME=<commit committer name>
+   GIT_COMMITTER_EMAIL=<commit committer email>
+3. Run this command again.
+EOF
+  exit "$ENV_NOT_SET_EXIT_CODE"
+fi
+
 readonly compose_file="$skill_dir/docker/compose.yaml"
 readonly project="ethwallet-$name"
 
 compose() {
-  docker compose -p "$project" -f "$compose_file" "$@"
+  docker compose --env-file "$env_file" -p "$project" -f "$compose_file" "$@"
 }
 
 compose up -d --wait
