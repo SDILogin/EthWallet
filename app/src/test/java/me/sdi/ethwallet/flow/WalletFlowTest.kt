@@ -7,11 +7,17 @@ import android.view.inputmethod.EditorInfo
 import androidx.activity.compose.setContent
 import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.fragment.app.FragmentActivity
@@ -93,6 +99,7 @@ class WalletFlowTest : KoinTest {
     private val setPinCodePage = SetPinCodePage(composeTestRule)
     private val walletPage = WalletPage(composeTestRule)
     private val walletsListPage = WalletsListPage(composeTestRule)
+    private val sensitiveData = SemanticsMatcher.expectValue(SemanticsProperties.IsSensitiveData, true)
 
     private val pinSession: PinSession by inject()
 
@@ -512,6 +519,69 @@ class WalletFlowTest : KoinTest {
 
         walletsListPage.assertSingleWallet()
         walletsListPage.assertSelectedIndicatorIsHidden()
+    }
+
+    @Test
+    fun setPinScreenMarksOnlyPinInputAsSensitive() {
+        onboardingPage.clickCreatePinCode()
+        composeTestRule.waitUntilTextExists("1")
+
+        assertOnlyPinInputIsSensitive()
+    }
+
+    @Test
+    fun verifyPinScreenMarksOnlyPinInputAsSensitive() {
+        runInitialWalletCreationFlow()
+
+        lockApp()
+
+        assertOnlyPinInputIsSensitive()
+    }
+
+    @Test
+    fun changePinScreenMarksOnlyPinInputAsSensitive() {
+        runInitialWalletCreationFlow()
+        showWalletsList()
+
+        composeTestRule.clickContentDescription("Settings")
+        composeTestRule.waitUntilTextExists("Change PIN")
+        composeTestRule.clickText("Change PIN")
+        composeTestRule.waitUntilTextExists("1")
+
+        assertOnlyPinInputIsSensitive()
+    }
+
+    @Test
+    fun createWalletScreenMarksRecoveryPhraseAsSensitive() {
+        onboardingPage.clickCreatePinCode()
+        setPinCodePage.enterPin(PIN)
+        setPinCodePage.enterPin(PIN)
+        walletsListPage.clickCreateWallet()
+
+        val recoveryPhrase = hasContentDescription("12 words mnemonic", substring = true)
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodes(recoveryPhrase).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNode(recoveryPhrase).assert(sensitiveData)
+    }
+
+    @Test
+    fun importWalletScreenMarksOnlyRecoveryPhraseInputAsSensitive() {
+        runInitialWalletCreationFlow()
+        showWalletsList()
+
+        walletsListPage.openAddWalletMenu()
+        walletsListPage.clickAddWalletImport()
+        composeTestRule.waitUntilTextExists("Enter Recovery Phrase")
+
+        composeTestRule.onAllNodes(hasSetTextAction() and sensitiveData, useUnmergedTree = true).assertCountEquals(1)
+        composeTestRule.onNodeWithTag("wallet-label-input")
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.IsSensitiveData))
+    }
+
+    private fun assertOnlyPinInputIsSensitive() {
+        composeTestRule.onNodeWithContentDescription("0 of 6 digits entered").assert(sensitiveData)
+        composeTestRule.onAllNodes(hasClickAction() and sensitiveData, useUnmergedTree = true).assertCountEquals(0)
     }
 
     /**
