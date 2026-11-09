@@ -9,12 +9,13 @@ containers. Each container runs one task, so the orchestrator can run several ag
   a task description.
 - `.claude/skills/docker-agent/scripts/start-agent.sh`: starts the compose project `ethwallet-<name>` and writes
   the prompt (template, `---`, then the task) into the container. It launches `claude` in a detached tmux session
-  with Opus 5.5, medium effort, bypassed permissions, and Fable as the advisor.
+  with Opus 5.5, medium effort, bypassed permissions, and Fable as the advisor. After 3 seconds it pastes the
+  prompt with tmux and presses Enter.
 - `.claude/skills/docker-agent/template.md`: rules shared by all Docker agents.
 - `.claude/skills/docker-agent/scripts/pr-comments.sh`: runs in the container. It prints the PR state and new
   comments from other users, because GitHub cannot push events to a container without a public IP.
-- `docker/Dockerfile`, `docker/compose.yaml`, `docker/entrypoint.sh`: the agent image and one compose project per
-  task. Each project has its own workspace volume, cloned over HTTPS with `GH_TOKEN`, and its own Gradle home.
+- `.claude/skills/docker-agent/docker/` (`Dockerfile`, `compose.yaml`, `entrypoint.sh`): the agent image and one
+  compose project per task. Each project has its own workspace volume, cloned over HTTPS with `GH_TOKEN`, and its own Gradle home.
   Claude config comes from the shared external volume. The shared Gradle cache is mounted read-only.
 
 ## Template rules

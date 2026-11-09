@@ -2,6 +2,8 @@
 # Runs on the host. Starts a Docker container for one task and launches an autonomous Claude agent in tmux.
 set -euo pipefail
 
+readonly TUI_START_TIMEOUT_S=3
+
 if [ $# -ne 3 ]; then
   echo "Usage: $0 <name> <task-reference> <task-description>" >&2
   exit 2
@@ -19,8 +21,8 @@ fi
 : "${GIT_AUTHOR_NAME:?Set GIT_AUTHOR_NAME}" "${GIT_AUTHOR_EMAIL:?Set GIT_AUTHOR_EMAIL}"
 : "${GIT_COMMITTER_NAME:?Set GIT_COMMITTER_NAME}" "${GIT_COMMITTER_EMAIL:?Set GIT_COMMITTER_EMAIL}"
 
-readonly skill_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-readonly compose_file="$skill_dir/../../../docker/compose.yaml"
+readonly skill_dir="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
+readonly compose_file="$skill_dir/docker/compose.yaml"
 readonly project="ethwallet-$name"
 
 compose() {
@@ -40,8 +42,14 @@ printf '%s\n\n---\n\nTask reference: %s\n\n%s\n' \
 
 compose exec -T agent tmux new-session -d -s agent -c /workspace/EthWallet \
   'claude --model claude-opus-5-5 --effort medium --permission-mode bypassPermissions \
-    --settings '\''{"skipDangerousModePermissionPrompt": true, "advisorModel": "fable"}'\'' \
-    "$(cat /tmp/agent-prompt.md)"'
+    --settings '\''{"skipDangerousModePermissionPrompt": true, "advisorModel": "fable"}'\'''
+
+sleep "$TUI_START_TIMEOUT_S"
+
+# Bracketed paste keeps the prompt's newlines inside one message; Enter then submits it.
+compose exec -T agent sh -c 'tmux load-buffer -b prompt /tmp/agent-prompt.md \
+  && tmux paste-buffer -p -d -b prompt -t agent \
+  && tmux send-keys -t agent Enter'
 
 echo "Started $project"
 echo "Attach: docker compose -p $project -f $compose_file exec -it agent tmux new-session -A -s agent"

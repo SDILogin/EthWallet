@@ -1,4 +1,4 @@
-# One compose project per task: `docker compose -p ethwallet-<name> -f docker/compose.yaml up -d`.
+# One compose project per task: `docker compose -p ethwallet-<name> -f .claude/skills/docker-agent/docker/compose.yaml up -d`.
 # Each project gets its own checkout and Gradle home. Claude auth, settings and MCP config come from
 # the shared claude-config volume. The shared Gradle cache is mounted read-only because Gradle does
 # not support one writable user home in several containers at once.

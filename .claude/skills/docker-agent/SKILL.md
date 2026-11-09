@@ -20,15 +20,16 @@ name.
 - `task-description`: the full task text. The agent sees only this text and the repository.
 
 The script builds the prompt as `template.md`, a `---` separator, then the task reference and description. It starts
-`claude` on Opus 5.5 (medium effort) in bypass-permissions mode, inside the tmux session `agent`. Fable is the
-advisor. Report the attach command the script prints.
+`claude` on Opus 5.5 (medium effort) in bypass-permissions mode, inside the tmux session `agent`, waits 3 seconds for
+the TUI, then pastes the prompt with tmux and presses Enter. Fable is the advisor. Report the attach command the
+script prints.
 
 Do not claim an Agent Board task before starting the agent. The agent claims it, and completes it when the PR is
 merged.
 
 ## Prerequisites
 
-- Docker Desktop is running. The first start builds the `ethwallet-agent` image from `docker/`.
+- Docker Desktop is running. The first start builds the `ethwallet-agent` image from this skill's `docker/`.
 - `GH_TOKEN` is the agent GitHub account token, with Contents and Pull requests write access.
 - `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL` are set.
 - The external volume `claude-box_claude-config` holds a logged-in Claude config. In that config,
@@ -41,7 +42,7 @@ merged.
 Only when the user asks, for a task whose PR is merged or closed:
 
 ```bash
-docker compose -p ethwallet-<name> -f docker/compose.yaml down -v
+docker compose -p ethwallet-<name> -f .claude/skills/docker-agent/docker/compose.yaml down -v
 ```
 
 `-v` deletes the task's checkout and Gradle home. It does not delete the shared external volumes.
