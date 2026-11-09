@@ -1,21 +1,22 @@
 package me.sdi.ethwallet.flow.e2e.environment
 
 import android.app.Application
+import android.content.Context
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.EthManagerKotlin
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
+import me.sdi.ethwallet.core.security.DataCleanerDataStore
 import me.sdi.ethwallet.core.security.DataCleanerRoomDb
+import me.sdi.ethwallet.core.security.MasterKekStorage
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
-import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PinLockState
-import me.sdi.ethwallet.core.security.PinSession
+import me.sdi.ethwallet.core.security.PinSessionDataCleaner
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
-import me.sdi.ethwallet.data.UserActivityManager
 import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.di.appModules
 import me.sdi.ethwallet.kotlin.PrivateKey
@@ -54,12 +55,7 @@ private val SEPOLIA_CHAIN_CONFIG = ChainConfig(
 
 private val sepoliaE2eHardwareModule = module {
     single<PinAttemptsGuard> { InMemoryPinAttemptsGuard() }
-    single<PinCodeStorage> {
-        InMemoryPinCodeStorage(
-            pinSession = get(),
-            userActivityManager = get(),
-        )
-    }
+    single<MasterKekStorage> { InMemoryMasterKekStorage() }
     single { InMemoryPrivateKeyEncryptor() }
     single<PrivateKeyEncryptor> { get<InMemoryPrivateKeyEncryptor>() }
     single<BiometricUnlock> { UnsupportedBiometricUnlock() }
@@ -67,8 +63,10 @@ private val sepoliaE2eHardwareModule = module {
         DataCleanerComposite(
             listOf(
                 DataCleanerRoomDb(get<AppDatabase>()),
+                DataCleanerDataStore(get<Context>()),
+                PinSessionDataCleaner(get()),
                 E2eHardwareDataCleaner(
-                    pinCodeStorage = get(),
+                    masterKekStorage = get(),
                     pinAttemptsGuard = get(),
                     privateKeyEncryptor = get(),
                 ),
@@ -77,33 +75,16 @@ private val sepoliaE2eHardwareModule = module {
     }
 }
 
-private class InMemoryPinCodeStorage(
-    private val pinSession: PinSession,
-    private val userActivityManager: UserActivityManager,
-) : PinCodeStorage {
-    private var storedPin: String? = null
+private class InMemoryMasterKekStorage : MasterKekStorage {
+    private var storedKek: ByteArray? = null
 
-    override suspend fun storePinCode(pinCode: String) {
-        storedPin = pinCode
-        unlock()
-    }
+    override suspend fun create(): ByteArray =
+        ByteArray(MASTER_KEK_SIZE) { MASTER_KEK_BYTE }.also { storedKek = it.copyOf() }
 
-    override suspend fun verifyPinCode(pinCode: String): Boolean {
-        if (storedPin != pinCode) return false
-        unlock()
-        return true
-    }
+    override suspend fun read(): ByteArray = checkNotNull(storedKek).copyOf()
 
-    override suspend fun hasPinCode(): Boolean = storedPin != null
-
-    override suspend fun clearPinCode() {
-        storedPin = null
-        pinSession.clear()
-    }
-
-    private fun unlock() {
-        pinSession.set(ByteArray(PIN_SESSION_KEY_SIZE) { PIN_SESSION_KEY_BYTE })
-        userActivityManager.onAppUnlocked()
+    override suspend fun clear() {
+        storedKek = null
     }
 }
 
@@ -166,16 +147,16 @@ private class UnsupportedBiometricUnlock : BiometricUnlock {
 }
 
 private class E2eHardwareDataCleaner(
-    private val pinCodeStorage: PinCodeStorage,
+    private val masterKekStorage: MasterKekStorage,
     private val pinAttemptsGuard: PinAttemptsGuard,
     private val privateKeyEncryptor: InMemoryPrivateKeyEncryptor,
 ) : DataCleaner {
     override suspend fun clean() {
-        pinCodeStorage.clearPinCode()
+        masterKekStorage.clear()
         pinAttemptsGuard.clear()
         privateKeyEncryptor.clear()
     }
 }
 
-private const val PIN_SESSION_KEY_SIZE = 32
-private const val PIN_SESSION_KEY_BYTE: Byte = 7
+private const val MASTER_KEK_SIZE = 32
+private const val MASTER_KEK_BYTE: Byte = 7

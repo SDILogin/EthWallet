@@ -9,9 +9,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.Logger
-import me.sdi.ethwallet.data.UserActivityManager
-import java.io.IOException
-import java.security.GeneralSecurityException
+import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
@@ -20,121 +18,78 @@ import kotlin.io.encoding.Base64
 /**
  * [PinCodeStorage] for targets without a hardware-backed key store, persisted with [DataStore].
  *
- * A `pinKey` derived from the PIN (PBKDF2WithHmacSHA256) wraps a random 256-bit master KEK with
- * software AES-256-GCM ([KekCipher]). The KDF salt and that wrapped blob are the only artifacts
- * persisted; no PIN hash is ever stored. Verification is decrypt-by-unwrap: a successful GCM unwrap
- * both proves the PIN and yields the KEK, which is published to the [PinSession] for the session.
- *
- * With no hardware layer to bind the envelope to the machine, an attacker who copies the artifacts
- * can brute force the PIN offline at the cost of the KDF alone. That is weaker than the Android
- * storage, which wraps the same blob again with an AndroidKeyStore key. Open the store through
- * [pinArtifactsDataStore], which keeps the artifacts where only their owner can read them.
+ * The PIN is an app-lock check only. It is stored as a salted PBKDF2WithHmacSHA256 PIN hash, which
+ * can be brute forced offline by anyone who can read the store.
  */
 class PinCodeStorageSoftware(
     private val dataStore: DataStore<Preferences>,
-    private val userActivityManager: UserActivityManager,
-    private val pinAttemptsGuard: PinAttemptsGuard,
-    private val pinSession: PinSession,
 ) : PinCodeStorage {
     override suspend fun storePinCode(pinCode: String) {
-        pinAttemptsGuard.bootstrap()
-
-        val salt = randomBytes(SALT_LENGTH)
-        val masterKek = randomBytes(MASTER_KEK_LENGTH)
-        val pinKey = deriveKey(pinCode, salt)
-        val wrappedKek = try {
-            KekCipher.encrypt(pinKey, masterKek)
-        } finally {
-            pinKey.fill(0)
-        }
-
-        dataStore.edit { preferences ->
-            preferences[PIN_KDF_SALT] = Base64.encode(salt)
-            preferences[PIN_WRAPPED_KEK] = Base64.encode(wrappedKek)
-        }
-
-        pinSession.set(masterKek)
+        writePinHash(pinCode)
         Logger.debug(TAG) { "PIN code stored successfully" }
     }
 
     override suspend fun verifyPinCode(pinCode: String): Boolean {
-        val artifacts = readArtifacts()
-        if (artifacts == null) {
-            Logger.debug(TAG) { "No PIN code stored for verification" }
-            return false
-        }
+        val preferences = dataStore.data.first()
+        val pinHashSalt = checkNotNull(preferences[PIN_HASH_SALT]) { "No PIN hash salt stored" }
+        val storedPinHash = checkNotNull(preferences[PIN_HASH]) { "No PIN hash stored" }
 
-        var pinKey: ByteArray? = null
-        return try {
-            pinKey = deriveKey(pinCode, Base64.decode(artifacts.salt))
-            val masterKek = KekCipher.decrypt(pinKey, Base64.decode(artifacts.wrappedKek))
-            pinSession.set(masterKek)
-            userActivityManager.onAppUnlocked()
-            Logger.debug(TAG) { "PIN verification succeeded" }
-            true
-        } catch (e: GeneralSecurityException) {
-            Logger.debug(TAG) { "PIN verification failed: ${e.message}" }
-            false
-        } catch (e: IllegalArgumentException) {
-            Logger.debug(TAG) { "PIN envelope is malformed: ${e.message}" }
-            false
+        val pinHash = hashPin(pinCode, Base64.decode(pinHashSalt))
+        val matches = try {
+            MessageDigest.isEqual(pinHash, Base64.decode(storedPinHash))
         } finally {
-            pinKey?.fill(0)
+            pinHash.fill(0)
         }
+        Logger.debug(TAG) { if (matches) "PIN verification succeeded" else "PIN verification failed" }
+        return matches
     }
 
-    override suspend fun hasPinCode(): Boolean = readArtifacts() != null
+    override suspend fun changePinCode(newPin: String) {
+        writePinHash(newPin)
+        Logger.debug(TAG) { "PIN code changed successfully" }
+    }
+
+    override suspend fun hasPinCode(): Boolean = PIN_HASH in dataStore.data.first()
 
     override suspend fun clearPinCode() {
         dataStore.edit { preferences ->
-            preferences.remove(PIN_KDF_SALT)
-            preferences.remove(PIN_WRAPPED_KEK)
+            preferences.remove(PIN_HASH_SALT)
+            preferences.remove(PIN_HASH)
         }
-
-        pinAttemptsGuard.clear()
-        pinSession.clear()
     }
 
-    private suspend fun randomBytes(size: Int): ByteArray = withContext(Dispatchers.Default) {
-        ByteArray(size).also(SecureRandom()::nextBytes)
+    private suspend fun writePinHash(pinCode: String) {
+        val salt = withContext(Dispatchers.Default) {
+            ByteArray(PIN_HASH_SALT_BYTES).also(SecureRandom()::nextBytes)
+        }
+        val pinHash = hashPin(pinCode, salt)
+
+        dataStore.edit { preferences ->
+            preferences[PIN_HASH_SALT] = Base64.encode(salt)
+            preferences[PIN_HASH] = Base64.encode(pinHash)
+        }
     }
 
-    private suspend fun deriveKey(pinCode: String, salt: ByteArray): ByteArray =
+    private suspend fun hashPin(pinCode: String, salt: ByteArray): ByteArray =
         withContext(Dispatchers.Default) {
-            val spec = PBEKeySpec(pinCode.toCharArray(), salt, PBKDF2_ITERATIONS, PBKDF2_KEY_BITS)
+            val spec = PBEKeySpec(pinCode.toCharArray(), salt, PIN_HASH_ITERATIONS, PIN_HASH_BITS)
             try {
-                val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM).also { ensureActive() }
+                val factory = SecretKeyFactory.getInstance(PIN_HASH_ALGORITHM).also { ensureActive() }
                 factory.generateSecret(spec).encoded.also { ensureActive() }
             } finally {
                 spec.clearPassword()
             }
         }
 
-    private suspend fun readArtifacts(): PinArtifacts? {
-        val preferences = try {
-            dataStore.data.first()
-        } catch (e: IOException) {
-            Logger.warn(TAG, e) { "Failed to read the stored PIN artifacts" }
-            return null
-        }
-
-        val salt = preferences[PIN_KDF_SALT]
-        val wrappedKek = preferences[PIN_WRAPPED_KEK]
-        return if (salt == null || wrappedKek == null) null else PinArtifacts(salt, wrappedKek)
-    }
-
-    private class PinArtifacts(val salt: String, val wrappedKek: String)
-
     private companion object {
         private const val TAG = "PinCodeStorageSoftware"
 
-        private const val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
-        private const val PBKDF2_ITERATIONS = 200_000
-        private const val PBKDF2_KEY_BITS = 256
-        private const val SALT_LENGTH = 16
-        private const val MASTER_KEK_LENGTH = 32
+        private const val PIN_HASH_ALGORITHM = "PBKDF2WithHmacSHA256"
+        private const val PIN_HASH_ITERATIONS = 200_000
+        private const val PIN_HASH_BITS = 256
+        private const val PIN_HASH_SALT_BYTES = 16
 
-        private val PIN_KDF_SALT = stringPreferencesKey("pin_kdf_salt")
-        private val PIN_WRAPPED_KEK = stringPreferencesKey("pin_wrapped_kek")
+        private val PIN_HASH_SALT = stringPreferencesKey("pin_hash_salt")
+        private val PIN_HASH = stringPreferencesKey("pin_hash")
     }
 }

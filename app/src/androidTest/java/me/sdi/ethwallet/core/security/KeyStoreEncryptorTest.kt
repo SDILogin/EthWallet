@@ -38,7 +38,7 @@ class KeyStoreEncryptorTest {
 
         val expectedBytes = PRIVATE_KEY.copyBytes()
         val decryptedBytes = decrypted.copyBytes()
-        assertTrue(decryptedBytes.contentEquals(expectedBytes), "Round-trip must recover the original private key")
+        assertTrue("Round-trip must recover the original private key", decryptedBytes.contentEquals(expectedBytes))
 
         val inner = stripOuterKeystoreLayer(cipherText, ADDRESS)
         val privateKeyBytes = PRIVATE_KEY.copyBytes()
@@ -98,7 +98,7 @@ class KeyStoreEncryptorTest {
         return cipher.doFinal(body)
     }
 
-    private fun randomKek(): ByteArray = ByteArray(MASTER_KEK_LENGTH).also { SecureRandom().nextBytes(it) }
+    private fun randomKek(): ByteArray = ByteArray(MASTER_KEK_BYTES).also { SecureRandom().nextBytes(it) }
 
     private fun deleteWalletAliases() {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
@@ -113,7 +113,7 @@ class KeyStoreEncryptorTest {
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val GCM_IV_LENGTH = 12
         private const val GCM_TAG_LENGTH = 128
-        private const val MASTER_KEK_LENGTH = 32
+        private const val MASTER_KEK_BYTES = 32
         private const val ETH_ALIAS_PREFIX = "eth_wallet_key_"
         private const val ADDRESS = "0x1234567890abcdef1234567890abcdef12345678"
         private val PRIVATE_KEY = PrivateKey.fromBytes(

@@ -26,6 +26,7 @@ import me.sdi.ethwallet.core.history.TransferHistoryRepositoryRoom
 import me.sdi.ethwallet.core.history.TransfersHistoryProvider
 import me.sdi.ethwallet.core.history.TransfersHistoryProviderBlockscout
 import me.sdi.ethwallet.core.security.InMemoryPinSession
+import me.sdi.ethwallet.core.security.PinInteractor
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.core.transfer.EthTransferInteractor
 import me.sdi.ethwallet.core.transfer.TransferInteractor
@@ -38,6 +39,7 @@ import me.sdi.ethwallet.ui.history.HistoryViewModel
 import me.sdi.ethwallet.ui.history.TransactionDetailsViewModel
 import me.sdi.ethwallet.ui.receive.ReceiveQrViewModel
 import me.sdi.ethwallet.ui.send.SendViewModel
+import me.sdi.ethwallet.ui.settings.ChangePinCodeViewModel
 import me.sdi.ethwallet.ui.settings.SettingsViewModel
 import me.sdi.ethwallet.ui.wallet.CreateWalletViewModel
 import me.sdi.ethwallet.ui.wallet.ImportWalletViewModel
@@ -94,6 +96,16 @@ val commonModule = module {
 
     single<PinSession> { InMemoryPinSession() }
 
+    factory<PinInteractor> {
+        PinInteractor(
+            pinCodeStorage = get(),
+            masterKekStorage = get(),
+            pinAttemptsGuard = get(),
+            pinSession = get(),
+            userActivityManager = get(),
+        )
+    }
+
     single<UserActivityManager> {
         ProcessLifetimeUserActivityManager(
             pinSession = get(),
@@ -127,7 +139,7 @@ val commonModule = module {
 
     viewModel<SetPinCodeViewModel> {
         SetPinCodeViewModel(
-            pinCodeStorage = get(),
+            pinInteractor = get(),
             walletRepository = get(),
             biometricUnlock = get(),
         )
@@ -135,11 +147,15 @@ val commonModule = module {
 
     viewModel<VerifyPinCodeViewModel> {
         VerifyPinCodeViewModel(
-            pinCodeStorage = get(),
+            pinInteractor = get(),
             dataCleaner = get(),
             pinAttemptsGuard = get(),
             biometricUnlock = get(),
         )
+    }
+
+    viewModel<ChangePinCodeViewModel> {
+        ChangePinCodeViewModel(pinInteractor = get())
     }
 
     viewModel<SettingsViewModel> {

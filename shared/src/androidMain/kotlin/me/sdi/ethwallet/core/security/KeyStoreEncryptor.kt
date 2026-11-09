@@ -21,9 +21,12 @@ import javax.crypto.spec.GCMParameterSpec
  * ```
  * pk -- private key.
  * epk -- encrypted private key.
- * h -- hardware encryption. Used to prevent decryption by pin code brutforce attack from outside of a device.
- * s -- software encryption. Used to prevent accessing the private key from the application process when
- *      attacker does not know the pin. PBKDF2(pin)
+ * h -- hardware encryption with a non-exportable per-address AndroidKeyStore key. Makes epk useless
+ *      outside of the device.
+ * s -- software encryption with the random master KEK. The KEK is stored wrapped by an AndroidKeyStore
+ *      key (see [MasterKekStorageAndroidKeyStore]) and is held in the [PinSession] only while the app is
+ *      unlocked. It does not depend on the PIN, so it does not protect against code running in the
+ *      application process, which can unwrap the KEK through the AndroidKeyStore.
  *
  * Encryption: epk = h(s(pk))
  * Decryption: pk = s(h(epk))

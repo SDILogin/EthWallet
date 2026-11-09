@@ -27,19 +27,29 @@
 - Repositories must be replaced with `InMemory` implementation in tests. Forbidden to mock repositories.
 - `InMemory` repositories implementation must be simple abstraction over collections without any complex logic. That's
   why repositories must be simple CRUDs.
+- A `Storage<Data>` is responsible only for persisting `Data`. Business logic such as sessions, auto-lock, and attempt
+  counters belongs in dedicated classes such as interactors.
 - Use named arguments when pass multiple primitive values. For example,
   `private class PinArtifacts(val saltBase64: String, val wrappedBase64: String)` must be constructed using named
   arguments.
+- Do not give private functions default parameter values; keep calls explicit. Default parameters are allowed only in
+  design-system components.
+- Prefer passing data (for example, a map of values to write) over callbacks. Callbacks make the execution flow harder
+  to read.
+- Prefer positive conditions: `if (predicate()) { ... } else { ... }` over `if (!predicate())` with an early return.
 - Use `checkNotNull` (or `check`) for a state that the app flow guarantees. Do not return a fallback value for an
   impossible state. For example, the PIN verification screen is shown only after a PIN storage check, so the stored PIN
   artifacts are not null there.
-- Store time constants as primitives with a unit suffix: `private const val INDICATOR_ANIMATION_DELAY_MS = 300`.
+- Declare constants as file-level `private const val`, not file-level `private val`. `Duration` cannot be a `const`, so
+  store time constants as primitives with a unit suffix: `private const val INDICATOR_ANIMATION_DELAY_MS = 300`.
   Convert to Kotlin `Duration` only on the call side.
 
 ## Presentation logic
 
 - Assume that Start event arrives first. It is forbidden to handle unrealistic events flow like pull-to-refresh before
   OnStart.
+- Trace `onEvent` handlers and remove dead branches. Consider only realistic user scenarios: `OnStart` after
+  pull-to-refresh or a click on a disabled button are not realistic.
 - Concurrency primitives like Lock, synchronized blocks and so on must be treated as overengineering. Agent must provide
   A REALISTIC evidence that concurrent primitive is mandatory.
 - ViewModel `init` must be fast and error-safe. Actual initialization (for example initial data loading) must be
@@ -48,8 +58,6 @@
   string resources on the Jetpack Compose layer, where localization is available.
 - One-time UI effects (shake, toast, navigation) must be sent through `news`. Do not use a state field (for example an
   error id) as an animation trigger.
-- Do not ask again for data that the app state already guarantees. For example, Settings is available only in the
-  unlocked state, so the change PIN flow must not ask for the current PIN and must not use the PIN attempts guard.
 
 ## Jetpack compose style
 

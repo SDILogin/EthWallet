@@ -1,25 +1,18 @@
 package me.sdi.ethwallet.core.security
 
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import me.sdi.ethwallet.data.UserActivityManager
-import me.sdi.ethwallet.fakes.FakePinAttemptsGuard
-import me.sdi.ethwallet.fakes.FakePinSession
-import me.sdi.ethwallet.fakes.FakeUserActivityManager
 import java.io.File
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermissions
-import kotlin.io.encoding.Base64
 import kotlin.test.AfterTest
 import kotlin.test.Test
-import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class PinCodeStorageSoftwareTest {
@@ -35,101 +28,42 @@ class PinCodeStorageSoftwareTest {
     }
 
     @Test
-    fun a_stored_pin_verifies_and_unlocks_the_session() = runTest {
-        val pinSession = FakePinSession()
-        val userActivityManager = FakeUserActivityManager()
-        val storage = newStorage(pinSession, userActivityManager)
+    fun a_stored_pin_verifies() = runTest {
+        val storage = newStorage()
 
         storage.storePinCode(PIN)
-        val kekFromStore = pinSession.lastKek
-        val verified = storage.verifyPinCode(PIN)
 
-        assertTrue(verified, "The stored PIN should verify")
         assertTrue(storage.hasPinCode(), "A stored PIN should be reported as present")
-        assertContentEquals(
-            kekFromStore,
-            pinSession.lastKek,
-            "Verification should republish the master KEK created when the PIN was stored",
-        )
-        assertEquals(
-            1,
-            userActivityManager.onAppUnlockedCallCount,
-            "A successful verification should unlock the app",
-        )
+        assertTrue(newStorage().verifyPinCode(PIN), "The stored PIN should verify")
     }
 
     @Test
-    fun a_wrong_pin_is_rejected_and_leaves_the_session_locked() = runTest {
+    fun a_wrong_pin_is_rejected() = runTest {
         newStorage().storePinCode(PIN)
 
-        val restartedSession = FakePinSession()
-        val userActivityManager = FakeUserActivityManager()
-        val verified = newStorage(restartedSession, userActivityManager).verifyPinCode("654321")
-
-        assertFalse(verified, "A wrong PIN must not verify")
-        assertNull(restartedSession.lastKek, "A wrong PIN must not publish a master KEK")
-        assertEquals(
-            0,
-            userActivityManager.onAppUnlockedCallCount,
-            "A wrong PIN must not unlock the app",
-        )
+        assertFalse(newStorage().verifyPinCode(WRONG_PIN), "A wrong PIN must not verify")
     }
 
     @Test
-    fun verification_fails_when_no_pin_is_stored() = runTest {
-        val pinSession = FakePinSession()
-        val storage = newStorage(pinSession)
+    fun verification_without_a_stored_pin_is_a_programming_error() = runTest {
+        val storage = newStorage()
 
-        val verified = storage.verifyPinCode(PIN)
-
-        assertFalse(verified, "Verification must fail when no PIN has ever been stored")
         assertFalse(storage.hasPinCode(), "No PIN should be reported when nothing was stored")
-        assertNull(pinSession.lastKek, "A failed verification must not publish a master KEK")
+        assertFailsWith<IllegalStateException>("The lock screen is only shown once a PIN is stored") {
+            storage.verifyPinCode(PIN)
+        }
     }
 
     @Test
-    fun a_tampered_envelope_is_rejected() = runTest {
-        newStorage().storePinCode(PIN)
-        rewriteWrappedKek(ByteArray(44) { it.toByte() })
-
-        val restartedSession = FakePinSession()
-        val verified = newStorage(restartedSession).verifyPinCode(PIN)
-
-        assertFalse(verified, "An envelope that fails its GCM tag must not verify")
-        assertNull(restartedSession.lastKek, "A tampered envelope must not publish a master KEK")
-    }
-
-    @Test
-    fun a_truncated_envelope_is_rejected() = runTest {
-        newStorage().storePinCode(PIN)
-        rewriteWrappedKek(ByteArray(4))
-
-        val restartedSession = FakePinSession()
-        val verified = newStorage(restartedSession).verifyPinCode(PIN)
-
-        assertFalse(verified, "An envelope shorter than the IV must not verify")
-        assertNull(restartedSession.lastKek, "A truncated envelope must not publish a master KEK")
-    }
-
-    @Test
-    fun clearing_the_pin_removes_the_stored_envelope() = runTest {
-        val pinSession = FakePinSession()
-        val storage = newStorage(pinSession)
+    fun clearing_the_pin_removes_the_stored_hash() = runTest {
+        val storage = newStorage()
         storage.storePinCode(PIN)
-        val storedKek = assertNotNull(dataStore.data.first()[PIN_WRAPPED_KEK])
 
         storage.clearPinCode()
 
+        val preferences = dataStore.data.first()
         assertFalse(storage.hasPinCode(), "A cleared PIN must not be reported as present")
-        assertFalse(
-            persistedArtifacts().contains(storedKek),
-            "Clearing the PIN should leave no wrapped KEK on disk",
-        )
-        assertNull(pinSession.lastKek, "Clearing the PIN should lock the session")
-        assertFalse(
-            newStorage(FakePinSession()).verifyPinCode(PIN),
-            "A cleared PIN must no longer verify",
-        )
+        assertFalse(PIN_HASH_SALT in preferences, "Clearing the PIN should leave no salt on disk")
     }
 
     @Test
@@ -148,7 +82,7 @@ class PinCodeStorageSoftwareTest {
     }
 
     @Test
-    fun storing_a_new_pin_replaces_the_previous_envelope() = runTest {
+    fun storing_a_new_pin_replaces_the_previous_one() = runTest {
         newStorage().storePinCode(PIN)
         newStorage().storePinCode(NEW_PIN)
 
@@ -157,7 +91,7 @@ class PinCodeStorageSoftwareTest {
         assertEquals(
             listOf(artifactsFile.name),
             artifactsDirectory.list()?.sorted(),
-            "Replacing the envelope should leave no temporary files behind",
+            "Replacing the PIN should leave no temporary files behind",
         )
     }
 
@@ -168,21 +102,43 @@ class PinCodeStorageSoftwareTest {
         assertFalse(persistedArtifacts().contains(PIN), "The PIN must never be persisted")
     }
 
-    private fun newStorage(
-        pinSession: PinSession = FakePinSession(),
-        userActivityManager: UserActivityManager = FakeUserActivityManager(),
-    ) = PinCodeStorageSoftware(
-        dataStore = dataStore,
-        userActivityManager = userActivityManager,
-        pinAttemptsGuard = FakePinAttemptsGuard(),
-        pinSession = pinSession,
-    )
+    @Test
+    fun a_changed_pin_verifies_and_the_old_one_does_not() = runTest {
+        newStorage().storePinCode(PIN)
 
-    private suspend fun rewriteWrappedKek(wrappedKek: ByteArray) {
-        dataStore.edit { preferences ->
-            preferences[PIN_WRAPPED_KEK] = Base64.encode(wrappedKek)
-        }
+        newStorage().changePinCode(NEW_PIN)
+
+        assertTrue(newStorage().verifyPinCode(NEW_PIN), "The new PIN should verify after the change")
+        assertFalse(newStorage().verifyPinCode(PIN), "The old PIN must no longer verify after the change")
     }
+
+    @Test
+    fun a_pin_change_keeps_the_other_stored_values() = runTest {
+        newStorage().storePinCode(PIN)
+        val masterKek = MasterKekStorageSoftware(dataStore).create()
+
+        newStorage().changePinCode(NEW_PIN)
+
+        assertTrue(
+            masterKek.contentEquals(MasterKekStorageSoftware(dataStore).read()),
+            "A PIN change must not rewrite the master KEK stored next to the PIN hash",
+        )
+    }
+
+    @Test
+    fun every_change_stores_a_fresh_salt_and_pin_hash() = runTest {
+        newStorage().storePinCode(PIN)
+        val before = dataStore.data.first()
+
+        newStorage().changePinCode(PIN)
+
+        val after = dataStore.data.first()
+        assertNotEquals(before[PIN_HASH_SALT], after[PIN_HASH_SALT], "Each PIN change should use a new salt")
+        assertNotEquals(before[PIN_HASH], after[PIN_HASH], "Each PIN change should store a new PIN hash")
+        assertTrue(newStorage().verifyPinCode(PIN), "Re-setting the same PIN should keep it valid")
+    }
+
+    private fun newStorage() = PinCodeStorageSoftware(dataStore = dataStore)
 
     /**
      * The stored file is protobuf, so it is read back as Latin-1: every byte maps to one character
@@ -194,8 +150,10 @@ class PinCodeStorageSoftwareTest {
     private companion object {
         private const val PIN = "123456"
         private const val NEW_PIN = "999999"
+        private const val WRONG_PIN = "654321"
         private const val ARTIFACTS_FILE_NAME = "secure_pin_preferences.preferences_pb"
 
-        private val PIN_WRAPPED_KEK = stringPreferencesKey("pin_wrapped_kek")
+        private val PIN_HASH_SALT = stringPreferencesKey("pin_hash_salt")
+        private val PIN_HASH = stringPreferencesKey("pin_hash")
     }
 }

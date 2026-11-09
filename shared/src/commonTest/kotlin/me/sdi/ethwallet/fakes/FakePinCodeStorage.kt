@@ -7,6 +7,7 @@ class FakePinCodeStorage : PinCodeStorage {
     var shouldThrowException = false
     var clearPinCalledCount = 0
     var storePinCalledCount = 0
+    var changePinCalledCount = 0
 
     override suspend fun storePinCode(pinCode: String) {
         if (shouldThrowException) throw SecurityException("Simulated storage failure")
@@ -22,6 +23,12 @@ class FakePinCodeStorage : PinCodeStorage {
     override suspend fun hasPinCode(): Boolean {
         if (shouldThrowException) throw SecurityException("Simulated check failure")
         return storedPin != null
+    }
+
+    override suspend fun changePinCode(newPin: String) {
+        changePinCalledCount++
+        if (shouldThrowException) throw SecurityException("Simulated change failure")
+        storedPin = newPin
     }
 
     override suspend fun clearPinCode() {

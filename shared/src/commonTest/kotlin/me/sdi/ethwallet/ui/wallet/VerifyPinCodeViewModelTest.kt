@@ -19,13 +19,17 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.security.PinCodeStorage
+import me.sdi.ethwallet.core.security.PinInteractor
 import me.sdi.ethwallet.core.security.PinLockState
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.fakes.FakeBiometricUnlock
 import me.sdi.ethwallet.fakes.FakeDataCleaner
+import me.sdi.ethwallet.fakes.FakeMasterKekStorage
 import me.sdi.ethwallet.fakes.FakePinAttemptsGuard
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
+import me.sdi.ethwallet.fakes.FakePinSession
+import me.sdi.ethwallet.fakes.FakeUserActivityManager
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -43,6 +47,7 @@ class VerifyPinCodeViewModelTest {
 
     private lateinit var viewModel: VerifyPinCodeViewModel
     private lateinit var pinCodeStorage: FakePinCodeStorage
+    private lateinit var masterKekStorage: FakeMasterKekStorage
     private lateinit var dataCleaner: FakeDataCleaner
     private lateinit var pinAttemptsGuard: FakePinAttemptsGuard
     private lateinit var biometricUnlock: FakeBiometricUnlock
@@ -55,6 +60,7 @@ class VerifyPinCodeViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         pinCodeStorage = FakePinCodeStorage()
+        masterKekStorage = FakeMasterKekStorage().apply { storedKek = ByteArray(32) }
         dataCleaner = FakeDataCleaner()
         pinAttemptsGuard = FakePinAttemptsGuard()
         biometricUnlock = FakeBiometricUnlock()
@@ -83,7 +89,7 @@ class VerifyPinCodeViewModelTest {
 
     @Test
     fun should_ignore_digit_clicks_while_initializing() = runTest(testDispatcher) {
-        viewModel = VerifyPinCodeViewModel(pinCodeStorage, dataCleaner, pinAttemptsGuard, biometricUnlock)
+        viewModel = VerifyPinCodeViewModel(newPinInteractor(pinCodeStorage), dataCleaner, pinAttemptsGuard, biometricUnlock)
         assertTrue(viewModel.viewState.value.isInitializing, "ViewModel should start in the initializing state")
 
         viewModel.onEvent(VerifyPinCodeEvent.OnDigitClick(1))
@@ -113,7 +119,7 @@ class VerifyPinCodeViewModelTest {
     @Test
     fun tampered_status_at_init_should_wipe_and_log_out() = runTest(testDispatcher) {
         pinAttemptsGuard.statusResult = PinLockState.Tampered
-        viewModel = VerifyPinCodeViewModel(pinCodeStorage, dataCleaner, pinAttemptsGuard, biometricUnlock)
+        viewModel = VerifyPinCodeViewModel(newPinInteractor(pinCodeStorage), dataCleaner, pinAttemptsGuard, biometricUnlock)
         collectNews()
         runCurrent()
 
@@ -514,7 +520,7 @@ class VerifyPinCodeViewModelTest {
                 awaitCancellation()
             }
         }
-        viewModel = VerifyPinCodeViewModel(blockingStorage, dataCleaner, pinAttemptsGuard, biometricUnlock)
+        viewModel = VerifyPinCodeViewModel(newPinInteractor(blockingStorage), dataCleaner, pinAttemptsGuard, biometricUnlock)
         runCurrent()
         collectNews()
 
@@ -730,9 +736,18 @@ class VerifyPinCodeViewModelTest {
     )
 
     private fun TestScope.createViewModel() {
-        viewModel = VerifyPinCodeViewModel(pinCodeStorage, dataCleaner, pinAttemptsGuard, biometricUnlock)
+        viewModel = VerifyPinCodeViewModel(newPinInteractor(pinCodeStorage), dataCleaner, pinAttemptsGuard, biometricUnlock)
         runCurrent()
     }
+
+    private fun newPinInteractor(pinCodeStorage: PinCodeStorage): PinInteractor =
+        PinInteractor(
+            pinCodeStorage = pinCodeStorage,
+            masterKekStorage = masterKekStorage,
+            pinAttemptsGuard = pinAttemptsGuard,
+            pinSession = FakePinSession(),
+            userActivityManager = FakeUserActivityManager(),
+        )
 
     private fun TestScope.inputPin(pin: String) {
         pin.forEach { digit ->

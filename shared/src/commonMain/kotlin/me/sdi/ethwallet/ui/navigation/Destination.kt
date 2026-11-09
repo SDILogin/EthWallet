@@ -49,4 +49,7 @@ sealed interface Destination : NavKey {
 
     @Serializable
     data object SettingsScreen : Destination
+
+    @Serializable
+    data object ChangePinCodeScreen : Destination
 }
