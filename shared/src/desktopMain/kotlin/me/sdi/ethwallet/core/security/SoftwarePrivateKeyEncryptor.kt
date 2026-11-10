@@ -9,7 +9,8 @@ import kotlin.io.encoding.Base64
  *
  * The private keys have no per-key hardware layer. The KEK itself is stored only wrapped by a Secure Enclave key
  * that needs Touch ID or the macOS account password to unwrap (see [MasterKekStorageSoftware] and
- * [MasterKekProtectionSecureEnclave]), so a copy of the app data cannot decrypt the private keys.
+ * [MasterKekProtectionSecureEnclave]), so a copy of the app data taken after the KEK was wrapped cannot decrypt the
+ * private keys.
  */
 class SoftwarePrivateKeyEncryptor(
     private val pinSession: PinSession,
