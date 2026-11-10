@@ -194,7 +194,7 @@ class SettingsViewModelTest {
         )
         advanceUntilIdle()
 
-        assertFalse(viewModel.viewState.value.isPinSettingsVisible, "Desktop has no PIN or biometric settings")
+        assertEquals(AppLockMethod.Password, viewModel.viewState.value.appLockMethod, "Desktop has no PIN or biometric settings")
         assertFalse(viewModel.viewState.value.isBiometricEnabled, "Biometric status should not be read for the password lock")
     }
 }

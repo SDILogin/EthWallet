@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.back
@@ -84,11 +85,11 @@ private fun SettingsScreen(
         },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            if (viewState.isPinSettingsVisible) {
+            if (viewState.appLockMethod == AppLockMethod.Pin) {
                 BiometricSettingRow(viewState = viewState, onEvent = onEvent)
                 ChangePinRow(onClick = onChangePinClick)
             }
-            LockAppRow(isPinLock = viewState.isPinSettingsVisible, onEvent = onEvent)
+            LockAppRow(appLockMethod = viewState.appLockMethod, onEvent = onEvent)
         }
     }
 }
@@ -149,7 +150,7 @@ private fun ChangePinRow(onClick: () -> Unit) {
 
 @Composable
 private fun LockAppRow(
-    isPinLock: Boolean,
+    appLockMethod: AppLockMethod,
     onEvent: (SettingsEvent) -> Unit,
 ) {
     Column(
@@ -164,7 +165,10 @@ private fun LockAppRow(
         )
         Text(
             text = stringResource(
-                if (isPinLock) Res.string.settings_lock_app_description else Res.string.settings_lock_app_description_password,
+                when (appLockMethod) {
+                    AppLockMethod.Pin -> Res.string.settings_lock_app_description
+                    AppLockMethod.Password -> Res.string.settings_lock_app_description_password
+                },
             ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

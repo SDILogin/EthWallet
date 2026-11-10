@@ -5,19 +5,20 @@ import kotlinx.coroutines.withContext
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator
 import org.bouncycastle.crypto.params.Argon2Parameters
 
-private const val ARGON2_MEMORY_KIB = 65_536
-private const val ARGON2_ITERATIONS = 3
-private const val ARGON2_PARALLELISM = 1
 private const val KEY_BYTES = 32
 
-/** Argon2id with m=64 MiB, t=3, p=1, above the OWASP minimum (m=19 MiB, t=2, p=1). */
-class PasswordKeyDerivationArgon2 : PasswordKeyDerivation {
+/** Argon2id (version 1.3) producing a 256-bit key. */
+class PasswordKeyDerivationArgon2(
+    private val memoryKib: Int,
+    private val iterations: Int,
+    private val parallelism: Int,
+) : PasswordKeyDerivation {
     override suspend fun deriveKey(password: ByteArray, salt: ByteArray): ByteArray = withContext(Dispatchers.Default) {
         val parameters = Argon2Parameters.Builder(Argon2Parameters.ARGON2_id)
             .withVersion(Argon2Parameters.ARGON2_VERSION_13)
-            .withMemoryAsKB(ARGON2_MEMORY_KIB)
-            .withIterations(ARGON2_ITERATIONS)
-            .withParallelism(ARGON2_PARALLELISM)
+            .withMemoryAsKB(memoryKib)
+            .withIterations(iterations)
+            .withParallelism(parallelism)
             .withSalt(salt)
             .build()
         val generator = Argon2BytesGenerator().apply { init(parameters) }

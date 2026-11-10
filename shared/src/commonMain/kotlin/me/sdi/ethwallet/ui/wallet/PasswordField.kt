@@ -43,8 +43,8 @@ internal fun PasswordField(
             onValueChange = onValueChange,
             label = { Text(label) },
             modifier = modifier
-                .fillMaxWidth()
                 .widthIn(max = 420.dp)
+                .fillMaxWidth()
                 .semantics { isSensitiveData = true },
             enabled = enabled,
             isError = isError,

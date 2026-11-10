@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
@@ -162,12 +163,12 @@ private fun PasswordUnlockScreenContent(
                 onClick = { onEvent(PasswordUnlockEvent.OnUnlockClick) },
                 enabled = canUnlock,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .widthIn(max = 420.dp)
+                    .fillMaxWidth()
                     .heightIn(min = 48.dp),
             ) {
                 if (viewState.isBusy) {
-                    CircularProgressIndicator(modifier = Modifier.heightIn(max = 20.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
                 } else {
                     Text(stringResource(Res.string.password_unlock))
                 }

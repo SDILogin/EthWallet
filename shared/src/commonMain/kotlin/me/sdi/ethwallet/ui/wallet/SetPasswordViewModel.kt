@@ -20,6 +20,7 @@ import me.sdi.ethwallet.core.security.PasswordStrength
 import me.sdi.ethwallet.core.security.passwordStrength
 
 private const val TAG = "SetPassword"
+private const val MAX_PASSWORD_SCORE = 4
 
 data class SetPasswordViewState(
     val password: String = "",
@@ -30,7 +31,7 @@ data class SetPasswordViewState(
 ) {
     val isMismatch: Boolean get() = confirmation.isNotEmpty() && confirmation != password
 
-    val canContinue: Boolean get() = password.isNotEmpty() && password == confirmation && !isSaving
+    val canContinue: Boolean get() = password.isNotEmpty() && password == confirmation && strength != null && !isSaving
 
     override fun toString(): String =
         "SetPasswordViewState(strength=$strength, isSaving=$isSaving, error=$error, isMismatch=$isMismatch)"
@@ -87,16 +88,26 @@ class SetPasswordViewModel(
     }
 
     private fun handlePasswordChange(password: String) {
-        viewState.update { it.copy(password = password, strength = null, error = null) }
+        val strengthBeforeScoring = if (password.isNotEmpty() && isTooShort(password)) PasswordStrength.Weak else null
+        viewState.update { it.copy(password = password, strength = strengthBeforeScoring, error = null) }
         scoringJob?.cancel()
         if (password.isNotEmpty()) {
             scoringJob = viewModelScope.launch {
-                val score = passwordScorer.score(password)
-                val strength = passwordStrength(length = password.length, score = score)
+                val strength = try {
+                    passwordStrength(length = password.length, score = passwordScorer.score(password))
+                } catch (e: Exception) {
+                    ensureActive()
+
+                    Logger.warn(TAG, e) { "Password scoring failed, rating the password as weak" }
+                    PasswordStrength.Weak
+                }
                 viewState.update { state -> if (state.password == password) state.copy(strength = strength) else state }
             }
         }
     }
+
+    private fun isTooShort(password: String): Boolean =
+        passwordStrength(length = password.length, score = MAX_PASSWORD_SCORE) == PasswordStrength.Weak
 
     private fun handleContinueClick() {
         val password = viewState.value.password

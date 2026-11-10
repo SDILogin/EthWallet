@@ -148,7 +148,7 @@
     <string name="password_strength_weak">Weak password</string>
     <string name="password_strength_fair">Fair password</string>
     <string name="password_strength_strong">Strong password</string>
-    <string name="password_weak_warning">This password is weak. Use at least 15 characters and avoid common words. You can continue, but a weak password is easier to guess if someone gets your wallet files on this Mac.</string>
+    <string name="password_weak_warning">This password is weak. Use at least 15 characters and avoid common words. You can continue, but a weak password is easier to guess if someone gets your wallet files on this Mac, and you cannot change it later without resetting the app.</string>
     <string name="password_mismatch">Passwords do not match</string>
     <string name="password_continue">Continue</string>
     <string name="password_setup_failed">Could not set the password. Try again.</string>

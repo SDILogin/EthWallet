@@ -34,6 +34,11 @@ import org.koin.core.module.Module
 import org.koin.dsl.module
 import java.io.File
 
+// Argon2id above the OWASP minimum (m=19 MiB, t=2, p=1).
+private const val ARGON2_MEMORY_KIB = 65_536
+private const val ARGON2_ITERATIONS = 3
+private const val ARGON2_PARALLELISM = 1
+
 actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<AppDatabase> { DesktopDatabaseBuilder.build(walletDirectory()) }
     single<WalletDao> { get<AppDatabase>().walletDao() }
@@ -65,7 +70,11 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
         PasswordKekStorageSoftware(
             dataStore = get(),
             protection = get(),
-            keyDerivation = PasswordKeyDerivationArgon2(),
+            keyDerivation = PasswordKeyDerivationArgon2(
+                memoryKib = ARGON2_MEMORY_KIB,
+                iterations = ARGON2_ITERATIONS,
+                parallelism = ARGON2_PARALLELISM,
+            ),
         )
     }
     single<PasswordScorer> { PasswordScorerZxcvbn() }

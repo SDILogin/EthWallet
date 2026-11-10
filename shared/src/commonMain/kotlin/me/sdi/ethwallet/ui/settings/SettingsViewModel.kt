@@ -23,7 +23,7 @@ data class SettingsViewState(
     val isBiometricEnabled: Boolean = false,
     val isBiometricSwitchEnabled: Boolean = false,
     val biometricHint: BiometricSettingsHint = BiometricSettingsHint.None,
-    val isPinSettingsVisible: Boolean = true,
+    val appLockMethod: AppLockMethod = AppLockMethod.Pin,
 )
 
 enum class BiometricSettingsHint { None, NotSupported, NotEnrolled, Invalidated }
@@ -49,7 +49,7 @@ class SettingsViewModel(
     private val appLockMethod: AppLockMethod,
 ) : ViewModel() {
     val viewState: StateFlow<SettingsViewState>
-        field = MutableStateFlow(SettingsViewState())
+        field = MutableStateFlow(SettingsViewState(appLockMethod = appLockMethod))
 
     private var toggleJob: Job? = null
 
@@ -58,9 +58,8 @@ class SettingsViewModel(
             .onEach { Logger.debug(TAG) { "ViewState: $it" } }
             .launchIn(viewModelScope)
 
-        when (appLockMethod) {
-            AppLockMethod.Pin -> viewModelScope.launch { refreshBiometricState() }
-            AppLockMethod.Password -> viewState.value = SettingsViewState(isPinSettingsVisible = false)
+        if (appLockMethod == AppLockMethod.Pin) {
+            viewModelScope.launch { refreshBiometricState() }
         }
     }
 

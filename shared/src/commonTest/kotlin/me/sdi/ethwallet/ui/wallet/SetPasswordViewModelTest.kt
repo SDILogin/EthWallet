@@ -77,6 +77,28 @@ class SetPasswordViewModelTest {
     }
 
     @Test
+    fun continue_waits_until_a_long_password_is_rated() = runTest(testDispatcher) {
+        viewModel.onEvent(SetPasswordEvent.OnPasswordChange(STRONG_PASSWORD))
+        viewModel.onEvent(SetPasswordEvent.OnConfirmationChange(STRONG_PASSWORD))
+
+        assertFalse(viewModel.viewState.value.canContinue, "The strength must be shown before the password can be set")
+
+        advanceUntilIdle()
+
+        assertTrue(viewModel.viewState.value.canContinue, "A rated password can be set")
+    }
+
+    @Test
+    fun a_scoring_failure_rates_the_password_weak() = runTest(testDispatcher) {
+        scorer.failure = IllegalStateException("Dictionaries unavailable")
+
+        viewModel.onEvent(SetPasswordEvent.OnPasswordChange(STRONG_PASSWORD))
+        advanceUntilIdle()
+
+        assertEquals(PasswordStrength.Weak, viewModel.viewState.value.strength, "An unrated password should warn")
+    }
+
+    @Test
     fun a_mismatching_confirmation_blocks_continue() = runTest(testDispatcher) {
         viewModel.onEvent(SetPasswordEvent.OnPasswordChange(STRONG_PASSWORD))
         viewModel.onEvent(SetPasswordEvent.OnConfirmationChange("different"))

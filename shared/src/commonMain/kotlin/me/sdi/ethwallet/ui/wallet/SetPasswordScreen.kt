@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -112,7 +113,11 @@ private fun SetPasswordScreenContent(
                 enabled = !viewState.isSaving,
                 isError = viewState.isMismatch,
                 imeAction = ImeAction.Done,
-                onImeAction = {},
+                onImeAction = {
+                    if (viewState.canContinue) {
+                        onEvent(SetPasswordEvent.OnContinueClick)
+                    }
+                },
                 modifier = Modifier,
             )
             Text(
@@ -125,12 +130,12 @@ private fun SetPasswordScreenContent(
                 onClick = { onEvent(SetPasswordEvent.OnContinueClick) },
                 enabled = viewState.canContinue,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .widthIn(max = 420.dp)
+                    .fillMaxWidth()
                     .heightIn(min = 48.dp),
             ) {
                 if (viewState.isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.heightIn(max = 20.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
                 } else {
                     Text(stringResource(Res.string.password_continue))
                 }
@@ -148,7 +153,7 @@ private fun SetPasswordScreenContent(
 @Composable
 private fun PasswordStrengthMeter(strength: PasswordStrength?) {
     Column(
-        modifier = Modifier.fillMaxWidth().widthIn(max = 420.dp),
+        modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         LinearProgressIndicator(
