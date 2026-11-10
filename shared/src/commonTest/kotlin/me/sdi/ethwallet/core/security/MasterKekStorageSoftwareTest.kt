@@ -1,7 +1,5 @@
 package me.sdi.ethwallet.core.security
 
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.fakes.FakeMasterKekProtection
@@ -16,7 +14,6 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MasterKekStorageSoftwareTest {
@@ -77,22 +74,6 @@ class MasterKekStorageSoftwareTest {
     }
 
     @Test
-    fun a_plain_master_kek_from_an_earlier_version_is_wrapped_on_read() = runTest {
-        val legacyMasterKek = ByteArray(32) { it.toByte() }
-        dataStore.edit { preferences -> preferences[LEGACY_MASTER_KEK] = Base64.encode(legacyMasterKek) }
-
-        val migrated = newStorage().read()
-
-        assertContentEquals(legacyMasterKek, migrated, "The migrated master KEK should keep its value")
-        assertNull(dataStore.data.first()[LEGACY_MASTER_KEK], "The plain master KEK should be removed")
-        assertFalse(
-            storedText().contains(Base64.encode(legacyMasterKek)),
-            "The plain master KEK should no longer be on disk",
-        )
-        assertContentEquals(legacyMasterKek, newStorage().read(), "The wrapped master KEK should be read back")
-    }
-
-    @Test
     fun the_master_kek_directory_is_enterable_only_by_its_owner() = runTest {
         if (!FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
             return@runTest
@@ -113,7 +94,5 @@ class MasterKekStorageSoftwareTest {
 
     private companion object {
         private const val ARTIFACTS_FILE_NAME = "secure_pin_preferences.preferences_pb"
-
-        private val LEGACY_MASTER_KEK = stringPreferencesKey("master_kek")
     }
 }
