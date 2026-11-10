@@ -7,8 +7,9 @@ import kotlin.io.encoding.Base64
  * Desktop [PrivateKeyEncryptor]: a single software AES-256-GCM layer ([KekCipher]) keyed by the
  * master KEK of the current [PinSession], so signing is impossible while the app is locked.
  *
- * There is no hardware-backed layer on desktop: the KEK is stored next to the PIN hash and is
- * protected only by the permissions of [pinArtifactsDataStore] (see [MasterKekStorageSoftware]).
+ * The private keys have no per-key hardware layer. The KEK itself is stored only wrapped by a Secure Enclave key
+ * that needs Touch ID or the macOS account password to unwrap (see [MasterKekStorageSoftware] and
+ * [MasterKekProtectionSecureEnclave]), so a copy of the app data cannot decrypt the private keys.
  */
 class SoftwarePrivateKeyEncryptor(
     private val pinSession: PinSession,

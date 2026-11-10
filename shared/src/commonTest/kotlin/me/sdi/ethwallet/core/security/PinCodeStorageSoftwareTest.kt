@@ -3,6 +3,7 @@ package me.sdi.ethwallet.core.security
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import me.sdi.ethwallet.fakes.FakeMasterKekProtection
 import java.io.File
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -20,6 +21,7 @@ class PinCodeStorageSoftwareTest {
         File(System.getProperty("java.io.tmpdir"), "eth-wallet-pin-${System.nanoTime()}")
     private val artifactsFile = File(artifactsDirectory, ARTIFACTS_FILE_NAME)
     private val dataStore = pinArtifactsDataStore(artifactsDirectory)
+    private val protection = FakeMasterKekProtection()
 
     @AfterTest
     fun deleteArtifacts() {
@@ -115,12 +117,12 @@ class PinCodeStorageSoftwareTest {
     @Test
     fun a_pin_change_keeps_the_other_stored_values() = runTest {
         newStorage().storePinCode(PIN)
-        val masterKek = MasterKekStorageSoftware(dataStore).create()
+        val masterKek = MasterKekStorageSoftware(dataStore = dataStore, protection = protection).create()
 
         newStorage().changePinCode(NEW_PIN)
 
         assertTrue(
-            masterKek.contentEquals(MasterKekStorageSoftware(dataStore).read()),
+            masterKek.contentEquals(MasterKekStorageSoftware(dataStore = dataStore, protection = protection).read()),
             "A PIN change must not rewrite the master KEK stored next to the PIN hash",
         )
     }

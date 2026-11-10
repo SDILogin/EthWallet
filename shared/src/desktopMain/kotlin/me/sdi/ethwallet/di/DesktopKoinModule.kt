@@ -9,6 +9,7 @@ import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.DataCleanerPinArtifacts
 import me.sdi.ethwallet.core.security.DataCleanerRoomDb
+import me.sdi.ethwallet.core.security.MasterKekProtectionSecureEnclave
 import me.sdi.ethwallet.core.security.MasterKekStorage
 import me.sdi.ethwallet.core.security.MasterKekStorageSoftware
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
@@ -60,7 +61,9 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<HttpClient> { createHttpClient(OkHttp.create()) }
 
     single<PinCodeStorage> { PinCodeStorageSoftware(dataStore = get()) }
-    single<MasterKekStorage> { MasterKekStorageSoftware(dataStore = get()) }
+    single<MasterKekStorage> {
+        MasterKekStorageSoftware(dataStore = get(), protection = MasterKekProtectionSecureEnclave())
+    }
     single<PinAttemptsGuard> { DesktopPinAttemptsGuard() }
     single<BiometricUnlock> { DesktopBiometricUnlock() }
 }

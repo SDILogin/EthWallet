@@ -9,8 +9,10 @@ done before Desktop persists wallets to disk.
 - `MasterKekStorageSoftware` stores the random master KEK unencrypted as `master_kek` in the owner-only
   `pinArtifactsDataStore` under `~/.ethwallet`. File permissions are its only protection.
 - `SoftwarePrivateKeyEncryptor` encrypts private keys with that KEK only (`KekCipher`), with no hardware layer.
-- The Desktop `AppDatabase` (`DesktopDatabase.kt`) keeps wallets, including encrypted private keys, in memory only.
-  Nothing the KEK can decrypt is written to disk, so a copied `~/.ethwallet` exposes no funds today.
+- Commit 90ad1ac "Persist Desktop wallet data with Room" persisted the Desktop `AppDatabase` to
+  `~/.ethwallet/ethwallet_db` before this task was done. Since then a copied `~/.ethwallet` contains both the
+  encrypted private keys and the plain KEK that decrypts them, and existing installs need a migration of the plain
+  `master_kek`. This scope was implemented in #307 Secure Desktop private key storage and app unlock.
 - `~/.ethwallet` is included in Time Machine backups, cloud-synced home folders, and disk images. Once wallets are
   persisted, such a copy would contain both the encrypted private keys and the KEK that decrypts them, with no brute
   force needed.
@@ -27,7 +29,8 @@ must not let anyone decrypt wallet private keys.
   the KEK.
 - The PIN stays an app-lock check (`pin_hash`, `pin_hash_salt`). It is not used as key material.
 - `MasterKekStorage.clear()` and the logout `DataCleaner` implementations must also delete the Keychain item or the Secure
-  Enclave key.
+  Enclave key. A CryptoKit Secure Enclave key exists only as its stored `dataRepresentation` blob, so removing that
+  blob is its deletion.
 - Update the KDoc of `MasterKekStorageSoftware` and `SoftwarePrivateKeyEncryptor` to describe the new protection.
 - Keep `MasterKekStorageSoftware` usable by tests that have no Keychain: inject the KEK protection behind an
   interface, with an in-memory fake in `commonTest`.
@@ -39,8 +42,8 @@ must not let anyone decrypt wallet private keys.
   an existing library), code signing and entitlement requirements, and behavior of unsigned development builds.
 - Whether the Keychain or Secure Enclave key needs user presence (Touch ID or the login password), and how that
   interacts with the in-app PIN and biometric unlock.
-- Migration: none is needed while wallets are not persisted on Desktop. Confirm this still holds when the task
-  starts.
+- Migration: needed, because wallets were already persisted when the task started (see Background). The plain
+  `master_kek` is wrapped and removed on the first read.
 
 ## Definition of done
 
