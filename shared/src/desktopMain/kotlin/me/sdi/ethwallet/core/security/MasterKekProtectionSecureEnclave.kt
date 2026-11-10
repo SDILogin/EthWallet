@@ -21,7 +21,7 @@ private const val LIBRARY_RESOURCE_PATH = "/native/macos/aarch64/$LIBRARY_FILE_N
  * The wrapping key handle is the Secure Enclave `dataRepresentation`: it is usable only by this Mac's Secure Enclave,
  * and its access control requires user presence (Touch ID or the macOS account password). [wrap] uses only the public
  * key (ECDH with an ephemeral key, HKDF-SHA256, AES-256-GCM) and never prompts. [unwrap] shows the system sheet and
- * blocks until the user answers it.
+ * blocks until the user answers it; cancelling the calling coroutine does not dismiss the sheet.
  */
 class MasterKekProtectionSecureEnclave : MasterKekProtection {
     private val library by lazy(::loadSecureEnclaveLibrary)
@@ -36,7 +36,6 @@ class MasterKekProtectionSecureEnclave : MasterKekProtection {
                 outputLength = outputLength,
             ),
         )
-        check(outputLength[0] in 1..output.size) { "Secure Enclave key length is invalid" }
         output.copyOf(outputLength[0])
     }
 
@@ -88,20 +87,22 @@ private interface SecureEnclaveLibrary : Library {
 }
 
 private fun loadSecureEnclaveLibrary(): SecureEnclaveLibrary {
-    if (!System.getProperty("os.name").equals("Mac OS X", ignoreCase = true)) {
-        throw UnsupportedOperationException("Secure Enclave KEK protection is macOS-only")
+    val supportedHost = System.getProperty("os.name").equals("Mac OS X", ignoreCase = true) &&
+        System.getProperty("os.arch").lowercase() in setOf("aarch64", "arm64")
+    if (supportedHost) {
+        return Native.load(extractLibrary().absolutePath, SecureEnclaveLibrary::class.java)
+    } else {
+        throw UnsupportedOperationException("Secure Enclave KEK protection requires Apple Silicon macOS")
     }
-    when (System.getProperty("os.arch").lowercase()) {
-        "aarch64", "arm64" -> Unit
-        else -> throw UnsupportedOperationException("Secure Enclave KEK protection requires Apple Silicon")
-    }
+}
+
+private fun extractLibrary(): File {
     val resource = checkNotNull(MasterKekProtectionSecureEnclave::class.java.getResourceAsStream(LIBRARY_RESOURCE_PATH)) {
         "Missing packaged native library: $LIBRARY_RESOURCE_PATH"
     }
     val directory = Files.createTempDirectory("ethwallet-secure-enclave-").toFile().apply { deleteOnExit() }
-    val library = File(directory, LIBRARY_FILE_NAME).apply {
+    return File(directory, LIBRARY_FILE_NAME).apply {
         deleteOnExit()
         resource.use { input -> outputStream().use(input::copyTo) }
     }
-    return Native.load(library.absolutePath, SecureEnclaveLibrary::class.java)
 }

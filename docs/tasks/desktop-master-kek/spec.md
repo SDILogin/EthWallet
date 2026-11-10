@@ -38,6 +38,11 @@ must not let anyone decrypt wallet private keys.
 
 ## Decisions
 
+- Compared with Monero GUI: wallet2 encrypts the `.keys` file with ChaCha20 under a key derived from the wallet
+  password by CryptoNight (`cn_slow_hash`). The password is the only key material, so a copied keys file can be
+  attacked offline by guessing the password. A Secure Enclave key cannot be copied at all, so no offline attack
+  exists, and the system sheet adds the OS-rate-limited account password or Touch ID. A wallet password on top
+  would add only a brute-forceable layer and a second secret to remember, so it is not added.
 - Secure Enclave wrapping key, not a Keychain item. A CryptoKit `SecureEnclave.P256.KeyAgreement.PrivateKey` is
   stored only as its `dataRepresentation` blob in the DataStore, needs no Keychain entitlement, and works for
   unsigned development builds. A device-only data-protection Keychain item needs a signed app with keychain
@@ -52,6 +57,9 @@ must not let anyone decrypt wallet private keys.
 - Migration: needed, because wallets were already persisted when the task started (see Background). The plain
   `master_kek` is wrapped and removed on the first read. The KEK is not rotated, so a copy taken before the
   migration still decrypts the private keys.
+- Memory: the KEK stays in process memory while the app is unlocked (`PinSession`). The Swift
+  `Data` and `SymmetricKey` copies and the JNA transfer buffers are not zeroed; Kotlin keeps its existing zeroing of
+  decrypted private keys. Cancelling the unlock coroutine does not dismiss the system sheet.
 
 ## Definition of done
 

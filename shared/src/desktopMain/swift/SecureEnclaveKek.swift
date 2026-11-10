@@ -1,4 +1,5 @@
 import CryptoKit
+import CryptoTokenKit
 import Foundation
 import LocalAuthentication
 import Security
@@ -17,7 +18,13 @@ private let ephemeralPublicKeyLength = 65
 private let wrappedMasterKekLength = 125
 private let kdfSharedInfo = Data("EthWallet master KEK v1".utf8)
 private let unlockReason = "unlock your EthWallet wallets"
-private let cancelledAuthentication: [LAError.Code] = [.userCancel, .appCancel, .systemCancel]
+private let cancelledAuthenticationErrors: [(domain: String, code: Int)] = [
+    (LAErrorDomain, LAError.Code.userCancel.rawValue),
+    (LAErrorDomain, LAError.Code.appCancel.rawValue),
+    (LAErrorDomain, LAError.Code.systemCancel.rawValue),
+    (TKErrorDomain, TKError.Code.canceledByUser.rawValue),
+    (NSOSStatusErrorDomain, Int(errSecUserCanceled)),
+]
 
 @_cdecl("ethwalletSecureEnclaveCreateKey")
 public func ethwalletSecureEnclaveCreateKey(
@@ -113,10 +120,8 @@ public func ethwalletSecureEnclaveUnwrap(
             let masterKek = try AES.GCM.open(sealedBox, using: symmetricKey)
             masterKek.copyBytes(to: output, count: masterKekLength)
             return statusOk
-        } catch let error as LAError where cancelledAuthentication.contains(error.code) {
-            return statusUserCancelled
         } catch {
-            return failure(error)
+            return isCancelledAuthentication(error) ? statusUserCancelled : failure(error)
         }
     }
 }
@@ -137,4 +142,20 @@ private func deriveSymmetricKey(
 private func failure(_ error: Error) -> Int32 {
     NSLog("EthWallet Secure Enclave operation failed: %@", error as NSError)
     return statusFailure
+}
+
+/// CryptoKit may report a dismissed sheet as a Security or CryptoTokenKit error wrapping the LocalAuthentication one.
+private func isCancelledAuthentication(_ error: Error) -> Bool {
+    var current: NSError? = error as NSError
+    while let nsError = current {
+        let cancelled = cancelledAuthenticationErrors.contains { cancelledError in
+            cancelledError.domain == nsError.domain && cancelledError.code == nsError.code
+        }
+        if cancelled {
+            return true
+        } else {
+            current = nsError.userInfo[NSUnderlyingErrorKey] as? NSError
+        }
+    }
+    return false
 }

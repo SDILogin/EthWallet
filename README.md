@@ -95,7 +95,7 @@ The desktop version uses the same `seed_1` and `seed_2` configuration:
 
 It runs the desktop Compose UI with desktop crypto, software PIN storage, the Secure Enclave-wrapped master KEK,
 and private-key encryption. Setting the PIN creates a real Secure Enclave key without a Touch ID prompt.
-PIN preferences use a temporary directory, and wallets use the desktop Room database.
+PIN preferences use a temporary directory, and wallets use the real desktop Room database in `~/.ethwallet`.
 The scenario imports both wallets, sends `0.000001` Sepolia ETH, and checks the receiver's balance.
 Each run spends testnet funds. Normal `:desktopApp:desktopTest` runs exclude this test, even with
 `-PsepoliaE2e=true`. Live test results are never reused from the Gradle cache.
