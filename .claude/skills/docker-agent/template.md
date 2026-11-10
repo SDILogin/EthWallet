@@ -42,14 +42,17 @@ watches this terminal. A human reviews your pull request and gives feedback only
    changed line against `REVIEW.md` and `CLAUDE.md`, and to check correctness, completeness against the task, and
    any change beyond the task. Fix confirmed findings and verify again. Run a new review round after any non-trivial
    fix.
-7. Commit, push, and open the pull request with `gh pr create --base master`. The description must contain:
-   - **Summary**: what changed and why.
-   - **Most critical changes**: the parts where a bug would hurt most. The human should review these first.
-   - **Decisions**: each decision you made without a human, the alternative, and why you chose it.
-   - **Struggles**: where you got stuck, what failed, review findings that needed several rounds, and anything you
-     could not verify. Obstacles signal potential errors in the final solution, so be specific. Write "None" only
-     when it is true.
-   - **Verification**: the commands you ran and their results.
+7. Commit, push, and open the pull request with `gh pr create --base master`. Keep the description under 250 words.
+   The human reads the diff, so do not describe it again. Use short bullets, one fact per bullet, and no tables.
+   The summary and the task reference are always present. Add another section only when it contains something the
+   human must know or do. Otherwise skip the section completely, without a heading and without "None". Sections, in
+   this order:
+   - **Summary**: one to three sentences on what changed and why.
+   - **Review first**: up to three `file:line` references where a bug would hurt most, each with a few words why.
+   - **Needs a human**: checks you could not run, as exact steps.
+   - **Decisions**: only decisions a reviewer could question. Write each as "chose X over Y because Z".
+   - **Struggles**: what failed or stayed uncertain, one line each. Obstacles signal potential errors, so do not hide
+     them.
    - The task reference.
 
    Then request a review from `SDILogin`, because the human gets no email without this request:
