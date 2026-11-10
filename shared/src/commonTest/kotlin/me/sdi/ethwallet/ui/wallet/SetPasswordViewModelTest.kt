@@ -78,7 +78,7 @@ class SetPasswordViewModelTest {
     }
 
     @Test
-    fun continue_waits_until_a_long_password_is_rated() = runTest(testDispatcher) {
+    fun continue_waits_until_the_password_is_rated() = runTest(testDispatcher) {
         viewModel.onEvent(SetPasswordEvent.OnPasswordChange(STRONG_PASSWORD))
         viewModel.onEvent(SetPasswordEvent.OnConfirmationChange(STRONG_PASSWORD))
 
