@@ -11,7 +11,7 @@ done before Desktop persists wallets to disk.
 - `SoftwarePrivateKeyEncryptor` encrypts private keys with that KEK only (`KekCipher`), with no hardware layer.
 - Commit 90ad1ac "Persist Desktop wallet data with Room" persisted the Desktop `AppDatabase` to
   `~/.ethwallet/ethwallet_db` before this task was done. Since then a copied `~/.ethwallet` contains both the
-  encrypted private keys and the plain KEK that decrypts them. This scope was implemented in #307 Secure Desktop private key storage and app unlock.
+  encrypted private keys and the plain KEK that decrypts them.
 - `~/.ethwallet` is included in Time Machine backups, cloud-synced home folders, and disk images. Once wallets are
   persisted, such a copy would contain both the encrypted private keys and the KEK that decrypts them, with no brute
   force needed.
@@ -53,7 +53,7 @@ must not let anyone decrypt wallet private keys.
 - The PIN stays the shared app lock (extend, not replace). With the system sheet on every unlock, the Desktop PIN
   adds no protection against an attacker the sheet does not already stop. Replacing it on Desktop needs
   Desktop-specific PIN screens and navigation and is left to a separate decision.
-- No migration: the app is not released, so versions below 1.0 are not migrated. A Desktop install that stored the
+- No migration: the app is not released, so pre-release builds are not migrated. A Desktop install that stored the
   plain `master_kek` cannot unlock and must use Reset, then re-import its wallets.
 - Memory: the KEK stays in process memory while the app is unlocked (`PinSession`). The Swift
   `Data` and `SymmetricKey` copies and the JNA transfer buffers are not zeroed; Kotlin keeps its existing zeroing of
