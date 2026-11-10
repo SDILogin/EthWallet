@@ -15,8 +15,8 @@ import me.sdi.ethwallet.core.security.MasterKekProtectionSecureEnclave
 import me.sdi.ethwallet.core.security.PasswordKekStorage
 import me.sdi.ethwallet.core.security.PasswordKekStorageSoftware
 import me.sdi.ethwallet.core.security.PasswordKeyDerivationArgon2
-import me.sdi.ethwallet.core.security.PasswordScorer
-import me.sdi.ethwallet.core.security.PasswordScorerZxcvbn
+import me.sdi.ethwallet.core.security.PasswordStrengthChecker
+import me.sdi.ethwallet.core.security.PasswordStrengthCheckerZxcvbn
 import me.sdi.ethwallet.core.security.PinSessionDataCleaner
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.core.security.SoftwarePrivateKeyEncryptor
@@ -77,7 +77,7 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
             ),
         )
     }
-    single<PasswordScorer> { PasswordScorerZxcvbn() }
+    single<PasswordStrengthChecker> { PasswordStrengthCheckerZxcvbn() }
     single<BiometricUnlock> { DesktopBiometricUnlock() }
 }
 

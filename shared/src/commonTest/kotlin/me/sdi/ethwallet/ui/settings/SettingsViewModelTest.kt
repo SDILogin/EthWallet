@@ -2,7 +2,10 @@ package me.sdi.ethwallet.ui.settings
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -40,7 +43,7 @@ class SettingsViewModelTest {
     @Test
     fun ready_status_should_show_enabled_switch_with_no_hint() = runTest(testDispatcher) {
         biometricUnlock.currentStatus = BiometricStatus.Ready
-        val viewModel = SettingsViewModel(biometricUnlock = biometricUnlock, pinSession = pinSession, appLockMethod = AppLockMethod.Pin)
+        val viewModel = createViewModel(AppLockMethod.Pin)
         advanceUntilIdle()
 
         assertEquals(
@@ -57,7 +60,7 @@ class SettingsViewModelTest {
     @Test
     fun not_set_up_status_should_show_disabled_toggle_with_enabled_switch() = runTest(testDispatcher) {
         biometricUnlock.currentStatus = BiometricStatus.NotSetUp
-        val viewModel = SettingsViewModel(biometricUnlock = biometricUnlock, pinSession = pinSession, appLockMethod = AppLockMethod.Pin)
+        val viewModel = createViewModel(AppLockMethod.Pin)
         advanceUntilIdle()
 
         assertEquals(
@@ -74,7 +77,7 @@ class SettingsViewModelTest {
     @Test
     fun not_enrolled_status_should_disable_switch_with_hint() = runTest(testDispatcher) {
         biometricUnlock.currentStatus = BiometricStatus.NotEnrolled
-        val viewModel = SettingsViewModel(biometricUnlock = biometricUnlock, pinSession = pinSession, appLockMethod = AppLockMethod.Pin)
+        val viewModel = createViewModel(AppLockMethod.Pin)
         advanceUntilIdle()
 
         assertEquals(
@@ -91,7 +94,7 @@ class SettingsViewModelTest {
     @Test
     fun not_supported_status_should_disable_switch_with_hint() = runTest(testDispatcher) {
         biometricUnlock.currentStatus = BiometricStatus.NotSupported
-        val viewModel = SettingsViewModel(biometricUnlock = biometricUnlock, pinSession = pinSession, appLockMethod = AppLockMethod.Pin)
+        val viewModel = createViewModel(AppLockMethod.Pin)
         advanceUntilIdle()
 
         assertEquals(
@@ -108,7 +111,7 @@ class SettingsViewModelTest {
     @Test
     fun invalidated_status_should_reenable_switch_with_hint() = runTest(testDispatcher) {
         biometricUnlock.currentStatus = BiometricStatus.Invalidated
-        val viewModel = SettingsViewModel(biometricUnlock = biometricUnlock, pinSession = pinSession, appLockMethod = AppLockMethod.Pin)
+        val viewModel = createViewModel(AppLockMethod.Pin)
         advanceUntilIdle()
 
         assertEquals(
@@ -125,7 +128,7 @@ class SettingsViewModelTest {
     @Test
     fun toggle_on_should_call_enable_and_refresh_to_ready() = runTest(testDispatcher) {
         biometricUnlock.currentStatus = BiometricStatus.NotSetUp
-        val viewModel = SettingsViewModel(biometricUnlock = biometricUnlock, pinSession = pinSession, appLockMethod = AppLockMethod.Pin)
+        val viewModel = createViewModel(AppLockMethod.Pin)
         advanceUntilIdle()
 
         viewModel.onEvent(SettingsEvent.OnBiometricToggle(true))
@@ -146,7 +149,7 @@ class SettingsViewModelTest {
     @Test
     fun toggle_off_from_ready_should_call_disable_and_refresh_to_disabled() = runTest(testDispatcher) {
         biometricUnlock.currentStatus = BiometricStatus.Ready
-        val viewModel = SettingsViewModel(biometricUnlock = biometricUnlock, pinSession = pinSession, appLockMethod = AppLockMethod.Pin)
+        val viewModel = createViewModel(AppLockMethod.Pin)
         advanceUntilIdle()
 
         viewModel.onEvent(SettingsEvent.OnBiometricToggle(false))
@@ -160,7 +163,7 @@ class SettingsViewModelTest {
     fun toggle_on_with_error_should_keep_switch_disabled() = runTest(testDispatcher) {
         biometricUnlock.currentStatus = BiometricStatus.NotSetUp
         biometricUnlock.enableResult = BiometricResult.Error("boom")
-        val viewModel = SettingsViewModel(biometricUnlock = biometricUnlock, pinSession = pinSession, appLockMethod = AppLockMethod.Pin)
+        val viewModel = createViewModel(AppLockMethod.Pin)
         advanceUntilIdle()
 
         viewModel.onEvent(SettingsEvent.OnBiometricToggle(true))
@@ -174,7 +177,7 @@ class SettingsViewModelTest {
     fun lock_click_should_end_the_unlocked_session() = runTest(testDispatcher) {
         biometricUnlock.currentStatus = BiometricStatus.Ready
         pinSession.set(ByteArray(32))
-        val viewModel = SettingsViewModel(biometricUnlock = biometricUnlock, pinSession = pinSession, appLockMethod = AppLockMethod.Pin)
+        val viewModel = createViewModel(AppLockMethod.Pin)
         advanceUntilIdle()
 
         viewModel.onEvent(SettingsEvent.OnLockClick)
@@ -187,14 +190,16 @@ class SettingsViewModelTest {
     @Test
     fun password_lock_hides_the_pin_settings_without_querying_biometrics() = runTest(testDispatcher) {
         biometricUnlock.currentStatus = BiometricStatus.Ready
-        val viewModel = SettingsViewModel(
-            biometricUnlock = biometricUnlock,
-            pinSession = pinSession,
-            appLockMethod = AppLockMethod.Password,
-        )
+        val viewModel = createViewModel(AppLockMethod.Password)
         advanceUntilIdle()
 
         assertEquals(AppLockMethod.Password, viewModel.viewState.value.appLockMethod, "Desktop has no PIN or biometric settings")
         assertFalse(viewModel.viewState.value.isBiometricEnabled, "Biometric status should not be read for the password lock")
     }
+
+    private fun TestScope.createViewModel(appLockMethod: AppLockMethod): SettingsViewModel =
+        SettingsViewModel(biometricUnlock = biometricUnlock, pinSession = pinSession, appLockMethod = appLockMethod)
+            .also { viewModel ->
+                backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.viewState.collect {} }
+            }
 }

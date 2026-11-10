@@ -2,8 +2,10 @@ package me.sdi.ethwallet.di
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -15,7 +17,7 @@ import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.MasterKekStorage
 import me.sdi.ethwallet.core.security.PasswordInteractor
 import me.sdi.ethwallet.core.security.PasswordKekStorage
-import me.sdi.ethwallet.core.security.PasswordScorer
+import me.sdi.ethwallet.core.security.PasswordStrengthChecker
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
@@ -24,7 +26,7 @@ import me.sdi.ethwallet.fakes.FakeBiometricUnlock
 import me.sdi.ethwallet.fakes.FakeDataCleaner
 import me.sdi.ethwallet.fakes.FakeMasterKekStorage
 import me.sdi.ethwallet.fakes.FakePasswordKekStorage
-import me.sdi.ethwallet.fakes.FakePasswordScorer
+import me.sdi.ethwallet.fakes.FakePasswordStrengthChecker
 import me.sdi.ethwallet.fakes.FakePinAttemptsGuard
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
 import me.sdi.ethwallet.ui.settings.ChangePinCodeViewModel
@@ -80,12 +82,14 @@ class KoinModuleTest {
         )
 
         val settingsViewModel = koin.get<SettingsViewModel>()
+        val collection = CoroutineScope(testDispatcher).launch { settingsViewModel.viewState.collect {} }
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertTrue(
             settingsViewModel.viewState.value.isBiometricEnabled,
             "SettingsViewModel should read its status from the BiometricUnlock instance wired by Koin",
         )
+        collection.cancel()
     }
 
     @Test
@@ -117,7 +121,7 @@ class KoinModuleTest {
                     single { AppLockMethod.Password }
                     single<BiometricUnlock> { FakeBiometricUnlock() }
                     single<PasswordKekStorage> { FakePasswordKekStorage() }
-                    single<PasswordScorer> { FakePasswordScorer() }
+                    single<PasswordStrengthChecker> { FakePasswordStrengthChecker() }
                     single<DataCleaner> { FakeDataCleaner() }
                 },
             )

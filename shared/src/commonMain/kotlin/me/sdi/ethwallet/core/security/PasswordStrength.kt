@@ -6,14 +6,14 @@ private const val STRONG_SCORE = 4
 
 enum class PasswordStrength { Weak, Fair, Strong }
 
-/** Scores a password from 0 (guessable) to 4 (very hard to guess). */
-interface PasswordScorer {
-    suspend fun score(password: String): Int
+fun interface PasswordStrengthChecker {
+    suspend fun check(password: String): PasswordStrength
 }
 
 /**
- * Weak below the OWASP minimum of 15 characters for a password without MFA, or when the scorer rates it below 3
- * (fewer than about 10^8 guesses, which covers common passwords).
+ * Rates a password from its length and a guessability score from 0 (guessable) to 4 (very hard to guess). Weak below
+ * the OWASP minimum of 15 characters for a password without MFA, or when the score is below 3 (fewer than about 10^8
+ * guesses, which covers common passwords).
  */
 fun passwordStrength(length: Int, score: Int): PasswordStrength =
     when {

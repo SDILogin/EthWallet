@@ -38,7 +38,7 @@ scope of #303 Protect Desktop master KEK before persisting wallets (docs/tasks/d
 - Argon2id over scrypt, bcrypt and PBKDF2: OWASP's first choice; bcrypt is a password hash, not a key derivation
   function, and caps input at 72 bytes.
 - Argon2 (Bouncy Castle) and zxcvbn are Desktop-only dependencies behind `PasswordKeyDerivation` and
-  `PasswordScorer`, so Android does not ship them.
+  `PasswordStrengthChecker`, so Android does not ship them.
 - Onboarding order: welcome -> wallet password -> wallets list, like a password manager's master password: one
   password protects every wallet in the app.
 - No migration: the app is not released.

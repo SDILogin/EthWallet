@@ -168,7 +168,7 @@ val commonModule = module {
     viewModel<SetPasswordViewModel> {
         SetPasswordViewModel(
             passwordInteractor = get(),
-            passwordScorer = get(),
+            passwordStrengthChecker = get(),
         )
     }
 

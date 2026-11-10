@@ -13,7 +13,7 @@ import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.security.PasswordInteractor
 import me.sdi.ethwallet.core.security.PasswordStrength
 import me.sdi.ethwallet.fakes.FakePasswordKekStorage
-import me.sdi.ethwallet.fakes.FakePasswordScorer
+import me.sdi.ethwallet.fakes.FakePasswordStrengthChecker
 import me.sdi.ethwallet.fakes.FakePinSession
 import me.sdi.ethwallet.fakes.FakeUserActivityManager
 import kotlin.test.AfterTest
@@ -28,7 +28,7 @@ import kotlin.test.assertTrue
 class SetPasswordViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private val storage = FakePasswordKekStorage()
-    private val scorer = FakePasswordScorer()
+    private val strengthChecker = FakePasswordStrengthChecker()
     private val collectedNews = mutableListOf<SetPasswordNews>()
     private lateinit var viewModel: SetPasswordViewModel
 
@@ -41,7 +41,7 @@ class SetPasswordViewModelTest {
                 pinSession = FakePinSession(),
                 userActivityManager = FakeUserActivityManager(),
             ),
-            passwordScorer = scorer,
+            passwordStrengthChecker = strengthChecker,
         )
     }
 
@@ -52,6 +52,7 @@ class SetPasswordViewModelTest {
 
     @Test
     fun a_short_password_is_rated_weak_but_can_still_be_set() = runTest(testDispatcher) {
+        strengthChecker.strength = PasswordStrength.Weak
         collectNews()
 
         viewModel.onEvent(SetPasswordEvent.OnPasswordChange(SHORT_PASSWORD))
@@ -69,11 +70,11 @@ class SetPasswordViewModelTest {
     }
 
     @Test
-    fun a_long_password_with_a_high_score_is_strong() = runTest(testDispatcher) {
+    fun a_strong_rating_is_shown() = runTest(testDispatcher) {
         viewModel.onEvent(SetPasswordEvent.OnPasswordChange(STRONG_PASSWORD))
         advanceUntilIdle()
 
-        assertEquals(PasswordStrength.Strong, viewModel.viewState.value.strength, "A long, high-score password is strong")
+        assertEquals(PasswordStrength.Strong, viewModel.viewState.value.strength, "The checker rating should be shown")
     }
 
     @Test
@@ -90,7 +91,7 @@ class SetPasswordViewModelTest {
 
     @Test
     fun a_scoring_failure_rates_the_password_weak() = runTest(testDispatcher) {
-        scorer.failure = IllegalStateException("Dictionaries unavailable")
+        strengthChecker.failure = IllegalStateException("Dictionaries unavailable")
 
         viewModel.onEvent(SetPasswordEvent.OnPasswordChange(STRONG_PASSWORD))
         advanceUntilIdle()
