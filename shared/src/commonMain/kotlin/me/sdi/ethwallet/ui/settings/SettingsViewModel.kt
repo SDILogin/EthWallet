@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
@@ -22,6 +23,7 @@ data class SettingsViewState(
     val isBiometricEnabled: Boolean = false,
     val isBiometricSwitchEnabled: Boolean = false,
     val biometricHint: BiometricSettingsHint = BiometricSettingsHint.None,
+    val isPinSettingsVisible: Boolean = true,
 )
 
 enum class BiometricSettingsHint { None, NotSupported, NotEnrolled, Invalidated }
@@ -44,6 +46,7 @@ sealed interface SettingsEvent {
 class SettingsViewModel(
     private val biometricUnlock: BiometricUnlock,
     private val pinSession: PinSession,
+    private val appLockMethod: AppLockMethod,
 ) : ViewModel() {
     val viewState: StateFlow<SettingsViewState>
         field = MutableStateFlow(SettingsViewState())
@@ -55,8 +58,9 @@ class SettingsViewModel(
             .onEach { Logger.debug(TAG) { "ViewState: $it" } }
             .launchIn(viewModelScope)
 
-        viewModelScope.launch {
-            refreshBiometricState()
+        when (appLockMethod) {
+            AppLockMethod.Pin -> viewModelScope.launch { refreshBiometricState() }
+            AppLockMethod.Password -> viewState.value = SettingsViewState(isPinSettingsVisible = false)
         }
     }
 

@@ -137,6 +137,30 @@
     <string name="biometric_offer_enable">Enable</string>
     <string name="biometric_offer_skip">Not now</string>
 
+    <!-- Wallet Password Screens -->
+    <string name="password_create_button">Create password</string>
+    <string name="password_create_title">Create a wallet password</string>
+    <string name="password_create_subtitle">This password encrypts your wallets on this Mac. It cannot be recovered: your recovery phrase is the only backup.</string>
+    <string name="password_field">Password</string>
+    <string name="password_confirm_field">Confirm password</string>
+    <string name="password_show">Show password</string>
+    <string name="password_hide">Hide password</string>
+    <string name="password_strength_weak">Weak password</string>
+    <string name="password_strength_fair">Fair password</string>
+    <string name="password_strength_strong">Strong password</string>
+    <string name="password_weak_warning">This password is weak. Use at least 15 characters and avoid common words. You can continue, but a weak password is easier to guess if someone gets your wallet files on this Mac.</string>
+    <string name="password_mismatch">Passwords do not match</string>
+    <string name="password_continue">Continue</string>
+    <string name="password_setup_failed">Could not set the password. Try again.</string>
+    <string name="password_enter_title">Enter your wallet password</string>
+    <string name="password_unlock">Unlock</string>
+    <string name="password_wrong">Wrong password</string>
+    <string name="password_unlock_failed">Could not unlock the wallets on this Mac. If the wallet files were moved from another Mac or user, reset and restore your wallets from the recovery phrase.</string>
+    <string name="password_reset_failed">Could not remove the local data. Try again.</string>
+    <string name="password_forgot">Forgot password?</string>
+    <string name="password_logout_dialog_message">This removes all wallets, encrypted private keys, the wallet password, balances, and cached prices from this Mac. Before continuing, make sure you own and can access your recovery (seed) phrase. Without it, you cannot restore these wallets or access their funds.</string>
+    <string name="settings_lock_app_description_password">Close the session and ask for the wallet password</string>
+
     <!-- Settings Screen -->
     <string name="settings_title">Settings</string>
     <string name="wallet_settings">Settings</string>

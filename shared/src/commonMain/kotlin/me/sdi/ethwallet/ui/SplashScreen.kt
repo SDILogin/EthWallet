@@ -17,6 +17,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.ensureActive
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.AppLockMethod
+import me.sdi.ethwallet.core.security.PasswordInteractor
 import me.sdi.ethwallet.core.security.PinInteractor
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.ic_eth_logo
@@ -47,17 +49,19 @@ fun SplashScreen(
 ) {
     val koin = getKoin()
     LaunchedEffect(Unit) {
-        val pinInteractor = koin.get<PinInteractor>()
-        val isPinSet = try {
-            pinInteractor.hasPin()
+        val isLockSet = try {
+            when (koin.get<AppLockMethod>()) {
+                AppLockMethod.Pin -> koin.get<PinInteractor>().hasPin()
+                AppLockMethod.Password -> koin.get<PasswordInteractor>().hasPassword()
+            }
         } catch (e: Exception) {
             ensureActive()
 
-            Logger.warn("Splash", e) { "Failed to check if PIN code is set" }
+            Logger.warn("Splash", e) { "Failed to check if the app lock is set" }
             false
         }
 
-        val destination = if (isPinSet) Destination.LockScreen else Destination.OnBoardingScreen
+        val destination = if (isLockSet) Destination.LockScreen else Destination.OnBoardingScreen
         startDestination(destination)
     }
 

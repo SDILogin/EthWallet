@@ -22,7 +22,6 @@ import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinInteractor
 import me.sdi.ethwallet.core.security.PinLockState
-import me.sdi.ethwallet.core.security.UserPresenceCancelledException
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
@@ -260,9 +259,6 @@ class VerifyPinCodeViewModel(
                         }
                     }
                 }
-            } catch (e: UserPresenceCancelledException) {
-                Logger.debug(TAG) { "User presence check was cancelled" }
-                viewState.update { it.copy(enteredPin = "", isVerifying = false) }
             } catch (e: Exception) {
                 ensureActive()
 

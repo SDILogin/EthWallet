@@ -2,6 +2,9 @@
 
 Allow an unlocked user to change their PIN from the Settings screen.
 
+Desktop no longer uses the PIN: since #307 Secure Desktop private key storage and app unlock it uses a wallet
+password (docs/tasks/desktop-secure-key-storage/spec.md). The Desktop parts below describe the earlier design.
+
 ## Scope
 
 - `PinCodeStorage`: the PIN becomes an app-lock check and no longer takes part in encrypting the master
@@ -42,8 +45,8 @@ The random 256-bit master KEK is kept. `KeyStoreEncryptor`, `SoftwarePrivateKeyE
 
 - **Android** (`MasterKekStorageAndroidKeyStore`): the KEK is encrypted only by the AndroidKeyStore AES-GCM key
   `wallet_pin_code_key` and stored as `keystore_wrapped_master_kek` in the same DataStore as the PIN hash.
-- **Desktop** (`MasterKekStorageSoftware`): the KEK is wrapped by a Secure Enclave key and stored as
-  `wrapped_master_kek` in the owner-only `pinArtifactsDataStore` (see docs/tasks/desktop-master-kek/spec.md).
+- **Desktop** (`MasterKekStorageSoftware`): the KEK is stored as Base64 (`master_kek`) in the owner-only
+  `pinArtifactsDataStore`. File permissions are its only protection.
 - **PIN hash** (both platforms): `pin_hash` is PBKDF2WithHmacSHA256(PIN, `pin_hash_salt`) with
   the existing parameters (200 000 iterations, 256-bit output, 16-byte random salt). It is compared with
   `MessageDigest.isEqual`.

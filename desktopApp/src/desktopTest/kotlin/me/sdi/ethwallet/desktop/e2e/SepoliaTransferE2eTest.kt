@@ -13,7 +13,7 @@ import me.sdi.ethwallet.desktop.e2e.environment.SepoliaE2eSeeds
 import me.sdi.ethwallet.desktop.e2e.pageobjects.ImportWalletPage
 import me.sdi.ethwallet.desktop.e2e.pageobjects.OnboardingPage
 import me.sdi.ethwallet.desktop.e2e.pageobjects.SendPage
-import me.sdi.ethwallet.desktop.e2e.pageobjects.SetPinCodePage
+import me.sdi.ethwallet.desktop.e2e.pageobjects.SetPasswordPage
 import me.sdi.ethwallet.desktop.e2e.pageobjects.WalletDashboardPage
 import me.sdi.ethwallet.desktop.e2e.pageobjects.WalletsListPage
 import me.sdi.ethwallet.di.appModules
@@ -47,7 +47,7 @@ class SepoliaTransferE2eTest {
         .around(composeTestRule)
 
     private val onboardingPage = OnboardingPage(composeTestRule)
-    private val setPinCodePage = SetPinCodePage(composeTestRule)
+    private val setPasswordPage = SetPasswordPage(composeTestRule)
     private val walletsListPage = WalletsListPage(composeTestRule)
     private val importWalletPage = ImportWalletPage(composeTestRule)
     private val walletDashboardPage = WalletDashboardPage(composeTestRule)
@@ -81,13 +81,12 @@ class SepoliaTransferE2eTest {
     @Category(SepoliaE2e::class)
     fun restoredAccountsCanTransferEthBetweenEachOther() {
         onboardingPage.assertShown()
-        onboardingPage.clickCreatePinCodeButton()
+        onboardingPage.clickCreatePasswordButton()
 
-        setPinCodePage.assertCreatePinShown()
-        setPinCodePage.inputPin(TEST_PIN)
-        setPinCodePage.assertConfirmPinShown()
-        setPinCodePage.confirmPin(TEST_PIN)
-        setPinCodePage.dismissBiometricOfferIfShown()
+        setPasswordPage.assertShown()
+        setPasswordPage.inputPassword(TEST_PASSWORD)
+        setPasswordPage.confirmPassword(TEST_PASSWORD)
+        setPasswordPage.clickContinue()
 
         walletsListPage.assertWalletsListShown()
         walletsListPage.clickImportWalletButton()
@@ -141,7 +140,7 @@ class SepoliaTransferE2eTest {
     }
 
     private companion object {
-        const val TEST_PIN = "112233"
+        const val TEST_PASSWORD = "e2e wallet password"
         const val SENDER_LABEL = "E2E Sender"
         const val RECEIVER_LABEL = "E2E Receiver"
         const val TRANSFER_TIMEOUT_MILLIS = 120_000L

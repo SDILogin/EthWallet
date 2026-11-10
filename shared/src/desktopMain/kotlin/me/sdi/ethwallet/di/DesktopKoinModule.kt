@@ -5,18 +5,18 @@ import androidx.datastore.preferences.core.Preferences
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import me.sdi.ethwallet.core.ChainConfig
+import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
 import me.sdi.ethwallet.core.security.DataCleanerPinArtifacts
 import me.sdi.ethwallet.core.security.DataCleanerRoomDb
+import me.sdi.ethwallet.core.security.MasterKekProtection
 import me.sdi.ethwallet.core.security.MasterKekProtectionSecureEnclave
-import me.sdi.ethwallet.core.security.MasterKekStorage
-import me.sdi.ethwallet.core.security.MasterKekStorageSoftware
-import me.sdi.ethwallet.core.security.PinAttemptsGuard
-import me.sdi.ethwallet.core.security.PinCodeStorage
-import me.sdi.ethwallet.core.security.PinCodeStorageSoftware
-import me.sdi.ethwallet.core.security.PinLockPolicy
-import me.sdi.ethwallet.core.security.PinLockState
+import me.sdi.ethwallet.core.security.PasswordKekStorage
+import me.sdi.ethwallet.core.security.PasswordKekStorageSoftware
+import me.sdi.ethwallet.core.security.PasswordKeyDerivationArgon2
+import me.sdi.ethwallet.core.security.PasswordScorer
+import me.sdi.ethwallet.core.security.PasswordScorerZxcvbn
 import me.sdi.ethwallet.core.security.PinSessionDataCleaner
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.core.security.SoftwarePrivateKeyEncryptor
@@ -33,7 +33,6 @@ import me.sdi.ethwallet.database.dao.WalletDao
 import org.koin.core.module.Module
 import org.koin.dsl.module
 import java.io.File
-import kotlin.time.Duration
 
 actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<AppDatabase> { DesktopDatabaseBuilder.build(walletDirectory()) }
@@ -60,34 +59,20 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
 
     single<HttpClient> { createHttpClient(OkHttp.create()) }
 
-    single<PinCodeStorage> { PinCodeStorageSoftware(dataStore = get()) }
-    single<MasterKekStorage> {
-        MasterKekStorageSoftware(dataStore = get(), protection = MasterKekProtectionSecureEnclave())
+    single { AppLockMethod.Password }
+    single<MasterKekProtection> { MasterKekProtectionSecureEnclave() }
+    single<PasswordKekStorage> {
+        PasswordKekStorageSoftware(
+            dataStore = get(),
+            protection = get(),
+            keyDerivation = PasswordKeyDerivationArgon2(),
+        )
     }
-    single<PinAttemptsGuard> { DesktopPinAttemptsGuard() }
+    single<PasswordScorer> { PasswordScorerZxcvbn() }
     single<BiometricUnlock> { DesktopBiometricUnlock() }
 }
 
 private fun walletDirectory(): File = File(System.getProperty("user.home"), ".ethwallet")
-
-private class DesktopPinAttemptsGuard : PinAttemptsGuard {
-    private val unlocked =
-        PinLockState.Active(
-            totalFailures = 0,
-            remainingInWindow = PinLockPolicy.ATTEMPTS_PER_WINDOW,
-            lockRemaining = Duration.ZERO,
-        )
-
-    override suspend fun bootstrap() = Unit
-
-    override suspend fun status(): PinLockState = unlocked
-
-    override suspend fun onFailedAttempt(): PinLockState = unlocked
-
-    override suspend fun onSuccess() = Unit
-
-    override suspend fun clear() = Unit
-}
 
 private class DesktopBiometricUnlock : BiometricUnlock {
     override suspend fun status(): BiometricStatus = BiometricStatus.NotSupported

@@ -32,6 +32,7 @@ import me.sdi.ethwallet.resources.settings_change_pin
 import me.sdi.ethwallet.resources.settings_change_pin_description
 import me.sdi.ethwallet.resources.settings_lock_app
 import me.sdi.ethwallet.resources.settings_lock_app_description
+import me.sdi.ethwallet.resources.settings_lock_app_description_password
 import me.sdi.ethwallet.resources.settings_title
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.StringResource
@@ -83,9 +84,11 @@ private fun SettingsScreen(
         },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            BiometricSettingRow(viewState = viewState, onEvent = onEvent)
-            ChangePinRow(onClick = onChangePinClick)
-            LockAppRow(onEvent = onEvent)
+            if (viewState.isPinSettingsVisible) {
+                BiometricSettingRow(viewState = viewState, onEvent = onEvent)
+                ChangePinRow(onClick = onChangePinClick)
+            }
+            LockAppRow(isPinLock = viewState.isPinSettingsVisible, onEvent = onEvent)
         }
     }
 }
@@ -145,7 +148,10 @@ private fun ChangePinRow(onClick: () -> Unit) {
 }
 
 @Composable
-private fun LockAppRow(onEvent: (SettingsEvent) -> Unit) {
+private fun LockAppRow(
+    isPinLock: Boolean,
+    onEvent: (SettingsEvent) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -157,7 +163,9 @@ private fun LockAppRow(onEvent: (SettingsEvent) -> Unit) {
             style = MaterialTheme.typography.bodyLarge,
         )
         Text(
-            text = stringResource(Res.string.settings_lock_app_description),
+            text = stringResource(
+                if (isPinLock) Res.string.settings_lock_app_description else Res.string.settings_lock_app_description_password,
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -26,7 +26,7 @@ class DataCleanerPinArtifactsTest {
     fun clean_removes_the_stored_pin_artifacts() = runTest {
         dataStore.edit { preferences ->
             preferences[KEK_WRAPPING_KEY] = STORED_WRAPPING_KEY
-            preferences[WRAPPED_MASTER_KEK] = STORED_WRAPPED_KEK
+            preferences[PASSWORD_WRAPPED_MASTER_KEK] = STORED_WRAPPED_KEK
         }
 
         DataCleanerPinArtifacts(dataStore).clean()
@@ -62,6 +62,6 @@ class DataCleanerPinArtifactsTest {
         private const val ARTIFACTS_FILE_NAME = "secure_pin_preferences.preferences_pb"
 
         private val KEK_WRAPPING_KEY = stringPreferencesKey("kek_wrapping_key")
-        private val WRAPPED_MASTER_KEK = stringPreferencesKey("wrapped_master_kek")
+        private val PASSWORD_WRAPPED_MASTER_KEK = stringPreferencesKey("password_wrapped_master_kek")
     }
 }

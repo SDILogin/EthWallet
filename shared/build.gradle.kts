@@ -197,6 +197,8 @@ kotlin {
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.okhttp)
                 implementation(libs.jna)
+                implementation(libs.bouncycastle.bcprov)
+                implementation(libs.zxcvbn)
 
                 // QR Code
                 implementation(libs.zxing.core)

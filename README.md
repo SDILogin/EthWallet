@@ -57,8 +57,9 @@ it restarts. Codex starts the server automatically; do not launch a second serve
 ./gradlew :desktopApp:desktopTest
 ```
 
-The test renders the desktop Compose UI and checks onboarding and navigation to PIN setup.
-It uses temporary PIN storage and requires no wallet seeds or network access.
+The test renders the desktop Compose UI: it sets a wallet password, locks the app, and unlocks it again.
+It uses temporary storage, a temporary database, and a fake Secure Enclave, and needs no wallet seeds or network
+access.
 
 ### Live Sepolia UI E2E
 
@@ -93,9 +94,10 @@ The desktop version uses the same `seed_1` and `seed_2` configuration:
 ./gradlew -PsepoliaE2e=true :desktopApp:sepoliaE2eTest --console=plain
 ```
 
-It runs the desktop Compose UI with desktop crypto, software PIN storage, the Secure Enclave-wrapped master KEK,
-and private-key encryption. Setting the PIN creates a real Secure Enclave key without a Touch ID prompt.
-PIN preferences use a temporary directory, and wallets use the real desktop Room database in `~/.ethwallet`.
+It runs the desktop Compose UI with desktop crypto, a wallet password, the Secure Enclave-wrapped master KEK,
+and private-key encryption. Setting the password creates a real Secure Enclave key.
+The key preferences use a temporary directory, and wallets use the real desktop Room database in `~/.ethwallet`;
+onboarding wipes that database, so run the test only on a Mac without real wallets.
 The scenario imports both wallets, sends `0.000001` Sepolia ETH, and checks the receiver's balance.
 Each run spends testnet funds. Normal `:desktopApp:desktopTest` runs exclude this test, even with
 `-PsepoliaE2e=true`. Live test results are never reused from the Gradle cache.

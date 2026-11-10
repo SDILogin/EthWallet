@@ -17,6 +17,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,10 +26,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.ensureActive
 import me.sdi.ethwallet.Logger
+import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.ic_eth_logo
 import me.sdi.ethwallet.resources.onboarding_title
+import me.sdi.ethwallet.resources.password_create_button
 import me.sdi.ethwallet.resources.pin_create_title
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -36,10 +39,11 @@ import org.koin.compose.getKoin
 
 @Composable
 fun OnboardingScreen(
-    onCreatePinClick: () -> Unit,
+    onContinueClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val koin = getKoin()
+    val appLockMethod = remember(koin) { koin.get<AppLockMethod>() }
     LaunchedEffect(Unit) {
         val dataCleaner = koin.get<DataCleaner>()
         try {
@@ -89,10 +93,15 @@ fun OnboardingScreen(
                     .widthIn(max = 320.dp)
                     .padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(16.dp),
-                onClick = onCreatePinClick,
+                onClick = onContinueClick,
             ) {
                 Text(
-                    text = stringResource(Res.string.pin_create_title),
+                    text = stringResource(
+                        when (appLockMethod) {
+                            AppLockMethod.Pin -> Res.string.pin_create_title
+                            AppLockMethod.Password -> Res.string.password_create_button
+                        },
+                    ),
                     style = MaterialTheme.typography.labelLarge,
                 )
             }

@@ -1,30 +1,17 @@
 import CryptoKit
-import CryptoTokenKit
 import Foundation
-import LocalAuthentication
 import Security
 
-// C ABI called only by MasterKekProtectionSecureEnclave through JNA. Kotlin validates the fixed buffer sizes.
+// C ABI called only by MasterKekProtectionSecureEnclave through JNA. Kotlin validates the buffer sizes.
 
 private let statusOk: Int32 = 0
 private let statusSecureEnclaveUnavailable: Int32 = 1
 private let statusFailure: Int32 = 2
 private let statusOutputTooSmall: Int32 = 3
-private let statusUserCancelled: Int32 = 4
 
-private let masterKekLength = 32
 private let symmetricKeyLength = 32
 private let ephemeralPublicKeyLength = 65
-private let wrappedMasterKekLength = 125
-private let kdfSharedInfo = Data("EthWallet master KEK v1".utf8)
-private let unlockReason = "unlock your EthWallet wallets"
-private let cancelledAuthenticationErrors: [(domain: String, code: Int)] = [
-    (LAErrorDomain, LAError.Code.userCancel.rawValue),
-    (LAErrorDomain, LAError.Code.appCancel.rawValue),
-    (LAErrorDomain, LAError.Code.systemCancel.rawValue),
-    (TKErrorDomain, TKError.Code.canceledByUser.rawValue),
-    (NSOSStatusErrorDomain, Int(errSecUserCanceled)),
-]
+private let kdfSharedInfo = Data("EthWallet master KEK v2".utf8)
 
 @_cdecl("ethwalletSecureEnclaveCreateKey")
 public func ethwalletSecureEnclaveCreateKey(
@@ -39,7 +26,7 @@ public func ethwalletSecureEnclaveCreateKey(
             let accessControl = SecAccessControlCreateWithFlags(
                 kCFAllocatorDefault,
                 kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-                [.privateKeyUsage, .userPresence],
+                [.privateKeyUsage],
                 &error
             )
         else {
@@ -58,13 +45,13 @@ public func ethwalletSecureEnclaveCreateKey(
     }
 }
 
-/// Writes `ephemeralPublicKey (65) || nonce (12) || ciphertext (32) || tag (16)` to `output`. Uses only the public
-/// key, so it never asks for user presence.
+/// Writes `ephemeralPublicKey (65) || nonce (12) || ciphertext (payloadLength) || tag (16)` to `output`.
 @_cdecl("ethwalletSecureEnclaveWrap")
 public func ethwalletSecureEnclaveWrap(
     _ key: UnsafePointer<UInt8>,
     _ keyLength: Int32,
-    _ masterKek: UnsafePointer<UInt8>,
+    _ payload: UnsafePointer<UInt8>,
+    _ payloadLength: Int32,
     _ output: UnsafeMutablePointer<UInt8>
 ) -> Int32 {
     autoreleasepool { () -> Int32 in
@@ -80,9 +67,9 @@ public func ethwalletSecureEnclaveWrap(
                 ephemeralPublicKey: ephemeralKey.publicKey,
                 recipientPublicKey: recipientPublicKey
             )
-            let sealedBox = try AES.GCM.seal(Data(bytes: masterKek, count: masterKekLength), using: symmetricKey)
+            let sealedBox = try AES.GCM.seal(Data(bytes: payload, count: Int(payloadLength)), using: symmetricKey)
             let wrapped = ephemeralKey.publicKey.x963Representation + sealedBox.combined!
-            wrapped.copyBytes(to: output, count: wrappedMasterKekLength)
+            wrapped.copyBytes(to: output, count: wrapped.count)
             return statusOk
         } catch {
             return failure(error)
@@ -90,25 +77,23 @@ public func ethwalletSecureEnclaveWrap(
     }
 }
 
-/// Shows the Touch ID or macOS password sheet and blocks until the user answers it.
+/// Reverses `ethwalletSecureEnclaveWrap`; writes `wrappedLength - 93` bytes to `output`.
 @_cdecl("ethwalletSecureEnclaveUnwrap")
 public func ethwalletSecureEnclaveUnwrap(
     _ key: UnsafePointer<UInt8>,
     _ keyLength: Int32,
-    _ wrappedMasterKek: UnsafePointer<UInt8>,
+    _ wrapped: UnsafePointer<UInt8>,
+    _ wrappedLength: Int32,
     _ output: UnsafeMutablePointer<UInt8>
 ) -> Int32 {
     autoreleasepool { () -> Int32 in
         do {
-            let context = LAContext()
-            context.localizedReason = unlockReason
             let privateKey = try SecureEnclave.P256.KeyAgreement.PrivateKey(
-                dataRepresentation: Data(bytes: key, count: Int(keyLength)),
-                authenticationContext: context
+                dataRepresentation: Data(bytes: key, count: Int(keyLength))
             )
-            let wrapped = Data(bytes: wrappedMasterKek, count: wrappedMasterKekLength)
+            let wrappedData = Data(bytes: wrapped, count: Int(wrappedLength))
             let ephemeralPublicKey = try P256.KeyAgreement.PublicKey(
-                x963Representation: wrapped.prefix(ephemeralPublicKeyLength)
+                x963Representation: wrappedData.prefix(ephemeralPublicKeyLength)
             )
             let sharedSecret = try privateKey.sharedSecretFromKeyAgreement(with: ephemeralPublicKey)
             let symmetricKey = deriveSymmetricKey(
@@ -116,12 +101,12 @@ public func ethwalletSecureEnclaveUnwrap(
                 ephemeralPublicKey: ephemeralPublicKey,
                 recipientPublicKey: privateKey.publicKey
             )
-            let sealedBox = try AES.GCM.SealedBox(combined: wrapped.dropFirst(ephemeralPublicKeyLength))
-            let masterKek = try AES.GCM.open(sealedBox, using: symmetricKey)
-            masterKek.copyBytes(to: output, count: masterKekLength)
+            let sealedBox = try AES.GCM.SealedBox(combined: wrappedData.dropFirst(ephemeralPublicKeyLength))
+            let payload = try AES.GCM.open(sealedBox, using: symmetricKey)
+            payload.copyBytes(to: output, count: payload.count)
             return statusOk
         } catch {
-            return isCancelledAuthentication(error) ? statusUserCancelled : failure(error)
+            return failure(error)
         }
     }
 }
@@ -142,20 +127,4 @@ private func deriveSymmetricKey(
 private func failure(_ error: Error) -> Int32 {
     NSLog("EthWallet Secure Enclave operation failed: %@", error as NSError)
     return statusFailure
-}
-
-/// CryptoKit may report a dismissed sheet as a Security or CryptoTokenKit error wrapping the LocalAuthentication one.
-private func isCancelledAuthentication(_ error: Error) -> Bool {
-    var current: NSError? = error as NSError
-    while let nsError = current {
-        let cancelled = cancelledAuthenticationErrors.contains { cancelledError in
-            cancelledError.domain == nsError.domain && cancelledError.code == nsError.code
-        }
-        if cancelled {
-            return true
-        } else {
-            current = nsError.userInfo[NSUnderlyingErrorKey] as? NSError
-        }
-    }
-    return false
 }

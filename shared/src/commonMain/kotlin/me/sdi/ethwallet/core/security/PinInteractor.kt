@@ -23,7 +23,6 @@ class PinInteractor(
      * Unlocks the app with the master KEK when [pin] matches the stored PIN.
      *
      * @return True if the PIN matched.
-     * @throws UserPresenceCancelledException if the user cancels the system authentication that guards the KEK.
      * @throws IllegalStateException if no PIN is stored.
      */
     suspend fun unlock(pin: String): Boolean {

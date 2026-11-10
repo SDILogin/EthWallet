@@ -26,44 +26,31 @@ must not let anyone decrypt wallet private keys.
 - Stop storing the master KEK unencrypted on disk. Protect it with a macOS mechanism that does not travel with
   file copies: a Keychain item that is device-only and cannot migrate, or a key held in the Secure Enclave that wraps
   the KEK.
-- The PIN stays an app-lock check (`pin_hash`, `pin_hash_salt`). It is not used as key material.
-- `MasterKekStorage.clear()` and the logout `DataCleaner` implementations must also delete the Keychain item or the Secure
-  Enclave key. A CryptoKit Secure Enclave key exists only as its stored `dataRepresentation` blob, so removing that
-  blob is its deletion.
-- Update the KDoc of `MasterKekStorageSoftware` and `SoftwarePrivateKeyEncryptor` to describe the new protection.
-- Keep `MasterKekStorageSoftware` usable by tests that have no Keychain: inject the KEK protection behind an
-  interface, with an in-memory fake in `commonTest`.
-- Out of scope: persisting the Desktop wallet database (already done by 90ad1ac, see Background).
+- Logout must also delete the Keychain item or the Secure Enclave key.
+- Keep the storage usable by tests that have no Keychain: inject the KEK protection behind an interface, with an
+  in-memory fake in `commonTest`.
 
 ## Decisions
 
-- Compared with Monero GUI: wallet2 encrypts the `.keys` file with ChaCha20 under a key derived from the wallet
-  password by CryptoNight (`cn_slow_hash`). The password is the only key material, so a copied keys file can be
-  attacked offline by guessing the password. A Secure Enclave key cannot be copied at all, so no offline attack
-  exists, and the system sheet adds the OS-rate-limited account password or Touch ID. A wallet password on top
-  would add only a brute-forceable layer and a second secret to remember, so it is not added.
-- Secure Enclave wrapping key, not a Keychain item. A CryptoKit `SecureEnclave.P256.KeyAgreement.PrivateKey` is
-  stored only as its `dataRepresentation` blob in the DataStore, needs no Keychain entitlement, and works for
-  unsigned development builds. A device-only data-protection Keychain item needs a signed app with keychain
-  entitlements, and a login-keychain item travels with home-folder backups. The Swift library is called through JNA.
-- The Secure Enclave key requires user presence (`.userPresence`: Touch ID or the macOS account password).
-  Unwrapping the KEK on every unlock shows the system sheet after the PIN. This stops a person at an unlocked Mac
-  who could otherwise guess the PIN without an attempt limit or use the key blob from a script. Wrapping uses only
-  the public key, so setting a PIN does not prompt. Desktop biometric unlock stays unsupported.
-- The PIN stays the shared app lock (extend, not replace). With the system sheet on every unlock, the Desktop PIN
-  adds no protection against an attacker the sheet does not already stop. Replacing it on Desktop needs
-  Desktop-specific PIN screens and navigation and is left to a separate decision.
+Implemented together with #307 Secure Desktop private key storage and app unlock; the password flow, threat boundary
+and research are in docs/tasks/desktop-secure-key-storage/spec.md.
+
+- Secure Enclave wrapping key, not a Keychain item: a CryptoKit `SecureEnclave.P256.KeyAgreement.PrivateKey` is stored
+  only as its `dataRepresentation` blob in the DataStore, needs no Keychain entitlement, and works for unsigned
+  development builds. A device-only data-protection Keychain item needs a signed app with keychain entitlements, and a
+  login-keychain item travels with home-folder backups. The Swift library is called through JNA
+  (`MasterKekProtectionSecureEnclave`).
+- `PasswordKekStorageSoftware` stores the Secure Enclave key handle, the password salt and the wrapped KEK. The handle
+  is the only form of the Secure Enclave key, so logout (`DataCleanerPinArtifacts`, which clears the whole store)
+  deletes the key.
 - No migration: the app is not released, so pre-release builds are not migrated. A Desktop install that stored the
-  plain `master_kek` cannot unlock and must use Reset, then re-import its wallets.
-- Memory: the KEK stays in process memory while the app is unlocked (`PinSession`). The Swift
-  `Data` and `SymmetricKey` copies and the JNA transfer buffers are not zeroed; Kotlin keeps its existing zeroing of
-  decrypted private keys. Cancelling the unlock coroutine does not dismiss the system sheet.
+  plain `master_kek` must reset and re-import its wallets.
 
 ## Definition of done
 
 - `~/.ethwallet` contains no unencrypted master KEK. A test asserts that the stored artifacts do not contain the
   KEK bytes.
-- Unit tests for `MasterKekStorageSoftware` with the fake KEK protection: create, read, clear.
-- Manual check on Apple Silicon macOS: set a PIN, restart the app, unlock, sign a transfer; copy `~/.ethwallet`
-  to another user account or machine and confirm the KEK cannot be recovered from the copy.
+- Unit tests for the KEK storage with the fake protection.
+- Manual check on Apple Silicon macOS: copy `~/.ethwallet` to another machine and confirm the KEK cannot be
+  recovered from the copy.
 - Formatting, Desktop compilation, and shared tests pass.

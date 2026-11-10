@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.fragment.app.FragmentActivity
+import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.InMemoryPinSession
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
@@ -58,6 +59,7 @@ class SettingsScreenTest {
                                 override suspend fun unlock(): BiometricResult = BiometricResult.Error("unsupported")
                             },
                             pinSession = InMemoryPinSession(),
+                            appLockMethod = AppLockMethod.Pin,
                         )
                     }
                 },

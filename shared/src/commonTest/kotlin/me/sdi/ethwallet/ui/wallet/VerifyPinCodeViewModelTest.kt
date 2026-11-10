@@ -21,7 +21,6 @@ import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PinInteractor
 import me.sdi.ethwallet.core.security.PinLockState
-import me.sdi.ethwallet.core.security.UserPresenceCancelledException
 import me.sdi.ethwallet.core.security.biometry.BiometricResult
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.fakes.FakeBiometricUnlock
@@ -261,21 +260,6 @@ class VerifyPinCodeViewModelTest {
             pinAttemptsGuard.onFailedAttemptCallCount,
             "Storage errors should not be recorded as guard attempts",
         )
-    }
-
-    @Test
-    fun cancelled_user_presence_check_should_clear_pin_without_error() = runTest(testDispatcher) {
-        pinCodeStorage.storePinCode(testPin)
-        masterKekStorage.readFailure = UserPresenceCancelledException()
-        createViewModel()
-        collectNews()
-        inputPin(testPin)
-
-        val state = viewModel.viewState.first()
-        assertNull(state.errorMessage, "Cancelling the system authentication is not an error")
-        assertEquals("", state.enteredPin, "The PIN should be entered again after the system authentication is cancelled")
-        assertFalse(state.isVerifying, "Verification should end when the system authentication is cancelled")
-        assertTrue(collectedNews.isEmpty(), "Cancelling the system authentication should neither unlock nor signal an error")
     }
 
     @Test

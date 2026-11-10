@@ -10,17 +10,27 @@ import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.history.TransfersHistoryProvider
 import me.sdi.ethwallet.core.history.TransfersHistoryProviderBlockscout
+import me.sdi.ethwallet.core.security.AppLockMethod
+import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.MasterKekStorage
+import me.sdi.ethwallet.core.security.PasswordInteractor
+import me.sdi.ethwallet.core.security.PasswordKekStorage
+import me.sdi.ethwallet.core.security.PasswordScorer
 import me.sdi.ethwallet.core.security.PinAttemptsGuard
 import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
 import me.sdi.ethwallet.fakes.FakeBiometricUnlock
+import me.sdi.ethwallet.fakes.FakeDataCleaner
 import me.sdi.ethwallet.fakes.FakeMasterKekStorage
+import me.sdi.ethwallet.fakes.FakePasswordKekStorage
+import me.sdi.ethwallet.fakes.FakePasswordScorer
 import me.sdi.ethwallet.fakes.FakePinAttemptsGuard
 import me.sdi.ethwallet.fakes.FakePinCodeStorage
 import me.sdi.ethwallet.ui.settings.ChangePinCodeViewModel
 import me.sdi.ethwallet.ui.settings.SettingsViewModel
+import me.sdi.ethwallet.ui.wallet.PasswordUnlockViewModel
+import me.sdi.ethwallet.ui.wallet.SetPasswordViewModel
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 import kotlin.test.AfterTest
@@ -56,7 +66,10 @@ class KoinModuleTest {
         val koin = koinApplication {
             modules(
                 commonModule,
-                module { single<BiometricUnlock> { fakeBiometricUnlock } },
+                module {
+                    single<BiometricUnlock> { fakeBiometricUnlock }
+                    single { AppLockMethod.Pin }
+                },
             )
         }.koin
 
@@ -93,6 +106,27 @@ class KoinModuleTest {
             koin.get<ChangePinCodeViewModel>(),
             "Opening Change PIN should resolve its ViewModel through the PIN interactor",
         )
+    }
+
+    @Test
+    fun desktopPasswordScreensResolveWithoutPinBindings() {
+        val koin = koinApplication {
+            modules(
+                commonModule,
+                module {
+                    single { AppLockMethod.Password }
+                    single<BiometricUnlock> { FakeBiometricUnlock() }
+                    single<PasswordKekStorage> { FakePasswordKekStorage() }
+                    single<PasswordScorer> { FakePasswordScorer() }
+                    single<DataCleaner> { FakeDataCleaner() }
+                },
+            )
+        }.koin
+
+        assertNotNull(koin.get<SettingsViewModel>(), "Desktop Settings should resolve without PIN bindings")
+        assertNotNull(koin.get<SetPasswordViewModel>(), "Password setup should resolve without PIN bindings")
+        assertNotNull(koin.get<PasswordUnlockViewModel>(), "Password unlock should resolve without PIN bindings")
+        assertNotNull(koin.get<PasswordInteractor>(), "Splash should resolve the password interactor")
     }
 
     @Test
