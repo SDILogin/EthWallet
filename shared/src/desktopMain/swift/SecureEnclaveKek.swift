@@ -9,6 +9,7 @@ private let statusOk: Int32 = 0
 private let statusSecureEnclaveUnavailable: Int32 = 1
 private let statusFailure: Int32 = 2
 private let statusOutputTooSmall: Int32 = 3
+private let statusUserCancelled: Int32 = 4
 
 private let masterKekLength = 32
 private let symmetricKeyLength = 32
@@ -16,6 +17,7 @@ private let ephemeralPublicKeyLength = 65
 private let wrappedMasterKekLength = 125
 private let kdfSharedInfo = Data("EthWallet master KEK v1".utf8)
 private let unlockReason = "unlock your EthWallet wallets"
+private let cancelledAuthentication: [LAError.Code] = [.userCancel, .appCancel, .systemCancel]
 
 @_cdecl("ethwalletSecureEnclaveCreateKey")
 public func ethwalletSecureEnclaveCreateKey(
@@ -34,8 +36,7 @@ public func ethwalletSecureEnclaveCreateKey(
                 &error
             )
         else {
-            _ = error?.takeRetainedValue()
-            return statusFailure
+            return failure(error!.takeRetainedValue())
         }
         do {
             let key = try SecureEnclave.P256.KeyAgreement.PrivateKey(accessControl: accessControl)
@@ -45,7 +46,7 @@ public func ethwalletSecureEnclaveCreateKey(
             outputLength.pointee = Int32(keyData.count)
             return statusOk
         } catch {
-            return statusFailure
+            return failure(error)
         }
     }
 }
@@ -73,13 +74,11 @@ public func ethwalletSecureEnclaveWrap(
                 recipientPublicKey: recipientPublicKey
             )
             let sealedBox = try AES.GCM.seal(Data(bytes: masterKek, count: masterKekLength), using: symmetricKey)
-            guard let combined = sealedBox.combined else { return statusFailure }
-            let wrapped = ephemeralKey.publicKey.x963Representation + combined
-            guard wrapped.count == wrappedMasterKekLength else { return statusFailure }
+            let wrapped = ephemeralKey.publicKey.x963Representation + sealedBox.combined!
             wrapped.copyBytes(to: output, count: wrappedMasterKekLength)
             return statusOk
         } catch {
-            return statusFailure
+            return failure(error)
         }
     }
 }
@@ -112,11 +111,12 @@ public func ethwalletSecureEnclaveUnwrap(
             )
             let sealedBox = try AES.GCM.SealedBox(combined: wrapped.dropFirst(ephemeralPublicKeyLength))
             let masterKek = try AES.GCM.open(sealedBox, using: symmetricKey)
-            guard masterKek.count == masterKekLength else { return statusFailure }
             masterKek.copyBytes(to: output, count: masterKekLength)
             return statusOk
+        } catch let error as LAError where cancelledAuthentication.contains(error.code) {
+            return statusUserCancelled
         } catch {
-            return statusFailure
+            return failure(error)
         }
     }
 }
@@ -132,4 +132,9 @@ private func deriveSymmetricKey(
         sharedInfo: kdfSharedInfo,
         outputByteCount: symmetricKeyLength
     )
+}
+
+private func failure(_ error: Error) -> Int32 {
+    NSLog("EthWallet Secure Enclave operation failed: %@", error as NSError)
+    return statusFailure
 }

@@ -40,6 +40,7 @@ val buildSecureEnclaveMacosArm64 = tasks.register<Exec>("buildSecureEnclaveMacos
         "swiftc",
         "-O",
         "-emit-library",
+        "-parse-as-library",
         "-module-name",
         "EthWalletSecureEnclave",
         "-target",

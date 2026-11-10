@@ -1,15 +1,14 @@
 package me.sdi.ethwallet.core.security
 
 import com.sun.jna.Library
-import com.sun.jna.Memory
 import com.sun.jna.Native
-import com.sun.jna.Pointer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.file.Files
 
 private const val STATUS_OK = 0
+private const val STATUS_USER_CANCELLED = 4
 private const val MASTER_KEK_BYTES = 32
 private const val WRAPPED_MASTER_KEK_BYTES = 125
 private const val WRAPPING_KEY_CAPACITY = 1024
@@ -30,23 +29,29 @@ class MasterKekProtectionSecureEnclave : MasterKekProtection {
     override suspend fun createWrappingKey(): ByteArray = withContext(Dispatchers.IO) {
         val output = ByteArray(WRAPPING_KEY_CAPACITY)
         val outputLength = IntArray(1)
-        checkStatus(library.ethwalletSecureEnclaveCreateKey(output, output.size, outputLength))
+        checkStatus(
+            library.ethwalletSecureEnclaveCreateKey(
+                output = output,
+                outputCapacity = output.size,
+                outputLength = outputLength,
+            ),
+        )
         check(outputLength[0] in 1..output.size) { "Secure Enclave key length is invalid" }
         output.copyOf(outputLength[0])
     }
 
     override suspend fun wrap(wrappingKey: ByteArray, masterKek: ByteArray): ByteArray = withContext(Dispatchers.IO) {
         require(masterKek.size == MASTER_KEK_BYTES) { "Master KEK must be $MASTER_KEK_BYTES bytes" }
-        val nativeMasterKek = Memory(MASTER_KEK_BYTES.toLong())
-        try {
-            nativeMasterKek.write(0, masterKek, 0, MASTER_KEK_BYTES)
-            val output = ByteArray(WRAPPED_MASTER_KEK_BYTES)
-            checkStatus(library.ethwalletSecureEnclaveWrap(wrappingKey, wrappingKey.size, nativeMasterKek, output))
-            output
-        } finally {
-            nativeMasterKek.clear()
-            nativeMasterKek.close()
-        }
+        val output = ByteArray(WRAPPED_MASTER_KEK_BYTES)
+        checkStatus(
+            library.ethwalletSecureEnclaveWrap(
+                key = wrappingKey,
+                keyLength = wrappingKey.size,
+                masterKek = masterKek,
+                output = output,
+            ),
+        )
+        output
     }
 
     override suspend fun unwrap(wrappingKey: ByteArray, wrappedMasterKek: ByteArray): ByteArray =
@@ -54,16 +59,19 @@ class MasterKekProtectionSecureEnclave : MasterKekProtection {
             require(wrappedMasterKek.size == WRAPPED_MASTER_KEK_BYTES) {
                 "Wrapped master KEK must be $WRAPPED_MASTER_KEK_BYTES bytes"
             }
-            val output = Memory(MASTER_KEK_BYTES.toLong())
-            try {
-                checkStatus(
-                    library.ethwalletSecureEnclaveUnwrap(wrappingKey, wrappingKey.size, wrappedMasterKek, output),
-                )
-                output.getByteArray(0, MASTER_KEK_BYTES)
-            } finally {
-                output.clear()
-                output.close()
+            val output = ByteArray(MASTER_KEK_BYTES)
+            val status = library.ethwalletSecureEnclaveUnwrap(
+                key = wrappingKey,
+                keyLength = wrappingKey.size,
+                wrappedMasterKek = wrappedMasterKek,
+                output = output,
+            )
+            if (status == STATUS_USER_CANCELLED) {
+                throw UserPresenceCancelledException()
+            } else {
+                checkStatus(status)
             }
+            output
         }
 
     private fun checkStatus(status: Int) {
@@ -74,9 +82,9 @@ class MasterKekProtectionSecureEnclave : MasterKekProtection {
 private interface SecureEnclaveLibrary : Library {
     fun ethwalletSecureEnclaveCreateKey(output: ByteArray, outputCapacity: Int, outputLength: IntArray): Int
 
-    fun ethwalletSecureEnclaveWrap(key: ByteArray, keyLength: Int, masterKek: Pointer, output: ByteArray): Int
+    fun ethwalletSecureEnclaveWrap(key: ByteArray, keyLength: Int, masterKek: ByteArray, output: ByteArray): Int
 
-    fun ethwalletSecureEnclaveUnwrap(key: ByteArray, keyLength: Int, wrappedMasterKek: ByteArray, output: Pointer): Int
+    fun ethwalletSecureEnclaveUnwrap(key: ByteArray, keyLength: Int, wrappedMasterKek: ByteArray, output: ByteArray): Int
 }
 
 private fun loadSecureEnclaveLibrary(): SecureEnclaveLibrary {
@@ -90,17 +98,10 @@ private fun loadSecureEnclaveLibrary(): SecureEnclaveLibrary {
     val resource = checkNotNull(MasterKekProtectionSecureEnclave::class.java.getResourceAsStream(LIBRARY_RESOURCE_PATH)) {
         "Missing packaged native library: $LIBRARY_RESOURCE_PATH"
     }
-    val directory = Files.createTempDirectory("ethwallet-secure-enclave-").toFile().apply {
-        deleteOnExit()
-        setReadable(true, true)
-        setWritable(true, true)
-        setExecutable(true, true)
-    }
+    val directory = Files.createTempDirectory("ethwallet-secure-enclave-").toFile().apply { deleteOnExit() }
     val library = File(directory, LIBRARY_FILE_NAME).apply {
         deleteOnExit()
         resource.use { input -> outputStream().use(input::copyTo) }
-        setReadable(true, true)
-        setExecutable(true, true)
     }
     return Native.load(library.absolutePath, SecureEnclaveLibrary::class.java)
 }

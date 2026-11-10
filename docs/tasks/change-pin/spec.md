@@ -42,8 +42,8 @@ The random 256-bit master KEK is kept. `KeyStoreEncryptor`, `SoftwarePrivateKeyE
 
 - **Android** (`MasterKekStorageAndroidKeyStore`): the KEK is encrypted only by the AndroidKeyStore AES-GCM key
   `wallet_pin_code_key` and stored as `keystore_wrapped_master_kek` in the same DataStore as the PIN hash.
-- **Desktop** (`MasterKekStorageSoftware`): the KEK is stored as Base64 (`master_kek`) in the owner-only
-  `pinArtifactsDataStore`. File permissions are its only protection.
+- **Desktop** (`MasterKekStorageSoftware`): the KEK is wrapped by a Secure Enclave key and stored as
+  `wrapped_master_kek` in the owner-only `pinArtifactsDataStore` (see docs/tasks/desktop-master-kek/spec.md).
 - **PIN hash** (both platforms): `pin_hash` is PBKDF2WithHmacSHA256(PIN, `pin_hash_salt`) with
   the existing parameters (200 000 iterations, 256-bit output, 16-byte random salt). It is compared with
   `MessageDigest.isEqual`.

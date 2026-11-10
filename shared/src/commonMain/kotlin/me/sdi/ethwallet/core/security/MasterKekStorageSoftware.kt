@@ -15,12 +15,11 @@ import kotlin.io.encoding.Base64
  * [pinArtifactsDataStore].
  *
  * The random 256-bit master KEK is never stored in plain form. [protection] wraps it, and the store keeps only the
- * wrapped KEK and the opaque handle of the wrapping key. On Desktop the wrapping key is a Secure Enclave key: a copy
- * of the store cannot be unwrapped on another Mac, and unwrapping on this Mac needs Touch ID or the macOS account
- * password. The handle is the only form of the wrapping key, so [clear] deletes it by removing the handle.
+ * wrapped KEK and the opaque handle of the wrapping key, so the store alone is as strong as [protection]. The handle
+ * is the only stored form of the wrapping key, so [clear] deletes the key by removing the handle.
  *
  * [read] also migrates the plain `master_kek` written by earlier versions: it wraps that KEK and removes the plain
- * value from the store.
+ * value. The KEK keeps its value, so a copy of the store taken before the migration still decrypts the private keys.
  */
 class MasterKekStorageSoftware(
     private val dataStore: DataStore<Preferences>,

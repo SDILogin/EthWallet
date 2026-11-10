@@ -34,16 +34,24 @@ must not let anyone decrypt wallet private keys.
 - Update the KDoc of `MasterKekStorageSoftware` and `SoftwarePrivateKeyEncryptor` to describe the new protection.
 - Keep `MasterKekStorageSoftware` usable by tests that have no Keychain: inject the KEK protection behind an
   interface, with an in-memory fake in `commonTest`.
-- Out of scope: persisting the Desktop wallet database. That work must depend on this task.
+- Out of scope: persisting the Desktop wallet database (already done by 90ad1ac, see Background).
 
-## Open questions
+## Decisions
 
-- Keychain item vs. Secure Enclave wrapping key: compare JVM access options (JNA or JNI to Security.framework, or
-  an existing library), code signing and entitlement requirements, and behavior of unsigned development builds.
-- Whether the Keychain or Secure Enclave key needs user presence (Touch ID or the login password), and how that
-  interacts with the in-app PIN and biometric unlock.
+- Secure Enclave wrapping key, not a Keychain item. A CryptoKit `SecureEnclave.P256.KeyAgreement.PrivateKey` is
+  stored only as its `dataRepresentation` blob in the DataStore, needs no Keychain entitlement, and works for
+  unsigned development builds. A device-only data-protection Keychain item needs a signed app with keychain
+  entitlements, and a login-keychain item travels with home-folder backups. The Swift library is called through JNA.
+- The Secure Enclave key requires user presence (`.userPresence`: Touch ID or the macOS account password).
+  Unwrapping the KEK on every unlock shows the system sheet after the PIN. This stops a person at an unlocked Mac
+  who could otherwise guess the PIN without an attempt limit or use the key blob from a script. Wrapping uses only
+  the public key, so setting a PIN does not prompt. Desktop biometric unlock stays unsupported.
+- The PIN stays the shared app lock (extend, not replace). With the system sheet on every unlock, the Desktop PIN
+  adds no protection against an attacker the sheet does not already stop. Replacing it on Desktop needs
+  Desktop-specific PIN screens and navigation and is left to a separate decision.
 - Migration: needed, because wallets were already persisted when the task started (see Background). The plain
-  `master_kek` is wrapped and removed on the first read.
+  `master_kek` is wrapped and removed on the first read. The KEK is not rotated, so a copy taken before the
+  migration still decrypts the private keys.
 
 ## Definition of done
 
