@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,12 +27,13 @@ data class SetPasswordViewState(
     val password: String = "",
     val confirmation: String = "",
     val strength: PasswordStrength? = null,
+    val isRating: Boolean = false,
     val isSaving: Boolean = false,
     val error: SetPasswordError? = null,
 ) {
     val isMismatch: Boolean get() = confirmation.isNotEmpty() && confirmation != password
 
-    val canContinue: Boolean get() = password.isNotEmpty() && password == confirmation && strength != null && !isSaving
+    val canContinue: Boolean get() = password.isNotEmpty() && password == confirmation && strength != null && !isRating && !isSaving
 
     override fun toString(): String =
         "SetPasswordViewState(strength=$strength, isSaving=$isSaving, error=$error, isMismatch=$isMismatch)"
@@ -88,22 +90,31 @@ class SetPasswordViewModel(
     }
 
     private fun handlePasswordChange(password: String) {
-        val strengthBeforeScoring = if (password.isNotEmpty() && isTooShort(password)) PasswordStrength.Weak else null
-        viewState.update { it.copy(password = password, strength = strengthBeforeScoring, error = null) }
         scoringJob?.cancel()
-        if (password.isNotEmpty()) {
-            scoringJob = viewModelScope.launch {
-                val strength = try {
-                    passwordStrength(length = password.length, score = passwordScorer.score(password))
-                } catch (e: Exception) {
-                    ensureActive()
-
-                    Logger.warn(TAG, e) { "Password scoring failed, rating the password as weak" }
-                    PasswordStrength.Weak
-                }
-                viewState.update { state -> if (state.password == password) state.copy(strength = strength) else state }
+        when {
+            password.isEmpty() -> viewState.update {
+                it.copy(password = password, strength = null, isRating = false, error = null)
+            }
+            isTooShort(password) -> viewState.update {
+                it.copy(password = password, strength = PasswordStrength.Weak, isRating = false, error = null)
+            }
+            else -> {
+                viewState.update { it.copy(password = password, isRating = true, error = null) }
+                scoringJob = viewModelScope.launch { rate(password) }
             }
         }
+    }
+
+    private suspend fun rate(password: String) {
+        val strength = try {
+            passwordStrength(length = password.length, score = passwordScorer.score(password))
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+
+            Logger.warn(TAG, e) { "Password scoring failed, rating the password as weak" }
+            PasswordStrength.Weak
+        }
+        viewState.update { it.copy(strength = strength, isRating = false) }
     }
 
     private fun isTooShort(password: String): Boolean =

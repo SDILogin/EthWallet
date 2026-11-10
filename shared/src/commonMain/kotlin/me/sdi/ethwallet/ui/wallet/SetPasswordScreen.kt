@@ -22,6 +22,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -74,6 +76,7 @@ private fun SetPasswordScreenContent(
     onEvent: (SetPasswordEvent) -> Unit,
     modifier: Modifier,
 ) {
+    val focusManager = LocalFocusManager.current
     Scaffold(modifier = modifier) { paddingValues ->
         Column(
             modifier = Modifier
@@ -102,7 +105,7 @@ private fun SetPasswordScreenContent(
                 enabled = !viewState.isSaving,
                 isError = false,
                 imeAction = ImeAction.Next,
-                onImeAction = {},
+                onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
                 modifier = Modifier,
             )
             PasswordStrengthMeter(strength = viewState.strength)

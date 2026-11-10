@@ -1,6 +1,6 @@
 package me.sdi.ethwallet.core.security
 
-private const val MIN_STRONG_LENGTH = 15
+private const val OWASP_MIN_LENGTH = 15
 private const val MIN_FAIR_SCORE = 3
 private const val STRONG_SCORE = 4
 
@@ -17,7 +17,7 @@ interface PasswordScorer {
  */
 fun passwordStrength(length: Int, score: Int): PasswordStrength =
     when {
-        length < MIN_STRONG_LENGTH || score < MIN_FAIR_SCORE -> PasswordStrength.Weak
+        length < OWASP_MIN_LENGTH || score < MIN_FAIR_SCORE -> PasswordStrength.Weak
         score >= STRONG_SCORE -> PasswordStrength.Strong
         else -> PasswordStrength.Fair
     }

@@ -15,10 +15,6 @@ import kotlin.io.encoding.Base64
 private const val MASTER_KEK_BYTES = 32
 private const val SALT_BYTES = 16
 
-private val KEK_WRAPPING_KEY = stringPreferencesKey("kek_wrapping_key")
-private val KEK_PASSWORD_SALT = stringPreferencesKey("kek_password_salt")
-private val PASSWORD_WRAPPED_MASTER_KEK = stringPreferencesKey("password_wrapped_master_kek")
-
 /**
  * [PasswordKekStorage] persisted with [DataStore] opened through [pinArtifactsDataStore].
  *
@@ -80,5 +76,11 @@ class PasswordKekStorageSoftware(
         } finally {
             passwordBytes.fill(0)
         }
+    }
+
+    private companion object {
+        private val KEK_WRAPPING_KEY = stringPreferencesKey("kek_wrapping_key")
+        private val KEK_PASSWORD_SALT = stringPreferencesKey("kek_password_salt")
+        private val PASSWORD_WRAPPED_MASTER_KEK = stringPreferencesKey("password_wrapped_master_kek")
     }
 }
