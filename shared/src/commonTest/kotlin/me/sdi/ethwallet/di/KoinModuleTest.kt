@@ -2,12 +2,13 @@ package me.sdi.ethwallet.di
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.history.TransfersHistoryProvider
@@ -54,6 +55,7 @@ class KoinModuleTest {
 
     @AfterTest
     fun tearDown() {
+        testDispatcher.scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
     }
 
@@ -82,14 +84,15 @@ class KoinModuleTest {
         )
 
         val settingsViewModel = koin.get<SettingsViewModel>()
-        val collection = CoroutineScope(testDispatcher).launch { settingsViewModel.viewState.collect {} }
-        testDispatcher.scheduler.advanceUntilIdle()
+        runTest(testDispatcher) {
+            backgroundScope.launch { settingsViewModel.viewState.collect {} }
+            advanceUntilIdle()
 
-        assertTrue(
-            settingsViewModel.viewState.value.isBiometricEnabled,
-            "SettingsViewModel should read its status from the BiometricUnlock instance wired by Koin",
-        )
-        collection.cancel()
+            assertTrue(
+                settingsViewModel.viewState.value.isBiometricEnabled,
+                "SettingsViewModel should read its status from the BiometricUnlock instance wired by Koin",
+            )
+        }
     }
 
     @Test

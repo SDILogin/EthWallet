@@ -37,6 +37,7 @@ class SettingsViewModelTest {
 
     @AfterTest
     fun tearDown() {
+        testDispatcher.scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
     }
 
@@ -195,6 +196,23 @@ class SettingsViewModelTest {
 
         assertEquals(AppLockMethod.Password, viewModel.viewState.value.appLockMethod, "Desktop has no PIN or biometric settings")
         assertFalse(viewModel.viewState.value.isBiometricEnabled, "Biometric status should not be read for the password lock")
+    }
+
+    @Test
+    fun biometric_status_is_read_when_the_view_state_is_collected() = runTest(testDispatcher) {
+        val viewModel = SettingsViewModel(
+            biometricUnlock = biometricUnlock,
+            pinSession = pinSession,
+            appLockMethod = AppLockMethod.Pin,
+        )
+        advanceUntilIdle()
+
+        assertEquals(0, biometricUnlock.statusCallCount, "Creating the ViewModel should not read the biometric status")
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.viewState.collect {} }
+        advanceUntilIdle()
+
+        assertEquals(1, biometricUnlock.statusCallCount, "Collecting the view state should read the biometric status")
     }
 
     private fun TestScope.createViewModel(appLockMethod: AppLockMethod): SettingsViewModel =

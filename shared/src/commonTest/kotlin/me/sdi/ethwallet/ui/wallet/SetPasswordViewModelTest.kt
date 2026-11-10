@@ -51,21 +51,21 @@ class SetPasswordViewModelTest {
     }
 
     @Test
-    fun a_short_password_is_rated_weak_but_can_still_be_set() = runTest(testDispatcher) {
+    fun a_weak_password_can_still_be_set() = runTest(testDispatcher) {
         strengthChecker.strength = PasswordStrength.Weak
         collectNews()
 
-        viewModel.onEvent(SetPasswordEvent.OnPasswordChange(SHORT_PASSWORD))
-        viewModel.onEvent(SetPasswordEvent.OnConfirmationChange(SHORT_PASSWORD))
+        viewModel.onEvent(SetPasswordEvent.OnPasswordChange(WEAK_PASSWORD))
+        viewModel.onEvent(SetPasswordEvent.OnConfirmationChange(WEAK_PASSWORD))
         advanceUntilIdle()
 
-        assertEquals(PasswordStrength.Weak, viewModel.viewState.value.strength, "A short password should be weak")
+        assertEquals(PasswordStrength.Weak, viewModel.viewState.value.strength, "The checker rating should be shown")
         assertTrue(viewModel.viewState.value.canContinue, "A weak password must not block the setup")
 
         viewModel.onEvent(SetPasswordEvent.OnContinueClick)
         advanceUntilIdle()
 
-        assertEquals(SHORT_PASSWORD, storage.storedPassword, "The weak password should be stored")
+        assertEquals(WEAK_PASSWORD, storage.storedPassword, "The weak password should be stored")
         assertEquals(listOf<SetPasswordNews>(SetPasswordNews.PasswordSet), collectedNews, "Setup should finish")
     }
 
@@ -138,7 +138,7 @@ class SetPasswordViewModelTest {
     }
 
     private companion object {
-        private const val SHORT_PASSWORD = "short"
+        private const val WEAK_PASSWORD = "short"
         private const val STRONG_PASSWORD = "correct horse battery staple"
     }
 }

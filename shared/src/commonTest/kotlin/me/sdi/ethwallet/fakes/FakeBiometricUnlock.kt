@@ -18,8 +18,10 @@ class FakeBiometricUnlock : BiometricUnlock {
      * Holds [status] suspended until completed, so tests can act while a caller awaits the result.
      */
     var statusGate: CompletableDeferred<Unit>? = null
+    var statusCallCount = 0
 
     override suspend fun status(): BiometricStatus {
+        statusCallCount++
         statusGate?.await()
         return currentStatus
     }

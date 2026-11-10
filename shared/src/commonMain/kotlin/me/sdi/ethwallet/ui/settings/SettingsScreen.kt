@@ -15,7 +15,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
@@ -51,7 +51,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel(),
 ) {
-    val viewState by viewModel.viewState.collectAsState()
+    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
     SettingsScreen(
         viewState = viewState,
         onEvent = viewModel::onEvent,

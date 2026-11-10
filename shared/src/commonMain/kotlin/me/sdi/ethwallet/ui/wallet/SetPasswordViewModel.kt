@@ -89,14 +89,11 @@ class SetPasswordViewModel(
 
     private fun handlePasswordChange(password: String) {
         scoringJob?.cancel()
-        when {
-            password.isEmpty() -> viewState.update {
-                it.copy(password = password, strength = null, isRating = false, error = null)
-            }
-            else -> {
-                viewState.update { it.copy(password = password, isRating = true, error = null) }
-                scoringJob = viewModelScope.launch { rate(password) }
-            }
+        if (password.isEmpty()) {
+            viewState.update { it.copy(password = password, strength = null, isRating = false, error = null) }
+        } else {
+            viewState.update { it.copy(password = password, isRating = true, error = null) }
+            scoringJob = viewModelScope.launch { rate(password) }
         }
     }
 
