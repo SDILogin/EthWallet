@@ -16,27 +16,8 @@ fun ComposeTestRule.clickText(
     ignoreCase: Boolean = false,
 ) {
     runSafe {
-        val alternatives = mutableListOf(text)
-        if (text.contains("'")) {
-            alternatives.add(text.replace("'", "\\'"))
-        }
-
-        var node: SemanticsNodeInteraction? = null
-        for (alt in alternatives) {
-            try {
-                val candidate = onNodeWithText(alt, substring = substring, ignoreCase = ignoreCase)
-                candidate.assertExists()
-                node = candidate
-                break
-            } catch (e: Throwable) {
-                // Try next alternative
-            }
-        }
-
-        if (node == null) {
-            node = onNodeWithText(text, substring = substring, ignoreCase = ignoreCase)
-            node.assertExists()
-        }
+        val node = onNodeWithText(text, substring = substring, ignoreCase = ignoreCase)
+        node.assertExists()
 
         try {
             node.performScrollTo()
@@ -102,25 +83,7 @@ fun ComposeTestRule.assertTextExists(
     ignoreCase: Boolean = false,
 ) {
     runSafe {
-        val alternatives = mutableListOf(text)
-        if (text.contains("'")) {
-            alternatives.add(text.replace("'", "\\'"))
-        }
-
-        var success = false
-        for (alt in alternatives) {
-            try {
-                onNodeWithText(alt, substring = substring, ignoreCase = ignoreCase).assertExists()
-                success = true
-                break
-            } catch (e: Throwable) {
-                // Try next alternative
-            }
-        }
-
-        if (!success) {
-            onNodeWithText(text, substring = substring, ignoreCase = ignoreCase).assertExists()
-        }
+        onNodeWithText(text, substring = substring, ignoreCase = ignoreCase).assertExists()
     }
 }
 
