@@ -53,6 +53,8 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
+private const val ERROR_LINES = 3
+
 @Composable
 fun PasswordUnlockScreen(
     onUnlocked: () -> Unit,
@@ -155,6 +157,7 @@ private fun PasswordUnlockScreenContent(
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
+                minLines = ERROR_LINES,
                 modifier = Modifier
                     .widthIn(max = 420.dp)
                     .alpha(if (viewState.error == null) 0f else 1f),

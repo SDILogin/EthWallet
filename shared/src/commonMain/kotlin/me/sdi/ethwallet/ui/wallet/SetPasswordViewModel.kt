@@ -33,7 +33,7 @@ data class SetPasswordViewState(
 ) {
     val isMismatch: Boolean get() = confirmation.isNotEmpty() && confirmation != password
 
-    val canContinue: Boolean get() = password.isNotEmpty() && password == confirmation && strength != null && !isRating && !isSaving
+    val canContinue: Boolean get() = password.isNotEmpty() && password == confirmation && !isRating && !isSaving
 
     override fun toString(): String =
         "SetPasswordViewState(strength=$strength, isSaving=$isSaving, error=$error, isMismatch=$isMismatch)"

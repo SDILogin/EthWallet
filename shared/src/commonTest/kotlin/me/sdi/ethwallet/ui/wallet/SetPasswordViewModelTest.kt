@@ -121,6 +121,7 @@ class SetPasswordViewModelTest {
         storage.createFailure = IllegalStateException("Secure Enclave unavailable")
         viewModel.onEvent(SetPasswordEvent.OnPasswordChange(STRONG_PASSWORD))
         viewModel.onEvent(SetPasswordEvent.OnConfirmationChange(STRONG_PASSWORD))
+        advanceUntilIdle()
 
         viewModel.onEvent(SetPasswordEvent.OnContinueClick)
         advanceUntilIdle()

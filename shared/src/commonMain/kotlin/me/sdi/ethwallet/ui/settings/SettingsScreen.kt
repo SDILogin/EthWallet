@@ -20,6 +20,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.resources.Res
@@ -183,12 +185,21 @@ private fun BiometricSettingsHint.toStringRes(): StringResource? = when (this) {
     BiometricSettingsHint.Invalidated -> Res.string.settings_biometric_invalidated
 }
 
+private class SettingsViewStateProvider : PreviewParameterProvider<SettingsViewState> {
+    override val values = sequenceOf(
+        SettingsViewState(isBiometricEnabled = true, isBiometricSwitchEnabled = true),
+        SettingsViewState(appLockMethod = AppLockMethod.Password),
+    )
+}
+
 @Preview
 @Composable
-private fun SettingsScreen_Preview() {
+private fun SettingsScreen_Preview(
+    @PreviewParameter(SettingsViewStateProvider::class) viewState: SettingsViewState,
+) {
     EthWalletTheme {
         SettingsScreen(
-            viewState = SettingsViewState(isBiometricEnabled = true, isBiometricSwitchEnabled = true),
+            viewState = viewState,
             onEvent = {},
             onBack = {},
             onChangePinClick = {},

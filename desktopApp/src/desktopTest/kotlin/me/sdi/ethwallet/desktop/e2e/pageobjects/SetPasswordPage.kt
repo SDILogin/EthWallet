@@ -3,6 +3,7 @@ package me.sdi.ethwallet.desktop.e2e.pageobjects
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.performTextInput
 
@@ -20,6 +21,6 @@ class SetPasswordPage(private val rule: ComposeTestRule) {
     }
 
     fun clickContinue() {
-        rule.clickNode(hasText("Continue") and hasClickAction())
+        rule.clickNode(hasText("Continue") and hasClickAction() and isEnabled())
     }
 }

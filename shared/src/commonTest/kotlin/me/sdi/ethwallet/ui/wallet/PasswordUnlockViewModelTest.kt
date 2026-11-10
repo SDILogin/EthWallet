@@ -102,6 +102,18 @@ class PasswordUnlockViewModelTest {
         assertEquals(listOf<PasswordUnlockNews>(PasswordUnlockNews.LoggedOut), collectedNews, "Reset should log out")
     }
 
+    @Test
+    fun a_failed_reset_shows_an_error_and_stays_on_the_lock_screen() = runTest(testDispatcher) {
+        dataCleaner.shouldThrowException = true
+        collectNews()
+
+        viewModel.onEvent(PasswordUnlockEvent.OnResetConfirm)
+        advanceUntilIdle()
+
+        assertEquals(PasswordUnlockError.ResetFailed, viewModel.viewState.value.error, "A failed reset should be shown")
+        assertTrue(collectedNews.isEmpty(), "A failed reset should not log out")
+    }
+
     private fun TestScope.unlockWith(password: String) {
         viewModel.onEvent(PasswordUnlockEvent.OnPasswordChange(password))
         viewModel.onEvent(PasswordUnlockEvent.OnUnlockClick)

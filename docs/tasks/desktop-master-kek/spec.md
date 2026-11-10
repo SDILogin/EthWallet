@@ -52,5 +52,5 @@ and research are in docs/tasks/desktop-secure-key-storage/spec.md.
   KEK bytes.
 - Unit tests for the KEK storage with the fake protection.
 - Manual check on Apple Silicon macOS: copy `~/.ethwallet` to another machine and confirm the KEK cannot be
-  recovered from the copy.
+  recovered from the copy; record the result for another user account on the same Mac.
 - Formatting, Desktop compilation, and shared tests pass.

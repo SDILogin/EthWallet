@@ -5,6 +5,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -81,6 +82,9 @@ class DesktopAppTest {
         awaitText("Create a wallet password")
         compose.onNode(hasSetTextAction() and hasText("Password")).performTextInput(PASSWORD)
         compose.onNode(hasSetTextAction() and hasText("Confirm password")).performTextInput(PASSWORD)
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodes(hasText("Continue") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("Continue").performClick()
         awaitText("My Wallets")
 
