@@ -170,7 +170,7 @@ private fun CreateWalletScreenContent(
                     .fillMaxSize()
                     .imePadding()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp),
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Column(
@@ -181,6 +181,8 @@ private fun CreateWalletScreenContent(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     WalletLabelTextField(
                         value = viewState.label,
                         onValueChange = { onEvent(CreateWalletEvent.LabelChanged(it)) },

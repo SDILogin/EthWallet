@@ -94,7 +94,7 @@ fun ImportWalletScreen(
                     .fillMaxSize()
                     .imePadding()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp),
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Column(
@@ -172,6 +172,8 @@ fun ImportWalletScreen(
                             maxLines = 3,
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
                 Spacer(modifier = Modifier.weight(1f))
             }
