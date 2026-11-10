@@ -10,13 +10,18 @@ class PasswordStrengthCheckerZxcvbnTest {
     private val checker = PasswordStrengthCheckerZxcvbn()
 
     @Test
-    fun a_random_password_shorter_than_15_characters_is_weak() = runBlocking {
-        assertEquals("OWASP: under 15 characters is weak", PasswordStrength.Weak, checker.check("qZ7#vL9!pX2@"))
+    fun a_random_password_of_14_characters_is_weak() = runBlocking {
+        assertEquals("OWASP: under 15 characters is weak", PasswordStrength.Weak, checker.check("qZ7#vL9!pX2@ab"))
     }
 
     @Test
     fun a_common_password_is_weak() = runBlocking {
         assertEquals("A common password is weak", PasswordStrength.Weak, checker.check("password12345678"))
+    }
+
+    @Test
+    fun a_long_moderately_guessable_password_is_fair() = runBlocking {
+        assertEquals("zxcvbn score 3 is fair", PasswordStrength.Fair, checker.check("monkeyelephant99"))
     }
 
     @Test

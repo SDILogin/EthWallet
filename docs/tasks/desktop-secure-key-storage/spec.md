@@ -48,9 +48,10 @@ scope of #303 Protect Desktop master KEK before persisting wallets (docs/tasks/d
 ## Definition of done
 
 - Unit tests: `PasswordKekStorageSoftware` (round trip, wrong password, Unicode normalization, salt per create, no KEK
-  or password on disk), password strength rule, `PasswordInteractor`, set-password and unlock view models, Settings,
+  or password on disk), `PasswordInteractor`, set-password and unlock view models, Settings,
   Koin resolution of the Desktop screens without PIN bindings.
-- `DesktopAppTest`: set password, lock, wrong password, right password (fake Secure Enclave).
+- Desktop tests: `DesktopAppTest` (set password, lock, wrong password, right password, fake Secure Enclave), the
+  zxcvbn strength checker, and an Argon2id reference test vector.
 - Manual check on Apple Silicon macOS: onboarding, unlock, a Sepolia transfer; a copy of `~/.ethwallet` on another
   Mac cannot be unlocked; record whether a copy for another user account on the same Mac can be unlocked with the
   password (the Secure Enclave key may be usable there).
