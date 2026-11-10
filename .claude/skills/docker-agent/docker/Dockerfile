@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential ca-certificates curl gh git jq openjdk-17-jdk-headless \
-        ripgrep socat sudo tmux unzip \
+        python3 ripgrep socat sudo tmux unzip \
     && rm -rf /var/lib/apt/lists/* \
     && echo "ubuntu ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu
 
@@ -29,8 +29,6 @@ RUN mkdir -p "$ANDROID_HOME/cmdline-tools" \
 RUN mkdir -p /workspace /home/ubuntu/.claude /home/ubuntu/.gradle \
     && chown ubuntu:ubuntu /workspace /home/ubuntu/.claude /home/ubuntu/.gradle
 
-COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
-
 USER ubuntu
 ENV PATH=/home/ubuntu/.local/bin:/home/ubuntu/.cargo/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
 
@@ -38,6 +36,13 @@ RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-to
     && cargo install --locked cargo-ndk --version "$CARGO_NDK_VERSION"
 
 RUN curl -fsSL https://claude.ai/install.sh | bash
+
+COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY --chmod=755 start-coder.sh /usr/local/bin/start-coder
+COPY --chmod=755 agent-status.py /usr/local/bin/agent-status
+COPY manager.md /usr/local/share/ethwallet-agent/manager.md
+
+LABEL ethwallet.agent="true"
 
 WORKDIR /workspace
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

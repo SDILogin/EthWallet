@@ -1,4 +1,4 @@
-# One compose project per task: `docker compose -p ethwallet-<name> -f .claude/skills/docker-agent/docker/compose.yaml up -d`.
+# One compose project per agent container. `scripts/start-agent.py` creates and reuses the projects.
 # Each project gets its own checkout and Gradle home. Claude auth, settings and MCP config come from
 # the shared claude-config volume. The shared Gradle cache is mounted read-only because Gradle does
 # not support one writable user home in several containers at once.
@@ -20,7 +20,7 @@ services:
     # Forwards the Agent Board MCP port from the host.
     command: socat TCP-LISTEN:48212,bind=127.0.0.1,fork,reuseaddr TCP:host.docker.internal:48212
     healthcheck:
-      test: ["CMD", "test", "-d", "/workspace/EthWallet/.git"]
+      test: ["CMD", "tmux", "has-session", "-t", "manager"]
       interval: 2s
       start_period: 10m
     volumes:
