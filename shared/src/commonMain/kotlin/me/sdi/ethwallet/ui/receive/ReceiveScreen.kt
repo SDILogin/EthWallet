@@ -24,7 +24,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -40,6 +39,8 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
@@ -62,16 +63,21 @@ import me.sdi.ethwallet.resources.send_token_eth
 import me.sdi.ethwallet.resources.send_token_usdc
 import me.sdi.ethwallet.resources.send_token_usdt
 import me.sdi.ethwallet.ui.KnownToken
+import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextField
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.supportedKnownTokens
+import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+
+private const val PREVIEW_WALLET_ADDRESS = "0x742d35cc6634C0532925a3b8d73a726FbCF3eB11"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -234,10 +240,10 @@ private fun AmountInput(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(
+        EthTextField(
             value = amount,
             onValueChange = onAmountChanged,
-            label = { EthText(stringResource(Res.string.send_enter_amount)) },
+            label = stringResource(Res.string.send_enter_amount),
             isError = amountError != null,
             supportingText = amountError?.let { { EthText(it) } },
             trailingIcon = {
@@ -339,6 +345,30 @@ private fun AddressDisplay(
             contentDescription = stringResource(Res.string.receive_copy_address),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(16.dp),
+        )
+    }
+}
+
+private class ReceiveQrViewStateProvider : PreviewParameterProvider<ReceiveQrViewState> {
+    override val values = sequenceOf(
+        ReceiveQrViewState(walletAddress = EthAddress(PREVIEW_WALLET_ADDRESS)),
+        ReceiveQrViewState(amount = "0.5", walletAddress = EthAddress(PREVIEW_WALLET_ADDRESS)),
+        ReceiveQrViewState(amount = "abc", walletAddress = EthAddress(PREVIEW_WALLET_ADDRESS)),
+    )
+}
+
+@FormFactorPreviews
+@Composable
+private fun ReceiveScreenContentPreview(
+    @PreviewParameter(ReceiveQrViewStateProvider::class) viewState: ReceiveQrViewState,
+) {
+    EthWalletTheme {
+        ReceiveScreenContent(
+            modifier = Modifier,
+            viewState = viewState,
+            chainTokens = emptyList(),
+            onBackPressed = {},
+            onEvent = {},
         )
     }
 }

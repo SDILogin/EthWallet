@@ -5,8 +5,8 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF3B82F6),
-    onPrimary = Color.White,
+    primary = Color(0xFF60A5FA),
+    onPrimary = Color(0xFF0B0F14),
     primaryContainer = Color(0xFF1E3A8A),
     onPrimaryContainer = Color.White,
     inversePrimary = Color(0xFF93C5FD),
@@ -23,8 +23,8 @@ val DarkColorScheme = darkColorScheme(
     surface = Color(0xFF0A0A0A),
     onSurface = Color.White,
     surfaceVariant = Color(0xFF1E1E1E),
-    onSurfaceVariant = Color(0xFFE5E7EB),
-    surfaceTint = Color(0xFF3B82F6),
+    onSurfaceVariant = Color(0xFF9CA3AF),
+    surfaceTint = Color(0xFF60A5FA),
     inverseSurface = Color.White,
     inverseOnSurface = Color.Black,
     error = Color(0xFFEF4444),
@@ -44,7 +44,7 @@ val DarkColorScheme = darkColorScheme(
 )
 
 val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF3B82F6),
+    primary = Color(0xFF2563EB),
     onPrimary = Color.White,
     primaryContainer = Color(0xFFE0F2FE),
     onPrimaryContainer = Color(0xFF1E3A8A),
@@ -62,8 +62,8 @@ val LightColorScheme = lightColorScheme(
     surface = Color.White,
     onSurface = Color.Black,
     surfaceVariant = Color(0xFFF3F4F6),
-    onSurfaceVariant = Color(0xFF1F2937),
-    surfaceTint = Color(0xFF3B82F6),
+    onSurfaceVariant = Color(0xFF4B5563),
+    surfaceTint = Color(0xFF2563EB),
     inverseSurface = Color(0xFF1F2937),
     inverseOnSurface = Color(0xFFF9FAFB),
     error = Color(0xFFDC2626),

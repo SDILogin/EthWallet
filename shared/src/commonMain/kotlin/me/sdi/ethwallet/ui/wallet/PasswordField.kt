@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +25,7 @@ import me.sdi.ethwallet.resources.visibility_24px
 import me.sdi.ethwallet.resources.visibility_off_24px
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextField
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -42,10 +42,10 @@ internal fun PasswordField(
 ) {
     var isVisible by rememberSaveable { mutableStateOf(false) }
     NoPersonalizedLearningInput {
-        OutlinedTextField(
+        EthTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { EthText(text = label) },
+            label = label,
             modifier = modifier
                 .widthIn(max = 420.dp)
                 .fillMaxWidth()

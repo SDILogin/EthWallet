@@ -1,7 +1,6 @@
 package me.sdi.ethwallet.ui.receive
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -14,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
@@ -55,9 +55,8 @@ actual fun QrCodeCanvas(
     } else {
         bitMatrix?.let { matrix ->
             val pixelSize = sizePx.toFloat() / matrix.width
-            val invertColors = isSystemInDarkTheme()
-            val activeColor = if (invertColors) Color.White else Color.Black
             val inactiveColor = MaterialTheme.colorScheme.background
+            val activeColor = if (inactiveColor.luminance() > 0.5f) Color.Black else Color.White
             Canvas(modifier = modifier) {
                 drawRect(
                     color = inactiveColor,

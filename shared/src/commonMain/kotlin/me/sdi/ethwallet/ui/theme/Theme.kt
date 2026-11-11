@@ -3,17 +3,12 @@ package me.sdi.ethwallet.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 
 val LocalEthWalletColorScheme = staticCompositionLocalOf<ColorScheme> {
     error("No ColorScheme provided")
-}
-
-val LocalEthWalletTypography = staticCompositionLocalOf<Typography> {
-    error("No Typography provided")
 }
 
 @Composable
@@ -30,7 +25,6 @@ fun EthWalletTheme(
 
     CompositionLocalProvider(
         LocalEthWalletColorScheme provides colorScheme,
-        LocalEthWalletTypography provides Typography,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

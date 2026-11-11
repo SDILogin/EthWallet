@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -261,7 +260,7 @@ private fun DetailsContent(state: TransactionDetailsState.Content, walletAddress
             EthButton(
                 text = stringResource(Res.string.transaction_details_explorer),
                 onClick = { uriHandler.openUri("${baseUrl.trimEnd('/')}/tx/${transfer.hash}") },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

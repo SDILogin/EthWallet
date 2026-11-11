@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -169,8 +168,7 @@ private fun PasswordUnlockScreenContent(
                 loading = viewState.isBusy,
                 modifier = Modifier
                     .widthIn(max = 420.dp)
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
+                    .fillMaxWidth(),
             )
             EthButton(
                 text = stringResource(Res.string.password_forgot),

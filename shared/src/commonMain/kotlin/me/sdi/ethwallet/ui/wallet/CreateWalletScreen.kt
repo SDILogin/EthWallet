@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -18,7 +17,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -63,6 +61,7 @@ import me.sdi.ethwallet.ui.designsystem.EthCard
 import me.sdi.ethwallet.ui.designsystem.EthCardTone
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextField
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
@@ -244,10 +243,10 @@ private fun WalletLabelTextField(
     onValueChange: (String) -> Unit,
     enabled: Boolean,
 ) {
-    OutlinedTextField(
+    EthTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { EthText(stringResource(Res.string.wallet_label)) },
+        label = stringResource(Res.string.wallet_label),
         placeholder = { EthText(stringResource(Res.string.wallet_label_placeholder)) },
         supportingText = { EthText(stringResource(Res.string.wallet_label_supporting)) },
         modifier = Modifier
@@ -268,10 +267,9 @@ private fun NextButton(enabled: Boolean, onClick: () -> Unit) {
         onClick = onClick,
         modifier =
             Modifier
+                .padding(horizontal = 16.dp)
                 .widthIn(max = 380.dp)
-                .fillMaxWidth()
-                .heightIn(min = 56.dp)
-                .padding(horizontal = 16.dp),
+                .fillMaxWidth(),
         enabled = enabled,
     )
 }
@@ -295,7 +293,7 @@ private fun SecurityWarning() {
             Icon(
                 painter = painterResource(Res.drawable.warning_24px),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
             )
             Spacer(modifier = Modifier.width(12.dp))
             EthText(

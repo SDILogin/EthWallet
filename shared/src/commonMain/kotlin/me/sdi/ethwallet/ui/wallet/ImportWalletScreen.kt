@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -14,7 +13,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -29,6 +27,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
@@ -44,15 +44,19 @@ import me.sdi.ethwallet.resources.import_wallet_title
 import me.sdi.ethwallet.resources.wallet_label
 import me.sdi.ethwallet.resources.wallet_label_placeholder
 import me.sdi.ethwallet.resources.wallet_label_supporting
+import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextField
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
+import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+private const val PREVIEW_MNEMONIC = "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12"
+
 @Composable
 fun ImportWalletScreen(
     onWalletImported: () -> Unit,
@@ -70,6 +74,22 @@ fun ImportWalletScreen(
         }
     }
 
+    ImportWalletScreenContent(
+        viewState = viewState,
+        onEvent = viewModel::onEvent,
+        onUpButtonClick = onUpButtonClick,
+        modifier = modifier,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ImportWalletScreenContent(
+    viewState: ImportWalletViewState,
+    onEvent: (ImportWalletEvent) -> Unit,
+    onUpButtonClick: () -> Unit,
+    modifier: Modifier,
+) {
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -122,10 +142,10 @@ fun ImportWalletScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    OutlinedTextField(
+                    EthTextField(
                         value = viewState.label,
-                        onValueChange = { viewModel.onEvent(ImportWalletEvent.LabelChanged(it)) },
-                        label = { EthText(stringResource(Res.string.wallet_label)) },
+                        onValueChange = { onEvent(ImportWalletEvent.LabelChanged(it)) },
+                        label = stringResource(Res.string.wallet_label),
                         modifier = Modifier
                             .fillMaxWidth()
                             .widthIn(max = 420.dp)
@@ -148,10 +168,10 @@ fun ImportWalletScreen(
                         }
 
                     NoPersonalizedLearningInput {
-                        OutlinedTextField(
+                        EthTextField(
                             value = viewState.mnemonic,
-                            onValueChange = { viewModel.onEvent(ImportWalletEvent.MnemonicChanged(it)) },
-                            label = { EthText(stringResource(Res.string.import_wallet_recovery_phrase_label)) },
+                            onValueChange = { onEvent(ImportWalletEvent.MnemonicChanged(it)) },
+                            label = stringResource(Res.string.import_wallet_recovery_phrase_label),
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
@@ -177,16 +197,39 @@ fun ImportWalletScreen(
             }
             EthButton(
                 text = stringResource(Res.string.import_wallet_button),
-                onClick = { viewModel.onEvent(ImportWalletEvent.ImportClicked) },
+                onClick = { onEvent(ImportWalletEvent.ImportClicked) },
                 modifier =
                     Modifier
+                        .padding(horizontal = 16.dp)
                         .widthIn(max = 380.dp)
-                        .fillMaxWidth()
-                        .heightIn(min = 56.dp)
-                        .padding(horizontal = 16.dp),
-                enabled = viewState.isImportEnabled && !viewState.isLoading,
+                        .fillMaxWidth(),
+                enabled = viewState.isImportEnabled,
                 loading = viewState.isLoading,
             )
         }
+    }
+}
+
+private class ImportWalletViewStateProvider : PreviewParameterProvider<ImportWalletViewState> {
+    override val values = sequenceOf(
+        ImportWalletViewState(),
+        ImportWalletViewState(label = "Savings", mnemonic = PREVIEW_MNEMONIC, isImportEnabled = true),
+        ImportWalletViewState(label = "Savings", mnemonic = PREVIEW_MNEMONIC, isImportEnabled = true, isLoading = true),
+        ImportWalletViewState(label = "Savings", mnemonic = "word1 word2", isError = true),
+    )
+}
+
+@FormFactorPreviews
+@Composable
+private fun ImportWalletScreenContentPreview(
+    @PreviewParameter(ImportWalletViewStateProvider::class) viewState: ImportWalletViewState,
+) {
+    EthWalletTheme {
+        ImportWalletScreenContent(
+            viewState = viewState,
+            onEvent = {},
+            onUpButtonClick = {},
+            modifier = Modifier,
+        )
     }
 }

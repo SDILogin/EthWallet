@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -34,7 +33,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -92,6 +90,7 @@ import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
 import me.sdi.ethwallet.ui.designsystem.EthCard
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextField
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
@@ -244,9 +243,8 @@ private fun WalletsListScreenContent(
                         text = stringResource(Res.string.onboarding_create_wallet),
                         onClick = onCreateWallet,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 56.dp)
-                            .widthIn(max = 320.dp),
+                            .widthIn(max = 320.dp)
+                            .fillMaxWidth(),
                     )
 
                     Spacer(Modifier.height(16.dp))
@@ -255,9 +253,8 @@ private fun WalletsListScreenContent(
                         text = stringResource(Res.string.onboarding_import_wallet),
                         onClick = onImportWallet,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 56.dp)
-                            .widthIn(max = 320.dp),
+                            .widthIn(max = 320.dp)
+                            .fillMaxWidth(),
                         style = EthButtonStyle.Secondary,
                     )
                 }
@@ -354,7 +351,7 @@ private fun WalletCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 EthText(
                     text = wallet.address.toString(),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.MiddleEllipsis,
                 )
@@ -458,13 +455,13 @@ private fun WalletLabelEditorDialog(
             }
         },
         text = {
-            OutlinedTextField(
+            EthTextField(
                 value = fieldValue,
                 onValueChange = {
                     fieldValue = it
                     onEvent(WalletsListEvent.OnWalletLabelChanged(it.text))
                 },
-                label = { EthText(text = stringResource(Res.string.wallet_label)) },
+                label = stringResource(Res.string.wallet_label),
                 placeholder = { EthText(text = stringResource(Res.string.wallet_label_placeholder)) },
                 supportingText = { EthText(text = validationMessage, style = EthTextStyle.Caption) },
                 modifier = Modifier
