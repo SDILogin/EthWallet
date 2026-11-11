@@ -94,6 +94,23 @@ class WalletScreenContentTest {
 
         assertEquals(1, refreshCount)
     }
+
+    @Test
+    fun clicking_filter_icon_opens_token_list() {
+        var clickCount = 0
+        activity.setWalletContent(
+            WalletViewState(
+                totalBalanceEth = "1 ETH",
+                balanceLoadState = WalletBalanceLoadState.Content,
+                fiatLoadState = WalletFiatLoadState.Available,
+            ),
+            onEditButtonClick = { clickCount += 1 },
+        )
+
+        composeTestRule.onNodeWithContentDescription("Manage tokens").performClick()
+
+        assertEquals(1, clickCount)
+    }
 }
 
 private class WalletScreenContentTestActivity : FragmentActivity() {
@@ -101,6 +118,7 @@ private class WalletScreenContentTestActivity : FragmentActivity() {
         viewState: WalletViewState,
         onRetry: () -> Unit = {},
         onRefresh: () -> Unit = {},
+        onEditButtonClick: () -> Unit = {},
     ) {
         setContent {
             MaterialTheme {
@@ -110,7 +128,7 @@ private class WalletScreenContentTestActivity : FragmentActivity() {
                     onRetry = onRetry,
                     showUpButton = false,
                     onUpButtonClick = {},
-                    onEditButtonClick = {},
+                    onEditButtonClick = onEditButtonClick,
                     onTokenClick = {},
                     onReceiveButtonClick = {},
                     onSendButtonClick = {},

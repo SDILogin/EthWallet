@@ -101,7 +101,7 @@ class TokensListViewModel(
     private suspend fun savePendingPreferences() {
         for (preferences in pendingPreferences) {
             try {
-                // The user can leave the screen right after a change; the last choice must still be saved.
+                // A save that already started must finish when the user leaves the screen right after a change.
                 withContext(NonCancellable) {
                     tokenPreferenceRepository.update(walletAddress, preferences)
                 }
