@@ -12,6 +12,12 @@ class WalletPage(private val composeTestRule: ComposeTestRule) {
         }
     }
 
+    fun awaitHidden() {
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodesWithContentDescription("Receive").fetchSemanticsNodes().isEmpty()
+        }
+    }
+
     fun clickUp() {
         composeTestRule.clickContentDescription("Back")
     }
@@ -22,5 +28,17 @@ class WalletPage(private val composeTestRule: ComposeTestRule) {
 
     fun clickSend() {
         composeTestRule.clickContentDescription("Send")
+    }
+
+    fun clickReceive() {
+        composeTestRule.clickContentDescription("Receive")
+    }
+
+    fun clickHistory() {
+        composeTestRule.clickContentDescription("History")
+    }
+
+    fun clickEditTokens() {
+        composeTestRule.clickText("Edit")
     }
 }

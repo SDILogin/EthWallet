@@ -58,6 +58,11 @@ class WalletsListPage(private val composeTestRule: ComposeTestRule) {
         composeTestRule.onAllNodesWithContentDescription("More options for $label", useUnmergedTree = true).assertCountEquals(1)
     }
 
+    fun assertWalletIsHidden(label: String) {
+        composeTestRule.onAllNodesWithContentDescription("More options for $label", useUnmergedTree = true)
+            .assertCountEquals(0)
+    }
+
     fun assertSelectedIndicatorIsHidden() {
         composeTestRule.onAllNodesWithContentDescription("Selected wallet").assertCountEquals(0)
     }

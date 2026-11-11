@@ -642,6 +642,81 @@ class WalletFlowTest : KoinTest {
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.IsSensitiveData))
     }
 
+    @Test
+    @Config(qualifiers = TWO_PANE_QUALIFIERS)
+    fun twoPaneShowsWalletScreensNextToWalletsList() {
+        runInitialWalletCreationFlow()
+
+        walletsListPage.clickWallet("My Wallet")
+        walletPage.awaitVisible()
+        walletsListPage.assertSingleWallet()
+
+        walletPage.clickSend()
+        composeTestRule.waitUntilTextExists("Receiver Address")
+        walletsListPage.assertSingleWallet()
+        pressBack()
+        walletPage.awaitVisible()
+
+        walletPage.clickReceive()
+        composeTestRule.waitUntilTextExists("Amount (Optional)")
+        walletsListPage.assertSingleWallet()
+        pressBack()
+        walletPage.awaitVisible()
+
+        walletPage.clickHistory()
+        walletPage.awaitHidden()
+        composeTestRule.waitUntilTextExists("History")
+        walletsListPage.assertSingleWallet()
+        pressBack()
+        walletPage.awaitVisible()
+
+        walletPage.clickEditTokens()
+        composeTestRule.waitUntilTextExists("Manage tokens")
+        walletsListPage.assertSingleWallet()
+        pressBack()
+        walletPage.awaitVisible()
+        walletsListPage.assertSingleWallet()
+    }
+
+    @Test
+    @Config(qualifiers = TWO_PANE_QUALIFIERS)
+    fun twoPaneOpensSettingsInFullScreen() {
+        runInitialWalletCreationFlow()
+        showWalletsList()
+        composeTestRule.waitUntilTextExists(NO_WALLET_SELECTED)
+
+        composeTestRule.clickContentDescription("Settings")
+        composeTestRule.waitUntilTextExists("Change PIN")
+        walletsListPage.assertWalletIsHidden("My Wallet")
+
+        composeTestRule.clickText("Change PIN")
+        composeTestRule.waitUntilTextExists("Enter new PIN")
+        walletsListPage.assertWalletIsHidden("My Wallet")
+
+        pressBack()
+        composeTestRule.waitUntilTextExists("Lock app")
+        walletsListPage.assertWalletIsHidden("My Wallet")
+        pressBack()
+        showWalletsList()
+    }
+
+    @Test
+    fun systemBackFromSendReturnsToWalletOnPhone() {
+        runInitialWalletCreationFlow()
+
+        walletsListPage.clickWallet("My Wallet")
+        walletPage.awaitVisible()
+        walletPage.clickSend()
+        composeTestRule.waitUntilTextExists("Receiver Address")
+        walletsListPage.assertWalletIsHidden("My Wallet")
+
+        pressBack()
+        walletPage.awaitVisible()
+        walletsListPage.assertWalletIsHidden("My Wallet")
+        pressBack()
+        showWalletsList()
+    }
+
     private fun assertOnlyPinInputIsSensitive() {
         composeTestRule.onNodeWithContentDescription("0 of 6 digits entered").assert(sensitiveData)
         composeTestRule.onAllNodes(hasClickAction() and sensitiveData, useUnmergedTree = true).assertCountEquals(0)

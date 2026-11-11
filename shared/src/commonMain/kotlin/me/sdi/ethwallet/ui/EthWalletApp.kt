@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
+import androidx.compose.material3.adaptive.navigation.BackNavigationBehavior
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy.Companion.detailPane
-import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy.Companion.extraPane
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy.Companion.listPane
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
@@ -251,21 +251,30 @@ fun EthWalletApp() {
                 )
             }
 
-            entry<Destination.TokensListScreen> {
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.TokensListScreen>(
+                metadata = detailPane(),
+            ) {
                 TokensListScreen(
                     modifier = Modifier.fillMaxSize(),
                     onBackPressed = { backStack.removeLastOrNull() },
                 )
             }
 
-            entry<Destination.ReceiveQrScreen> { destination ->
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.ReceiveQrScreen>(
+                metadata = detailPane(),
+            ) { destination ->
                 ReceiveScreen(
                     walletAddress = EthAddress(destination.ethAddress),
                     onBackPressed = { backStack.removeLastOrNull() },
                 )
             }
 
-            entry<Destination.HistoryScreen> { destination ->
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.HistoryScreen>(
+                metadata = detailPane(),
+            ) { destination ->
                 HistoryRoute(
                     walletAddress = EthAddress(destination.ethAddress),
                     walletLabel = destination.walletLabel,
@@ -276,7 +285,10 @@ fun EthWalletApp() {
                 )
             }
 
-            entry<Destination.TransactionDetails> { destination ->
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.TransactionDetails>(
+                metadata = detailPane(),
+            ) { destination ->
                 TransactionDetailsRoute(
                     walletAddress = EthAddress(destination.ethAddress),
                     transactionHash = destination.transactionHash,
@@ -285,7 +297,10 @@ fun EthWalletApp() {
                 )
             }
 
-            entry<Destination.SendScreen> { destination ->
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.SendScreen>(
+                metadata = detailPane(),
+            ) { destination ->
                 SendScreen(
                     modifier = Modifier.fillMaxSize(),
                     walletAddress = EthAddress(destination.ethAddress),
@@ -313,10 +328,7 @@ fun EthWalletApp() {
                 )
             }
 
-            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-            entry<Destination.SettingsScreen>(
-                metadata = extraPane(),
-            ) {
+            entry<Destination.SettingsScreen> {
                 SettingsScreen(
                     modifier = Modifier.fillMaxSize(),
                     onBack = { backStack.removeLastOrNull() },
@@ -324,10 +336,7 @@ fun EthWalletApp() {
                 )
             }
 
-            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-            entry<Destination.ChangePinCodeScreen>(
-                metadata = extraPane(),
-            ) {
+            entry<Destination.ChangePinCodeScreen> {
                 ChangePinCodeScreen(
                     modifier = Modifier.fillMaxSize(),
                     onBack = { backStack.removeLastOrNull() },
@@ -347,6 +356,7 @@ fun EthWalletApp() {
             ),
             sceneStrategies = listOf(
                 rememberListDetailSceneStrategy(
+                    backNavigationBehavior = BackNavigationBehavior.PopLatest,
                     directive = calculatePaneScaffoldDirective(currentWindowAdaptiveInfoV2())
                         .copy(horizontalPartitionSpacerSize = 0.dp),
                 ),
