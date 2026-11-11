@@ -46,6 +46,7 @@ import me.sdi.ethwallet.resources.wallet_label_placeholder
 import me.sdi.ethwallet.resources.wallet_label_supporting
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.designsystem.EthTextField
@@ -106,106 +107,99 @@ private fun ImportWalletScreenContent(
             )
         },
     ) { innerPadding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .imePadding()
-                    .padding(innerPadding)
-                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+        EthButtonsLayout(
+            buttons = {
+                EthButton(
+                    text = stringResource(Res.string.import_wallet_button),
+                    onClick = { onEvent(ImportWalletEvent.ImportClicked) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = viewState.isImportEnabled,
+                    loading = viewState.isLoading,
+                )
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
+                .imePadding(),
+        ) { contentPadding ->
             Column(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(contentPadding)
+                    .padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                    EthText(
-                        text = stringResource(Res.string.import_wallet_enter_recovery_phrase),
-                        style = EthTextStyle.Headline,
-                        textAlign = TextAlign.Center,
-                    )
+                EthText(
+                    text = stringResource(Res.string.import_wallet_enter_recovery_phrase),
+                    style = EthTextStyle.Headline,
+                    textAlign = TextAlign.Center,
+                )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                    EthText(
-                        text = stringResource(Res.string.import_wallet_instruction),
-                        style = EthTextStyle.Body,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.widthIn(max = 420.dp),
-                    )
+                EthText(
+                    text = stringResource(Res.string.import_wallet_instruction),
+                    style = EthTextStyle.Body,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.widthIn(max = 420.dp),
+                )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                    EthTextField(
-                        value = viewState.label,
-                        onValueChange = { onEvent(ImportWalletEvent.LabelChanged(it)) },
-                        label = stringResource(Res.string.wallet_label),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = 420.dp)
-                            .testTag("wallet-label-input"),
-                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
-                        placeholder = { EthText(stringResource(Res.string.wallet_label_placeholder)) },
-                        supportingText = { EthText(stringResource(Res.string.wallet_label_supporting)) },
-                        isError = viewState.label.isNotEmpty() && !isWalletLabelValid(normalizeWalletLabel(viewState.label)),
-                        enabled = !viewState.isLoading,
-                        singleLine = true,
-                    )
+                EthTextField(
+                    value = viewState.label,
+                    onValueChange = { onEvent(ImportWalletEvent.LabelChanged(it)) },
+                    label = stringResource(Res.string.wallet_label),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .widthIn(max = 420.dp)
+                        .testTag("wallet-label-input"),
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                    placeholder = { EthText(stringResource(Res.string.wallet_label_placeholder)) },
+                    supportingText = { EthText(stringResource(Res.string.wallet_label_supporting)) },
+                    isError = viewState.label.isNotEmpty() && !isWalletLabelValid(normalizeWalletLabel(viewState.label)),
+                    enabled = !viewState.isLoading,
+                    singleLine = true,
+                )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                    val supportingText =
-                        if (viewState.isError) {
-                            stringResource(Res.string.import_wallet_invalid_recovery_phrase)
-                        } else {
-                            stringResource(Res.string.import_wallet_recovery_phrase_supporting)
-                        }
-
-                    NoPersonalizedLearningInput {
-                        EthTextField(
-                            value = viewState.mnemonic,
-                            onValueChange = { onEvent(ImportWalletEvent.MnemonicChanged(it)) },
-                            label = stringResource(Res.string.import_wallet_recovery_phrase_label),
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .widthIn(max = 420.dp)
-                                    .semantics { isSensitiveData = true },
-                            keyboardOptions =
-                                KeyboardOptions(
-                                    keyboardType = KeyboardType.Password,
-                                    autoCorrectEnabled = false,
-                                    imeAction = ImeAction.Done,
-                                ),
-                            placeholder = { EthText(stringResource(Res.string.import_wallet_recovery_phrase_placeholder)) },
-                            supportingText = { EthText(supportingText) },
-                            isError = viewState.isError,
-                            enabled = !viewState.isLoading,
-                            maxLines = 3,
-                        )
+                val supportingText =
+                    if (viewState.isError) {
+                        stringResource(Res.string.import_wallet_invalid_recovery_phrase)
+                    } else {
+                        stringResource(Res.string.import_wallet_recovery_phrase_supporting)
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                NoPersonalizedLearningInput {
+                    EthTextField(
+                        value = viewState.mnemonic,
+                        onValueChange = { onEvent(ImportWalletEvent.MnemonicChanged(it)) },
+                        label = stringResource(Res.string.import_wallet_recovery_phrase_label),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .widthIn(max = 420.dp)
+                                .semantics { isSensitiveData = true },
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                autoCorrectEnabled = false,
+                                imeAction = ImeAction.Done,
+                            ),
+                        placeholder = { EthText(stringResource(Res.string.import_wallet_recovery_phrase_placeholder)) },
+                        supportingText = { EthText(supportingText) },
+                        isError = viewState.isError,
+                        enabled = !viewState.isLoading,
+                        maxLines = 3,
+                    )
                 }
-                Spacer(modifier = Modifier.weight(1f))
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
-            EthButton(
-                text = stringResource(Res.string.import_wallet_button),
-                onClick = { onEvent(ImportWalletEvent.ImportClicked) },
-                modifier =
-                    Modifier
-                        .padding(horizontal = 16.dp)
-                        .widthIn(max = 380.dp)
-                        .fillMaxWidth(),
-                enabled = viewState.isImportEnabled,
-                loading = viewState.isLoading,
-            )
         }
     }
 }
