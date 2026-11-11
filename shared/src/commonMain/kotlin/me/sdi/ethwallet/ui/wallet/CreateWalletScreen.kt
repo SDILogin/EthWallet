@@ -12,27 +12,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -66,6 +57,13 @@ import me.sdi.ethwallet.resources.wallet_label_placeholder
 import me.sdi.ethwallet.resources.wallet_label_supporting
 import me.sdi.ethwallet.resources.warning_24px
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
+import me.sdi.ethwallet.ui.designsystem.EthCard
+import me.sdi.ethwallet.ui.designsystem.EthCardTone
+import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -110,9 +108,9 @@ private fun CreateWalletScreenContent(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.create_wallet_title)) },
+                title = { EthText(stringResource(Res.string.create_wallet_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onUpButtonClick) {
+                    EthIconButton(onClick = onUpButtonClick) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = null,
@@ -140,26 +138,26 @@ private fun CreateWalletScreenContent(
         if (showConfirmationDialog) {
             AlertDialog(
                 onDismissRequest = { showConfirmationDialog = false },
-                title = { Text(stringResource(Res.string.create_wallet_confirmation_dialog_title)) },
-                text = { Text(stringResource(Res.string.create_wallet_confirmation_dialog_message)) },
+                title = { EthText(stringResource(Res.string.create_wallet_confirmation_dialog_title)) },
+                text = { EthText(stringResource(Res.string.create_wallet_confirmation_dialog_message)) },
                 confirmButton = {
-                    TextButton(
+                    EthButton(
+                        text = stringResource(Res.string.create_wallet_confirmation_dialog_confirm_button),
                         onClick = {
                             showConfirmationDialog = false
                             onEvent(CreateWalletEvent.SeedPhraseSaved)
                         },
-                    ) {
-                        Text(stringResource(Res.string.create_wallet_confirmation_dialog_confirm_button))
-                    }
+                        style = EthButtonStyle.Text,
+                    )
                 },
                 dismissButton = {
-                    OutlinedButton(
+                    EthButton(
+                        text = stringResource(Res.string.create_wallet_confirmation_dialog_dismiss_button),
                         onClick = {
                             showConfirmationDialog = false
                         },
-                    ) {
-                        Text(stringResource(Res.string.create_wallet_confirmation_dialog_dismiss_button))
-                    }
+                        style = EthButtonStyle.Secondary,
+                    )
                 },
             )
         }
@@ -191,23 +189,20 @@ private fun CreateWalletScreenContent(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    BasicText(
+                    EthText(
                         text = stringResource(Res.string.create_wallet_recovery_phrase_title),
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            color = MaterialTheme.colorScheme.onBackground,
-                        ),
+                        style = EthTextStyle.Headline,
+                        color = MaterialTheme.colorScheme.onBackground,
                         maxLines = 1,
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    BasicText(
+                    EthText(
                         modifier = Modifier.widthIn(max = 420.dp),
                         text = stringResource(Res.string.create_wallet_recovery_phrase_instruction),
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        ),
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onBackground,
                         maxLines = 1,
                     )
 
@@ -252,9 +247,9 @@ private fun WalletLabelTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(stringResource(Res.string.wallet_label)) },
-        placeholder = { Text(stringResource(Res.string.wallet_label_placeholder)) },
-        supportingText = { Text(stringResource(Res.string.wallet_label_supporting)) },
+        label = { EthText(stringResource(Res.string.wallet_label)) },
+        placeholder = { EthText(stringResource(Res.string.wallet_label_placeholder)) },
+        supportingText = { EthText(stringResource(Res.string.wallet_label_supporting)) },
         modifier = Modifier
             .widthIn(max = 420.dp)
             .fillMaxWidth()
@@ -268,7 +263,8 @@ private fun WalletLabelTextField(
 
 @Composable
 private fun NextButton(enabled: Boolean, onClick: () -> Unit) {
-    Button(
+    EthButton(
+        text = stringResource(Res.string.create_wallet_next_button_text),
         onClick = onClick,
         modifier =
             Modifier
@@ -276,27 +272,18 @@ private fun NextButton(enabled: Boolean, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
                 .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(16.dp),
         enabled = enabled,
-    ) {
-        Text(
-            text = stringResource(Res.string.create_wallet_next_button_text),
-            style = MaterialTheme.typography.labelLarge,
-        )
-    }
+    )
 }
 
 @Composable
 private fun SecurityWarning() {
-    Card(
+    EthCard(
         modifier =
             Modifier
                 .widthIn(max = 420.dp)
                 .fillMaxWidth(),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-            ),
+        tone = EthCardTone.Error,
     ) {
         Row(
             modifier =
@@ -311,9 +298,9 @@ private fun SecurityWarning() {
                 tint = MaterialTheme.colorScheme.error,
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Text(
+            EthText(
                 text = stringResource(Res.string.create_wallet_security_warning),
-                style = MaterialTheme.typography.bodyMedium,
+                style = EthTextStyle.Body,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
         }

@@ -44,6 +44,17 @@
   store time constants as primitives with a unit suffix: `private const val INDICATOR_ANIMATION_DELAY_MS = 300`.
   Convert to Kotlin `Duration` only on the call side.
 
+## Design system
+
+- Package `me.sdi.ethwallet.ui.designsystem` is the only place that may import Material `Text`, `Button`,
+  `OutlinedButton`, `TextButton`, `FilledTonalButton`, `IconButton` and `Card`. Screens use `EthText`, `EthButton`,
+  `EthIconButton` and `EthCard`.
+- Text styles are `EthTextStyle.Headline`, `Title`, `Body`, `Caption`. Do not set `fontSize`, `fontWeight` or
+  `fontFamily` on a screen. Do not add a style. Pick the nearest one.
+- Button styles are `EthButtonStyle.Primary`, `Secondary`, `Text`. Primary is the main action of a screen. Do not add a
+  style.
+- A card is `EthCard`. Do not set shape, color or elevation on a card. Use `EthCardTone.Error` for failures.
+
 ## Presentation logic
 
 - Assume that Start event arrives first. It is forbidden to handle unrealistic events flow like pull-to-refresh before

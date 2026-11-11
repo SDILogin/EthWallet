@@ -3,8 +3,9 @@ package me.sdi.ethwallet.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy.Companion.detailPane
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy.Companion.extraPane
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy.Companion.listPane
@@ -14,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -29,6 +31,7 @@ import kotlinx.serialization.modules.polymorphic
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.PinSession
+import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.history.HistoryRoute
 import me.sdi.ethwallet.ui.history.TransactionDetailsRoute
 import me.sdi.ethwallet.ui.navigation.Destination
@@ -139,7 +142,7 @@ fun EthWalletApp() {
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(
+                            EthText(
                                 text = "No wallet has been selected yet",
                             )
                         }
@@ -334,7 +337,10 @@ fun EthWalletApp() {
                 rememberViewModelStoreNavEntryDecorator(),
             ),
             sceneStrategies = listOf(
-                rememberListDetailSceneStrategy(),
+                rememberListDetailSceneStrategy(
+                    directive = calculatePaneScaffoldDirective(currentWindowAdaptiveInfoV2())
+                        .copy(horizontalPartitionSpacerSize = 0.dp),
+                ),
             ),
         )
     }

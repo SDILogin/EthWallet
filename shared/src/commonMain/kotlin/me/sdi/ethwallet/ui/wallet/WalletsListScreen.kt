@@ -28,22 +28,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.navigation3.LocalListDetailSceneScope
@@ -64,7 +56,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
@@ -73,7 +64,6 @@ import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.resources.Res
-import me.sdi.ethwallet.resources.add_24px
 import me.sdi.ethwallet.resources.cancel
 import me.sdi.ethwallet.resources.check_24px
 import me.sdi.ethwallet.resources.delete
@@ -97,6 +87,12 @@ import me.sdi.ethwallet.resources.wallets_list_selected_wallet_icon
 import me.sdi.ethwallet.resources.wallets_list_title
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.components.shimmer
+import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
+import me.sdi.ethwallet.ui.designsystem.EthCard
+import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -159,14 +155,13 @@ private fun WalletsListScreenContent(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
+                    EthText(
                         text = stringResource(Res.string.wallets_list_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        style = EthTextStyle.Title,
                     )
                 },
                 actions = {
-                    IconButton(onClick = onSettingsClick) {
+                    EthIconButton(onClick = onSettingsClick) {
                         Icon(
                             painter = painterResource(Res.drawable.settings_24px),
                             contentDescription = stringResource(Res.string.wallet_settings),
@@ -181,16 +176,10 @@ private fun WalletsListScreenContent(
                 val addWalletLabel = stringResource(Res.string.wallets_list_add_wallet)
 
                 Box {
-                    ExtendedFloatingActionButton(
+                    EthButton(
+                        text = addWalletLabel,
                         onClick = { isAddWalletMenuExpanded = true },
                         modifier = Modifier.semantics { contentDescription = addWalletLabel },
-                        icon = {
-                            Icon(
-                                painter = painterResource(Res.drawable.add_24px),
-                                contentDescription = null,
-                            )
-                        },
-                        text = { Text(addWalletLabel) },
                     )
 
                     DropdownMenu(
@@ -198,14 +187,14 @@ private fun WalletsListScreenContent(
                         onDismissRequest = { isAddWalletMenuExpanded = false },
                     ) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(Res.string.onboarding_create_wallet)) },
+                            text = { EthText(text = stringResource(Res.string.onboarding_create_wallet)) },
                             onClick = {
                                 isAddWalletMenuExpanded = false
                                 onCreateWallet()
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(Res.string.onboarding_import_wallet)) },
+                            text = { EthText(text = stringResource(Res.string.onboarding_import_wallet)) },
                             onClick = {
                                 isAddWalletMenuExpanded = false
                                 onImportWallet()
@@ -236,52 +225,41 @@ private fun WalletsListScreenContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Spacer(modifier = Modifier.weight(1f))
-                    Text(
+                    EthText(
                         text = "Your wallets will be displayed here",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = EthTextStyle.Title,
                         textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(16.dp),
                     )
 
-                    Text(
+                    EthText(
                         text = "You can create a new wallet or import an existing one",
-                        style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(16.dp),
                     )
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    FilledTonalButton(
+                    EthButton(
+                        text = stringResource(Res.string.onboarding_create_wallet),
+                        onClick = onCreateWallet,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 56.dp)
                             .widthIn(max = 320.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        onClick = onCreateWallet,
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.onboarding_create_wallet),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
+                    )
 
                     Spacer(Modifier.height(16.dp))
 
-                    OutlinedButton(
+                    EthButton(
+                        text = stringResource(Res.string.onboarding_import_wallet),
+                        onClick = onImportWallet,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 56.dp)
                             .widthIn(max = 320.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        onClick = onImportWallet,
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.onboarding_import_wallet),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
+                        style = EthButtonStyle.Secondary,
+                    )
                 }
             } else {
                 LazyVerticalGrid(
@@ -326,7 +304,6 @@ private fun WalletsListScreenContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WalletCard(
     item: WalletListItemUiState,
@@ -338,14 +315,9 @@ private fun WalletCard(
 ) {
     val wallet = item.wallet
 
-    Card(
+    EthCard(
         modifier = modifier,
         onClick = onWalletClicked,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
     ) {
         Row(
             modifier =
@@ -361,11 +333,9 @@ private fun WalletCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(
+                    EthText(
                         text = wallet.label,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = EthTextStyle.Title,
                     )
 
                     AnimatedVisibility(
@@ -382,9 +352,8 @@ private fun WalletCard(
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
+                EthText(
                     text = wallet.address.toString(),
-                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     maxLines = 1,
                     overflow = TextOverflow.MiddleEllipsis,
@@ -399,19 +368,14 @@ private fun WalletCard(
                             .shimmer(),
                     )
                 } else {
-                    Text(
-                        text = item.totalBalanceUsd,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    EthText(text = item.totalBalanceUsd)
                 }
             }
 
             var isOptionsMenuExpanded by remember { mutableStateOf(false) }
             val optionsDescription = stringResource(Res.string.wallet_options, wallet.label)
             Box {
-                IconButton(
+                EthIconButton(
                     onClick = { isOptionsMenuExpanded = true },
                     modifier = Modifier.semantics { contentDescription = optionsDescription },
                 ) {
@@ -425,14 +389,14 @@ private fun WalletCard(
                     onDismissRequest = { isOptionsMenuExpanded = false },
                 ) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.wallet_rename)) },
+                        text = { EthText(text = stringResource(Res.string.wallet_rename)) },
                         onClick = {
                             isOptionsMenuExpanded = false
                             onRenameClicked()
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.delete)) },
+                        text = { EthText(text = stringResource(Res.string.delete)) },
                         onClick = {
                             isOptionsMenuExpanded = false
                             onDeleteClicked()
@@ -485,10 +449,10 @@ private fun WalletLabelEditorDialog(
         },
         title = {
             Column {
-                Text(stringResource(Res.string.wallet_rename_title))
-                Text(
+                EthText(text = stringResource(Res.string.wallet_rename_title), style = EthTextStyle.Title)
+                EthText(
                     text = editor.address.abbreviated(),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = EthTextStyle.Caption,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -500,9 +464,9 @@ private fun WalletLabelEditorDialog(
                     fieldValue = it
                     onEvent(WalletsListEvent.OnWalletLabelChanged(it.text))
                 },
-                label = { Text(stringResource(Res.string.wallet_label)) },
-                placeholder = { Text(stringResource(Res.string.wallet_label_placeholder)) },
-                supportingText = { Text(validationMessage) },
+                label = { EthText(text = stringResource(Res.string.wallet_label)) },
+                placeholder = { EthText(text = stringResource(Res.string.wallet_label_placeholder)) },
+                supportingText = { EthText(text = validationMessage, style = EthTextStyle.Caption) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester)
@@ -521,20 +485,20 @@ private fun WalletLabelEditorDialog(
             )
         },
         confirmButton = {
-            TextButton(
+            EthButton(
+                text = stringResource(Res.string.wallet_rename),
                 onClick = { onEvent(WalletsListEvent.OnWalletLabelSaveClick) },
                 enabled = editor.isSaveEnabled,
-            ) {
-                Text(stringResource(Res.string.wallet_rename))
-            }
+                style = EthButtonStyle.Text,
+            )
         },
         dismissButton = {
-            TextButton(
+            EthButton(
+                text = stringResource(Res.string.cancel),
                 onClick = { onEvent(WalletsListEvent.OnWalletLabelEditorDismiss) },
                 enabled = !editor.isSaving,
-            ) {
-                Text(stringResource(Res.string.cancel))
-            }
+                style = EthButtonStyle.Text,
+            )
         },
     )
 }
@@ -553,7 +517,10 @@ private fun WalletsListScreenPreview() {
             uiState = WalletsListUiState(
                 wallets = listOf(
                     WalletListItemUiState(
-                        wallet = EthWallet("Business Wallet", EthAddress("0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef")),
+                        wallet = EthWallet(
+                            "Business Wallet",
+                            EthAddress("0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef"),
+                        ),
                         totalBalanceUsd = "$12,345.67",
                     ),
                     WalletListItemUiState(

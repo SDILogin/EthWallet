@@ -11,10 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,6 +38,10 @@ import me.sdi.ethwallet.resources.pin_confirm_title
 import me.sdi.ethwallet.resources.pin_create_subtitle
 import me.sdi.ethwallet.resources.pin_create_title
 import me.sdi.ethwallet.resources.pin_reset
+import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -81,20 +82,24 @@ private fun BiometricOfferDialog(
     AlertDialog(
         onDismissRequest = onSkip,
         title = {
-            Text(stringResource(Res.string.biometric_offer_title))
+            EthText(stringResource(Res.string.biometric_offer_title))
         },
         text = {
-            Text(stringResource(Res.string.biometric_offer_message))
+            EthText(stringResource(Res.string.biometric_offer_message))
         },
         confirmButton = {
-            TextButton(onClick = onAccept) {
-                Text(stringResource(Res.string.biometric_offer_enable))
-            }
+            EthButton(
+                text = stringResource(Res.string.biometric_offer_enable),
+                onClick = onAccept,
+                style = EthButtonStyle.Text,
+            )
         },
         dismissButton = {
-            OutlinedButton(onClick = onSkip) {
-                Text(stringResource(Res.string.biometric_offer_skip))
-            }
+            EthButton(
+                text = stringResource(Res.string.biometric_offer_skip),
+                onClick = onSkip,
+                style = EthButtonStyle.Secondary,
+            )
         },
     )
 }
@@ -151,9 +156,9 @@ private fun Title(isConfirmationMode: Boolean) {
         Res.string.pin_create_title
     }
 
-    Text(
+    EthText(
         text = stringResource(textRes),
-        style = MaterialTheme.typography.headlineMedium,
+        style = EthTextStyle.Headline,
         textAlign = TextAlign.Center,
     )
 }
@@ -166,9 +171,9 @@ private fun Subtitle(isConfirmationMode: Boolean) {
         Res.string.pin_create_subtitle
     }
 
-    Text(
+    EthText(
         text = stringResource(textRes),
-        style = MaterialTheme.typography.bodyLarge,
+        style = EthTextStyle.Body,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
     )
@@ -187,27 +192,27 @@ private fun ErrorMessage(errorMessage: String?) {
     val slideAnim by animateDpAsState(if (errorMessage == null) 16.dp else 0.dp)
     val slideAnimPx = with(LocalDensity.current) { slideAnim.toPx() }
 
-    Text(
+    EthText(
         modifier = Modifier.graphicsLayer {
             alpha = alphaAnim
             translationY = -slideAnimPx
         },
         text = lastActiveMessage,
         color = MaterialTheme.colorScheme.error,
-        style = MaterialTheme.typography.bodyMedium,
+        style = EthTextStyle.Body,
     )
 }
 
 @Composable
 private fun ResetButton(visible: Boolean, onClick: () -> Unit) {
     val alphaAnim by animateFloatAsState(if (visible) 1f else 0f)
-    TextButton(onClick = onClick, enabled = visible, modifier = Modifier.graphicsLayer { alpha = alphaAnim }) {
-        Text(
-            text = stringResource(Res.string.pin_reset),
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.labelLarge,
-        )
-    }
+    EthButton(
+        text = stringResource(Res.string.pin_reset),
+        onClick = onClick,
+        enabled = visible,
+        modifier = Modifier.graphicsLayer { alpha = alphaAnim },
+        style = EthButtonStyle.Text,
+    )
 }
 
 private class SetPinCodeViewStateProvider : PreviewParameterProvider<SetPinCodeViewState> {

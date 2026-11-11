@@ -4,9 +4,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +22,11 @@ import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.password_hide
 import me.sdi.ethwallet.resources.password_show
+import me.sdi.ethwallet.resources.visibility_24px
+import me.sdi.ethwallet.resources.visibility_off_24px
+import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -41,7 +45,7 @@ internal fun PasswordField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text(label) },
+            label = { EthText(text = label) },
             modifier = modifier
                 .widthIn(max = 420.dp)
                 .fillMaxWidth()
@@ -57,8 +61,11 @@ internal fun PasswordField(
             ),
             keyboardActions = KeyboardActions(onAny = { onImeAction() }),
             trailingIcon = {
-                TextButton(onClick = { isVisible = !isVisible }) {
-                    Text(stringResource(if (isVisible) Res.string.password_hide else Res.string.password_show))
+                EthIconButton(onClick = { isVisible = !isVisible }) {
+                    Icon(
+                        painter = painterResource(if (isVisible) Res.drawable.visibility_off_24px else Res.drawable.visibility_24px),
+                        contentDescription = stringResource(if (isVisible) Res.string.password_hide else Res.string.password_show),
+                    )
                 }
             },
         )

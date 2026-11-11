@@ -2,6 +2,7 @@ package me.sdi.ethwallet.desktop
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -17,9 +18,12 @@ import me.sdi.ethwallet.ui.EthWalletApp
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
+import java.awt.Dimension
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
+
+private const val MIN_WINDOW_SIZE_DP = 360
 
 fun main() = application {
     val chainConfig = ChainConfig(
@@ -45,6 +49,9 @@ fun main() = application {
                     false
                 },
             ) {
+                LaunchedEffect(window) {
+                    window.minimumSize = Dimension(MIN_WINDOW_SIZE_DP, MIN_WINDOW_SIZE_DP)
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

@@ -6,16 +6,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +40,9 @@ import me.sdi.ethwallet.resources.password_strength_strong
 import me.sdi.ethwallet.resources.password_strength_weak
 import me.sdi.ethwallet.resources.password_weak_warning
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -87,14 +86,14 @@ private fun SetPasswordScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
+            EthText(
                 text = stringResource(Res.string.password_create_title),
-                style = MaterialTheme.typography.headlineSmall,
+                style = EthTextStyle.Headline,
                 textAlign = TextAlign.Center,
             )
-            Text(
+            EthText(
                 text = stringResource(Res.string.password_create_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
+                style = EthTextStyle.Body,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.widthIn(max = 420.dp),
             )
@@ -123,30 +122,26 @@ private fun SetPasswordScreenContent(
                 },
                 modifier = Modifier,
             )
-            Text(
+            EthText(
                 text = stringResource(Res.string.password_mismatch),
                 color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
+                style = EthTextStyle.Caption,
                 modifier = Modifier.alpha(if (viewState.isMismatch) 1f else 0f),
             )
-            Button(
+            EthButton(
+                text = stringResource(Res.string.password_continue),
                 onClick = { onEvent(SetPasswordEvent.OnContinueClick) },
                 enabled = viewState.canContinue,
+                loading = viewState.isSaving,
                 modifier = Modifier
                     .widthIn(max = 420.dp)
                     .fillMaxWidth()
                     .heightIn(min = 48.dp),
-            ) {
-                if (viewState.isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                } else {
-                    Text(stringResource(Res.string.password_continue))
-                }
-            }
-            Text(
+            )
+            EthText(
                 text = stringResource(Res.string.password_setup_failed),
                 color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
+                style = EthTextStyle.Caption,
                 modifier = Modifier.alpha(if (viewState.error == SetPasswordError.SetupFailed) 1f else 0f),
             )
         }
@@ -175,7 +170,7 @@ private fun PasswordStrengthMeter(strength: PasswordStrength?) {
             },
             modifier = Modifier.fillMaxWidth(),
         )
-        Text(
+        EthText(
             text = stringResource(
                 when (strength) {
                     PasswordStrength.Weak, null -> Res.string.password_strength_weak
@@ -183,13 +178,13 @@ private fun PasswordStrengthMeter(strength: PasswordStrength?) {
                     PasswordStrength.Strong -> Res.string.password_strength_strong
                 },
             ),
-            style = MaterialTheme.typography.labelMedium,
+            style = EthTextStyle.Caption,
             modifier = Modifier.alpha(if (strength == null) 0f else 1f),
         )
-        Text(
+        EthText(
             text = stringResource(Res.string.password_weak_warning),
             color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodySmall,
+            style = EthTextStyle.Caption,
             modifier = Modifier.alpha(if (strength == PasswordStrength.Weak) 1f else 0f),
         )
     }

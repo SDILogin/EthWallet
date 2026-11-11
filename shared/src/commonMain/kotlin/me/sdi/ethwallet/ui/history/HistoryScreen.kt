@@ -21,15 +21,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -91,6 +88,10 @@ import me.sdi.ethwallet.resources.switch_account_24px
 import me.sdi.ethwallet.resources.wallet_retry
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.components.shimmer
+import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -128,8 +129,8 @@ fun HistoryScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Text(stringResource(Res.string.history_refresh_error))
-                        Button(onClick = onRetry) { Text(stringResource(Res.string.wallet_retry)) }
+                        EthText(stringResource(Res.string.history_refresh_error))
+                        EthButton(text = stringResource(Res.string.wallet_retry), onClick = onRetry)
                     }
                 }
                 is HistoryViewState.Loading -> ShimmersSkeleton(modifier = contentModifier)
@@ -166,16 +167,16 @@ private fun HistoryHeader(
     TopAppBar(
         modifier = modifier,
         navigationIcon = {
-            IconButton(onClick = onBackPressed) {
+            EthIconButton(onClick = onBackPressed) {
                 Icon(painterResource(Res.drawable.arrow_back_24px), stringResource(Res.string.back))
             }
         },
         title = {
             Column {
-                Text(stringResource(Res.string.history_title))
-                Text(
+                EthText(stringResource(Res.string.history_title))
+                EthText(
                     text = "$walletLabel · $networkName",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = EthTextStyle.Caption,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -283,14 +284,14 @@ private fun RefreshableContent(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.height(16.dp))
-                        Text(
+                        EthText(
                             stringResource(Res.string.history_empty_title),
-                            style = MaterialTheme.typography.titleMedium,
+                            style = EthTextStyle.Title,
                         )
                         Spacer(Modifier.height(8.dp))
-                        Text(
+                        EthText(
                             stringResource(Res.string.history_empty_message),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = EthTextStyle.Body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
@@ -305,10 +306,10 @@ private fun RefreshableContent(
                             yesterdayKey -> stringResource(Res.string.history_yesterday)
                             else -> formatHistoryDate(group.first().timestampMillis, timeZone)
                         }
-                        Text(
+                        EthText(
                             title,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            style = MaterialTheme.typography.labelLarge,
+                            style = EthTextStyle.Body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -333,14 +334,14 @@ private fun RefreshableContent(
                             )
                         }
                         is HistoryPagination.Failed -> {
-                            Text(stringResource(Res.string.history_load_more_error), textAlign = TextAlign.Center)
-                            Button(onClick = onRetryLoadMore) { Text(stringResource(Res.string.wallet_retry)) }
+                            EthText(stringResource(Res.string.history_load_more_error), textAlign = TextAlign.Center)
+                            EthButton(text = stringResource(Res.string.wallet_retry), onClick = onRetryLoadMore)
                         }
                         is HistoryPagination.Idle -> {
                             if (!pagination.hasMore && rows.isNotEmpty()) {
-                                Text(
+                                EthText(
                                     stringResource(Res.string.history_end),
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = EthTextStyle.Caption,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
                                 )
@@ -410,10 +411,10 @@ private fun HistoryListItem(
         ) {
             HistoryItemIcon(row)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, style = MaterialTheme.typography.titleSmall, color = statusColor)
-                Text(
+                EthText(title, style = EthTextStyle.Title, color = statusColor)
+                EthText(
                     counterparty,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = EthTextStyle.Caption,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -424,10 +425,10 @@ private fun HistoryListItem(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(
+                EthText(
                     text = row.amount?.let { "$it ${row.symbol}" }
                         ?: stringResource(Res.string.history_amount_unavailable, row.symbol),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = EthTextStyle.Title,
                     color = if (row.action == TransferDirection.Received && row.status == TransactionStatus.Confirmed) {
                         MaterialTheme.colorScheme.primary
                     } else {
@@ -438,19 +439,19 @@ private fun HistoryListItem(
                     overflow = TextOverflow.Ellipsis,
                 )
                 row.transactionFee?.let { fee ->
-                    Text(
+                    EthText(
                         stringResource(
                             if (row.feeEstimated) Res.string.history_estimated_fee_short else Res.string.history_fee_short,
                             fee,
                         ),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = EthTextStyle.Caption,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.End,
                     )
                 }
-                Text(
+                EthText(
                     subtitle,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = EthTextStyle.Caption,
                     color = if (row.status == TransactionStatus.Confirmed) {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     } else {

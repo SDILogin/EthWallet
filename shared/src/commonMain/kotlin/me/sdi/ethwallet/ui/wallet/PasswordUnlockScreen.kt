@@ -6,18 +6,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +42,10 @@ import me.sdi.ethwallet.resources.password_unlock
 import me.sdi.ethwallet.resources.password_unlock_failed
 import me.sdi.ethwallet.resources.password_wrong
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -83,22 +81,24 @@ fun PasswordUnlockScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text(stringResource(Res.string.logout_dialog_title)) },
-            text = { Text(stringResource(Res.string.password_logout_dialog_message)) },
+            title = { EthText(stringResource(Res.string.logout_dialog_title)) },
+            text = { EthText(stringResource(Res.string.password_logout_dialog_message)) },
             confirmButton = {
-                TextButton(
+                EthButton(
+                    text = stringResource(Res.string.logout_dialog_confirm),
                     onClick = {
                         showLogoutDialog = false
                         viewModel.onEvent(PasswordUnlockEvent.OnResetConfirm)
                     },
-                ) {
-                    Text(stringResource(Res.string.logout_dialog_confirm))
-                }
+                    style = EthButtonStyle.Text,
+                )
             },
             dismissButton = {
-                OutlinedButton(onClick = { showLogoutDialog = false }) {
-                    Text(stringResource(Res.string.logout_dialog_dismiss))
-                }
+                EthButton(
+                    text = stringResource(Res.string.logout_dialog_dismiss),
+                    onClick = { showLogoutDialog = false },
+                    style = EthButtonStyle.Secondary,
+                )
             },
         )
     }
@@ -127,9 +127,9 @@ private fun PasswordUnlockScreenContent(
                 contentDescription = null,
                 modifier = Modifier.width(72.dp),
             )
-            Text(
+            EthText(
                 text = stringResource(Res.string.password_enter_title),
-                style = MaterialTheme.typography.headlineSmall,
+                style = EthTextStyle.Headline,
                 textAlign = TextAlign.Center,
             )
             PasswordField(
@@ -146,7 +146,7 @@ private fun PasswordUnlockScreenContent(
                 },
                 modifier = Modifier,
             )
-            Text(
+            EthText(
                 text = stringResource(
                     when (viewState.error) {
                         PasswordUnlockError.WrongPassword, null -> Res.string.password_wrong
@@ -155,33 +155,29 @@ private fun PasswordUnlockScreenContent(
                     },
                 ),
                 color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
+                style = EthTextStyle.Caption,
                 textAlign = TextAlign.Center,
                 minLines = ERROR_LINES,
                 modifier = Modifier
                     .widthIn(max = 420.dp)
                     .alpha(if (viewState.error == null) 0f else 1f),
             )
-            Button(
+            EthButton(
+                text = stringResource(Res.string.password_unlock),
                 onClick = { onEvent(PasswordUnlockEvent.OnUnlockClick) },
                 enabled = canUnlock,
+                loading = viewState.isBusy,
                 modifier = Modifier
                     .widthIn(max = 420.dp)
                     .fillMaxWidth()
                     .heightIn(min = 48.dp),
-            ) {
-                if (viewState.isBusy) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                } else {
-                    Text(stringResource(Res.string.password_unlock))
-                }
-            }
-            TextButton(
+            )
+            EthButton(
+                text = stringResource(Res.string.password_forgot),
                 onClick = onForgotPasswordClick,
                 enabled = !viewState.isBusy,
-            ) {
-                Text(stringResource(Res.string.password_forgot))
-            }
+                style = EthButtonStyle.Text,
+            )
         }
     }
 }
