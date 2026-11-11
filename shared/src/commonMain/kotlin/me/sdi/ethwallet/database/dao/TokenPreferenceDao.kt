@@ -9,18 +9,21 @@ import me.sdi.ethwallet.database.entity.TokenPreferenceEntity
 
 @Dao
 interface TokenPreferenceDao {
-    @Query("SELECT * FROM token_preferences WHERE wallet_address = :walletAddress ORDER BY position")
-    fun observe(walletAddress: String): Flow<List<TokenPreferenceEntity>>
+    @Query(
+        "SELECT * FROM token_preferences " +
+            "WHERE chain_id = :chainId AND wallet_address = :walletAddress ORDER BY position",
+    )
+    fun observe(chainId: Long, walletAddress: String): Flow<List<TokenPreferenceEntity>>
 
-    @Query("DELETE FROM token_preferences WHERE wallet_address = :walletAddress")
-    suspend fun delete(walletAddress: String)
+    @Query("DELETE FROM token_preferences WHERE chain_id = :chainId AND wallet_address = :walletAddress")
+    suspend fun delete(chainId: Long, walletAddress: String)
 
     @Insert
     suspend fun insertAll(preferences: List<TokenPreferenceEntity>)
 
     @Transaction
-    suspend fun replace(walletAddress: String, preferences: List<TokenPreferenceEntity>) {
-        delete(walletAddress)
+    suspend fun replace(chainId: Long, walletAddress: String, preferences: List<TokenPreferenceEntity>) {
+        delete(chainId, walletAddress)
         insertAll(preferences)
     }
 }

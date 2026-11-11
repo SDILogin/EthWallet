@@ -5,11 +5,13 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.data.repository.TokenPreference
 import me.sdi.ethwallet.data.repository.TokenPreferenceRepositoryRoom
 import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.database.DesktopDatabaseBuilder
+import me.sdi.ethwallet.ui.ETH_SEPOLIA_CHAIN_ID
 import me.sdi.ethwallet.ui.daiOnSepolia
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -30,6 +32,12 @@ class DesktopDatabaseMigrationTest {
     )
 
     private val walletAddress = EthAddress("0xAbCdEf0123456789aBcDeF0123456789AbCdEf01")
+    private val chainConfig = ChainConfig(
+        rpcUrl = "https://rpc.example",
+        chainId = ETH_SEPOLIA_CHAIN_ID,
+        explorerBaseUrl = null,
+        transactionHistoryApiBaseUrl = "https://history.example",
+    )
 
     @After
     fun tearDown() {
@@ -51,7 +59,7 @@ class DesktopDatabaseMigrationTest {
         val database = DesktopDatabaseBuilder.build(databaseDirectory)
         try {
             assertEquals(listOf("Main"), database.walletDao().observeAllWallets().first().map { it.label })
-            val repository = TokenPreferenceRepositoryRoom(database.tokenPreferenceDao())
+            val repository = TokenPreferenceRepositoryRoom(database.tokenPreferenceDao(), chainConfig)
             val preferences = listOf(TokenPreference(daiOnSepolia.ethAddress, visible = false))
             repository.update(walletAddress, preferences)
             assertEquals(preferences, repository.observe(walletAddress).first())

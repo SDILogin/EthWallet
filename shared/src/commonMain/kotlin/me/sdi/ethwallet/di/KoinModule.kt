@@ -90,7 +90,12 @@ val commonModule = module {
         )
     }
 
-    single<TokenPreferenceRepository> { TokenPreferenceRepositoryRoom(tokenPreferenceDao = get()) }
+    single<TokenPreferenceRepository> {
+        TokenPreferenceRepositoryRoom(
+            tokenPreferenceDao = get(),
+            chainConfig = get(),
+        )
+    }
 
     factory<WalletRepository> {
         WalletRepository(

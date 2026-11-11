@@ -2,11 +2,13 @@ package me.sdi.ethwallet.desktop
 
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.security.DataCleanerRoomDb
 import me.sdi.ethwallet.data.repository.TokenPreference
 import me.sdi.ethwallet.data.repository.TokenPreferenceRepositoryRoom
 import me.sdi.ethwallet.database.DesktopDatabaseBuilder
+import me.sdi.ethwallet.ui.ETH_SEPOLIA_CHAIN_ID
 import me.sdi.ethwallet.ui.daiOnSepolia
 import me.sdi.ethwallet.ui.usdcOnSepolia
 import me.sdi.ethwallet.ui.usdtOnSepolia
@@ -20,6 +22,12 @@ class DesktopTokenPreferenceRepositoryTest {
     val temporaryFolder = TemporaryFolder()
 
     private val walletAddress = EthAddress("0xAbCdEf0123456789aBcDeF0123456789AbCdEf01")
+    private val chainConfig = ChainConfig(
+        rpcUrl = "https://rpc.example",
+        chainId = ETH_SEPOLIA_CHAIN_ID,
+        explorerBaseUrl = null,
+        transactionHistoryApiBaseUrl = "https://history.example",
+    )
 
     @Test
     fun preferencesSurviveReopeningAndAreWipedByDataCleaner() = runBlocking {
@@ -30,14 +38,14 @@ class DesktopTokenPreferenceRepositoryTest {
         )
         val database = DesktopDatabaseBuilder.build(temporaryFolder.root)
         try {
-            TokenPreferenceRepositoryRoom(database.tokenPreferenceDao()).update(walletAddress, preferences)
+            TokenPreferenceRepositoryRoom(database.tokenPreferenceDao(), chainConfig).update(walletAddress, preferences)
         } finally {
             database.close()
         }
 
         val reopened = DesktopDatabaseBuilder.build(temporaryFolder.root)
         try {
-            val repository = TokenPreferenceRepositoryRoom(reopened.tokenPreferenceDao())
+            val repository = TokenPreferenceRepositoryRoom(reopened.tokenPreferenceDao(), chainConfig)
             assertEquals(preferences, repository.observe(walletAddress).first())
 
             DataCleanerRoomDb(reopened).clean()

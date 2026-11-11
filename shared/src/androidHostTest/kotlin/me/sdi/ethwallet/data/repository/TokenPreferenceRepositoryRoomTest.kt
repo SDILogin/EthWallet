@@ -3,8 +3,12 @@ package me.sdi.ethwallet.data.repository
 import androidx.room.Room
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.database.AppDatabase
+import me.sdi.ethwallet.ui.ETH_MAINNET_CHAIN_ID
+import me.sdi.ethwallet.ui.ETH_SEPOLIA_CHAIN_ID
+import me.sdi.ethwallet.ui.daiOnMainnet
 import me.sdi.ethwallet.ui.daiOnSepolia
 import me.sdi.ethwallet.ui.usdcOnSepolia
 import me.sdi.ethwallet.ui.usdtOnSepolia
@@ -23,6 +27,12 @@ class TokenPreferenceRepositoryRoomTest {
 
     private val walletAddress = EthAddress("0xAbCdEf0123456789aBcDeF0123456789AbCdEf01")
     private val otherWalletAddress = EthAddress("0x0000000000000000000000000000000000000002")
+    private val sepoliaConfig = ChainConfig(
+        rpcUrl = "https://rpc.example",
+        chainId = ETH_SEPOLIA_CHAIN_ID,
+        explorerBaseUrl = null,
+        transactionHistoryApiBaseUrl = "https://history.example",
+    )
 
     @BeforeTest
     fun setUp() {
@@ -32,7 +42,7 @@ class TokenPreferenceRepositoryRoomTest {
         )
             .allowMainThreadQueries()
             .build()
-        repository = TokenPreferenceRepositoryRoom(database.tokenPreferenceDao())
+        repository = TokenPreferenceRepositoryRoom(database.tokenPreferenceDao(), sepoliaConfig)
     }
 
     @AfterTest
@@ -105,5 +115,21 @@ class TokenPreferenceRepositoryRoomTest {
 
         assertEquals(walletPreferences, repository.observe(walletAddress).first())
         assertEquals(otherWalletPreferences, repository.observe(otherWalletAddress).first())
+    }
+
+    @Test
+    fun preferences_are_kept_per_chain() = runTest {
+        val mainnetRepository = TokenPreferenceRepositoryRoom(
+            database.tokenPreferenceDao(),
+            sepoliaConfig.copy(chainId = ETH_MAINNET_CHAIN_ID),
+        )
+        val sepoliaPreferences = listOf(TokenPreference(daiOnSepolia.ethAddress, visible = false))
+        val mainnetPreferences = listOf(TokenPreference(daiOnMainnet.ethAddress, visible = true))
+
+        repository.update(walletAddress, sepoliaPreferences)
+        mainnetRepository.update(walletAddress, mainnetPreferences)
+
+        assertEquals(sepoliaPreferences, repository.observe(walletAddress).first())
+        assertEquals(mainnetPreferences, mainnetRepository.observe(walletAddress).first())
     }
 }

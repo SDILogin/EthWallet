@@ -2,6 +2,7 @@ package me.sdi.ethwallet.data.repository
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.database.dao.TokenPreferenceDao
 import me.sdi.ethwallet.database.entity.TokenPreferenceEntity
@@ -22,17 +23,22 @@ interface TokenPreferenceRepository {
 
 class TokenPreferenceRepositoryRoom(
     private val tokenPreferenceDao: TokenPreferenceDao,
+    private val chainConfig: ChainConfig,
 ) : TokenPreferenceRepository {
     override fun observe(walletAddress: EthAddress): Flow<List<TokenPreference>> =
-        tokenPreferenceDao.observe(walletAddress.toString()).map { entities ->
-            entities.map { TokenPreference(tokenAddress = EthAddress(it.tokenAddress), visible = it.visible) }
-        }
+        tokenPreferenceDao
+            .observe(chainId = chainConfig.chainId, walletAddress = walletAddress.toString())
+            .map { entities ->
+                entities.map { TokenPreference(tokenAddress = EthAddress(it.tokenAddress), visible = it.visible) }
+            }
 
     override suspend fun update(walletAddress: EthAddress, preferences: List<TokenPreference>) {
         tokenPreferenceDao.replace(
+            chainId = chainConfig.chainId,
             walletAddress = walletAddress.toString(),
             preferences = preferences.mapIndexed { index, preference ->
                 TokenPreferenceEntity(
+                    chainId = chainConfig.chainId,
                     walletAddress = walletAddress.toString(),
                     tokenAddress = preference.tokenAddress.toString(),
                     position = index,
