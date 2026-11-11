@@ -16,19 +16,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
@@ -41,10 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -69,6 +62,9 @@ import me.sdi.ethwallet.resources.send_token_eth
 import me.sdi.ethwallet.resources.send_token_usdc
 import me.sdi.ethwallet.resources.send_token_usdt
 import me.sdi.ethwallet.ui.KnownToken
+import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
@@ -121,9 +117,9 @@ private fun ReceiveScreenContent(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.receive_title)) },
+                title = { EthText(stringResource(Res.string.receive_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBackPressed) {
+                    EthIconButton(onClick = onBackPressed) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
@@ -170,10 +166,9 @@ private fun CurrencyPicker(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        Text(
+        EthText(
             text = stringResource(Res.string.receive_currency),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = EthTextStyle.Title,
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -185,7 +180,7 @@ private fun CurrencyPicker(
             FilterChip(
                 selected = selectedTokenContract == EthContractAddress,
                 onClick = { onTokenSelected(EthContractAddress) },
-                label = { Text(stringResource(Res.string.send_token_eth)) },
+                label = { EthText(stringResource(Res.string.send_token_eth)) },
                 leadingIcon = {
                     Icon(
                         painter = painterResource(Res.drawable.ic_eth_logo),
@@ -208,7 +203,7 @@ private fun CurrencyPicker(
                             "DAI" -> Res.string.send_token_dai
                             else -> null
                         }
-                        Text(nameRes?.let { stringResource(it) } ?: token.symbol)
+                        EthText(nameRes?.let { stringResource(it) } ?: token.symbol)
                     },
                     leadingIcon = {
                         Icon(
@@ -233,26 +228,25 @@ private fun AmountInput(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        Text(
+        EthText(
             text = stringResource(Res.string.receive_amount_optional),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = EthTextStyle.Title,
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = amount,
             onValueChange = onAmountChanged,
-            label = { Text(stringResource(Res.string.send_enter_amount)) },
+            label = { EthText(stringResource(Res.string.send_enter_amount)) },
             isError = amountError != null,
-            supportingText = amountError?.let { { Text(it) } },
+            supportingText = amountError?.let { { EthText(it) } },
             trailingIcon = {
                 AnimatedVisibility(
                     amount.isNotEmpty(),
                     enter = fadeIn() + scaleIn(),
                     exit = fadeOut() + scaleOut(),
                 ) {
-                    IconButton(
+                    EthIconButton(
                         onClick = onClearAmount,
                     ) {
                         Icon(
@@ -292,9 +286,9 @@ private fun QrCodeDisplay(
                     )
                 }
                 else -> {
-                    Text(
+                    EthText(
                         text = stringResource(Res.string.receive_select_currency),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = EthTextStyle.Body,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -319,38 +313,10 @@ private fun AddressDisplay(
     val addressString = address.toString()
     val truncatedAddress = "${addressString.take(6)}...${addressString.takeLast(4)}"
 
-    val annotatedText = buildAnnotatedString {
-        append(truncatedAddress)
-        append(" ")
-        appendInlineContent("copyIcon", "[copy]")
-    }
-
-    val inlineContent = mapOf(
-        "copyIcon" to InlineTextContent(
-            placeholder = Placeholder(
-                width = MaterialTheme.typography.bodyMedium.fontSize,
-                height = MaterialTheme.typography.bodyMedium.fontSize,
-                placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-            ),
-        ) {
-            Icon(
-                painter = painterResource(Res.drawable.copy_all_24px),
-                contentDescription = stringResource(Res.string.receive_copy_address),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp),
-            )
-        },
-    )
-
     val clipboardManager = LocalClipboardManager.current
     val toastManager = rememberToastManager()
     val addressCopiedMessage = stringResource(Res.string.receive_address_copied)
-    Text(
-        text = annotatedText,
-        inlineContent = inlineContent,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center,
+    Row(
         modifier = modifier
             .fillMaxWidth()
             .minimumInteractiveComponentSize()
@@ -359,5 +325,20 @@ private fun AddressDisplay(
                 toastManager.showToast(addressCopiedMessage)
             }
             .padding(horizontal = 16.dp, vertical = 8.dp),
-    )
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        EthText(
+            text = truncatedAddress,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Icon(
+            painter = painterResource(Res.drawable.copy_all_24px),
+            contentDescription = stringResource(Res.string.receive_copy_address),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(16.dp),
+        )
+    }
 }

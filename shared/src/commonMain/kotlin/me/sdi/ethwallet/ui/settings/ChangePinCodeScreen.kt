@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +35,9 @@ import me.sdi.ethwallet.resources.change_pin_error_mismatch
 import me.sdi.ethwallet.resources.change_pin_success
 import me.sdi.ethwallet.resources.change_pin_title
 import me.sdi.ethwallet.resources.error_something_went_wrong
+import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.PinCodeInput
 import me.sdi.ethwallet.ui.wallet.PinNumberPad
@@ -91,9 +92,9 @@ private fun ChangePinCodeScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.change_pin_title)) },
+                title = { EthText(stringResource(Res.string.change_pin_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    EthIconButton(onClick = onBack) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
@@ -114,9 +115,9 @@ private fun ChangePinCodeScreen(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.height(32.dp))
 
-                Text(
+                EthText(
                     text = stringResource(viewState.step.titleRes()),
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = EthTextStyle.Headline,
                     textAlign = TextAlign.Center,
                 )
 
@@ -155,11 +156,11 @@ private fun ErrorMessage(error: ChangePinCodeError?) {
 
     val alphaAnim by animateFloatAsState(if (error == null) 0f else 1f)
 
-    Text(
+    EthText(
         modifier = Modifier.graphicsLayer { alpha = alphaAnim },
         text = lastActiveError?.let { stringResource(it.messageRes()) }.orEmpty(),
         color = MaterialTheme.colorScheme.error,
-        style = MaterialTheme.typography.bodyMedium,
+        style = EthTextStyle.Body,
         textAlign = TextAlign.Center,
     )
 }

@@ -8,11 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,6 +35,9 @@ import me.sdi.ethwallet.resources.settings_lock_app
 import me.sdi.ethwallet.resources.settings_lock_app_description
 import me.sdi.ethwallet.resources.settings_lock_app_description_password
 import me.sdi.ethwallet.resources.settings_title
+import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
@@ -74,9 +75,9 @@ private fun SettingsScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.settings_title)) },
+                title = { EthText(stringResource(Res.string.settings_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    EthIconButton(onClick = onBack) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
@@ -108,15 +109,15 @@ private fun BiometricSettingRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            EthText(
                 text = stringResource(Res.string.settings_biometric_title),
-                style = MaterialTheme.typography.bodyLarge,
+                style = EthTextStyle.Body,
             )
             val hint = viewState.biometricHint.toStringRes()
             if (hint != null) {
-                Text(
+                EthText(
                     text = stringResource(hint),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = EthTextStyle.Caption,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -138,13 +139,13 @@ private fun ChangePinRow(onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(16.dp),
     ) {
-        Text(
+        EthText(
             text = stringResource(Res.string.settings_change_pin),
-            style = MaterialTheme.typography.bodyLarge,
+            style = EthTextStyle.Body,
         )
-        Text(
+        EthText(
             text = stringResource(Res.string.settings_change_pin_description),
-            style = MaterialTheme.typography.bodySmall,
+            style = EthTextStyle.Caption,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -161,18 +162,18 @@ private fun LockAppRow(
             .clickable { onEvent(SettingsEvent.OnLockClick) }
             .padding(16.dp),
     ) {
-        Text(
+        EthText(
             text = stringResource(Res.string.settings_lock_app),
-            style = MaterialTheme.typography.bodyLarge,
+            style = EthTextStyle.Body,
         )
-        Text(
+        EthText(
             text = stringResource(
                 when (appLockMethod) {
                     AppLockMethod.Pin -> Res.string.settings_lock_app_description
                     AppLockMethod.Password -> Res.string.settings_lock_app_description_password
                 },
             ),
-            style = MaterialTheme.typography.bodySmall,
+            style = EthTextStyle.Caption,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

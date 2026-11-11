@@ -20,18 +20,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,7 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -96,6 +90,12 @@ import me.sdi.ethwallet.resources.send_transfer_speed
 import me.sdi.ethwallet.resources.send_transfer_successful
 import me.sdi.ethwallet.ui.KnownToken
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
+import me.sdi.ethwallet.ui.designsystem.EthCard
+import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.ui.usdtOnMainnet
 import me.sdi.ethwallet.util.formatUsdCurrency
@@ -167,9 +167,9 @@ private fun SendScreenContent(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.send_title)) },
+                title = { EthText(stringResource(Res.string.send_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBackPress) {
+                    EthIconButton(onClick = onBackPress) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
@@ -220,10 +220,9 @@ private fun SendScreenContent(
             )
 
             Column {
-                Text(
+                EthText(
                     text = stringResource(Res.string.send_amount),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = EthTextStyle.Title,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 AmountInput(
@@ -258,12 +257,12 @@ private fun SendScreenContent(
                 enter = SECTION_ENTER,
                 exit = SECTION_EXIT,
             ) {
-                Button(
+                EthButton(
+                    text = stringResource(Res.string.send_clear_form),
                     onClick = { onEvent(SendEvent.OnClearFormClick) },
                     modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(Res.string.send_clear_form))
-                }
+                    style = EthButtonStyle.Secondary,
+                )
             }
         }
     }
@@ -277,10 +276,9 @@ private fun TokenSelector(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        Text(
+        EthText(
             text = stringResource(Res.string.send_token),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = EthTextStyle.Title,
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -291,7 +289,7 @@ private fun TokenSelector(
             FilterChip(
                 selected = selectedTokenContract == EthContractAddress,
                 onClick = { onTokenSelected(EthContractAddress) },
-                label = { Text(stringResource(Res.string.send_token_eth)) },
+                label = { EthText(stringResource(Res.string.send_token_eth)) },
                 leadingIcon = {
                     Icon(
                         painter = painterResource(Res.drawable.ic_eth_logo),
@@ -313,7 +311,7 @@ private fun TokenSelector(
                             "DAI" -> Res.string.send_token_dai
                             else -> null
                         }
-                        Text(nameRes?.let { stringResource(it) } ?: token.symbol)
+                        EthText(nameRes?.let { stringResource(it) } ?: token.symbol)
                     },
                     leadingIcon = {
                         Icon(
@@ -339,10 +337,9 @@ private fun GasSelector(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        Text(
+        EthText(
             text = stringResource(Res.string.send_transfer_speed),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = EthTextStyle.Title,
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -424,9 +421,9 @@ private fun CustomFeeEstimate(customFeeUsd: String?) {
     ) {
         Column {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
+            EthText(
                 text = stringResource(Res.string.send_custom_gas_network_fee, lastFeeUsd),
-                style = MaterialTheme.typography.bodySmall,
+                style = EthTextStyle.Caption,
             )
         }
     }
@@ -436,10 +433,10 @@ private fun CustomFeeEstimate(customFeeUsd: String?) {
 private fun GasChipLabel(labelRes: StringResource, feeUsd: String?) {
     val zeroFee = remember { formatUsdCurrency(BigDecimal.ZERO) }
     Column {
-        Text(stringResource(labelRes))
-        Text(
+        EthText(stringResource(labelRes))
+        EthText(
             text = stringResource(Res.string.send_fee_estimate, feeUsd ?: zeroFee),
-            style = MaterialTheme.typography.bodySmall,
+            style = EthTextStyle.Caption,
         )
     }
 }
@@ -453,31 +450,30 @@ private fun ReceiverAddressInput(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        Text(
+        EthText(
             text = stringResource(Res.string.send_receiver_address),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = EthTextStyle.Title,
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = addressState.value,
             onValueChange = onAddressChanged,
-            label = { Text(stringResource(Res.string.send_enter_receiver_address)) },
-            placeholder = { Text(stringResource(Res.string.send_address_placeholder)) },
+            label = { EthText(stringResource(Res.string.send_enter_receiver_address)) },
+            placeholder = { EthText(stringResource(Res.string.send_address_placeholder)) },
             isError = addressState.error != null,
-            supportingText = addressState.error?.let { { Text(it) } },
+            supportingText = addressState.error?.let { { EthText(it) } },
             trailingIcon = {
                 Row {
                     if (addressState.value.isNotEmpty()) {
-                        IconButton(onClick = { onAddressChanged("") }) {
+                        EthIconButton(onClick = { onAddressChanged("") }) {
                             Icon(
                                 painter = painterResource(Res.drawable.cancel_24px),
                                 contentDescription = stringResource(Res.string.send_clear_address),
                             )
                         }
                     }
-                    IconButton(
+                    EthIconButton(
                         onClick = onWalletPickerClick,
                         enabled = receiverWallets.isNotEmpty(),
                     ) {
@@ -506,25 +502,25 @@ private fun ReceiverWalletDropdownList(
     onWalletSelected: (EthAddress) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    EthCard(modifier = modifier.fillMaxWidth()) {
         Column {
-            Text(
+            EthText(
                 text = stringResource(Res.string.send_my_wallets),
-                style = MaterialTheme.typography.titleSmall,
+                style = EthTextStyle.Title,
                 modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp),
             )
             wallets.forEach { wallet ->
                 DropdownMenuItem(
                     text = {
                         Column {
-                            Text(
+                            EthText(
                                 text = wallet.label,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
-                            Text(
+                            EthText(
                                 text = wallet.address.toString(),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = EthTextStyle.Caption,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -551,13 +547,13 @@ private fun AmountInput(
     OutlinedTextField(
         value = amountState.value,
         onValueChange = onAmountChanged,
-        label = { Text(label) },
-        placeholder = { Text(placeholder) },
+        label = { EthText(label) },
+        placeholder = { EthText(placeholder) },
         isError = amountState.error != null,
-        supportingText = supportingText?.let { { Text(it) } },
+        supportingText = supportingText?.let { { EthText(it) } },
         trailingIcon = {
             if (amountState.value.isNotEmpty()) {
-                IconButton(onClick = { onAmountChanged("") }) {
+                EthIconButton(onClick = { onAmountChanged("") }) {
                     Icon(
                         painter = painterResource(Res.drawable.cancel_24px),
                         contentDescription = clearContentDescription,
@@ -580,22 +576,12 @@ private fun SendButton(
     onSendClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Button(
+    EthButton(
+        text = stringResource(if (loading) Res.string.send_sending else Res.string.send_transaction),
         onClick = onSendClick,
         enabled = enabled && !loading,
         modifier = modifier.fillMaxWidth(),
-    ) {
-        if (loading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-            )
-            Spacer(modifier = Modifier.size(8.dp))
-            Text(stringResource(Res.string.send_sending))
-        } else {
-            Text(stringResource(Res.string.send_transaction))
-        }
-    }
+    )
 }
 
 private class SendViewStateProvider : PreviewParameterProvider<SendViewState> {

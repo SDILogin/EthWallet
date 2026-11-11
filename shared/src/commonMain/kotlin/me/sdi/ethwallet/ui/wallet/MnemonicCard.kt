@@ -15,7 +15,6 @@ import androidx.compose.foundation.style.Style
 import androidx.compose.foundation.style.rememberUpdatedStyleState
 import androidx.compose.foundation.style.styleable
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -41,6 +40,8 @@ import kotlinx.coroutines.launch
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.mnemonic_content_description
 import me.sdi.ethwallet.resources.mnemonic_long_press_to_copy
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.stringResource
 
@@ -56,10 +57,7 @@ fun MnemonicCard(
     style: Style = Style,
 ) {
     val textMeasurer = rememberTextMeasurer()
-    val textStyle = MaterialTheme.typography.bodyMedium.copy(
-        color = MaterialTheme.colorScheme.onSurface,
-        fontSize = MaterialTheme.typography.bodyMedium.fontSize,
-    )
+    val textStyle = EthTextStyle.Body.textStyle.copy(color = MaterialTheme.colorScheme.onSurface)
     val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     val interactionSource = remember { MutableInteractionSource() }
@@ -121,10 +119,10 @@ fun MnemonicCard(
             }
 
             Spacer(modifier = Modifier.size(8.dp))
-            Text(
+            EthText(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 text = stringResource(Res.string.mnemonic_long_press_to_copy),
-                style = MaterialTheme.typography.labelSmall,
+                style = EthTextStyle.Caption,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.size(8.dp))
@@ -162,9 +160,9 @@ private fun IndexedText(
     textStyle: TextStyle,
     textMeasurer: TextMeasurer,
 ) {
-    Text(
+    EthText(
         text = word,
-        style = textStyle,
+        color = textStyle.color,
         textAlign = TextAlign.Center,
         modifier =
             Modifier

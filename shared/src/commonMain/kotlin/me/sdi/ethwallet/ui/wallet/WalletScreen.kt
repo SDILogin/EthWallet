@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui.wallet
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -22,19 +23,11 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -55,7 +48,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
@@ -82,6 +74,13 @@ import me.sdi.ethwallet.resources.wallet_tokens_erc20
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.components.shimmer
 import me.sdi.ethwallet.ui.daiOnSepolia
+import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
+import me.sdi.ethwallet.ui.designsystem.EthCard
+import me.sdi.ethwallet.ui.designsystem.EthCardTone
+import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.findKnownToken
 import me.sdi.ethwallet.ui.usdcOnSepolia
 import me.sdi.ethwallet.ui.usdtOnSepolia
@@ -91,6 +90,10 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+
+private const val TOKEN_SHIMMER_COUNT = 6
+private const val TWO_COLUMNS_MIN_WIDTH_DP = 600
+private const val THREE_COLUMNS_MIN_WIDTH_DP = 900
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -156,10 +159,10 @@ fun WalletScreenContent(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text(viewState.walletName) },
+                title = { EthText(text = viewState.walletName, style = EthTextStyle.Title) },
                 navigationIcon = if (showUpButton) {
                     {
-                        IconButton(onClick = onUpButtonClick) {
+                        EthIconButton(onClick = onUpButtonClick) {
                             Icon(
                                 painter = painterResource(Res.drawable.arrow_back_24px),
                                 contentDescription = stringResource(Res.string.back),
@@ -238,7 +241,7 @@ private fun TokensSection(
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier) {
+    EthCard(modifier = modifier) {
         Column {
             TokensHeader(
                 onEditButtonClick = onEditButtonClick,
@@ -246,33 +249,26 @@ private fun TokensSection(
             )
 
             BoxWithConstraints {
-                val spacing = 16.dp
-                val contentPadding = 16.dp
-                val minimumItemWidth = 300.dp
-                val availableWidth = maxWidth - contentPadding * 2
-                val columnCount = maxOf(
-                    1,
-                    ((availableWidth + spacing) / (minimumItemWidth + spacing)).toInt(),
-                )
-                val itemWidth = (availableWidth - spacing * (columnCount - 1)) / columnCount
+                val columnCount = when {
+                    maxWidth >= THREE_COLUMNS_MIN_WIDTH_DP.dp -> 3
+                    maxWidth >= TWO_COLUMNS_MIN_WIDTH_DP.dp -> 2
+                    else -> 1
+                }
+                val itemWidth = maxWidth / columnCount
 
                 FlowRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(contentPadding),
-                    horizontalArrangement = Arrangement.spacedBy(spacing),
-                    verticalArrangement = Arrangement.spacedBy(spacing),
+                    modifier = Modifier.fillMaxWidth(),
                     maxItemsInEachRow = columnCount,
                 ) {
                     if (viewState.balanceLoadState == WalletBalanceLoadState.Loading) {
-                        repeat(10) {
+                        repeat(TOKEN_SHIMMER_COUNT) {
                             Box(modifier = Modifier.width(itemWidth)) {
                                 TokenItemShimmer()
                             }
                         }
                     } else {
                         viewState.favoriteTokens.forEach { token ->
-                            TokenCard(
+                            TokenRow(
                                 token = token,
                                 onTokenClick = onTokenClick,
                                 modifier = Modifier.width(itemWidth),
@@ -295,23 +291,22 @@ private fun TokensHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.weight(1f)) {
-            BasicText(
+            EthText(
                 text = stringResource(Res.string.wallet_tokens_erc20),
+                style = EthTextStyle.Title,
                 autoSize = TextAutoSize.StepBased(
                     minFontSize = 12.sp,
                     maxFontSize = 20.sp,
-                ),
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
                 ),
                 maxLines = 1,
             )
         }
 
-        TextButton(onClick = { onEditButtonClick() }) {
-            Text(stringResource(Res.string.edit))
-        }
+        EthButton(
+            text = stringResource(Res.string.edit),
+            onClick = { onEditButtonClick() },
+            style = EthButtonStyle.Text,
+        )
     }
 }
 
@@ -320,11 +315,9 @@ private fun BalanceErrorCard(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    EthCard(
         modifier = modifier.padding(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
+        tone = EthCardTone.Error,
     ) {
         Column(
             modifier = Modifier
@@ -332,50 +325,35 @@ private fun BalanceErrorCard(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
+            EthText(
                 text = stringResource(Res.string.wallet_balance_error_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                style = EthTextStyle.Title,
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(Res.string.wallet_balance_error_message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
+            EthText(text = stringResource(Res.string.wallet_balance_error_message))
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onRetry) {
-                Text(stringResource(Res.string.wallet_retry))
-            }
+            EthButton(text = stringResource(Res.string.wallet_retry), onClick = onRetry)
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TokenCard(
+private fun TokenRow(
     token: FavoriteToken,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        onClick = { onTokenClick(token.address) },
-    ) {
-        TokenItem(
-            tokenAddress = token.address,
-            tokenName = token.name,
-            tokenSymbol = token.ticker,
-            tokenBalance = token.amount,
-            fiatValue = token.usdValue?.let { token.usdValueFormatted },
-            modifier = Modifier.padding(16.dp),
-        )
-    }
+    TokenItem(
+        tokenAddress = token.address,
+        tokenName = token.name,
+        tokenSymbol = token.ticker,
+        tokenBalance = token.amount,
+        fiatValue = token.usdValue?.let { token.usdValueFormatted },
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onTokenClick(token.address) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    )
 }
 
 @Composable
@@ -430,13 +408,10 @@ private fun CircularButtonWithTitle(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        IconButton(
+        EthIconButton(
             onClick = onClick,
             enabled = enabled,
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ),
+            filled = true,
         ) {
             Icon(
                 painter = icon,
@@ -444,9 +419,8 @@ private fun CircularButtonWithTitle(
                 tint = MaterialTheme.colorScheme.onPrimary,
             )
         }
-        Text(
+        EthText(
             text = title,
-            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.alpha(if (enabled) 1f else 0.6f),
         )
@@ -469,10 +443,9 @@ private fun CircularButtonWithTitleShimmer(title: String) {
                 .clip(RoundedCornerShape(8.dp))
                 .shimmer(),
         ) {
-            Text(
+            EthText(
                 text = title,
                 modifier = Modifier.alpha(0f),
-                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }
@@ -498,40 +471,35 @@ private fun TotalFiatBalanceCard(
                         .clip(RoundedCornerShape(8.dp))
                         .shimmer(),
                 ) {
-                    BasicText(
+                    EthText(
                         text = "\$00,000.00",
                         modifier = Modifier.alpha(0f),
+                        style = EthTextStyle.Headline,
+                        color = MaterialTheme.colorScheme.onBackground,
                         autoSize = TextAutoSize.StepBased(
                             minFontSize = 12.sp,
                             maxFontSize = 48.sp,
-                        ),
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground,
                         ),
                         maxLines = 1,
                     )
                 }
             }
             WalletFiatLoadState.Available -> {
-                BasicText(
+                EthText(
                     text = fiatBalance.orEmpty(),
+                    style = EthTextStyle.Headline,
+                    color = MaterialTheme.colorScheme.onBackground,
                     autoSize = TextAutoSize.StepBased(
                         minFontSize = 12.sp,
                         maxFontSize = 48.sp,
-                    ),
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
                     ),
                     maxLines = 1,
                 )
             }
             WalletFiatLoadState.Unavailable -> {
-                Text(
+                EthText(
                     text = stringResource(Res.string.wallet_fiat_unavailable),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    style = EthTextStyle.Title,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
             }
@@ -550,8 +518,9 @@ private fun TotalFiatBalanceCard(
         ) {
             val displayedEthBalance =
                 if (balanceLoadState == WalletBalanceLoadState.Loading) "0.000 ETH" else ethBalance
-            Text(
+            EthText(
                 text = displayedEthBalance,
+                style = EthTextStyle.Title,
                 modifier = Modifier
                     .alpha(if (balanceLoadState == WalletBalanceLoadState.Loading) 0f else 1f)
                     .clearAndSetSemantics {
@@ -559,15 +528,14 @@ private fun TotalFiatBalanceCard(
                             contentDescription = "ETH balance: $displayedEthBalance"
                         }
                     },
-                fontSize = 18.sp,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 maxLines = 1,
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
-        Text(
+        EthText(
             text = stringResource(Res.string.wallet_network, chainId.toNetworkName()),
-            fontSize = 14.sp,
+            style = EthTextStyle.Caption,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
         )
     }
@@ -608,29 +576,26 @@ private fun TokenItem(
         Spacer(modifier = Modifier.padding(horizontal = 8.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            EthText(
                 text = tokenName,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 18.sp,
+                style = EthTextStyle.Title,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
+            EthText(
                 text = tokenSymbol,
-                fontSize = 14.sp,
+                style = EthTextStyle.Caption,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             )
         }
 
         Column(horizontalAlignment = Alignment.End) {
-            Text(
+            EthText(
                 text = "$tokenBalance $tokenSymbol",
-                fontWeight = FontWeight.Medium,
-                fontSize = 18.sp,
+                style = EthTextStyle.Title,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
+            EthText(
                 text = fiatValue ?: stringResource(Res.string.wallet_fiat_unavailable),
-                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -639,13 +604,7 @@ private fun TokenItem(
 
 @Composable
 private fun TokensCardShimmer() {
-    Card(
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-    ) {
+    EthCard {
         Column(
             modifier = Modifier.padding(8.dp),
         ) {
@@ -668,13 +627,8 @@ private fun TokensCardShimmer() {
 
 @Composable
 private fun TokenItemShimmer() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-    ) {
-        Row(modifier = Modifier.padding(8.dp)) {
+    Column {
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
             Box(
                 modifier = Modifier
                     .size(48.dp)

@@ -15,16 +15,10 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -55,6 +49,12 @@ import me.sdi.ethwallet.resources.wallet_receive
 import me.sdi.ethwallet.resources.wallet_send
 import me.sdi.ethwallet.ui.ETH_MAINNET_CHAIN_ID
 import me.sdi.ethwallet.ui.ETH_SEPOLIA_CHAIN_ID
+import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
+import me.sdi.ethwallet.ui.designsystem.EthCard
+import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.usdcOnMainnet
 import org.jetbrains.compose.resources.painterResource
@@ -100,9 +100,9 @@ fun TokenDetailsScreenContent(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(viewState.name) },
+                title = { EthText(viewState.name) },
                 navigationIcon = {
-                    IconButton(onClick = onUpButtonClick) {
+                    EthIconButton(onClick = onUpButtonClick) {
                         Icon(painterResource(Res.drawable.arrow_back_24px), stringResource(Res.string.back))
                     }
                 },
@@ -124,41 +124,44 @@ fun TokenDetailsScreenContent(
                 modifier = Modifier.size(72.dp),
                 tint = Color.Unspecified,
             )
-            Text(viewState.symbol, style = MaterialTheme.typography.titleLarge)
-            Text(
+            EthText(viewState.symbol, style = EthTextStyle.Title)
+            EthText(
                 text = viewState.balance?.let { "$it ${viewState.symbol}" }
                     ?: stringResource(Res.string.token_details_unavailable),
-                style = MaterialTheme.typography.headlineLarge,
+                style = EthTextStyle.Headline,
             )
-            Text(
+            EthText(
                 text = viewState.fiatValue ?: stringResource(Res.string.wallet_fiat_unavailable),
-                style = MaterialTheme.typography.titleMedium,
+                style = EthTextStyle.Title,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(
                 modifier = Modifier.widthIn(max = 420.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Button(onClick = onSendButtonClick, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(Res.string.wallet_send))
-                }
+                EthButton(
+                    text = stringResource(Res.string.wallet_send),
+                    onClick = onSendButtonClick,
+                    modifier = Modifier.weight(1f),
+                )
                 Spacer(modifier = Modifier.width(16.dp))
-                OutlinedButton(onClick = onReceiveButtonClick, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(Res.string.wallet_receive))
-                }
+                EthButton(
+                    text = stringResource(Res.string.wallet_receive),
+                    onClick = onReceiveButtonClick,
+                    modifier = Modifier.weight(1f),
+                    style = EthButtonStyle.Secondary,
+                )
             }
-            Card(
+            EthCard(
                 modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Text(
+                    EthText(
                         stringResource(Res.string.token_details_information),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = EthTextStyle.Title,
                     )
                     TokenInformationRow(
                         stringResource(Res.string.token_details_network),
@@ -179,11 +182,9 @@ fun TokenDetailsScreenContent(
                     )
                 }
             }
-            Card(
+            EthCard(
                 onClick = onHistoryButtonClick,
                 modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -203,10 +204,10 @@ fun TokenDetailsScreenContent(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Text(stringResource(Res.string.history_title), style = MaterialTheme.typography.titleMedium)
-                        Text(
+                        EthText(stringResource(Res.string.history_title), style = EthTextStyle.Title)
+                        EthText(
                             stringResource(Res.string.token_details_history_description),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = EthTextStyle.Body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -227,9 +228,9 @@ private fun TokenInformationRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        EthText(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.width(16.dp))
-        Text(value)
+        EthText(value)
     }
 }
 

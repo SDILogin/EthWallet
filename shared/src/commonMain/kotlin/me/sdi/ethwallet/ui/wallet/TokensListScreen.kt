@@ -13,11 +13,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,6 +39,8 @@ import me.sdi.ethwallet.resources.drag_handle_24px
 import me.sdi.ethwallet.resources.tokens_list_reorder
 import me.sdi.ethwallet.resources.tokens_list_title
 import me.sdi.ethwallet.ui.ETH_SEPOLIA_CHAIN_ID
+import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.DrawableResource
@@ -79,9 +79,9 @@ private fun TokensListScreenContent(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.tokens_list_title)) },
+                title = { EthText(stringResource(Res.string.tokens_list_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBackPressed) {
+                    EthIconButton(onClick = onBackPressed) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
@@ -206,8 +206,8 @@ private fun TokenListItem(
                 )
             }
         },
-        headlineContent = { Text(text = name) },
-        supportingContent = { Text(text = symbol) },
+        headlineContent = { EthText(text = name) },
+        supportingContent = { EthText(text = symbol) },
         trailingContent = {
             Switch(
                 checked = checked,

@@ -10,18 +10,12 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,6 +44,10 @@ import me.sdi.ethwallet.resources.import_wallet_title
 import me.sdi.ethwallet.resources.wallet_label
 import me.sdi.ethwallet.resources.wallet_label_placeholder
 import me.sdi.ethwallet.resources.wallet_label_supporting
+import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -76,9 +74,9 @@ fun ImportWalletScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.import_wallet_title)) },
+                title = { EthText(stringResource(Res.string.import_wallet_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onUpButtonClick) {
+                    EthIconButton(onClick = onUpButtonClick) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
@@ -107,17 +105,17 @@ fun ImportWalletScreen(
                 ) {
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(
+                    EthText(
                         text = stringResource(Res.string.import_wallet_enter_recovery_phrase),
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = EthTextStyle.Headline,
                         textAlign = TextAlign.Center,
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
+                    EthText(
                         text = stringResource(Res.string.import_wallet_instruction),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = EthTextStyle.Body,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.widthIn(max = 420.dp),
                     )
@@ -127,14 +125,14 @@ fun ImportWalletScreen(
                     OutlinedTextField(
                         value = viewState.label,
                         onValueChange = { viewModel.onEvent(ImportWalletEvent.LabelChanged(it)) },
-                        label = { Text(stringResource(Res.string.wallet_label)) },
+                        label = { EthText(stringResource(Res.string.wallet_label)) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .widthIn(max = 420.dp)
                             .testTag("wallet-label-input"),
                         keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
-                        placeholder = { Text(stringResource(Res.string.wallet_label_placeholder)) },
-                        supportingText = { Text(stringResource(Res.string.wallet_label_supporting)) },
+                        placeholder = { EthText(stringResource(Res.string.wallet_label_placeholder)) },
+                        supportingText = { EthText(stringResource(Res.string.wallet_label_supporting)) },
                         isError = viewState.label.isNotEmpty() && !isWalletLabelValid(normalizeWalletLabel(viewState.label)),
                         enabled = !viewState.isLoading,
                         singleLine = true,
@@ -153,7 +151,7 @@ fun ImportWalletScreen(
                         OutlinedTextField(
                             value = viewState.mnemonic,
                             onValueChange = { viewModel.onEvent(ImportWalletEvent.MnemonicChanged(it)) },
-                            label = { Text(stringResource(Res.string.import_wallet_recovery_phrase_label)) },
+                            label = { EthText(stringResource(Res.string.import_wallet_recovery_phrase_label)) },
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
@@ -165,8 +163,8 @@ fun ImportWalletScreen(
                                     autoCorrectEnabled = false,
                                     imeAction = ImeAction.Done,
                                 ),
-                            placeholder = { Text(stringResource(Res.string.import_wallet_recovery_phrase_placeholder)) },
-                            supportingText = { Text(supportingText) },
+                            placeholder = { EthText(stringResource(Res.string.import_wallet_recovery_phrase_placeholder)) },
+                            supportingText = { EthText(supportingText) },
                             isError = viewState.isError,
                             enabled = !viewState.isLoading,
                             maxLines = 3,
@@ -177,7 +175,8 @@ fun ImportWalletScreen(
                 }
                 Spacer(modifier = Modifier.weight(1f))
             }
-            Button(
+            EthButton(
+                text = stringResource(Res.string.import_wallet_button),
                 onClick = { viewModel.onEvent(ImportWalletEvent.ImportClicked) },
                 modifier =
                     Modifier
@@ -185,18 +184,9 @@ fun ImportWalletScreen(
                         .fillMaxWidth()
                         .heightIn(min = 56.dp)
                         .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
                 enabled = viewState.isImportEnabled && !viewState.isLoading,
-            ) {
-                if (viewState.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.height(24.dp))
-                } else {
-                    Text(
-                        text = stringResource(Res.string.import_wallet_button),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
+                loading = viewState.isLoading,
+            )
         }
     }
 }

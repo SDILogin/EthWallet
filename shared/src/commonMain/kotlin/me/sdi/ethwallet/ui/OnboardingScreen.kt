@@ -9,19 +9,14 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.ensureActive
@@ -33,6 +28,9 @@ import me.sdi.ethwallet.resources.ic_eth_logo
 import me.sdi.ethwallet.resources.onboarding_title
 import me.sdi.ethwallet.resources.password_create_button
 import me.sdi.ethwallet.resources.pin_create_title
+import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.getKoin
@@ -75,36 +73,30 @@ fun OnboardingScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            Text(
+            EthText(
                 text = stringResource(Res.string.onboarding_title),
                 textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.headlineLarge,
+                style = EthTextStyle.Headline,
             )
 
             Spacer(Modifier.height(16.dp))
 
             Spacer(Modifier.weight(1f))
 
-            FilledTonalButton(
+            EthButton(
+                text = stringResource(
+                    when (appLockMethod) {
+                        AppLockMethod.Pin -> Res.string.pin_create_title
+                        AppLockMethod.Password -> Res.string.password_create_button
+                    },
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 56.dp)
                     .widthIn(max = 320.dp)
                     .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
                 onClick = onContinueClick,
-            ) {
-                Text(
-                    text = stringResource(
-                        when (appLockMethod) {
-                            AppLockMethod.Pin -> Res.string.pin_create_title
-                            AppLockMethod.Password -> Res.string.password_create_button
-                        },
-                    ),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
+            )
         }
     }
 }
