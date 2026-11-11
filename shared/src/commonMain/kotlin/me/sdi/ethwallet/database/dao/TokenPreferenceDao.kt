@@ -23,7 +23,7 @@ interface TokenPreferenceDao {
 
     @Transaction
     suspend fun replace(chainId: Long, walletAddress: String, preferences: List<TokenPreferenceEntity>) {
-        delete(chainId, walletAddress)
+        delete(chainId = chainId, walletAddress = walletAddress)
         insertAll(preferences)
     }
 }

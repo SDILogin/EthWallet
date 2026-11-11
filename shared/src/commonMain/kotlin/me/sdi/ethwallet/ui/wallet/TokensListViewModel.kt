@@ -34,16 +34,11 @@ class TokensListViewModel(
     private val state = MutableStateFlow(TokensListViewState(tokenListItems = emptyList()))
 
     val viewState: StateFlow<TokensListViewState> = state
-        .onStart {
-            loadTokenListItems()
-            viewModelScope.launch { savePendingPreferences() }
-        }
+        .onStart { loadTokenListItems() }
         .stateIn(viewModelScope, SharingStarted.Lazily, state.value)
 
     private val newsChannel = Channel<TokensListNews>(Channel.BUFFERED)
     val news: Flow<TokensListNews> = newsChannel.receiveAsFlow()
-
-    private val pendingPreferences = Channel<List<TokenPreference>>(Channel.CONFLATED)
 
     fun onEvent(event: TokensListEvent) {
         Logger.debug(TAG) { "onEvent: $event" }
@@ -95,11 +90,7 @@ class TokensListViewModel(
         val preferences = state.value.tokenListItems.map {
             TokenPreference(tokenAddress = it.knownToken.ethAddress, visible = it.showOnMain)
         }
-        pendingPreferences.trySend(preferences)
-    }
-
-    private suspend fun savePendingPreferences() {
-        for (preferences in pendingPreferences) {
+        viewModelScope.launch {
             try {
                 // A save that already started must finish when the user leaves the screen right after a change.
                 withContext(NonCancellable) {
