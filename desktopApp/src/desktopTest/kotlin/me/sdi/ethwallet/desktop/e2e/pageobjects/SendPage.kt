@@ -6,6 +6,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
@@ -35,7 +37,7 @@ class SendPage(private val rule: ComposeTestRule) {
 
     fun selectWallet(label: String) {
         rule.awaitNode(hasText("My wallets"))
-        rule.clickNode(hasText(label) and hasClickAction())
+        rule.clickNode(hasText(label) and hasClickAction() and hasAnyAncestor(hasAnyChild(hasText("My wallets"))))
     }
 
     fun inputEthAmount(amount: String) {

@@ -2,12 +2,14 @@ package me.sdi.ethwallet.desktop
 
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
@@ -34,6 +36,7 @@ import org.junit.rules.RuleChain
 import org.junit.rules.TemporaryFolder
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
+import org.koin.core.module.Module
 import org.koin.dsl.koinConfiguration
 import org.koin.dsl.module
 
@@ -53,6 +56,49 @@ class DesktopAppTest {
 
     @Test
     fun newUserSetsAWalletPasswordAndUnlocksWithIt() {
+        val modules = testModules()
+        lateinit var pinSession: PinSession
+        compose.setContent {
+            KoinApplication(configuration = koinConfiguration { modules(modules) }) {
+                pinSession = koinInject()
+                EthWalletApp()
+            }
+        }
+        createWalletPassword()
+
+        compose.runOnIdle { pinSession.clear() }
+        awaitText("Enter your wallet password")
+        compose.onNode(hasSetTextAction() and hasText("Password")).performTextInput("wrong password")
+        compose.onNodeWithText("Unlock").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodes(hasSetTextAction() and SemanticsMatcher.keyIsDefined(SemanticsProperties.Error))
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+        assertFalse("A wrong password must keep the app locked", pinSession.isUnlocked.value)
+        compose.onNode(hasSetTextAction()).performTextClearance()
+        compose.onNode(hasSetTextAction()).performTextInput(PASSWORD)
+        compose.onNodeWithText("Unlock").performClick()
+        awaitText("My Wallets")
+    }
+
+    @Test
+    fun settingsOpensInFullScreenOnWideWindow() {
+        val modules = testModules()
+        compose.setContent {
+            KoinApplication(configuration = koinConfiguration { modules(modules) }) {
+                EthWalletApp()
+            }
+        }
+        createWalletPassword()
+        awaitText("No wallet has been selected yet")
+
+        compose.onNodeWithContentDescription("Settings").performClick()
+        awaitText("Lock app")
+        compose.onAllNodesWithText("My Wallets").assertCountEquals(0)
+    }
+
+    private fun testModules(): List<Module> {
         val dataStore = PreferenceDataStoreFactory.create(scope = dataStoreScope) {
             temporaryFolder.root.resolve("pin.preferences_pb")
         }
@@ -68,15 +114,10 @@ class DesktopAppTest {
             explorerBaseUrl = null,
             transactionHistoryApiBaseUrl = "http://127.0.0.1:1",
         )
-        lateinit var pinSession: PinSession
+        return appModules(chainConfig) + testStorage
+    }
 
-        compose.setContent {
-            KoinApplication(configuration = koinConfiguration { modules(appModules(chainConfig) + testStorage) }) {
-                pinSession = koinInject()
-                EthWalletApp()
-            }
-        }
-
+    private fun createWalletPassword() {
         awaitText("ETH Wallet")
         compose.onNodeWithText("Create password").assertIsDisplayed().performClick()
         awaitText("Create a wallet password")
@@ -86,21 +127,6 @@ class DesktopAppTest {
             compose.onAllNodes(hasText("Continue") and isEnabled()).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Continue").performClick()
-        awaitText("My Wallets")
-
-        compose.runOnIdle { pinSession.clear() }
-        awaitText("Enter your wallet password")
-        compose.onNode(hasSetTextAction() and hasText("Password")).performTextInput("wrong password")
-        compose.onNodeWithText("Unlock").performClick()
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodes(hasSetTextAction() and SemanticsMatcher.keyIsDefined(SemanticsProperties.Error))
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
-        assertFalse("A wrong password must keep the app locked", pinSession.isUnlocked.value)
-        compose.onNode(hasSetTextAction()).performTextClearance()
-        compose.onNode(hasSetTextAction()).performTextInput(PASSWORD)
-        compose.onNodeWithText("Unlock").performClick()
         awaitText("My Wallets")
     }
 
