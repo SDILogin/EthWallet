@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "634d48ede168aceff1cda2030b103e19",
+    "identityHash": "2c548a0e144189c020a47802c98cf63f",
     "entities": [
       {
         "tableName": "wallets",
@@ -212,11 +212,55 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_transaction_history_chain_id_wallet_address` ON `${TABLE_NAME}` (`chain_id`, `wallet_address`)"
           }
         ]
+      },
+      {
+        "tableName": "token_preferences",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chain_id` INTEGER NOT NULL, `wallet_address` TEXT NOT NULL, `token_address` TEXT NOT NULL, `position` INTEGER NOT NULL, `visible` INTEGER NOT NULL, PRIMARY KEY(`chain_id`, `wallet_address`, `token_address`))",
+        "fields": [
+          {
+            "fieldPath": "chainId",
+            "columnName": "chain_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "walletAddress",
+            "columnName": "wallet_address",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tokenAddress",
+            "columnName": "token_address",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "visible",
+            "columnName": "visible",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "chain_id",
+            "wallet_address",
+            "token_address"
+          ]
+        }
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '634d48ede168aceff1cda2030b103e19')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2c548a0e144189c020a47802c98cf63f')"
     ]
   }
 }

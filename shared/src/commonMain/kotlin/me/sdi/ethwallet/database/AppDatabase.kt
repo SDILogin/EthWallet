@@ -1,6 +1,5 @@
 package me.sdi.ethwallet.database
 
-import androidx.room.AutoMigration
 import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
@@ -24,9 +23,8 @@ import me.sdi.ethwallet.database.entity.WalletEntity
         TransferHistoryEntity::class,
         TokenPreferenceEntity::class,
     ],
-    version = 2,
+    version = 1,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {
