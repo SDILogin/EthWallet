@@ -25,7 +25,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -95,6 +94,7 @@ import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
 import me.sdi.ethwallet.ui.designsystem.EthCard
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextField
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.ui.usdtOnMainnet
@@ -456,10 +456,10 @@ private fun ReceiverAddressInput(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(
+        EthTextField(
             value = addressState.value,
             onValueChange = onAddressChanged,
-            label = { EthText(stringResource(Res.string.send_enter_receiver_address)) },
+            label = stringResource(Res.string.send_enter_receiver_address),
             placeholder = { EthText(stringResource(Res.string.send_address_placeholder)) },
             isError = addressState.error != null,
             supportingText = addressState.error?.let { { EthText(it) } },
@@ -544,10 +544,10 @@ private fun AmountInput(
     modifier: Modifier = Modifier,
     keyboardType: KeyboardType = KeyboardType.Decimal,
 ) {
-    OutlinedTextField(
+    EthTextField(
         value = amountState.value,
         onValueChange = onAmountChanged,
-        label = { EthText(label) },
+        label = label,
         placeholder = { EthText(placeholder) },
         isError = amountState.error != null,
         supportingText = supportingText?.let { { EthText(it) } },

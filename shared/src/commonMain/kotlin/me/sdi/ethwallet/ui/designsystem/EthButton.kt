@@ -1,16 +1,24 @@
 package me.sdi.ethwallet.ui.designsystem
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
+
+private const val BUTTON_MIN_HEIGHT_DP = 52
 
 /**
  * Primary: the main action of a screen. Secondary: an alternative action.
@@ -19,7 +27,8 @@ import androidx.compose.ui.unit.dp
 enum class EthButtonStyle { Primary, Secondary, Text }
 
 /**
- * The only labeled button of the app. Loading replaces the label with a spinner.
+ * The only labeled button of the app. Loading ignores clicks, keeps the enabled colors
+ * and the width, and shows a spinner over the hidden label.
  */
 @Composable
 fun EthButton(
@@ -31,17 +40,58 @@ fun EthButton(
     loading: Boolean = false,
 ) {
     val label: @Composable () -> Unit = {
-        if (loading) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-        } else {
-            EthText(text = text)
+        Box(contentAlignment = Alignment.Center) {
+            EthText(text = text, modifier = Modifier.alpha(if (loading) 0f else 1f))
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = LocalContentColor.current,
+                )
+            }
         }
     }
+    val isEnabled = enabled && !loading
     when (style) {
-        EthButtonStyle.Primary -> Button(onClick = onClick, modifier = modifier, enabled = enabled, content = { label() })
-        EthButtonStyle.Secondary ->
-            OutlinedButton(onClick = onClick, modifier = modifier, enabled = enabled, content = { label() })
-        EthButtonStyle.Text -> TextButton(onClick = onClick, modifier = modifier, enabled = enabled, content = { label() })
+        EthButtonStyle.Primary -> Button(
+            onClick = onClick,
+            modifier = modifier.heightIn(min = BUTTON_MIN_HEIGHT_DP.dp),
+            enabled = isEnabled,
+            colors = ButtonDefaults.buttonColors().let {
+                if (loading) {
+                    it.copy(disabledContainerColor = it.containerColor, disabledContentColor = it.contentColor)
+                } else {
+                    it
+                }
+            },
+            content = { label() },
+        )
+        EthButtonStyle.Secondary -> OutlinedButton(
+            onClick = onClick,
+            modifier = modifier.heightIn(min = BUTTON_MIN_HEIGHT_DP.dp),
+            enabled = isEnabled,
+            colors = ButtonDefaults.outlinedButtonColors().let {
+                if (loading) {
+                    it.copy(disabledContainerColor = it.containerColor, disabledContentColor = it.contentColor)
+                } else {
+                    it
+                }
+            },
+            content = { label() },
+        )
+        EthButtonStyle.Text -> TextButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = isEnabled,
+            colors = ButtonDefaults.textButtonColors().let {
+                if (loading) {
+                    it.copy(disabledContainerColor = it.containerColor, disabledContentColor = it.contentColor)
+                } else {
+                    it
+                }
+            },
+            content = { label() },
+        )
     }
 }
 
@@ -60,6 +110,8 @@ fun EthIconButton(
         IconButtonDefaults.iconButtonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
         )
     } else {
         IconButtonDefaults.iconButtonColors()

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -18,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.ensureActive
 import me.sdi.ethwallet.Logger
@@ -28,9 +29,11 @@ import me.sdi.ethwallet.resources.ic_eth_logo
 import me.sdi.ethwallet.resources.onboarding_title
 import me.sdi.ethwallet.resources.password_create_button
 import me.sdi.ethwallet.resources.pin_create_title
+import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
+import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.getKoin
@@ -53,6 +56,19 @@ fun OnboardingScreen(
         }
     }
 
+    OnboardingScreenContent(
+        appLockMethod = appLockMethod,
+        onContinueClick = onContinueClick,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun OnboardingScreenContent(
+    appLockMethod: AppLockMethod,
+    onContinueClick: () -> Unit,
+    modifier: Modifier,
+) {
     Scaffold(modifier = modifier) { paddingValues ->
         Column(
             modifier = Modifier
@@ -91,12 +107,29 @@ fun OnboardingScreen(
                     },
                 ),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 56.dp)
+                    .padding(horizontal = 16.dp)
                     .widthIn(max = 320.dp)
-                    .padding(horizontal = 16.dp),
+                    .fillMaxWidth(),
                 onClick = onContinueClick,
             )
         }
+    }
+}
+
+private class AppLockMethodProvider : PreviewParameterProvider<AppLockMethod> {
+    override val values = AppLockMethod.entries.asSequence()
+}
+
+@FormFactorPreviews
+@Composable
+private fun OnboardingScreenContentPreview(
+    @PreviewParameter(AppLockMethodProvider::class) appLockMethod: AppLockMethod,
+) {
+    EthWalletTheme {
+        OnboardingScreenContent(
+            appLockMethod = appLockMethod,
+            onContinueClick = {},
+            modifier = Modifier,
+        )
     }
 }
