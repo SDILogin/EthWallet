@@ -37,8 +37,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.navigation3.LocalListDetailSceneScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -98,7 +96,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3AdaptiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletsListScreen(
     selectedWalletAddress: EthAddress?,
@@ -113,7 +111,6 @@ fun WalletsListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val toastManager = rememberToastManager()
     val errorMessage = stringResource(Res.string.error_something_went_wrong)
-    val isListDetailLayout = LocalListDetailSceneScope.current != null
 
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
@@ -128,7 +125,6 @@ fun WalletsListScreen(
         modifier = modifier,
         uiState = uiState,
         selectedWalletAddress = selectedWalletAddress,
-        isListDetailLayout = isListDetailLayout,
         onWalletSelected = onWalletSelected,
         onEvent = viewModel::onEvent,
         onImportWallet = onImportWallet,
@@ -143,7 +139,6 @@ private fun WalletsListScreenContent(
     modifier: Modifier,
     uiState: WalletsListUiState,
     selectedWalletAddress: EthAddress?,
-    isListDetailLayout: Boolean,
     onWalletSelected: (EthAddress) -> Unit,
     onEvent: (WalletsListEvent) -> Unit,
     onImportWallet: () -> Unit,
@@ -285,7 +280,7 @@ private fun WalletsListScreenContent(
                         WalletCard(
                             modifier = Modifier.fillMaxWidth(),
                             item = item,
-                            isSelected = isListDetailLayout && item.wallet.address == selectedWalletAddress,
+                            isSelected = item.wallet.address == selectedWalletAddress,
                             onWalletClicked = { onWalletSelected(item.wallet.address) },
                             onDeleteClicked = { onEvent(WalletsListEvent.OnDeleteWalletClick(item.wallet.address)) },
                             onRenameClicked = { onEvent(WalletsListEvent.OnRenameWalletClick(item.wallet)) },
@@ -530,7 +525,6 @@ private fun WalletsListScreenPreview() {
                 isLoading = false,
             ),
             selectedWalletAddress = null,
-            isListDetailLayout = false,
             onWalletSelected = {},
             onEvent = {},
             onImportWallet = {},
