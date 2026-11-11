@@ -19,7 +19,7 @@ val StyleScope.typography: Typography
 @OptIn(ExperimentalFoundationStyleApi::class)
 object ComponentStyles {
     val mnemonicCardStyle = Style {
-        background(colors.surfaceVariant)
+        background(colors.surfaceContainer)
         shape(RoundedCornerShape(16.dp))
         borderWidth(1.dp)
         borderColor(colors.outline)

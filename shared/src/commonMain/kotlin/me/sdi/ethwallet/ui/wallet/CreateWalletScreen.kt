@@ -293,7 +293,7 @@ private fun SecurityWarning() {
             Icon(
                 painter = painterResource(Res.drawable.warning_24px),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
             )
             Spacer(modifier = Modifier.width(12.dp))
             EthText(

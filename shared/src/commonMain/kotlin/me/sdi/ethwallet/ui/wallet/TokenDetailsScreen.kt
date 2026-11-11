@@ -198,7 +198,7 @@ fun TokenDetailsScreenContent(
                             .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
                             .padding(12.dp)
                             .size(24.dp),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                     Column(
                         modifier = Modifier.weight(1f),

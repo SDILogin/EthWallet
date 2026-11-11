@@ -70,6 +70,7 @@ fun EthButton(
             onClick = onClick,
             modifier = modifier.heightIn(min = BUTTON_MIN_HEIGHT_DP.dp),
             enabled = isEnabled,
+            border = ButtonDefaults.outlinedButtonBorder(enabled = enabled),
             colors = ButtonDefaults.outlinedButtonColors().let {
                 if (loading) {
                     it.copy(disabledContainerColor = it.containerColor, disabledContentColor = it.contentColor)
