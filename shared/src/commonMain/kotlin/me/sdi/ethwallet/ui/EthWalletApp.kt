@@ -173,7 +173,7 @@ fun EthWalletApp() {
                         activeWalletAddress = ethAddress.toString()
                     },
                     onWalletDeleted = { address ->
-                        if (address.toString() == activeWalletAddress) {
+                        if (address == activeWalletAddress?.let(::EthAddress)) {
                             popToWalletsList()
                             activeWalletAddress = null
                         }

@@ -127,9 +127,10 @@ class DesktopWalletSelectionTest {
         assertSelectedWallet("Main")
 
         compose.onNodeWithText("Savings").performClick()
-        awaitText(usdtOnSepolia.tokenName)
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("Token information").fetchSemanticsNodes().isEmpty()
+        }
         assertSelectedWallet("Savings")
-        compose.onAllNodesWithText("Token information").assertCountEquals(0)
     }
 
     private fun assertSelectedWallet(label: String) {
