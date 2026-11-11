@@ -12,6 +12,10 @@ import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy.C
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +70,13 @@ fun EthWalletApp() {
             },
             Destination.SplashScreen,
         )
+        var activeWalletAddress by rememberSaveable { mutableStateOf<String?>(null) }
+
+        fun popToWalletsList() {
+            val walletsListIndex = backStack.indexOf(Destination.WalletsListScreen)
+            check(walletsListIndex >= 0)
+            backStack.subList(walletsListIndex + 1, backStack.size).clear()
+        }
 
         val koin = getKoin()
         val appLockMethod = koin.get<AppLockMethod>()
@@ -82,6 +93,7 @@ fun EthWalletApp() {
                 .distinctUntilChanged()
                 .collect { showLockScreen ->
                     if (showLockScreen) {
+                        activeWalletAddress = null
                         backStack.clear()
                         backStack.add(Destination.LockScreen)
                     }
@@ -149,26 +161,21 @@ fun EthWalletApp() {
                     },
                 ),
             ) {
-                val selectedWalletAddress = (backStack.lastOrNull() as? Destination.WalletScreen)
-                    ?.ethAddress
-                    ?.let(::EthAddress)
                 WalletsListScreen(
                     modifier = Modifier.fillMaxSize(),
-                    selectedWalletAddress = selectedWalletAddress,
+                    selectedWalletAddress = activeWalletAddress?.let(::EthAddress),
                     onWalletSelected = { ethAddress ->
                         val destination = Destination.WalletScreen(ethAddress = ethAddress.toString())
-                        val currentDestination = backStack.lastOrNull()
-                        if (currentDestination == destination) {
-                            return@WalletsListScreen
+                        if (backStack.lastOrNull() != destination) {
+                            popToWalletsList()
+                            backStack.add(destination)
                         }
-                        if (currentDestination is Destination.WalletScreen) {
-                            backStack.removeLastOrNull()
-                        }
-                        backStack.add(destination)
+                        activeWalletAddress = ethAddress.toString()
                     },
                     onWalletDeleted = { address ->
-                        if ((backStack.lastOrNull() as? Destination.WalletScreen)?.ethAddress == address.toString()) {
-                            backStack.removeLastOrNull()
+                        if (address == activeWalletAddress?.let(::EthAddress)) {
+                            popToWalletsList()
+                            activeWalletAddress = null
                         }
                     },
                     onImportWallet = { backStack.add(Destination.ImportWalletScreen) },
@@ -185,6 +192,7 @@ fun EthWalletApp() {
                     modifier = Modifier.fillMaxSize().systemBarsPadding(),
                     onUpButtonClick = { backStack.removeLastOrNull() },
                     onMnemonicSaved = {
+                        activeWalletAddress = null
                         backStack.clear()
                         backStack.add(Destination.WalletsListScreen)
                     },
@@ -199,6 +207,7 @@ fun EthWalletApp() {
                     modifier = Modifier.fillMaxSize().systemBarsPadding(),
                     onUpButtonClick = { backStack.removeLastOrNull() },
                     onWalletImported = {
+                        activeWalletAddress = null
                         backStack.clear()
                         backStack.add(Destination.WalletsListScreen)
                     },

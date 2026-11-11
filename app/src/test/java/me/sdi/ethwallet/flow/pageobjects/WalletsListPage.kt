@@ -1,6 +1,8 @@
 package me.sdi.ethwallet.flow.pageobjects
 
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -58,6 +60,16 @@ class WalletsListPage(private val composeTestRule: ComposeTestRule) {
 
     fun assertSelectedIndicatorIsHidden() {
         composeTestRule.onAllNodesWithContentDescription("Selected wallet").assertCountEquals(0)
+    }
+
+    fun assertSelectedWallet(label: String) {
+        composeTestRule.onAllNodes(hasContentDescription("Selected wallet")).assertCountEquals(1)
+        composeTestRule.onNode(hasText(label) and hasContentDescription("Selected wallet")).assertExists()
+    }
+
+    fun deleteWallet(label: String) {
+        composeTestRule.clickContentDescription("More options for $label")
+        composeTestRule.clickText("Delete")
     }
 
     fun clickWallet(label: String) {
