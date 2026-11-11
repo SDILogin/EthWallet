@@ -28,6 +28,7 @@ import me.sdi.ethwallet.database.AppDatabase
 import me.sdi.ethwallet.database.DesktopDatabaseBuilder
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
+import me.sdi.ethwallet.database.dao.TokenPreferenceDao
 import me.sdi.ethwallet.database.dao.TransferHistoryDao
 import me.sdi.ethwallet.database.dao.WalletDao
 import org.koin.core.module.Module
@@ -45,6 +46,7 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single<TokenBalanceDao> { get<AppDatabase>().tokenBalanceDao() }
     single<FiatRateDao> { get<AppDatabase>().fiatRateDao() }
     single<TransferHistoryDao> { get<AppDatabase>().transferHistoryDao() }
+    single<TokenPreferenceDao> { get<AppDatabase>().tokenPreferenceDao() }
 
     single<PrivateKeyEncryptor> { SoftwarePrivateKeyEncryptor(pinSession = get()) }
 

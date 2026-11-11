@@ -15,6 +15,8 @@ import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
+import me.sdi.ethwallet.data.repository.TokenPreference
+import me.sdi.ethwallet.data.repository.TokenPreferenceRepositoryInMemory
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.database.entity.WalletEntity
 import me.sdi.ethwallet.fakes.FakeEthManager
@@ -41,6 +43,7 @@ class WalletViewModelTest {
     private lateinit var viewModel: WalletViewModel
     private lateinit var walletDao: FakeWalletDao
     private lateinit var walletRepository: WalletRepository
+    private lateinit var tokenPreferenceRepository: TokenPreferenceRepositoryInMemory
 
     private val testAddress = EthAddress("0x1234567890123456789012345678901234567890")
     private val chainConfig = ChainConfig(
@@ -93,6 +96,7 @@ class WalletViewModelTest {
             privateKeyEncryptor = FakePrivateKeyEncryptor(),
             historyInitializationStore = HistoryInitializationStoreInMemory(),
         )
+        tokenPreferenceRepository = TokenPreferenceRepositoryInMemory()
     }
 
     @AfterTest
@@ -107,6 +111,7 @@ class WalletViewModelTest {
             fiatRateProvider = fiatRateProvider,
             chainConfig = chainConfig,
             walletRepository = walletRepository,
+            tokenPreferenceRepository = tokenPreferenceRepository,
         )
     }
 
@@ -414,5 +419,66 @@ class WalletViewModelTest {
 
         assertEquals(WalletNews.ShowErrorMessage, viewModel.news.first())
         assertNull(withTimeoutOrNull(1) { viewModel.news.first() })
+    }
+
+    @Test
+    fun token_preferences_define_order_and_visibility_of_favorite_tokens() = runTest(testDispatcher) {
+        tokenPreferenceRepository.update(
+            testAddress,
+            listOf(
+                TokenPreference(daiOnMainnet.ethAddress, visible = true),
+                TokenPreference(usdtOnMainnet.ethAddress, visible = false),
+            ),
+        )
+        balanceFlow.value = mapOf(
+            EthContractAddress to BigInteger("1000000000000000000"),
+            usdtOnMainnet.ethAddress to BigInteger("1000000"),
+        )
+        fiatRateFlow.value = mapOf(
+            EthContractAddress to BigDecimal("2000"),
+            usdtOnMainnet.ethAddress to BigDecimal.ONE,
+        )
+
+        createViewModel()
+        advanceUntilIdle()
+
+        val state = viewModel.viewState.value
+        assertEquals(listOf("DAI", "USDC"), state.favoriteTokens.map { it.ticker })
+        assertEquals("$2,001.00", state.totalBalanceUsd, "Hidden tokens still count toward the total balance")
+    }
+
+    @Test
+    fun token_preference_change_updates_favorite_tokens_at_once() = runTest(testDispatcher) {
+        balanceFlow.value = mapOf(EthContractAddress to BigInteger.ONE)
+        createViewModel()
+        advanceUntilIdle()
+        assertEquals(listOf("USDT", "USDC", "DAI"), viewModel.viewState.value.favoriteTokens.map { it.ticker })
+
+        tokenPreferenceRepository.update(
+            testAddress,
+            listOf(
+                TokenPreference(usdcOnMainnet.ethAddress, visible = true),
+                TokenPreference(usdtOnMainnet.ethAddress, visible = true),
+                TokenPreference(daiOnMainnet.ethAddress, visible = false),
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals(listOf("USDC", "USDT"), viewModel.viewState.value.favoriteTokens.map { it.ticker })
+    }
+
+    @Test
+    fun token_preferences_stored_before_balances_arrive_are_applied() = runTest(testDispatcher) {
+        tokenPreferenceRepository.update(
+            testAddress,
+            listOf(TokenPreference(usdcOnMainnet.ethAddress, visible = false)),
+        )
+        createViewModel()
+        advanceUntilIdle()
+
+        balanceFlow.value = mapOf(EthContractAddress to BigInteger.ONE)
+        advanceUntilIdle()
+
+        assertEquals(listOf("USDT", "DAI"), viewModel.viewState.value.favoriteTokens.map { it.ticker })
     }
 }

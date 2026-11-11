@@ -33,6 +33,8 @@ import me.sdi.ethwallet.core.transfer.EthTransferInteractor
 import me.sdi.ethwallet.core.transfer.TransferInteractor
 import me.sdi.ethwallet.data.ProcessLifetimeUserActivityManager
 import me.sdi.ethwallet.data.UserActivityManager
+import me.sdi.ethwallet.data.repository.TokenPreferenceRepository
+import me.sdi.ethwallet.data.repository.TokenPreferenceRepositoryRoom
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.kotlin.EthereumNetwork
 import me.sdi.ethwallet.kotlin.JsonRpcTransport
@@ -85,6 +87,13 @@ val commonModule = module {
             historyProvider = get(),
             historyRepository = get(),
             initializationStore = get(),
+        )
+    }
+
+    single<TokenPreferenceRepository> {
+        TokenPreferenceRepositoryRoom(
+            tokenPreferenceDao = get(),
+            chainConfig = get(),
         )
     }
 
@@ -204,8 +213,12 @@ val commonModule = module {
         )
     }
 
-    viewModel<TokensListViewModel> {
-        TokensListViewModel(chainConfig = get())
+    viewModel<TokensListViewModel> { params ->
+        TokensListViewModel(
+            walletAddress = params.get(),
+            chainConfig = get(),
+            tokenPreferenceRepository = get(),
+        )
     }
 
     viewModel<TokenDetailsViewModel> { params ->
@@ -225,6 +238,7 @@ val commonModule = module {
             fiatRateProvider = get(),
             chainConfig = get(),
             walletRepository = get(),
+            tokenPreferenceRepository = get(),
         )
     }
 

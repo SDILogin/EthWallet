@@ -15,6 +15,7 @@ class DataCleanerRoomDb(
                 execSQL("DELETE FROM token_balances")
                 execSQL("DELETE FROM fiat_rates")
                 execSQL("DELETE FROM transaction_history")
+                execSQL("DELETE FROM token_preferences")
             }
         }
     }

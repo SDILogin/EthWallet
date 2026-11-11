@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import me.sdi.ethwallet.flow.clickContentDescription
 import me.sdi.ethwallet.flow.clickText
+import me.sdi.ethwallet.flow.waitUntilTextExists
 
 class WalletPage(private val composeTestRule: ComposeTestRule) {
     fun awaitVisible() {
@@ -23,10 +24,14 @@ class WalletPage(private val composeTestRule: ComposeTestRule) {
     }
 
     fun clickToken(name: String) {
+        composeTestRule.waitUntilTextExists(name)
         composeTestRule.clickText(name)
     }
 
     fun clickSend() {
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodesWithContentDescription("Send").fetchSemanticsNodes().isNotEmpty()
+        }
         composeTestRule.clickContentDescription("Send")
     }
 
@@ -39,6 +44,6 @@ class WalletPage(private val composeTestRule: ComposeTestRule) {
     }
 
     fun clickEditTokens() {
-        composeTestRule.clickText("Edit")
+        composeTestRule.clickContentDescription("Manage tokens")
     }
 }

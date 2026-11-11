@@ -58,10 +58,11 @@ import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.arrow_downward_24px
 import me.sdi.ethwallet.resources.arrow_outward_24px
 import me.sdi.ethwallet.resources.back
-import me.sdi.ethwallet.resources.edit
+import me.sdi.ethwallet.resources.filter_list_24px
 import me.sdi.ethwallet.resources.history_24px
 import me.sdi.ethwallet.resources.history_title
 import me.sdi.ethwallet.resources.ic_question_mark_56
+import me.sdi.ethwallet.resources.tokens_list_title
 import me.sdi.ethwallet.resources.wallet_balance_error_message
 import me.sdi.ethwallet.resources.wallet_balance_error_title
 import me.sdi.ethwallet.resources.wallet_fiat_unavailable
@@ -75,7 +76,6 @@ import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.components.shimmer
 import me.sdi.ethwallet.ui.daiOnSepolia
 import me.sdi.ethwallet.ui.designsystem.EthButton
-import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
 import me.sdi.ethwallet.ui.designsystem.EthCard
 import me.sdi.ethwallet.ui.designsystem.EthCardTone
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
@@ -302,11 +302,12 @@ private fun TokensHeader(
             )
         }
 
-        EthButton(
-            text = stringResource(Res.string.edit),
-            onClick = { onEditButtonClick() },
-            style = EthButtonStyle.Text,
-        )
+        EthIconButton(onClick = onEditButtonClick) {
+            Icon(
+                painter = painterResource(Res.drawable.filter_list_24px),
+                contentDescription = stringResource(Res.string.tokens_list_title),
+            )
+        }
     }
 }
 
