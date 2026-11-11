@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -18,7 +17,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -59,10 +57,12 @@ import me.sdi.ethwallet.resources.warning_24px
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
+import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthCard
 import me.sdi.ethwallet.ui.designsystem.EthCardTone
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextField
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
@@ -162,78 +162,75 @@ private fun CreateWalletScreenContent(
             )
         }
 
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .imePadding()
-                    .padding(innerPadding)
-                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+        EthButtonsLayout(
+            buttons = {
+                NextButton(
+                    enabled = viewState.isLabelValid && !viewState.isSaving,
+                    onClick = {
+                        showConfirmationDialog = true
+                    },
+                )
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding())
+                .imePadding(),
+        ) { contentPadding ->
             Column(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(contentPadding)
+                    .padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                    WalletLabelTextField(
-                        value = viewState.label,
-                        onValueChange = { onEvent(CreateWalletEvent.LabelChanged(it)) },
-                        enabled = !viewState.isSaving,
-                    )
+                WalletLabelTextField(
+                    value = viewState.label,
+                    onValueChange = { onEvent(CreateWalletEvent.LabelChanged(it)) },
+                    enabled = !viewState.isSaving,
+                )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                    EthText(
-                        text = stringResource(Res.string.create_wallet_recovery_phrase_title),
-                        style = EthTextStyle.Headline,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 1,
-                    )
+                EthText(
+                    text = stringResource(Res.string.create_wallet_recovery_phrase_title),
+                    style = EthTextStyle.Headline,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                    EthText(
-                        modifier = Modifier.widthIn(max = 420.dp),
-                        text = stringResource(Res.string.create_wallet_recovery_phrase_instruction),
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 1,
-                    )
+                EthText(
+                    modifier = Modifier.widthIn(max = 420.dp),
+                    text = stringResource(Res.string.create_wallet_recovery_phrase_instruction),
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                )
 
-                    Spacer(modifier = Modifier.height(8.dp))
-                    MnemonicCard(
-                        seedPhrase = viewState.seedPhrase,
-                        modifier =
-                            Modifier
-                                .widthIn(max = 420.dp)
-                                .fillMaxWidth(),
-                        onCopied = {
-                            scope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = copiedMessage,
-                                    duration = SnackbarDuration.Short,
-                                )
-                            }
-                        },
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    SecurityWarning()
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(8.dp))
+                MnemonicCard(
+                    seedPhrase = viewState.seedPhrase,
+                    modifier =
+                        Modifier
+                            .widthIn(max = 420.dp)
+                            .fillMaxWidth(),
+                    onCopied = {
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = copiedMessage,
+                                duration = SnackbarDuration.Short,
+                            )
+                        }
+                    },
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                SecurityWarning()
+                Spacer(modifier = Modifier.height(8.dp))
             }
-            NextButton(
-                enabled = viewState.isLabelValid && !viewState.isSaving,
-                onClick = {
-                    showConfirmationDialog = true
-                },
-            )
         }
     }
 }
@@ -244,10 +241,10 @@ private fun WalletLabelTextField(
     onValueChange: (String) -> Unit,
     enabled: Boolean,
 ) {
-    OutlinedTextField(
+    EthTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { EthText(stringResource(Res.string.wallet_label)) },
+        label = stringResource(Res.string.wallet_label),
         placeholder = { EthText(stringResource(Res.string.wallet_label_placeholder)) },
         supportingText = { EthText(stringResource(Res.string.wallet_label_supporting)) },
         modifier = Modifier
@@ -266,12 +263,7 @@ private fun NextButton(enabled: Boolean, onClick: () -> Unit) {
     EthButton(
         text = stringResource(Res.string.create_wallet_next_button_text),
         onClick = onClick,
-        modifier =
-            Modifier
-                .widthIn(max = 380.dp)
-                .fillMaxWidth()
-                .heightIn(min = 56.dp)
-                .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth(),
         enabled = enabled,
     )
 }
@@ -295,7 +287,7 @@ private fun SecurityWarning() {
             Icon(
                 painter = painterResource(Res.drawable.warning_24px),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
             )
             Spacer(modifier = Modifier.width(12.dp))
             EthText(

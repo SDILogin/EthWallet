@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -44,6 +44,7 @@ import me.sdi.ethwallet.resources.password_wrong
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
+import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
@@ -113,71 +114,78 @@ private fun PasswordUnlockScreenContent(
 ) {
     val canUnlock = viewState.password.isNotEmpty() && !viewState.isBusy
     Scaffold(modifier = modifier) { paddingValues ->
-        Column(
+        EthButtonsLayout(
+            buttons = {
+                EthButton(
+                    text = stringResource(Res.string.password_forgot),
+                    onClick = onForgotPasswordClick,
+                    enabled = !viewState.isBusy,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = EthButtonStyle.Text,
+                )
+                EthButton(
+                    text = stringResource(Res.string.password_unlock),
+                    onClick = { onEvent(PasswordUnlockEvent.OnUnlockClick) },
+                    enabled = canUnlock,
+                    loading = viewState.isBusy,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-        ) {
-            Icon(
-                painter = painterResource(Res.drawable.ic_eth_logo),
-                tint = Color.Unspecified,
-                contentDescription = null,
-                modifier = Modifier.width(72.dp),
-            )
-            EthText(
-                text = stringResource(Res.string.password_enter_title),
-                style = EthTextStyle.Headline,
-                textAlign = TextAlign.Center,
-            )
-            PasswordField(
-                value = viewState.password,
-                onValueChange = { onEvent(PasswordUnlockEvent.OnPasswordChange(it)) },
-                label = stringResource(Res.string.password_field),
-                enabled = !viewState.isBusy,
-                isError = viewState.error == PasswordUnlockError.WrongPassword,
-                imeAction = ImeAction.Done,
-                onImeAction = {
-                    if (canUnlock) {
-                        onEvent(PasswordUnlockEvent.OnUnlockClick)
-                    }
-                },
-                modifier = Modifier,
-            )
-            EthText(
-                text = stringResource(
-                    when (viewState.error) {
-                        PasswordUnlockError.WrongPassword, null -> Res.string.password_wrong
-                        PasswordUnlockError.UnlockFailed -> Res.string.password_unlock_failed
-                        PasswordUnlockError.ResetFailed -> Res.string.password_reset_failed
+                .padding(top = paddingValues.calculateTopPadding())
+                .imePadding(),
+        ) { contentPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_eth_logo),
+                    tint = Color.Unspecified,
+                    contentDescription = null,
+                    modifier = Modifier.width(72.dp),
+                )
+                EthText(
+                    text = stringResource(Res.string.password_enter_title),
+                    style = EthTextStyle.Headline,
+                    textAlign = TextAlign.Center,
+                )
+                PasswordField(
+                    value = viewState.password,
+                    onValueChange = { onEvent(PasswordUnlockEvent.OnPasswordChange(it)) },
+                    label = stringResource(Res.string.password_field),
+                    enabled = !viewState.isBusy,
+                    isError = viewState.error == PasswordUnlockError.WrongPassword,
+                    imeAction = ImeAction.Done,
+                    onImeAction = {
+                        if (canUnlock) {
+                            onEvent(PasswordUnlockEvent.OnUnlockClick)
+                        }
                     },
-                ),
-                color = MaterialTheme.colorScheme.error,
-                style = EthTextStyle.Caption,
-                textAlign = TextAlign.Center,
-                minLines = ERROR_LINES,
-                modifier = Modifier
-                    .widthIn(max = 420.dp)
-                    .alpha(if (viewState.error == null) 0f else 1f),
-            )
-            EthButton(
-                text = stringResource(Res.string.password_unlock),
-                onClick = { onEvent(PasswordUnlockEvent.OnUnlockClick) },
-                enabled = canUnlock,
-                loading = viewState.isBusy,
-                modifier = Modifier
-                    .widthIn(max = 420.dp)
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
-            )
-            EthButton(
-                text = stringResource(Res.string.password_forgot),
-                onClick = onForgotPasswordClick,
-                enabled = !viewState.isBusy,
-                style = EthButtonStyle.Text,
-            )
+                    modifier = Modifier,
+                )
+                EthText(
+                    text = stringResource(
+                        when (viewState.error) {
+                            PasswordUnlockError.WrongPassword, null -> Res.string.password_wrong
+                            PasswordUnlockError.UnlockFailed -> Res.string.password_unlock_failed
+                            PasswordUnlockError.ResetFailed -> Res.string.password_reset_failed
+                        },
+                    ),
+                    color = MaterialTheme.colorScheme.error,
+                    style = EthTextStyle.Caption,
+                    textAlign = TextAlign.Center,
+                    minLines = ERROR_LINES,
+                    modifier = Modifier
+                        .widthIn(max = 420.dp)
+                        .alpha(if (viewState.error == null) 0f else 1f),
+                )
+            }
         }
     }
 }

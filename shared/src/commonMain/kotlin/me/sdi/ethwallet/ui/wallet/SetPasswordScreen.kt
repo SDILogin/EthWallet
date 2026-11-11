@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -41,6 +41,7 @@ import me.sdi.ethwallet.resources.password_strength_weak
 import me.sdi.ethwallet.resources.password_weak_warning
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
@@ -77,73 +78,79 @@ private fun SetPasswordScreenContent(
 ) {
     val focusManager = LocalFocusManager.current
     Scaffold(modifier = modifier) { paddingValues ->
-        Column(
+        EthButtonsLayout(
+            buttons = {
+                EthButton(
+                    text = stringResource(Res.string.password_continue),
+                    onClick = { onEvent(SetPasswordEvent.OnContinueClick) },
+                    enabled = viewState.canContinue,
+                    loading = viewState.isSaving,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            EthText(
-                text = stringResource(Res.string.password_create_title),
-                style = EthTextStyle.Headline,
-                textAlign = TextAlign.Center,
-            )
-            EthText(
-                text = stringResource(Res.string.password_create_subtitle),
-                style = EthTextStyle.Body,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.widthIn(max = 420.dp),
-            )
-            PasswordField(
-                value = viewState.password,
-                onValueChange = { onEvent(SetPasswordEvent.OnPasswordChange(it)) },
-                label = stringResource(Res.string.password_field),
-                enabled = !viewState.isSaving,
-                isError = false,
-                imeAction = ImeAction.Next,
-                onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
-                modifier = Modifier,
-            )
-            PasswordStrengthMeter(strength = viewState.strength)
-            PasswordField(
-                value = viewState.confirmation,
-                onValueChange = { onEvent(SetPasswordEvent.OnConfirmationChange(it)) },
-                label = stringResource(Res.string.password_confirm_field),
-                enabled = !viewState.isSaving,
-                isError = viewState.isMismatch,
-                imeAction = ImeAction.Done,
-                onImeAction = {
-                    if (viewState.canContinue) {
-                        onEvent(SetPasswordEvent.OnContinueClick)
-                    }
-                },
-                modifier = Modifier,
-            )
-            EthText(
-                text = stringResource(Res.string.password_mismatch),
-                color = MaterialTheme.colorScheme.error,
-                style = EthTextStyle.Caption,
-                modifier = Modifier.alpha(if (viewState.isMismatch) 1f else 0f),
-            )
-            EthButton(
-                text = stringResource(Res.string.password_continue),
-                onClick = { onEvent(SetPasswordEvent.OnContinueClick) },
-                enabled = viewState.canContinue,
-                loading = viewState.isSaving,
+                .padding(top = paddingValues.calculateTopPadding())
+                .imePadding(),
+        ) { contentPadding ->
+            Column(
                 modifier = Modifier
-                    .widthIn(max = 420.dp)
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
-            )
-            EthText(
-                text = stringResource(Res.string.password_setup_failed),
-                color = MaterialTheme.colorScheme.error,
-                style = EthTextStyle.Caption,
-                modifier = Modifier.alpha(if (viewState.error == SetPasswordError.SetupFailed) 1f else 0f),
-            )
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(contentPadding)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                EthText(
+                    text = stringResource(Res.string.password_create_title),
+                    style = EthTextStyle.Headline,
+                    textAlign = TextAlign.Center,
+                )
+                EthText(
+                    text = stringResource(Res.string.password_create_subtitle),
+                    style = EthTextStyle.Body,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.widthIn(max = 420.dp),
+                )
+                PasswordField(
+                    value = viewState.password,
+                    onValueChange = { onEvent(SetPasswordEvent.OnPasswordChange(it)) },
+                    label = stringResource(Res.string.password_field),
+                    enabled = !viewState.isSaving,
+                    isError = false,
+                    imeAction = ImeAction.Next,
+                    onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
+                    modifier = Modifier,
+                )
+                PasswordStrengthMeter(strength = viewState.strength)
+                PasswordField(
+                    value = viewState.confirmation,
+                    onValueChange = { onEvent(SetPasswordEvent.OnConfirmationChange(it)) },
+                    label = stringResource(Res.string.password_confirm_field),
+                    enabled = !viewState.isSaving,
+                    isError = viewState.isMismatch,
+                    imeAction = ImeAction.Done,
+                    onImeAction = {
+                        if (viewState.canContinue) {
+                            onEvent(SetPasswordEvent.OnContinueClick)
+                        }
+                    },
+                    modifier = Modifier,
+                )
+                EthText(
+                    text = stringResource(Res.string.password_mismatch),
+                    color = MaterialTheme.colorScheme.error,
+                    style = EthTextStyle.Caption,
+                    modifier = Modifier.alpha(if (viewState.isMismatch) 1f else 0f),
+                )
+                EthText(
+                    text = stringResource(Res.string.password_setup_failed),
+                    color = MaterialTheme.colorScheme.error,
+                    style = EthTextStyle.Caption,
+                    modifier = Modifier.alpha(if (viewState.error == SetPasswordError.SetupFailed) 1f else 0f),
+                )
+            }
         }
     }
 }

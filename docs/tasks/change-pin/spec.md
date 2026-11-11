@@ -25,8 +25,8 @@ password (docs/tasks/desktop-secure-key-storage/spec.md). The Desktop parts belo
 - `SettingsScreen`: a "Change PIN" row that opens the flow through `onChangePinClick: () -> Unit`, wired in
   `EthWalletApp`.
 - `ChangePinCodeScreen` and `ChangePinCodeViewModel` in `shared/src/commonMain/kotlin/me/sdi/ethwallet/ui/settings/`,
-  reached through `Destination.ChangePinCodeScreen` with the same `extraPane()` metadata as
-  `Destination.SettingsScreen`.
+  reached through `Destination.ChangePinCodeScreen`. Like `Destination.SettingsScreen`, it has no pane metadata and
+  opens full screen.
 - Compose string resources in `shared/src/commonMain/composeResources/values/strings.xml`.
 
 The onboarding `SetPinCodeScreen`, the lock screen (`VerifyPinCodeViewModel`, including its use of

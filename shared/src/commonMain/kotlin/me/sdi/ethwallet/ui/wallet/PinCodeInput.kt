@@ -97,7 +97,7 @@ fun PinCodeInput(
                     when {
                         isError && isActive -> MaterialTheme.colorScheme.error
                         isActive -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        else -> MaterialTheme.colorScheme.outline
                     },
                 animationSpec = tween(),
                 label = "dotColor",

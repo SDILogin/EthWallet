@@ -10,10 +10,10 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -77,6 +77,7 @@ import me.sdi.ethwallet.resources.transaction_details_token
 import me.sdi.ethwallet.resources.transaction_details_unavailable
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthCard
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
@@ -123,25 +124,44 @@ fun TransactionDetailsScreen(
             )
         },
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding), contentAlignment = Alignment.TopCenter) {
-            when (state) {
-                TransactionDetailsState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                TransactionDetailsState.Error -> EthText(
-                    stringResource(Res.string.transaction_details_error),
-                    Modifier.align(Alignment.Center),
-                )
-                TransactionDetailsState.Unavailable -> EthText(
-                    stringResource(Res.string.transaction_details_unavailable),
-                    Modifier.align(Alignment.Center),
-                )
-                is TransactionDetailsState.Content -> DetailsContent(state, walletAddress, chainConfig)
+        when (state) {
+            TransactionDetailsState.Loading -> Box(
+                Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
             }
+            TransactionDetailsState.Error -> Box(
+                Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
+                EthText(stringResource(Res.string.transaction_details_error))
+            }
+            TransactionDetailsState.Unavailable -> Box(
+                Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
+                EthText(stringResource(Res.string.transaction_details_unavailable))
+            }
+            is TransactionDetailsState.Content -> DetailsContent(
+                state = state,
+                walletAddress = walletAddress,
+                chainConfig = chainConfig,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = padding.calculateTopPadding()),
+            )
         }
     }
 }
 
 @Composable
-private fun DetailsContent(state: TransactionDetailsState.Content, walletAddress: EthAddress, chainConfig: ChainConfig) {
+private fun DetailsContent(
+    state: TransactionDetailsState.Content,
+    walletAddress: EthAddress,
+    chainConfig: ChainConfig,
+    modifier: Modifier,
+) {
     val transfer = state.transfer
     val outgoing = transfer.from.toString().equals(walletAddress.toString(), ignoreCase = true)
     val self = transfer.from.toString().equals(transfer.to.toString(), ignoreCase = true)
@@ -175,94 +195,114 @@ private fun DetailsContent(state: TransactionDetailsState.Content, walletAddress
         MaterialTheme.colorScheme.primary
     }
     val uriHandler = LocalUriHandler.current
-    Column(
-        Modifier.widthIn(max = 640.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
+    val explorerUrl = chainConfig.explorerBaseUrl?.takeIf(String::isNotBlank)?.let { baseUrl ->
+        "${baseUrl.trimEnd('/')}/tx/${transfer.hash}"
+    }
+    EthButtonsLayout(
+        buttons = {
+            if (explorerUrl != null) {
+                EthButton(
+                    text = stringResource(Res.string.transaction_details_explorer),
+                    onClick = { uriHandler.openUri(explorerUrl) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        modifier = modifier,
+    ) { contentPadding ->
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(contentPadding)
+                .wrapContentWidth()
+                .widthIn(max = 640.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Box(Modifier.size(72.dp).background(MaterialTheme.colorScheme.primary, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(
-                    painterResource(if (outgoing) Res.drawable.arrow_outward_24px else Res.drawable.arrow_downward_24px),
-                    null,
-                    Modifier.size(36.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-            EthText(
-                stringResource(direction),
-                style = EthTextStyle.Title,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            EthText(
-                amount?.let {
-                    "$sign$it $symbol"
-                } ?: stringResource(Res.string.history_amount_unavailable, symbol),
-                style = EthTextStyle.Headline,
-            )
-            EthText(stringResource(status), style = EthTextStyle.Title, color = statusColor)
-        }
-        DetailsCard {
-            DetailValue(
-                stringResource(Res.string.transaction_details_network),
-                when (chainConfig.chainId) {
-                    1L -> stringResource(Res.string.history_mainnet)
-                    11155111L -> stringResource(Res.string.history_sepolia)
-                    else -> stringResource(Res.string.history_network, chainConfig.chainId)
-                },
-            )
-            HorizontalDivider()
-            val timeZone = TimeZone.getDefault()
-            DetailValue(
-                stringResource(Res.string.transaction_details_date),
-                "${formatHistoryDate(transfer.timestamp, timeZone)}, ${formatHistoryTime(transfer.timestamp, timeZone)}",
-            )
-            transfer.fee?.let { fee ->
-                HorizontalDivider()
-                DetailValue(
-                    stringResource(
-                        if (fee.estimated) Res.string.transaction_details_estimated_fee else Res.string.transaction_details_fee,
-                    ),
-                    "${formatHistoryAmount(fee.value.value.toString(), 18).orEmpty()} ETH",
-                )
-            }
-        }
-        EthText(stringResource(Res.string.transaction_details_addresses), style = EthTextStyle.Title)
-        DetailsCard {
-            CopyValue(
-                stringResource(Res.string.transaction_details_from),
-                transfer.from.toString(),
-                state.fromWalletLabel,
-            )
-            HorizontalDivider()
-            CopyValue(
-                stringResource(Res.string.transaction_details_to),
-                transfer.to.toString(),
-                state.toWalletLabel,
-            )
-        }
-        DetailsCard { CopyValue(stringResource(Res.string.transaction_details_hash), transfer.hash) }
-        if (transfer is Transfer.Erc20) {
-            EthText(stringResource(Res.string.transaction_details_token), style = EthTextStyle.Title)
-            DetailsCard {
-                CopyValue(stringResource(Res.string.transaction_details_contract), transfer.tokenAddress.toString())
+            Column(
+                Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Box(
+                    Modifier.size(72.dp).background(MaterialTheme.colorScheme.primary, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painterResource(
+                            if (outgoing) Res.drawable.arrow_outward_24px else Res.drawable.arrow_downward_24px,
+                        ),
+                        null,
+                        Modifier.size(36.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                    )
+                }
                 EthText(
-                    stringResource(Res.string.transaction_details_metadata, transfer.tokenDecimals, transfer.logIndex),
-                    Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                    style = EthTextStyle.Caption,
+                    stringResource(direction),
+                    style = EthTextStyle.Title,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                EthText(
+                    amount?.let {
+                        "$sign$it $symbol"
+                    } ?: stringResource(Res.string.history_amount_unavailable, symbol),
+                    style = EthTextStyle.Headline,
+                )
+                EthText(stringResource(status), style = EthTextStyle.Title, color = statusColor)
             }
-        }
-        chainConfig.explorerBaseUrl?.takeIf(String::isNotBlank)?.let { baseUrl ->
-            EthButton(
-                text = stringResource(Res.string.transaction_details_explorer),
-                onClick = { uriHandler.openUri("${baseUrl.trimEnd('/')}/tx/${transfer.hash}") },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-            )
+            DetailsCard {
+                DetailValue(
+                    stringResource(Res.string.transaction_details_network),
+                    when (chainConfig.chainId) {
+                        1L -> stringResource(Res.string.history_mainnet)
+                        11155111L -> stringResource(Res.string.history_sepolia)
+                        else -> stringResource(Res.string.history_network, chainConfig.chainId)
+                    },
+                )
+                HorizontalDivider()
+                val timeZone = TimeZone.getDefault()
+                DetailValue(
+                    stringResource(Res.string.transaction_details_date),
+                    "${formatHistoryDate(transfer.timestamp, timeZone)}, ${formatHistoryTime(transfer.timestamp, timeZone)}",
+                )
+                transfer.fee?.let { fee ->
+                    HorizontalDivider()
+                    DetailValue(
+                        stringResource(
+                            if (fee.estimated) Res.string.transaction_details_estimated_fee else Res.string.transaction_details_fee,
+                        ),
+                        "${formatHistoryAmount(fee.value.value.toString(), 18).orEmpty()} ETH",
+                    )
+                }
+            }
+            EthText(stringResource(Res.string.transaction_details_addresses), style = EthTextStyle.Title)
+            DetailsCard {
+                CopyValue(
+                    stringResource(Res.string.transaction_details_from),
+                    transfer.from.toString(),
+                    state.fromWalletLabel,
+                )
+                HorizontalDivider()
+                CopyValue(
+                    stringResource(Res.string.transaction_details_to),
+                    transfer.to.toString(),
+                    state.toWalletLabel,
+                )
+            }
+            DetailsCard { CopyValue(stringResource(Res.string.transaction_details_hash), transfer.hash) }
+            if (transfer is Transfer.Erc20) {
+                EthText(stringResource(Res.string.transaction_details_token), style = EthTextStyle.Title)
+                DetailsCard {
+                    CopyValue(stringResource(Res.string.transaction_details_contract), transfer.tokenAddress.toString())
+                    EthText(
+                        stringResource(Res.string.transaction_details_metadata, transfer.tokenDecimals, transfer.logIndex),
+                        Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                        style = EthTextStyle.Caption,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }

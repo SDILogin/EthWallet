@@ -417,7 +417,6 @@ private fun CircularButtonWithTitle(
             Icon(
                 painter = icon,
                 contentDescription = title,
-                tint = MaterialTheme.colorScheme.onPrimary,
             )
         }
         EthText(
@@ -529,7 +528,7 @@ private fun TotalFiatBalanceCard(
                             contentDescription = "ETH balance: $displayedEthBalance"
                         }
                     },
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
             )
         }
@@ -537,7 +536,7 @@ private fun TotalFiatBalanceCard(
         EthText(
             text = stringResource(Res.string.wallet_network, chainId.toNetworkName()),
             style = EthTextStyle.Caption,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -585,7 +584,7 @@ private fun TokenItem(
             EthText(
                 text = tokenSymbol,
                 style = EthTextStyle.Caption,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 

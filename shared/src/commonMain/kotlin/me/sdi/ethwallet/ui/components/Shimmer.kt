@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -26,12 +27,13 @@ data class Shimmer(
 
 @Composable
 fun rememberShimmer(durationMillis: Int = 1000): Shimmer {
-    return remember(durationMillis) {
+    val baseColor = MaterialTheme.colorScheme.onSurface
+    return remember(durationMillis, baseColor) {
         Shimmer(
             colors = listOf(
-                Color.LightGray.copy(alpha = 0.6f),
-                Color.LightGray.copy(alpha = 0.2f),
-                Color.LightGray.copy(alpha = 0.6f),
+                baseColor.copy(alpha = 0.12f),
+                baseColor.copy(alpha = 0.04f),
+                baseColor.copy(alpha = 0.12f),
             ),
             duration = durationMillis,
         )

@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -34,11 +33,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.navigation3.LocalListDetailSceneScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -89,16 +85,18 @@ import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.components.shimmer
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
+import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthCard
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
+import me.sdi.ethwallet.ui.designsystem.EthTextField
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3AdaptiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletsListScreen(
     selectedWalletAddress: EthAddress?,
@@ -113,7 +111,6 @@ fun WalletsListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val toastManager = rememberToastManager()
     val errorMessage = stringResource(Res.string.error_something_went_wrong)
-    val isListDetailLayout = LocalListDetailSceneScope.current != null
 
     LaunchedEffect(Unit) {
         viewModel.news.collect { news ->
@@ -128,7 +125,6 @@ fun WalletsListScreen(
         modifier = modifier,
         uiState = uiState,
         selectedWalletAddress = selectedWalletAddress,
-        isListDetailLayout = isListDetailLayout,
         onWalletSelected = onWalletSelected,
         onEvent = viewModel::onEvent,
         onImportWallet = onImportWallet,
@@ -143,7 +139,6 @@ private fun WalletsListScreenContent(
     modifier: Modifier,
     uiState: WalletsListUiState,
     selectedWalletAddress: EthAddress?,
-    isListDetailLayout: Boolean,
     onWalletSelected: (EthAddress) -> Unit,
     onEvent: (WalletsListEvent) -> Unit,
     onImportWallet: () -> Unit,
@@ -170,126 +165,90 @@ private fun WalletsListScreenContent(
                 },
             )
         },
-        floatingActionButton = {
-            if (!uiState.isLoading && uiState.wallets.isNotEmpty()) {
-                var isAddWalletMenuExpanded by remember { mutableStateOf(false) }
-                val addWalletLabel = stringResource(Res.string.wallets_list_add_wallet)
-
-                Box {
-                    EthButton(
-                        text = addWalletLabel,
-                        onClick = { isAddWalletMenuExpanded = true },
-                        modifier = Modifier.semantics { contentDescription = addWalletLabel },
-                    )
-
-                    DropdownMenu(
-                        expanded = isAddWalletMenuExpanded,
-                        onDismissRequest = { isAddWalletMenuExpanded = false },
-                    ) {
-                        DropdownMenuItem(
-                            text = { EthText(text = stringResource(Res.string.onboarding_create_wallet)) },
-                            onClick = {
-                                isAddWalletMenuExpanded = false
-                                onCreateWallet()
-                            },
+    ) { innerPadding ->
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            EthButtonsLayout(
+                buttons = {
+                    if (uiState.wallets.isEmpty()) {
+                        EthButton(
+                            text = stringResource(Res.string.onboarding_import_wallet),
+                            onClick = onImportWallet,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = EthButtonStyle.Secondary,
                         )
-                        DropdownMenuItem(
-                            text = { EthText(text = stringResource(Res.string.onboarding_import_wallet)) },
-                            onClick = {
-                                isAddWalletMenuExpanded = false
-                                onImportWallet()
-                            },
+                        EthButton(
+                            text = stringResource(Res.string.onboarding_create_wallet),
+                            onClick = onCreateWallet,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        AddWalletButton(
+                            onCreateWallet = onCreateWallet,
+                            onImportWallet = onImportWallet,
                         )
                     }
-                }
-            }
-        },
-    ) { innerPadding ->
-        Box(
-            modifier =
-                Modifier
+                },
+                modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background)
                     .padding(top = innerPadding.calculateTopPadding()),
-        ) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            } else if (uiState.wallets.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .padding(16.dp)
-                        .fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Spacer(modifier = Modifier.weight(1f))
-                    EthText(
-                        text = "Your wallets will be displayed here",
-                        style = EthTextStyle.Title,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(16.dp),
-                    )
-
-                    EthText(
-                        text = "You can create a new wallet or import an existing one",
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(16.dp),
-                    )
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    EthButton(
-                        text = stringResource(Res.string.onboarding_create_wallet),
-                        onClick = onCreateWallet,
+            ) { contentPadding ->
+                if (uiState.wallets.isEmpty()) {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 56.dp)
-                            .widthIn(max = 320.dp),
-                    )
-
-                    Spacer(Modifier.height(16.dp))
-
-                    EthButton(
-                        text = stringResource(Res.string.onboarding_import_wallet),
-                        onClick = onImportWallet,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 56.dp)
-                            .widthIn(max = 320.dp),
-                        style = EthButtonStyle.Secondary,
-                    )
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(300.dp),
-                    modifier =
-                        Modifier
                             .fillMaxSize()
+                            .padding(contentPadding)
                             .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(
-                        top = 0.dp,
-                        bottom = innerPadding.calculateBottomPadding() + 80.dp,
-                        start = innerPadding.calculateStartPadding(LocalLayoutDirection.current),
-                        end = innerPadding.calculateEndPadding(LocalLayoutDirection.current),
-                    ),
-                ) {
-                    items(
-                        items = uiState.wallets,
-                        key = { item -> item.wallet.address.toString() },
-                        contentType = { it::class.qualifiedName },
-                    ) { item ->
-                        WalletCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            item = item,
-                            isSelected = isListDetailLayout && item.wallet.address == selectedWalletAddress,
-                            onWalletClicked = { onWalletSelected(item.wallet.address) },
-                            onDeleteClicked = { onEvent(WalletsListEvent.OnDeleteWalletClick(item.wallet.address)) },
-                            onRenameClicked = { onEvent(WalletsListEvent.OnRenameWalletClick(item.wallet)) },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        EthText(
+                            text = "Your wallets will be displayed here",
+                            style = EthTextStyle.Title,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(16.dp),
                         )
+
+                        EthText(
+                            text = "You can create a new wallet or import an existing one",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(300.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(start = 16.dp, top = 16.dp, end = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = contentPadding,
+                    ) {
+                        items(
+                            items = uiState.wallets,
+                            key = { item -> item.wallet.address.toString() },
+                            contentType = { it::class.qualifiedName },
+                        ) { item ->
+                            WalletCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                item = item,
+                                isSelected = item.wallet.address == selectedWalletAddress,
+                                onWalletClicked = { onWalletSelected(item.wallet.address) },
+                                onDeleteClicked = { onEvent(WalletsListEvent.OnDeleteWalletClick(item.wallet.address)) },
+                                onRenameClicked = { onEvent(WalletsListEvent.OnRenameWalletClick(item.wallet)) },
+                            )
+                        }
                     }
                 }
             }
@@ -354,7 +313,7 @@ private fun WalletCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 EthText(
                     text = wallet.address.toString(),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.MiddleEllipsis,
                 )
@@ -458,13 +417,13 @@ private fun WalletLabelEditorDialog(
             }
         },
         text = {
-            OutlinedTextField(
+            EthTextField(
                 value = fieldValue,
                 onValueChange = {
                     fieldValue = it
                     onEvent(WalletsListEvent.OnWalletLabelChanged(it.text))
                 },
-                label = { EthText(text = stringResource(Res.string.wallet_label)) },
+                label = stringResource(Res.string.wallet_label),
                 placeholder = { EthText(text = stringResource(Res.string.wallet_label_placeholder)) },
                 supportingText = { EthText(text = validationMessage, style = EthTextStyle.Caption) },
                 modifier = Modifier
@@ -503,6 +462,43 @@ private fun WalletLabelEditorDialog(
     )
 }
 
+@Composable
+private fun AddWalletButton(
+    onCreateWallet: () -> Unit,
+    onImportWallet: () -> Unit,
+) {
+    var isAddWalletMenuExpanded by remember { mutableStateOf(false) }
+    val addWalletLabel = stringResource(Res.string.wallets_list_add_wallet)
+    Box {
+        EthButton(
+            text = addWalletLabel,
+            onClick = { isAddWalletMenuExpanded = true },
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = addWalletLabel },
+        )
+        DropdownMenu(
+            expanded = isAddWalletMenuExpanded,
+            onDismissRequest = { isAddWalletMenuExpanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { EthText(text = stringResource(Res.string.onboarding_create_wallet)) },
+                onClick = {
+                    isAddWalletMenuExpanded = false
+                    onCreateWallet()
+                },
+            )
+            DropdownMenuItem(
+                text = { EthText(text = stringResource(Res.string.onboarding_import_wallet)) },
+                onClick = {
+                    isAddWalletMenuExpanded = false
+                    onImportWallet()
+                },
+            )
+        }
+    }
+}
+
 private fun EthAddress.abbreviated(): String {
     val address = toString()
     return "${address.take(6)}...${address.takeLast(4)}"
@@ -530,7 +526,6 @@ private fun WalletsListScreenPreview() {
                 isLoading = false,
             ),
             selectedWalletAddress = null,
-            isListDetailLayout = false,
             onWalletSelected = {},
             onEvent = {},
             onImportWallet = {},

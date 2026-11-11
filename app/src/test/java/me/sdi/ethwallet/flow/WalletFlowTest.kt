@@ -16,6 +16,7 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -349,6 +350,68 @@ class WalletFlowTest : KoinTest {
         walletPage.clickUp()
 
         walletsListPage.assertSingleWallet()
+        walletsListPage.assertSelectedWallet("My Wallet")
+    }
+
+    @Test
+    @Config(qualifiers = TWO_PANE_QUALIFIERS)
+    fun twoPaneIndicatorStaysOnActiveWalletInTokenDetailsAndMovesToAnotherSelectedWallet() {
+        runInitialWalletCreationFlow()
+        insertSavingsWallet()
+        composeTestRule.assertTextExists(NO_WALLET_SELECTED)
+
+        walletsListPage.clickWallet("My Wallet")
+        walletPage.awaitVisible()
+        walletsListPage.assertSelectedWallet("My Wallet")
+
+        walletPage.clickSend()
+        composeTestRule.waitUntilTextExists("Receiver Address")
+        pressBack()
+        walletPage.awaitVisible()
+        walletsListPage.assertSelectedWallet("My Wallet")
+
+        walletPage.clickToken("Tether USD")
+        composeTestRule.waitUntilTextExists("Token information")
+        walletsListPage.assertSelectedWallet("My Wallet")
+
+        walletsListPage.clickWallet("Savings")
+        walletPage.awaitVisible()
+        walletsListPage.assertSelectedWallet("Savings")
+        composeTestRule.onAllNodesWithText("Token information").assertCountEquals(0)
+    }
+
+    @Test
+    @Config(qualifiers = TWO_PANE_QUALIFIERS)
+    fun twoPaneDeletingActiveWalletFromTokenDetailsClearsIndicator() {
+        runInitialWalletCreationFlow()
+        insertSavingsWallet()
+        composeTestRule.assertTextExists(NO_WALLET_SELECTED)
+
+        walletsListPage.clickWallet("My Wallet")
+        walletPage.awaitVisible()
+        walletPage.clickToken("Tether USD")
+        composeTestRule.waitUntilTextExists("Token information")
+        walletsListPage.deleteWallet("My Wallet")
+
+        composeTestRule.waitUntilTextExists(NO_WALLET_SELECTED)
+        walletsListPage.assertSelectedIndicatorIsHidden()
+        composeTestRule.onAllNodesWithText("Token information").assertCountEquals(0)
+    }
+
+    @Test
+    fun systemBackFromTokenDetailsAndDashboardKeepsIndicator() {
+        runInitialWalletCreationFlow()
+
+        walletsListPage.clickWallet("My Wallet")
+        walletPage.awaitVisible()
+        walletPage.clickToken("Tether USD")
+        composeTestRule.waitUntilTextExists("Token information")
+        pressBack()
+        walletPage.awaitVisible()
+        pressBack()
+
+        walletsListPage.assertSingleWallet()
+        walletsListPage.assertSelectedWallet("My Wallet")
     }
 
     @Test
@@ -579,6 +642,81 @@ class WalletFlowTest : KoinTest {
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.IsSensitiveData))
     }
 
+    @Test
+    @Config(qualifiers = TWO_PANE_QUALIFIERS)
+    fun twoPaneShowsWalletScreensNextToWalletsList() {
+        runInitialWalletCreationFlow()
+
+        walletsListPage.clickWallet("My Wallet")
+        walletPage.awaitVisible()
+        walletsListPage.assertSingleWallet()
+
+        walletPage.clickSend()
+        composeTestRule.waitUntilTextExists("Receiver Address")
+        walletsListPage.assertSingleWallet()
+        pressBack()
+        walletPage.awaitVisible()
+
+        walletPage.clickReceive()
+        composeTestRule.waitUntilTextExists("Amount (Optional)")
+        walletsListPage.assertSingleWallet()
+        pressBack()
+        walletPage.awaitVisible()
+
+        walletPage.clickHistory()
+        walletPage.awaitHidden()
+        composeTestRule.waitUntilTextExists("History")
+        walletsListPage.assertSingleWallet()
+        pressBack()
+        walletPage.awaitVisible()
+
+        walletPage.clickEditTokens()
+        composeTestRule.waitUntilTextExists("Manage tokens")
+        walletsListPage.assertSingleWallet()
+        pressBack()
+        walletPage.awaitVisible()
+        walletsListPage.assertSingleWallet()
+    }
+
+    @Test
+    @Config(qualifiers = TWO_PANE_QUALIFIERS)
+    fun twoPaneOpensSettingsInFullScreen() {
+        runInitialWalletCreationFlow()
+        showWalletsList()
+        composeTestRule.waitUntilTextExists(NO_WALLET_SELECTED)
+
+        composeTestRule.clickContentDescription("Settings")
+        composeTestRule.waitUntilTextExists("Change PIN")
+        walletsListPage.assertWalletIsHidden("My Wallet")
+
+        composeTestRule.clickText("Change PIN")
+        composeTestRule.waitUntilTextExists("Enter new PIN")
+        walletsListPage.assertWalletIsHidden("My Wallet")
+
+        pressBack()
+        composeTestRule.waitUntilTextExists("Lock app")
+        walletsListPage.assertWalletIsHidden("My Wallet")
+        pressBack()
+        showWalletsList()
+    }
+
+    @Test
+    fun systemBackFromSendReturnsToWalletOnPhone() {
+        runInitialWalletCreationFlow()
+
+        walletsListPage.clickWallet("My Wallet")
+        walletPage.awaitVisible()
+        walletPage.clickSend()
+        composeTestRule.waitUntilTextExists("Receiver Address")
+        walletsListPage.assertWalletIsHidden("My Wallet")
+
+        pressBack()
+        walletPage.awaitVisible()
+        walletsListPage.assertWalletIsHidden("My Wallet")
+        pressBack()
+        showWalletsList()
+    }
+
     private fun assertOnlyPinInputIsSensitive() {
         composeTestRule.onNodeWithContentDescription("0 of 6 digits entered").assert(sensitiveData)
         composeTestRule.onAllNodes(hasClickAction() and sensitiveData, useUnmergedTree = true).assertCountEquals(0)
@@ -605,6 +743,23 @@ class WalletFlowTest : KoinTest {
         walletsListPage.assertSingleWallet()
     }
 
+    private fun pressBack() {
+        composeTestRule.runOnUiThread { activityController.get().onBackPressedDispatcher.onBackPressed() }
+    }
+
+    private fun insertSavingsWallet() {
+        runBlocking {
+            appDatabase.walletDao().insertWallet(
+                WalletEntity(
+                    address = "0x9876543210987654321098765432109876543210",
+                    encryptedPrivateKeyBase64 = "private-key",
+                    label = "Savings",
+                ),
+            )
+        }
+        walletsListPage.assertWalletOptions("Savings")
+    }
+
     private fun runInitialWalletCreationFlow() {
         onboardingPage.clickCreatePinCode()
         setPinCodePage.enterPin(PIN)
@@ -622,6 +777,8 @@ class WalletFlowTest : KoinTest {
 }
 
 private const val PIN = "112233"
+private const val TWO_PANE_QUALIFIERS = "w1280dp-h800dp"
+private const val NO_WALLET_SELECTED = "No wallet has been selected yet"
 private const val VISIBLE_RECOVERY_PHRASE = "abandon ability able"
 
 class WalletFlowTestApplication : Application()
