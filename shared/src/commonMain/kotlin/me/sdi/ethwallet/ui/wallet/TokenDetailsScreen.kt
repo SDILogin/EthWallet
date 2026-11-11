@@ -51,6 +51,7 @@ import me.sdi.ethwallet.ui.ETH_MAINNET_CHAIN_ID
 import me.sdi.ethwallet.ui.ETH_SEPOLIA_CHAIN_ID
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
+import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthCard
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
@@ -109,113 +110,115 @@ fun TokenDetailsScreenContent(
             )
         },
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            Icon(
-                painter = painterResource(viewState.icon),
-                contentDescription = null,
-                modifier = Modifier.size(72.dp),
-                tint = Color.Unspecified,
-            )
-            EthText(viewState.symbol, style = EthTextStyle.Title)
-            EthText(
-                text = viewState.balance?.let { "$it ${viewState.symbol}" }
-                    ?: stringResource(Res.string.token_details_unavailable),
-                style = EthTextStyle.Headline,
-            )
-            EthText(
-                text = viewState.fiatValue ?: stringResource(Res.string.wallet_fiat_unavailable),
-                style = EthTextStyle.Title,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                modifier = Modifier.widthIn(max = 420.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                EthButton(
-                    text = stringResource(Res.string.wallet_send),
-                    onClick = onSendButtonClick,
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(modifier = Modifier.width(16.dp))
+        EthButtonsLayout(
+            buttons = {
                 EthButton(
                     text = stringResource(Res.string.wallet_receive),
                     onClick = onReceiveButtonClick,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     style = EthButtonStyle.Secondary,
                 )
-            }
-            EthCard(
-                modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
+                EthButton(
+                    text = stringResource(Res.string.wallet_send),
+                    onClick = onSendButtonClick,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = innerPadding.calculateTopPadding()),
+        ) { contentPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(contentPadding)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                Icon(
+                    painter = painterResource(viewState.icon),
+                    contentDescription = null,
+                    modifier = Modifier.size(72.dp),
+                    tint = Color.Unspecified,
+                )
+                EthText(viewState.symbol, style = EthTextStyle.Title)
+                EthText(
+                    text = viewState.balance?.let { "$it ${viewState.symbol}" }
+                        ?: stringResource(Res.string.token_details_unavailable),
+                    style = EthTextStyle.Headline,
+                )
+                EthText(
+                    text = viewState.fiatValue ?: stringResource(Res.string.wallet_fiat_unavailable),
+                    style = EthTextStyle.Title,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                EthCard(
+                    modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
                 ) {
-                    EthText(
-                        stringResource(Res.string.token_details_information),
-                        style = EthTextStyle.Title,
-                    )
-                    TokenInformationRow(
-                        stringResource(Res.string.token_details_network),
-                        when (viewState.chainId) {
-                            ETH_MAINNET_CHAIN_ID -> stringResource(Res.string.history_mainnet)
-                            ETH_SEPOLIA_CHAIN_ID -> stringResource(Res.string.history_sepolia)
-                            else -> viewState.chainId.toString()
-                        },
-                    )
-                    TokenInformationRow(stringResource(Res.string.token_details_standard), "ERC-20")
-                    TokenInformationRow(
-                        stringResource(Res.string.token_details_contract),
-                        viewState.address,
-                    )
-                    TokenInformationRow(
-                        stringResource(Res.string.token_details_decimals),
-                        viewState.decimals.toString(),
-                    )
-                }
-            }
-            EthCard(
-                onClick = onHistoryButtonClick,
-                modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(Res.drawable.history_24px),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                            .padding(12.dp)
-                            .size(24.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
                     Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        EthText(stringResource(Res.string.history_title), style = EthTextStyle.Title)
                         EthText(
-                            stringResource(Res.string.token_details_history_description),
-                            style = EthTextStyle.Body,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            stringResource(Res.string.token_details_information),
+                            style = EthTextStyle.Title,
+                        )
+                        TokenInformationRow(
+                            stringResource(Res.string.token_details_network),
+                            when (viewState.chainId) {
+                                ETH_MAINNET_CHAIN_ID -> stringResource(Res.string.history_mainnet)
+                                ETH_SEPOLIA_CHAIN_ID -> stringResource(Res.string.history_sepolia)
+                                else -> viewState.chainId.toString()
+                            },
+                        )
+                        TokenInformationRow(stringResource(Res.string.token_details_standard), "ERC-20")
+                        TokenInformationRow(
+                            stringResource(Res.string.token_details_contract),
+                            viewState.address,
+                        )
+                        TokenInformationRow(
+                            stringResource(Res.string.token_details_decimals),
+                            viewState.decimals.toString(),
                         )
                     }
-                    Icon(
-                        painter = painterResource(Res.drawable.chevron_right_24px),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                }
+                EthCard(
+                    onClick = onHistoryButtonClick,
+                    modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            painter = painterResource(Res.drawable.history_24px),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                                .padding(12.dp)
+                                .size(24.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            EthText(stringResource(Res.string.history_title), style = EthTextStyle.Title)
+                            EthText(
+                                stringResource(Res.string.token_details_history_description),
+                                style = EthTextStyle.Body,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Icon(
+                            painter = painterResource(Res.drawable.chevron_right_24px),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }

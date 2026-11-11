@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -31,6 +31,7 @@ import me.sdi.ethwallet.resources.password_create_button
 import me.sdi.ethwallet.resources.pin_create_title
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthButton
+import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
@@ -70,48 +71,46 @@ private fun OnboardingScreenContent(
     modifier: Modifier,
 ) {
     Scaffold(modifier = modifier) { paddingValues ->
-        Column(
+        EthButtonsLayout(
+            buttons = {
+                EthButton(
+                    text = stringResource(
+                        when (appLockMethod) {
+                            AppLockMethod.Pin -> Res.string.pin_create_title
+                            AppLockMethod.Password -> Res.string.password_create_button
+                        },
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onContinueClick,
+                )
+            },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Spacer(Modifier.weight(1f))
-
-            Spacer(Modifier.height(16.dp))
-            Icon(
-                painter = painterResource(Res.drawable.ic_eth_logo),
-                tint = Color.Unspecified,
-                contentDescription = null,
-                modifier = Modifier.width(100.dp),
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            EthText(
-                text = stringResource(Res.string.onboarding_title),
-                textAlign = TextAlign.Center,
-                style = EthTextStyle.Headline,
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            Spacer(Modifier.weight(1f))
-
-            EthButton(
-                text = stringResource(
-                    when (appLockMethod) {
-                        AppLockMethod.Pin -> Res.string.pin_create_title
-                        AppLockMethod.Password -> Res.string.password_create_button
-                    },
-                ),
+                .padding(top = paddingValues.calculateTopPadding()),
+        ) { contentPadding ->
+            Column(
                 modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .widthIn(max = 320.dp)
-                    .fillMaxWidth(),
-                onClick = onContinueClick,
-            )
+                    .fillMaxSize()
+                    .padding(contentPadding)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_eth_logo),
+                    tint = Color.Unspecified,
+                    contentDescription = null,
+                    modifier = Modifier.width(100.dp),
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                EthText(
+                    text = stringResource(Res.string.onboarding_title),
+                    textAlign = TextAlign.Center,
+                    style = EthTextStyle.Headline,
+                )
+            }
         }
     }
 }

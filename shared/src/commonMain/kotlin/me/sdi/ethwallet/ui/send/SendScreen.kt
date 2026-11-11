@@ -91,6 +91,7 @@ import me.sdi.ethwallet.ui.KnownToken
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
+import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthCard
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
@@ -179,89 +180,95 @@ private fun SendScreenContent(
             )
         },
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-                .imePadding()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Column {
-                ReceiverAddressInput(
-                    addressState = viewState.receiverAddress,
-                    receiverWallets = viewState.receiverWallets,
-                    onAddressChanged = { onEvent(SendEvent.OnReceiverAddressChanged(it)) },
-                    onWalletPickerClick = { receiverWalletsExpanded = !receiverWalletsExpanded },
-                )
+        EthButtonsLayout(
+            buttons = {
                 AnimatedVisibility(
-                    visible = receiverWalletsExpanded && viewState.receiverWallets.isNotEmpty(),
+                    visible = !viewState.transferring,
                     enter = SECTION_ENTER,
                     exit = SECTION_EXIT,
                 ) {
-                    Column {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ReceiverWalletDropdownList(
-                            wallets = viewState.receiverWallets,
-                            onWalletSelected = {
-                                receiverWalletsExpanded = false
-                                onEvent(SendEvent.OnReceiverWalletSelected(it))
-                            },
-                        )
+                    EthButton(
+                        text = stringResource(Res.string.send_clear_form),
+                        onClick = { onEvent(SendEvent.OnClearFormClick) },
+                        modifier = Modifier.fillMaxWidth(),
+                        style = EthButtonStyle.Secondary,
+                    )
+                }
+                SendButton(
+                    enabled = viewState.isTransferEnabled,
+                    loading = viewState.transferring,
+                    onSendClick = { onEvent(SendEvent.OnSendClick) },
+                )
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = paddingValues.calculateTopPadding())
+                .imePadding(),
+        ) { contentPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(contentPadding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Column {
+                    ReceiverAddressInput(
+                        addressState = viewState.receiverAddress,
+                        receiverWallets = viewState.receiverWallets,
+                        onAddressChanged = { onEvent(SendEvent.OnReceiverAddressChanged(it)) },
+                        onWalletPickerClick = { receiverWalletsExpanded = !receiverWalletsExpanded },
+                    )
+                    AnimatedVisibility(
+                        visible = receiverWalletsExpanded && viewState.receiverWallets.isNotEmpty(),
+                        enter = SECTION_ENTER,
+                        exit = SECTION_EXIT,
+                    ) {
+                        Column {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ReceiverWalletDropdownList(
+                                wallets = viewState.receiverWallets,
+                                onWalletSelected = {
+                                    receiverWalletsExpanded = false
+                                    onEvent(SendEvent.OnReceiverWalletSelected(it))
+                                },
+                            )
+                        }
                     }
                 }
-            }
 
-            TokenSelector(
-                selectedTokenContract = viewState.selectedTokenContractAddress,
-                chainTokens = chainTokens,
-                onTokenSelected = { onEvent(SendEvent.OnTokenSelected(it)) },
-            )
-
-            Column {
-                EthText(
-                    text = stringResource(Res.string.send_amount),
-                    style = EthTextStyle.Title,
+                TokenSelector(
+                    selectedTokenContract = viewState.selectedTokenContractAddress,
+                    chainTokens = chainTokens,
+                    onTokenSelected = { onEvent(SendEvent.OnTokenSelected(it)) },
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                AmountInput(
-                    amountState = viewState.transferAmountInputState,
-                    label = stringResource(Res.string.send_enter_amount),
-                    placeholder = stringResource(Res.string.send_amount_placeholder),
-                    clearContentDescription = stringResource(Res.string.send_clear_amount),
-                    supportingText = viewState.transferAmountInputState.error
-                        ?: viewState.transferAmountUsd?.let {
-                            stringResource(Res.string.send_fee_estimate, it)
-                        },
-                    onAmountChanged = { onEvent(SendEvent.OnTransferAmountChanged(it)) },
-                )
-            }
 
-            GasSelector(
-                gas = viewState.gas,
-                onGasOptionSelected = { onEvent(SendEvent.OnGasOptionSelected(it)) },
-                onBaseFeeChanged = { onEvent(SendEvent.OnBaseFeeChanged(it)) },
-                onPriorityFeeChanged = { onEvent(SendEvent.OnPriorityFeeChanged(it)) },
-                onGasUnitsChanged = { onEvent(SendEvent.OnGasUnitsChanged(it)) },
-            )
+                Column {
+                    EthText(
+                        text = stringResource(Res.string.send_amount),
+                        style = EthTextStyle.Title,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    AmountInput(
+                        amountState = viewState.transferAmountInputState,
+                        label = stringResource(Res.string.send_enter_amount),
+                        placeholder = stringResource(Res.string.send_amount_placeholder),
+                        clearContentDescription = stringResource(Res.string.send_clear_amount),
+                        supportingText = viewState.transferAmountInputState.error
+                            ?: viewState.transferAmountUsd?.let {
+                                stringResource(Res.string.send_fee_estimate, it)
+                            },
+                        onAmountChanged = { onEvent(SendEvent.OnTransferAmountChanged(it)) },
+                    )
+                }
 
-            SendButton(
-                enabled = viewState.isTransferEnabled,
-                loading = viewState.transferring,
-                onSendClick = { onEvent(SendEvent.OnSendClick) },
-            )
-
-            AnimatedVisibility(
-                visible = !viewState.transferring,
-                enter = SECTION_ENTER,
-                exit = SECTION_EXIT,
-            ) {
-                EthButton(
-                    text = stringResource(Res.string.send_clear_form),
-                    onClick = { onEvent(SendEvent.OnClearFormClick) },
-                    modifier = Modifier.fillMaxWidth(),
-                    style = EthButtonStyle.Secondary,
+                GasSelector(
+                    gas = viewState.gas,
+                    onGasOptionSelected = { onEvent(SendEvent.OnGasOptionSelected(it)) },
+                    onBaseFeeChanged = { onEvent(SendEvent.OnBaseFeeChanged(it)) },
+                    onPriorityFeeChanged = { onEvent(SendEvent.OnPriorityFeeChanged(it)) },
+                    onGasUnitsChanged = { onEvent(SendEvent.OnGasUnitsChanged(it)) },
                 )
             }
         }
