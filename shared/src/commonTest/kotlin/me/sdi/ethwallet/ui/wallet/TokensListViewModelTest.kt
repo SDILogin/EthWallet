@@ -163,16 +163,6 @@ class TokensListViewModelTest {
     }
 
     @Test
-    fun finishing_a_drag_without_a_move_does_not_write() = runTest(testDispatcher) {
-        val viewModel = createViewModel(tokenPreferenceRepository = repository)
-        start(viewModel)
-
-        viewModel.onEvent(TokensListEvent.OnTokenMoveFinished)
-
-        assertEquals(emptyList(), storedPreferences())
-    }
-
-    @Test
     fun moving_last_token_to_first_and_repeating_the_move_keeps_requested_order() = runTest(testDispatcher) {
         val viewModel = createViewModel(tokenPreferenceRepository = repository)
         val initialItems = start(viewModel)

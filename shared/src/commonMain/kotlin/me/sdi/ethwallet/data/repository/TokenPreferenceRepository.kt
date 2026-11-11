@@ -29,8 +29,9 @@ class TokenPreferenceRepositoryRoom(
         }
 
     override suspend fun update(walletAddress: EthAddress, preferences: List<TokenPreference>) {
-        tokenPreferenceDao.upsertAll(
-            preferences.mapIndexed { index, preference ->
+        tokenPreferenceDao.replace(
+            walletAddress = walletAddress.toString(),
+            preferences = preferences.mapIndexed { index, preference ->
                 TokenPreferenceEntity(
                     walletAddress = walletAddress.toString(),
                     tokenAddress = preference.tokenAddress.toString(),

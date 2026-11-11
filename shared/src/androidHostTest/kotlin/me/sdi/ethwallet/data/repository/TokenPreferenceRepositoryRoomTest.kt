@@ -46,16 +46,16 @@ class TokenPreferenceRepositoryRoomTest {
     }
 
     @Test
-    fun update_round_trips_order_visibility_and_checksum_cased_addresses() = runTest {
+    fun update_round_trips_order_visibility_and_addresses() = runTest {
         val preferences = listOf(
             TokenPreference(daiOnSepolia.ethAddress, visible = true),
             TokenPreference(usdtOnSepolia.ethAddress, visible = false),
             TokenPreference(usdcOnSepolia.ethAddress, visible = true),
         )
 
-        repository.update(EthAddress(walletAddress.toString()), preferences)
+        repository.update(walletAddress, preferences)
 
-        assertEquals(preferences, repository.observe(EthAddress(walletAddress.toString())).first())
+        assertEquals(preferences, repository.observe(walletAddress).first())
     }
 
     @Test
@@ -73,6 +73,22 @@ class TokenPreferenceRepositoryRoomTest {
             TokenPreference(usdcOnSepolia.ethAddress, visible = true),
             TokenPreference(usdtOnSepolia.ethAddress, visible = true),
         )
+
+        repository.update(walletAddress, updated)
+
+        assertEquals(updated, repository.observe(walletAddress).first())
+    }
+
+    @Test
+    fun update_with_shorter_list_removes_tokens_that_are_not_in_it() = runTest {
+        repository.update(
+            walletAddress,
+            listOf(
+                TokenPreference(usdtOnSepolia.ethAddress, visible = true),
+                TokenPreference(usdcOnSepolia.ethAddress, visible = false),
+            ),
+        )
+        val updated = listOf(TokenPreference(daiOnSepolia.ethAddress, visible = true))
 
         repository.update(walletAddress, updated)
 

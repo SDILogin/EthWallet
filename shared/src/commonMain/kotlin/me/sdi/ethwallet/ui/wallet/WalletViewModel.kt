@@ -122,9 +122,10 @@ class WalletViewModel(
             chainId = chainConfig.chainId,
         )
 
+        val favoriteTokensByAddress = summary.favoriteTokens.associateBy { it.address }
         val favoriteTokens = tokenListItems(supportedKnownTokens(chainConfig.chainId), combinedBalance.tokenPreferences)
             .filter { it.showOnMain }
-            .map { item -> summary.favoriteTokens.first { it.address == item.knownToken.ethAddress } }
+            .map { item -> checkNotNull(favoriteTokensByAddress[item.knownToken.ethAddress]) }
 
         viewState.update { currentViewState: WalletViewState ->
             currentViewState.copy(

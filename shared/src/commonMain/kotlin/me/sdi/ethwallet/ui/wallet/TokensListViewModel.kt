@@ -34,13 +34,16 @@ class TokensListViewModel(
     private val state = MutableStateFlow(TokensListViewState(tokenListItems = emptyList()))
 
     val viewState: StateFlow<TokensListViewState> = state
-        .onStart { loadTokenListItems() }
+        .onStart {
+            loadTokenListItems()
+            viewModelScope.launch { savePendingPreferences() }
+        }
         .stateIn(viewModelScope, SharingStarted.Lazily, state.value)
 
     private val newsChannel = Channel<TokensListNews>(Channel.BUFFERED)
     val news: Flow<TokensListNews> = newsChannel.receiveAsFlow()
 
-    private var lastSavedItems: List<TokenListItem> = emptyList()
+    private val pendingPreferences = Channel<List<TokenPreference>>(Channel.CONFLATED)
 
     fun onEvent(event: TokensListEvent) {
         Logger.debug(TAG) { "onEvent: $event" }
@@ -55,7 +58,6 @@ class TokensListViewModel(
         try {
             val preferences = tokenPreferenceRepository.observe(walletAddress).first()
             val items = tokenListItems(supportedKnownTokens(chainConfig.chainId), preferences)
-            lastSavedItems = items
             state.update { it.copy(tokenListItems = items) }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -90,23 +92,23 @@ class TokensListViewModel(
     }
 
     private fun persistTokenListItems() {
-        val items = state.value.tokenListItems
-        if (items != lastSavedItems) {
-            lastSavedItems = items
-            val preferences = items.map {
-                TokenPreference(tokenAddress = it.knownToken.ethAddress, visible = it.showOnMain)
-            }
-            viewModelScope.launch {
-                try {
-                    // The user can leave the screen right after a change; the last choice must still be saved.
-                    withContext(NonCancellable) {
-                        tokenPreferenceRepository.update(walletAddress, preferences)
-                    }
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Logger.warn(TAG, e) { "Failed to save token preferences" }
-                    newsChannel.send(TokensListNews.ShowError)
+        val preferences = state.value.tokenListItems.map {
+            TokenPreference(tokenAddress = it.knownToken.ethAddress, visible = it.showOnMain)
+        }
+        pendingPreferences.trySend(preferences)
+    }
+
+    private suspend fun savePendingPreferences() {
+        for (preferences in pendingPreferences) {
+            try {
+                // The user can leave the screen right after a change; the last choice must still be saved.
+                withContext(NonCancellable) {
+                    tokenPreferenceRepository.update(walletAddress, preferences)
                 }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Logger.warn(TAG, e) { "Failed to save token preferences" }
+                newsChannel.send(TokensListNews.ShowError)
             }
         }
     }
