@@ -25,7 +25,10 @@ import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.FiatRateProvider
+import me.sdi.ethwallet.data.repository.TokenPreference
+import me.sdi.ethwallet.data.repository.TokenPreferenceRepository
 import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.ui.supportedKnownTokens
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -37,6 +40,7 @@ class WalletViewModel(
     private val fiatRateProvider: FiatRateProvider,
     private val chainConfig: ChainConfig,
     private val walletRepository: WalletRepository,
+    private val tokenPreferenceRepository: TokenPreferenceRepository,
 ) : ViewModel() {
     val viewState: StateFlow<WalletViewState>
         field = MutableStateFlow(WalletViewState(chainId = chainConfig.chainId))
@@ -79,8 +83,11 @@ class WalletViewModel(
         viewModelScope.launch {
             val walletBalance = balanceProvider.observe(walletAddress)
             val fiatRate = fiatRateProvider.observe().onStart { emit(emptyMap()) }
+            val tokenPreferences = tokenPreferenceRepository.observe(walletAddress)
 
-            combine(walletBalance, fiatRate) { balance, fiatRates -> CombinedBalance(balance, fiatRates) }
+            combine(walletBalance, fiatRate, tokenPreferences) { balance, fiatRates, preferences ->
+                CombinedBalance(balance, fiatRates, preferences)
+            }
                 .onStart { refreshData(isUserInitiated = false) }
                 .onEach { Logger.debug(TAG) { "Balance update for $walletAddress: $it" } }
                 .collectLatest { combinedBalance: CombinedBalance -> displayUpdatedBalance(combinedBalance) }
@@ -115,11 +122,15 @@ class WalletViewModel(
             chainId = chainConfig.chainId,
         )
 
+        val favoriteTokens = tokenListItems(supportedKnownTokens(chainConfig.chainId), combinedBalance.tokenPreferences)
+            .filter { it.showOnMain }
+            .map { item -> summary.favoriteTokens.first { it.address == item.knownToken.ethAddress } }
+
         viewState.update { currentViewState: WalletViewState ->
             currentViewState.copy(
                 totalBalanceEth = summary.totalBalanceEth,
                 totalBalanceUsd = summary.totalBalanceUsd,
-                favoriteTokens = summary.favoriteTokens,
+                favoriteTokens = favoriteTokens,
                 balanceLoadState = WalletBalanceLoadState.Content,
                 fiatLoadState = if (summary.totalBalanceUsd != null) {
                     WalletFiatLoadState.Available
@@ -229,4 +240,5 @@ class WalletViewModel(
 data class CombinedBalance(
     val balance: Map<EthAddress, BigInteger>,
     val fiatRates: Map<EthAddress, BigDecimal>,
+    val tokenPreferences: List<TokenPreference>,
 )

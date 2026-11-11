@@ -1,38 +1,71 @@
 package me.sdi.ethwallet.ui.wallet
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.data.repository.TokenPreference
+import me.sdi.ethwallet.data.repository.TokenPreferenceRepository
 import me.sdi.ethwallet.ui.KnownToken
 import me.sdi.ethwallet.ui.supportedKnownTokens
 
-class TokensListViewModel(chainConfig: ChainConfig) : ViewModel() {
-    private val _viewState = MutableStateFlow(
-        TokensListViewState(
-            tokenListItems = supportedKnownTokens(chainConfig.chainId)
-                .mapIndexed { index, token ->
-                    TokenListItem(
-                        knownToken = token,
-                        showOnMain = true,
-                    )
-                },
-        ),
-    )
-    val viewState: StateFlow<TokensListViewState> = _viewState.asStateFlow()
+private const val TAG = "TokensListViewModel"
+
+class TokensListViewModel(
+    private val walletAddress: EthAddress,
+    private val chainConfig: ChainConfig,
+    private val tokenPreferenceRepository: TokenPreferenceRepository,
+) : ViewModel() {
+    private val state = MutableStateFlow(TokensListViewState(tokenListItems = emptyList()))
+
+    val viewState: StateFlow<TokensListViewState> = state
+        .onStart { loadTokenListItems() }
+        .stateIn(viewModelScope, SharingStarted.Lazily, state.value)
+
+    private val newsChannel = Channel<TokensListNews>(Channel.BUFFERED)
+    val news: Flow<TokensListNews> = newsChannel.receiveAsFlow()
+
+    private var lastSavedItems: List<TokenListItem> = emptyList()
 
     fun onEvent(event: TokensListEvent) {
+        Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
             is TokensListEvent.OnTokenVisibilityChanged -> onTokenVisibilityOnMainChanged(event.newListItemState)
             is TokensListEvent.OnTokenMoved -> onTokenMoved(event.tokenAddress, event.toIndex)
+            TokensListEvent.OnTokenMoveFinished -> persistTokenListItems()
+        }
+    }
+
+    private suspend fun loadTokenListItems() {
+        try {
+            val preferences = tokenPreferenceRepository.observe(walletAddress).first()
+            val items = tokenListItems(supportedKnownTokens(chainConfig.chainId), preferences)
+            lastSavedItems = items
+            state.update { it.copy(tokenListItems = items) }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Logger.warn(TAG, e) { "Failed to load token preferences" }
+            newsChannel.send(TokensListNews.ShowError)
         }
     }
 
     private fun onTokenMoved(tokenAddress: EthAddress, toIndex: Int) {
-        _viewState.update { state ->
+        state.update { state ->
             val items = state.tokenListItems
             val fromIndex = items.indexOfFirst { it.knownToken.ethAddress == tokenAddress }
             if (fromIndex == -1 || toIndex !in items.indices || fromIndex == toIndex) {
@@ -46,18 +79,36 @@ class TokensListViewModel(chainConfig: ChainConfig) : ViewModel() {
     }
 
     private fun onTokenVisibilityOnMainChanged(newState: TokenListItem) {
-        val knownTokensWithUpdatedItem = _viewState
-            .value
-            .tokenListItems
-            .map {
-                if (it.knownToken.ethAddress == newState.knownToken.ethAddress) {
-                    newState
-                } else {
-                    it
+        state.update { state ->
+            state.copy(
+                tokenListItems = state.tokenListItems.map {
+                    if (it.knownToken.ethAddress == newState.knownToken.ethAddress) newState else it
+                },
+            )
+        }
+        persistTokenListItems()
+    }
+
+    private fun persistTokenListItems() {
+        val items = state.value.tokenListItems
+        if (items != lastSavedItems) {
+            lastSavedItems = items
+            val preferences = items.map {
+                TokenPreference(tokenAddress = it.knownToken.ethAddress, visible = it.showOnMain)
+            }
+            viewModelScope.launch {
+                try {
+                    // The user can leave the screen right after a change; the last choice must still be saved.
+                    withContext(NonCancellable) {
+                        tokenPreferenceRepository.update(walletAddress, preferences)
+                    }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Logger.warn(TAG, e) { "Failed to save token preferences" }
+                    newsChannel.send(TokensListNews.ShowError)
                 }
             }
-
-        _viewState.update { it.copy(tokenListItems = knownTokensWithUpdatedItem) }
+        }
     }
 }
 
@@ -67,9 +118,15 @@ sealed interface TokensListEvent {
         val toIndex: Int,
     ) : TokensListEvent
 
+    data object OnTokenMoveFinished : TokensListEvent
+
     data class OnTokenVisibilityChanged(
         val newListItemState: TokenListItem,
     ) : TokensListEvent
+}
+
+sealed interface TokensListNews {
+    data object ShowError : TokensListNews
 }
 
 data class TokenListItem(

@@ -17,7 +17,6 @@
     <!-- Common -->
     <string name="back">Back</string>
     <string name="delete">Delete</string>
-    <string name="edit">Edit</string>
     <string name="cancel">Cancel</string>
     <string name="error_something_went_wrong">Something went wrong</string>
     <string name="error_unknown">Unknown error</string>

@@ -18,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -28,32 +29,49 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.drag_handle_24px
+import me.sdi.ethwallet.resources.error_something_went_wrong
 import me.sdi.ethwallet.resources.tokens_list_reorder
 import me.sdi.ethwallet.resources.tokens_list_title
 import me.sdi.ethwallet.ui.ETH_SEPOLIA_CHAIN_ID
+import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun TokensListScreen(
-    modifier: Modifier = Modifier,
+    walletAddress: EthAddress,
     onBackPressed: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val viewModel = koinViewModel<TokensListViewModel>()
+    val viewModel: TokensListViewModel = koinViewModel(
+        parameters = { parametersOf(walletAddress) },
+    )
+    val toastManager = rememberToastManager()
+    val errorMessage = stringResource(Res.string.error_something_went_wrong)
+    LaunchedEffect(key1 = viewModel.news) {
+        viewModel.news.collect { news ->
+            when (news) {
+                TokensListNews.ShowError -> toastManager.showToast(errorMessage)
+            }
+        }
+    }
+
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
     TokensListScreenContent(
         modifier = modifier,
@@ -156,7 +174,10 @@ private fun TokensListScreenContent(
                                     draggedTokenKey = key
                                 }
                             },
-                            onDragStopped = { draggedTokenKey = null },
+                            onDragStopped = {
+                                draggedTokenKey = null
+                                onEvent(TokensListEvent.OnTokenMoveFinished)
+                            },
                         ),
                     name = tokenListItem.knownToken.tokenName,
                     symbol = tokenListItem.knownToken.symbol,
@@ -217,8 +238,7 @@ private fun TokenListItem(
     )
 }
 
-@Preview(name = "Light", uiMode = 0x10)
-@Preview(name = "Dark", uiMode = 0x20)
+@FormFactorPreviews
 @Composable
 private fun TokensListScreenContentPreview() {
     EthWalletTheme(dynamicColor = false) {

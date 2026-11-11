@@ -218,7 +218,7 @@ fun EthWalletApp() {
                     onHistoryButtonClick = { label ->
                         backStack.add(Destination.HistoryScreen(destination.ethAddress, label))
                     },
-                    onEditButtonClick = { backStack.add(Destination.TokensListScreen) },
+                    onEditButtonClick = { backStack.add(Destination.TokensListScreen(destination.ethAddress)) },
                     onTokenClick = { tokenAddress ->
                         backStack.add(Destination.TokenDetailsScreen(destination.ethAddress, tokenAddress.toString()))
                     },
@@ -242,9 +242,10 @@ fun EthWalletApp() {
                 )
             }
 
-            entry<Destination.TokensListScreen> {
+            entry<Destination.TokensListScreen> { destination ->
                 TokensListScreen(
                     modifier = Modifier.fillMaxSize(),
+                    walletAddress = EthAddress(destination.walletAddress),
                     onBackPressed = { backStack.removeLastOrNull() },
                 )
             }

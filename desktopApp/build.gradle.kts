@@ -36,6 +36,8 @@ kotlin {
                 implementation(libs.androidx.datastore.preferences.core)
                 implementation(libs.junit)
                 implementation(libs.androidx.room.runtime)
+                implementation(libs.androidx.room.testing)
+                implementation(libs.androidx.sqlite.bundled)
             }
         }
         getByName("desktopMain") {

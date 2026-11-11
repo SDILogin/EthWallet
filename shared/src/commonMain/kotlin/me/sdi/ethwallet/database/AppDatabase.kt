@@ -1,15 +1,18 @@
 package me.sdi.ethwallet.database
 
+import androidx.room.AutoMigration
 import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.dao.TokenBalanceDao
+import me.sdi.ethwallet.database.dao.TokenPreferenceDao
 import me.sdi.ethwallet.database.dao.TransferHistoryDao
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.database.entity.FiatRateEntity
 import me.sdi.ethwallet.database.entity.TokenBalanceEntity
+import me.sdi.ethwallet.database.entity.TokenPreferenceEntity
 import me.sdi.ethwallet.database.entity.TransferHistoryEntity
 import me.sdi.ethwallet.database.entity.WalletEntity
 
@@ -19,9 +22,11 @@ import me.sdi.ethwallet.database.entity.WalletEntity
         TokenBalanceEntity::class,
         FiatRateEntity::class,
         TransferHistoryEntity::class,
+        TokenPreferenceEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -32,6 +37,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun fiatRateDao(): FiatRateDao
 
     abstract fun transferHistoryDao(): TransferHistoryDao
+
+    abstract fun tokenPreferenceDao(): TokenPreferenceDao
 }
 
 @Suppress("KotlinNoActualForExpect")
