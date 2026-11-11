@@ -8,7 +8,6 @@ import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class DataCleanerPinArtifactsTest {
@@ -25,17 +24,25 @@ class DataCleanerPinArtifactsTest {
 
     @Test
     fun clean_removes_the_stored_pin_artifacts() = runTest {
-        dataStore.edit { preferences -> preferences[MASTER_KEK] = STORED_KEK }
+        dataStore.edit { preferences ->
+            preferences[KEK_WRAPPING_KEY] = STORED_WRAPPING_KEY
+            preferences[PASSWORD_WRAPPED_MASTER_KEK] = STORED_WRAPPED_KEK
+        }
 
         DataCleanerPinArtifacts(dataStore).clean()
 
-        assertNull(
-            dataStore.data.first()[MASTER_KEK],
+        assertTrue(
+            dataStore.data.first().asMap().isEmpty(),
             "Logout should remove the stored PIN artifacts",
         )
+        val storedText = String(artifactsFile.readBytes(), Charsets.ISO_8859_1)
         assertFalse(
-            String(artifactsFile.readBytes(), Charsets.ISO_8859_1).contains(STORED_KEK),
-            "Logout should leave no readable PIN artifacts on disk",
+            storedText.contains(STORED_WRAPPING_KEY),
+            "Logout should delete the KEK wrapping key handle from disk",
+        )
+        assertFalse(
+            storedText.contains(STORED_WRAPPED_KEK),
+            "Logout should leave no wrapped master KEK on disk",
         )
     }
 
@@ -50,9 +57,11 @@ class DataCleanerPinArtifactsTest {
     }
 
     private companion object {
-        private const val STORED_KEK = "a2VrLWJ5dGVz"
+        private const val STORED_WRAPPING_KEY = "d3JhcHBpbmcta2V5"
+        private const val STORED_WRAPPED_KEK = "a2VrLWJ5dGVz"
         private const val ARTIFACTS_FILE_NAME = "secure_pin_preferences.preferences_pb"
 
-        private val MASTER_KEK = stringPreferencesKey("master_kek")
+        private val KEK_WRAPPING_KEY = stringPreferencesKey("kek_wrapping_key")
+        private val PASSWORD_WRAPPED_MASTER_KEK = stringPreferencesKey("password_wrapped_master_kek")
     }
 }

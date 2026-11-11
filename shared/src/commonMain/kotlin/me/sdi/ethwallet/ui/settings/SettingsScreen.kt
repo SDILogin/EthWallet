@@ -15,12 +15,15 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.back
@@ -32,6 +35,7 @@ import me.sdi.ethwallet.resources.settings_change_pin
 import me.sdi.ethwallet.resources.settings_change_pin_description
 import me.sdi.ethwallet.resources.settings_lock_app
 import me.sdi.ethwallet.resources.settings_lock_app_description
+import me.sdi.ethwallet.resources.settings_lock_app_description_password
 import me.sdi.ethwallet.resources.settings_title
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.StringResource
@@ -47,7 +51,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel(),
 ) {
-    val viewState by viewModel.viewState.collectAsState()
+    val viewState by viewModel.viewState.collectAsStateWithLifecycle()
     SettingsScreen(
         viewState = viewState,
         onEvent = viewModel::onEvent,
@@ -83,9 +87,11 @@ private fun SettingsScreen(
         },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            BiometricSettingRow(viewState = viewState, onEvent = onEvent)
-            ChangePinRow(onClick = onChangePinClick)
-            LockAppRow(onEvent = onEvent)
+            if (viewState.appLockMethod == AppLockMethod.Pin) {
+                BiometricSettingRow(viewState = viewState, onEvent = onEvent)
+                ChangePinRow(onClick = onChangePinClick)
+            }
+            LockAppRow(appLockMethod = viewState.appLockMethod, onEvent = onEvent)
         }
     }
 }
@@ -145,7 +151,10 @@ private fun ChangePinRow(onClick: () -> Unit) {
 }
 
 @Composable
-private fun LockAppRow(onEvent: (SettingsEvent) -> Unit) {
+private fun LockAppRow(
+    appLockMethod: AppLockMethod,
+    onEvent: (SettingsEvent) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -157,7 +166,12 @@ private fun LockAppRow(onEvent: (SettingsEvent) -> Unit) {
             style = MaterialTheme.typography.bodyLarge,
         )
         Text(
-            text = stringResource(Res.string.settings_lock_app_description),
+            text = stringResource(
+                when (appLockMethod) {
+                    AppLockMethod.Pin -> Res.string.settings_lock_app_description
+                    AppLockMethod.Password -> Res.string.settings_lock_app_description_password
+                },
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -171,12 +185,21 @@ private fun BiometricSettingsHint.toStringRes(): StringResource? = when (this) {
     BiometricSettingsHint.Invalidated -> Res.string.settings_biometric_invalidated
 }
 
+private class SettingsViewStateProvider : PreviewParameterProvider<SettingsViewState> {
+    override val values = sequenceOf(
+        SettingsViewState(isBiometricEnabled = true, isBiometricSwitchEnabled = true),
+        SettingsViewState(appLockMethod = AppLockMethod.Password),
+    )
+}
+
 @Preview
 @Composable
-private fun SettingsScreen_Preview() {
+private fun SettingsScreen_Preview(
+    @PreviewParameter(SettingsViewStateProvider::class) viewState: SettingsViewState,
+) {
     EthWalletTheme {
         SettingsScreen(
-            viewState = SettingsViewState(isBiometricEnabled = true, isBiometricSwitchEnabled = true),
+            viewState = viewState,
             onEvent = {},
             onBack = {},
             onChangePinClick = {},

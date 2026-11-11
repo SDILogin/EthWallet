@@ -27,6 +27,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.ui.history.HistoryRoute
 import me.sdi.ethwallet.ui.history.TransactionDetailsRoute
@@ -38,6 +39,8 @@ import me.sdi.ethwallet.ui.settings.SettingsScreen
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
+import me.sdi.ethwallet.ui.wallet.PasswordUnlockScreen
+import me.sdi.ethwallet.ui.wallet.SetPasswordScreen
 import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.TokenDetailsScreen
 import me.sdi.ethwallet.ui.wallet.TokensListScreen
@@ -62,6 +65,7 @@ fun EthWalletApp() {
         )
 
         val koin = getKoin()
+        val appLockMethod = koin.get<AppLockMethod>()
         val isAuthenticatedFlow = snapshotFlow {
             backStack.any { it is Destination.WalletsListScreen }
         }
@@ -93,23 +97,37 @@ fun EthWalletApp() {
             }
 
             entry<Destination.LockScreen> {
-                VerifyPinCodeScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    onUnlocked = {
-                        backStack.clear()
-                        backStack.add(Destination.WalletsListScreen)
-                    },
-                    onLogout = {
-                        backStack.clear()
-                        backStack.add(Destination.OnBoardingScreen)
-                    },
-                )
+                val onUnlocked: () -> Unit = {
+                    backStack.clear()
+                    backStack.add(Destination.WalletsListScreen)
+                }
+                val onLogout: () -> Unit = {
+                    backStack.clear()
+                    backStack.add(Destination.OnBoardingScreen)
+                }
+                when (appLockMethod) {
+                    AppLockMethod.Pin -> VerifyPinCodeScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onUnlocked = onUnlocked,
+                        onLogout = onLogout,
+                    )
+                    AppLockMethod.Password -> PasswordUnlockScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onUnlocked = onUnlocked,
+                        onLogout = onLogout,
+                    )
+                }
             }
 
             entry<Destination.OnBoardingScreen> {
                 OnboardingScreen(
                     modifier = Modifier.fillMaxSize().systemBarsPadding(),
-                    onCreatePinClick = { backStack.add(Destination.SetPinCodeScreen) },
+                    onContinueClick = {
+                        when (appLockMethod) {
+                            AppLockMethod.Pin -> backStack.add(Destination.SetPinCodeScreen)
+                            AppLockMethod.Password -> backStack.add(Destination.SetPasswordScreen)
+                        }
+                    },
                 )
             }
 
@@ -267,6 +285,16 @@ fun EthWalletApp() {
                 SetPinCodeScreen(
                     modifier = Modifier.fillMaxSize(),
                     onPinCodeSet = {
+                        backStack.clear()
+                        backStack.add(Destination.WalletsListScreen)
+                    },
+                )
+            }
+
+            entry<Destination.SetPasswordScreen> {
+                SetPasswordScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onPasswordSet = {
                         backStack.clear()
                         backStack.add(Destination.WalletsListScreen)
                     },

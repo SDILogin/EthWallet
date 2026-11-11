@@ -26,6 +26,7 @@ import me.sdi.ethwallet.core.history.TransferHistoryRepositoryRoom
 import me.sdi.ethwallet.core.history.TransfersHistoryProvider
 import me.sdi.ethwallet.core.history.TransfersHistoryProviderBlockscout
 import me.sdi.ethwallet.core.security.InMemoryPinSession
+import me.sdi.ethwallet.core.security.PasswordInteractor
 import me.sdi.ethwallet.core.security.PinInteractor
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.core.transfer.EthTransferInteractor
@@ -43,6 +44,8 @@ import me.sdi.ethwallet.ui.settings.ChangePinCodeViewModel
 import me.sdi.ethwallet.ui.settings.SettingsViewModel
 import me.sdi.ethwallet.ui.wallet.CreateWalletViewModel
 import me.sdi.ethwallet.ui.wallet.ImportWalletViewModel
+import me.sdi.ethwallet.ui.wallet.PasswordUnlockViewModel
+import me.sdi.ethwallet.ui.wallet.SetPasswordViewModel
 import me.sdi.ethwallet.ui.wallet.SetPinCodeViewModel
 import me.sdi.ethwallet.ui.wallet.TokenDetailsViewModel
 import me.sdi.ethwallet.ui.wallet.TokensListViewModel
@@ -106,6 +109,14 @@ val commonModule = module {
         )
     }
 
+    factory<PasswordInteractor> {
+        PasswordInteractor(
+            passwordKekStorage = get(),
+            pinSession = get(),
+            userActivityManager = get(),
+        )
+    }
+
     single<UserActivityManager> {
         ProcessLifetimeUserActivityManager(
             pinSession = get(),
@@ -154,6 +165,20 @@ val commonModule = module {
         )
     }
 
+    viewModel<SetPasswordViewModel> {
+        SetPasswordViewModel(
+            passwordInteractor = get(),
+            passwordStrengthChecker = get(),
+        )
+    }
+
+    viewModel<PasswordUnlockViewModel> {
+        PasswordUnlockViewModel(
+            passwordInteractor = get(),
+            dataCleaner = get(),
+        )
+    }
+
     viewModel<ChangePinCodeViewModel> {
         ChangePinCodeViewModel(pinInteractor = get())
     }
@@ -162,6 +187,7 @@ val commonModule = module {
         SettingsViewModel(
             biometricUnlock = get(),
             pinSession = get(),
+            appLockMethod = get(),
         )
     }
 

@@ -8,6 +8,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 import kotlinx.coroutines.Dispatchers
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.security.AndroidBiometricUnlock
+import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerAndroidKeyStore
 import me.sdi.ethwallet.core.security.DataCleanerComposite
@@ -60,6 +61,8 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
     single { chainConfig }
 
     single<HttpClient> { createHttpClient(OkHttp.create()) }
+
+    single { AppLockMethod.Pin }
 
     single<PinAttemptsGuard> { KeyStorePinAttemptsGuard(context = androidContext()) }
 

@@ -9,8 +9,9 @@ done before Desktop persists wallets to disk.
 - `MasterKekStorageSoftware` stores the random master KEK unencrypted as `master_kek` in the owner-only
   `pinArtifactsDataStore` under `~/.ethwallet`. File permissions are its only protection.
 - `SoftwarePrivateKeyEncryptor` encrypts private keys with that KEK only (`KekCipher`), with no hardware layer.
-- The Desktop `AppDatabase` (`DesktopDatabase.kt`) keeps wallets, including encrypted private keys, in memory only.
-  Nothing the KEK can decrypt is written to disk, so a copied `~/.ethwallet` exposes no funds today.
+- Commit 90ad1ac "Persist Desktop wallet data with Room" persisted the Desktop `AppDatabase` to
+  `~/.ethwallet/ethwallet_db` before this task was done. Since then a copied `~/.ethwallet` contains both the
+  encrypted private keys and the plain KEK that decrypts them.
 - `~/.ethwallet` is included in Time Machine backups, cloud-synced home folders, and disk images. Once wallets are
   persisted, such a copy would contain both the encrypted private keys and the KEK that decrypts them, with no brute
   force needed.
@@ -25,28 +26,31 @@ must not let anyone decrypt wallet private keys.
 - Stop storing the master KEK unencrypted on disk. Protect it with a macOS mechanism that does not travel with
   file copies: a Keychain item that is device-only and cannot migrate, or a key held in the Secure Enclave that wraps
   the KEK.
-- The PIN stays an app-lock check (`pin_hash`, `pin_hash_salt`). It is not used as key material.
-- `MasterKekStorage.clear()` and the logout `DataCleaner` implementations must also delete the Keychain item or the Secure
-  Enclave key.
-- Update the KDoc of `MasterKekStorageSoftware` and `SoftwarePrivateKeyEncryptor` to describe the new protection.
-- Keep `MasterKekStorageSoftware` usable by tests that have no Keychain: inject the KEK protection behind an
-  interface, with an in-memory fake in `commonTest`.
-- Out of scope: persisting the Desktop wallet database. That work must depend on this task.
+- Logout must also delete the Keychain item or the Secure Enclave key.
+- Keep the storage usable by tests that have no Keychain: inject the KEK protection behind an interface, with an
+  in-memory fake in `commonTest`.
 
-## Open questions
+## Decisions
 
-- Keychain item vs. Secure Enclave wrapping key: compare JVM access options (JNA or JNI to Security.framework, or
-  an existing library), code signing and entitlement requirements, and behavior of unsigned development builds.
-- Whether the Keychain or Secure Enclave key needs user presence (Touch ID or the login password), and how that
-  interacts with the in-app PIN and biometric unlock.
-- Migration: none is needed while wallets are not persisted on Desktop. Confirm this still holds when the task
-  starts.
+Implemented together with #307 Secure Desktop private key storage and app unlock; the password flow, threat boundary
+and research are in docs/tasks/desktop-secure-key-storage/spec.md.
+
+- Secure Enclave wrapping key, not a Keychain item: a CryptoKit `SecureEnclave.P256.KeyAgreement.PrivateKey` is stored
+  only as its `dataRepresentation` blob in the DataStore, needs no Keychain entitlement, and works for unsigned
+  development builds. A device-only data-protection Keychain item needs a signed app with keychain entitlements, and a
+  login-keychain item travels with home-folder backups. The Swift library is called through JNA
+  (`MasterKekProtectionSecureEnclave`).
+- `PasswordKekStorageSoftware` stores the Secure Enclave key handle, the password salt and the wrapped KEK. The handle
+  is the only form of the Secure Enclave key, so logout (`DataCleanerPinArtifacts`, which clears the whole store)
+  deletes the key.
+- No migration: the app is not released, so pre-release builds are not migrated. A Desktop install that stored the
+  plain `master_kek` must reset and re-import its wallets.
 
 ## Definition of done
 
 - `~/.ethwallet` contains no unencrypted master KEK. A test asserts that the stored artifacts do not contain the
   KEK bytes.
-- Unit tests for `MasterKekStorageSoftware` with the fake KEK protection: create, read, clear.
-- Manual check on Apple Silicon macOS: set a PIN, restart the app, unlock, sign a transfer; copy `~/.ethwallet`
-  to another user account or machine and confirm the KEK cannot be recovered from the copy.
+- Unit tests for the KEK storage with the fake protection.
+- Manual check on Apple Silicon macOS: copy `~/.ethwallet` to another machine and confirm the KEK cannot be
+  recovered from the copy; record the result for another user account on the same Mac.
 - Formatting, Desktop compilation, and shared tests pass.

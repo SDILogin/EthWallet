@@ -25,6 +25,46 @@ spotless {
     }
 }
 
+val secureEnclaveSource = layout.projectDirectory.file("src/desktopMain/swift/SecureEnclaveKek.swift")
+val secureEnclaveLibraryName = "libethwallet_secure_enclave.dylib"
+val secureEnclaveBuildDirectory = layout.buildDirectory.dir("swift/secureEnclave")
+
+val buildSecureEnclaveMacosArm64 = tasks.register<Exec>("buildSecureEnclaveMacosArm64") {
+    group = "swift"
+    description = "Builds the Apple Silicon macOS Secure Enclave library."
+    val library = secureEnclaveBuildDirectory.map { directory -> directory.file(secureEnclaveLibraryName) }
+    inputs.file(secureEnclaveSource)
+    outputs.file(library)
+    commandLine(
+        "xcrun",
+        "swiftc",
+        "-O",
+        "-emit-library",
+        "-parse-as-library",
+        "-module-name",
+        "EthWalletSecureEnclave",
+        "-target",
+        "arm64-apple-macos11",
+        secureEnclaveSource.asFile.absolutePath,
+        "-o",
+        library.get().asFile.absolutePath,
+    )
+    doFirst {
+        library.get().asFile.parentFile.mkdirs()
+    }
+}
+
+val packageSecureEnclaveMacosLibrary = tasks.register<Sync>("packageSecureEnclaveMacosLibrary") {
+    group = "swift"
+    description = "Packages the Apple Silicon macOS Secure Enclave library as a JVM resource."
+    dependsOn(buildSecureEnclaveMacosArm64)
+    from(secureEnclaveBuildDirectory) {
+        include(secureEnclaveLibraryName)
+        into("native/macos/aarch64")
+    }
+    into(layout.buildDirectory.dir("generated/secureEnclave/jvmResources"))
+}
+
 compose.resources {
     publicResClass = true
     packageOfResClass = "me.sdi.ethwallet.resources"
@@ -149,11 +189,16 @@ kotlin {
             }
         }
         val desktopMain = getByName("desktopMain") {
+            resources.srcDir(packageSecureEnclaveMacosLibrary)
+
             dependencies {
                 implementation(libs.androidx.sqlite.bundled)
                 implementation(compose.desktop.currentOs)
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.okhttp)
+                implementation(libs.jna)
+                implementation(libs.bouncycastle.bcprov)
+                implementation(libs.zxcvbn)
 
                 // QR Code
                 implementation(libs.zxing.core)
