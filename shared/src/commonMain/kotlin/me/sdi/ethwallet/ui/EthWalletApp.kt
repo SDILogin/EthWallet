@@ -56,6 +56,8 @@ import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
 import org.koin.compose.getKoin
 
+private const val WALLET_SCREEN_CONTENT_KEY = "WalletScreen"
+
 @Composable
 fun EthWalletApp() {
     EthWalletTheme {
@@ -238,6 +240,7 @@ fun EthWalletApp() {
 
             @OptIn(ExperimentalMaterial3AdaptiveApi::class)
             entry<Destination.WalletScreen>(
+                clazzContentKey = { WALLET_SCREEN_CONTENT_KEY },
                 metadata = detailPane(),
             ) { destination ->
                 WalletScreen(

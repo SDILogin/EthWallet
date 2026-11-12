@@ -1,5 +1,13 @@
 package me.sdi.ethwallet.ui.wallet
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -74,6 +82,7 @@ import me.sdi.ethwallet.resources.wallet_retry
 import me.sdi.ethwallet.resources.wallet_send
 import me.sdi.ethwallet.resources.wallet_tokens_erc20
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.components.ScreenTransition
 import me.sdi.ethwallet.ui.components.rememberScreenTransition
 import me.sdi.ethwallet.ui.components.shimmer
 import me.sdi.ethwallet.ui.daiOnSepolia
@@ -94,10 +103,31 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 private const val TOKEN_SHIMMER_COUNT = 6
+private const val WALLET_SWITCH_MS = 300
+private const val BALANCE_CARD_SHARED_KEY = "wallet-balance-card"
+private const val BUTTONS_PANEL_SHARED_KEY = "wallet-buttons-panel"
+private const val TOKENS_CARD_SHARED_KEY = "wallet-tokens-card"
 private const val TWO_COLUMNS_MIN_WIDTH_DP = 600
 private const val THREE_COLUMNS_MIN_WIDTH_DP = 900
 
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+/**
+ * Modifiers that connect the main blocks of two wallet screens during a switch between wallets.
+ */
+class WalletSharedBounds(
+    val balanceCard: Modifier,
+    val buttonsPanel: Modifier,
+    val tokensCard: Modifier,
+) {
+    companion object {
+        val None = WalletSharedBounds(balanceCard = Modifier, buttonsPanel = Modifier, tokensCard = Modifier)
+    }
+}
+
+/**
+ * One instance shows all wallets. A change of [walletAddress] keeps the balance card, the action
+ * buttons and the tokens card in place, and fades the content of the old wallet into the new one.
+ */
+@OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun WalletScreen(
     walletAddress: EthAddress,
@@ -109,34 +139,62 @@ fun WalletScreen(
     onHistoryButtonClick: (walletLabel: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: WalletViewModel = koinViewModel(
-        parameters = { parametersOf(walletAddress) },
-    )
     val toastManager = rememberToastManager()
     val showUpButton = LocalListDetailSceneScope.current == null
     val refreshErrorMessage = stringResource(Res.string.wallet_refresh_error)
-    LaunchedEffect(key1 = viewModel.news) {
-        viewModel.news.collect { news ->
-            when (news) {
-                WalletNews.ShowErrorMessage -> toastManager.showToast(refreshErrorMessage)
+    val screenTransition = rememberScreenTransition()
+    SharedTransitionLayout(modifier = modifier) {
+        AnimatedContent(
+            targetState = walletAddress,
+            transitionSpec = {
+                fadeIn(tween(WALLET_SWITCH_MS)) togetherWith fadeOut(tween(WALLET_SWITCH_MS))
+            },
+        ) { address ->
+            val viewModel: WalletViewModel = koinViewModel(
+                key = address.toString(),
+                parameters = { parametersOf(address) },
+            )
+            LaunchedEffect(key1 = viewModel.news) {
+                viewModel.news.collect { news ->
+                    when (news) {
+                        WalletNews.ShowErrorMessage -> toastManager.showToast(refreshErrorMessage)
+                    }
+                }
             }
+
+            val viewState by viewModel.viewState.collectAsState()
+            WalletScreenContent(
+                viewState = viewState,
+                onRefresh = { viewModel.onEvent(WalletEvent.Refresh) },
+                onRetry = { viewModel.onEvent(WalletEvent.Retry) },
+                showUpButton = showUpButton,
+                onUpButtonClick = onUpButtonClick,
+                onEditButtonClick = onEditButtonClick,
+                onTokenClick = onTokenClick,
+                onReceiveButtonClick = onReceiveButtonClick,
+                onSendButtonClick = onSendButtonClick,
+                onHistoryButtonClick = { onHistoryButtonClick(viewState.walletName) },
+                screenTransition = screenTransition,
+                sharedBounds = WalletSharedBounds(
+                    balanceCard = Modifier.sharedBounds(
+                        sharedContentState = rememberSharedContentState(BALANCE_CARD_SHARED_KEY),
+                        animatedVisibilityScope = this@AnimatedContent,
+                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                    ),
+                    buttonsPanel = Modifier.sharedBounds(
+                        sharedContentState = rememberSharedContentState(BUTTONS_PANEL_SHARED_KEY),
+                        animatedVisibilityScope = this@AnimatedContent,
+                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                    ),
+                    tokensCard = Modifier.sharedBounds(
+                        sharedContentState = rememberSharedContentState(TOKENS_CARD_SHARED_KEY),
+                        animatedVisibilityScope = this@AnimatedContent,
+                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                    ),
+                ),
+            )
         }
     }
-
-    val viewState by viewModel.viewState.collectAsState()
-    WalletScreenContent(
-        viewState = viewState,
-        onRefresh = { viewModel.onEvent(WalletEvent.Refresh) },
-        onRetry = { viewModel.onEvent(WalletEvent.Retry) },
-        showUpButton = showUpButton,
-        onUpButtonClick = onUpButtonClick,
-        onEditButtonClick = onEditButtonClick,
-        onTokenClick = onTokenClick,
-        onReceiveButtonClick = onReceiveButtonClick,
-        onSendButtonClick = onSendButtonClick,
-        onHistoryButtonClick = { onHistoryButtonClick(viewState.walletName) },
-        modifier = modifier,
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -153,9 +211,10 @@ fun WalletScreenContent(
     onSendButtonClick: () -> Unit,
     onHistoryButtonClick: () -> Unit,
     modifier: Modifier = Modifier,
+    screenTransition: ScreenTransition = rememberScreenTransition(),
+    sharedBounds: WalletSharedBounds = WalletSharedBounds.None,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-    val transition = rememberScreenTransition()
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -188,7 +247,7 @@ fun WalletScreenContent(
                 columns = GridCells.Adaptive(300.dp),
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer { alpha = transition.fadeAlpha }
+                    .graphicsLayer { alpha = screenTransition.fadeAlpha }
                     .consumeWindowInsets(innerPadding),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
@@ -203,7 +262,7 @@ fun WalletScreenContent(
                         WalletBalanceLoadState.Loading,
                         WalletBalanceLoadState.Content,
                         -> TotalFiatBalanceCard(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().then(sharedBounds.balanceCard),
                             fiatBalance = viewState.totalBalanceUsd,
                             ethBalance = viewState.totalBalanceEth,
                             chainId = viewState.chainId,
@@ -220,6 +279,7 @@ fun WalletScreenContent(
                         onReceiveClick = onReceiveButtonClick,
                         onSendButtonClick = onSendButtonClick,
                         onHistoryButtonClick = onHistoryButtonClick,
+                        modifier = sharedBounds.buttonsPanel,
                     )
                 }
 
@@ -229,7 +289,7 @@ fun WalletScreenContent(
                             viewState = viewState,
                             onEditButtonClick = onEditButtonClick,
                             onTokenClick = onTokenClick,
-                            modifier = Modifier.padding(16.dp),
+                            modifier = sharedBounds.tokensCard.padding(16.dp),
                         )
                     }
                 }
@@ -368,11 +428,13 @@ private fun ButtonsPanel(
     onReceiveClick: () -> Unit,
     onSendButtonClick: () -> Unit,
     onHistoryButtonClick: () -> Unit,
+    modifier: Modifier,
 ) {
     val receiveTitle = stringResource(Res.string.wallet_receive)
     val sendTitle = stringResource(Res.string.wallet_send)
 
     Row(
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
