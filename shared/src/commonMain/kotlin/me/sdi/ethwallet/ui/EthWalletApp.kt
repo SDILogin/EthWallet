@@ -44,6 +44,7 @@ import me.sdi.ethwallet.ui.send.SendScreen
 import me.sdi.ethwallet.ui.settings.ChangePinCodeScreen
 import me.sdi.ethwallet.ui.settings.SettingsScreen
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import me.sdi.ethwallet.ui.wallet.AddWalletScreen
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
 import me.sdi.ethwallet.ui.wallet.PasswordUnlockScreen
@@ -164,6 +165,11 @@ fun EthWalletApp() {
                 WalletsListScreen(
                     modifier = Modifier.fillMaxSize(),
                     selectedWalletAddress = activeWalletAddress?.let(::EthAddress),
+                    buttonsVisible = backStack.none {
+                        it is Destination.AddWalletScreen ||
+                            it is Destination.CreateWalletScreen ||
+                            it is Destination.ImportWalletScreen
+                    },
                     onWalletSelected = { ethAddress ->
                         val destination = Destination.WalletScreen(ethAddress = ethAddress.toString())
                         if (backStack.lastOrNull() != destination) {
@@ -178,9 +184,28 @@ fun EthWalletApp() {
                             activeWalletAddress = null
                         }
                     },
+                    onAddWalletClick = {
+                        if (backStack.lastOrNull() != Destination.AddWalletScreen) {
+                            popToWalletsList()
+                            backStack.add(Destination.AddWalletScreen)
+                        }
+                        activeWalletAddress = null
+                    },
                     onImportWallet = { backStack.add(Destination.ImportWalletScreen) },
                     onCreateWallet = { backStack.add(Destination.CreateWalletScreen) },
                     onSettingsClick = { backStack.add(Destination.SettingsScreen) },
+                )
+            }
+
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.AddWalletScreen>(
+                metadata = detailPane(),
+            ) {
+                AddWalletScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onUpButtonClick = { backStack.removeLastOrNull() },
+                    onImportWallet = { backStack.add(Destination.ImportWalletScreen) },
+                    onCreateWallet = { backStack.add(Destination.CreateWalletScreen) },
                 )
             }
 

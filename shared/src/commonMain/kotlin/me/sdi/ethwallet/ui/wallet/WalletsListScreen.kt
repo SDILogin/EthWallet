@@ -100,8 +100,10 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun WalletsListScreen(
     selectedWalletAddress: EthAddress?,
+    buttonsVisible: Boolean,
     onWalletSelected: (EthAddress) -> Unit,
     onWalletDeleted: (EthAddress) -> Unit,
+    onAddWalletClick: () -> Unit,
     onImportWallet: () -> Unit,
     onCreateWallet: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -125,8 +127,10 @@ fun WalletsListScreen(
         modifier = modifier,
         uiState = uiState,
         selectedWalletAddress = selectedWalletAddress,
+        buttonsVisible = buttonsVisible,
         onWalletSelected = onWalletSelected,
         onEvent = viewModel::onEvent,
+        onAddWalletClick = onAddWalletClick,
         onImportWallet = onImportWallet,
         onCreateWallet = onCreateWallet,
         onSettingsClick = onSettingsClick,
@@ -139,8 +143,10 @@ private fun WalletsListScreenContent(
     modifier: Modifier,
     uiState: WalletsListUiState,
     selectedWalletAddress: EthAddress?,
+    buttonsVisible: Boolean,
     onWalletSelected: (EthAddress) -> Unit,
     onEvent: (WalletsListEvent) -> Unit,
+    onAddWalletClick: () -> Unit,
     onImportWallet: () -> Unit,
     onCreateWallet: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -192,9 +198,13 @@ private fun WalletsListScreenContent(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
-                        AddWalletButton(
-                            onCreateWallet = onCreateWallet,
-                            onImportWallet = onImportWallet,
+                        val addWalletLabel = stringResource(Res.string.wallets_list_add_wallet)
+                        EthButton(
+                            text = addWalletLabel,
+                            onClick = onAddWalletClick,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .semantics { contentDescription = addWalletLabel },
                         )
                     }
                 },
@@ -202,6 +212,7 @@ private fun WalletsListScreenContent(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background)
                     .padding(top = innerPadding.calculateTopPadding()),
+                buttonsVisible = buttonsVisible,
             ) { contentPadding ->
                 if (uiState.wallets.isEmpty()) {
                     Column(
@@ -462,43 +473,6 @@ private fun WalletLabelEditorDialog(
     )
 }
 
-@Composable
-private fun AddWalletButton(
-    onCreateWallet: () -> Unit,
-    onImportWallet: () -> Unit,
-) {
-    var isAddWalletMenuExpanded by remember { mutableStateOf(false) }
-    val addWalletLabel = stringResource(Res.string.wallets_list_add_wallet)
-    Box {
-        EthButton(
-            text = addWalletLabel,
-            onClick = { isAddWalletMenuExpanded = true },
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics { contentDescription = addWalletLabel },
-        )
-        DropdownMenu(
-            expanded = isAddWalletMenuExpanded,
-            onDismissRequest = { isAddWalletMenuExpanded = false },
-        ) {
-            DropdownMenuItem(
-                text = { EthText(text = stringResource(Res.string.onboarding_create_wallet)) },
-                onClick = {
-                    isAddWalletMenuExpanded = false
-                    onCreateWallet()
-                },
-            )
-            DropdownMenuItem(
-                text = { EthText(text = stringResource(Res.string.onboarding_import_wallet)) },
-                onClick = {
-                    isAddWalletMenuExpanded = false
-                    onImportWallet()
-                },
-            )
-        }
-    }
-}
-
 private fun EthAddress.abbreviated(): String {
     val address = toString()
     return "${address.take(6)}...${address.takeLast(4)}"
@@ -526,8 +500,10 @@ private fun WalletsListScreenPreview() {
                 isLoading = false,
             ),
             selectedWalletAddress = null,
+            buttonsVisible = true,
             onWalletSelected = {},
             onEvent = {},
+            onAddWalletClick = {},
             onImportWallet = {},
             onCreateWallet = {},
             onSettingsClick = {},

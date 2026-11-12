@@ -15,6 +15,9 @@ sealed interface Destination : NavKey {
     data object OnBoardingScreen : Destination
 
     @Serializable
+    data object AddWalletScreen : Destination
+
+    @Serializable
     data object CreateWalletScreen : Destination
 
     @Serializable
