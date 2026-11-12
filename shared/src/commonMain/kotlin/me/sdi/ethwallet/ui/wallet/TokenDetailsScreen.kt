@@ -72,8 +72,10 @@ fun TokenDetailsScreen(
     onReceiveButtonClick: () -> Unit,
     onHistoryButtonClick: () -> Unit,
     modifier: Modifier = Modifier,
+    transitionScopes: WalletTransitionScopes? = null,
 ) {
     val viewModel = koinViewModel<TokenDetailsViewModel>(
+        key = "$walletAddress-$tokenAddress",
         parameters = { parametersOf(walletAddress, tokenAddress) },
     )
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
@@ -84,6 +86,7 @@ fun TokenDetailsScreen(
         onReceiveButtonClick = onReceiveButtonClick,
         onHistoryButtonClick = onHistoryButtonClick,
         viewState = viewState,
+        tokenBounds = transitionScopes?.tokenBounds(tokenAddress) ?: TokenSharedBounds.None,
     )
 }
 
@@ -95,13 +98,14 @@ fun TokenDetailsScreenContent(
     onReceiveButtonClick: () -> Unit,
     onHistoryButtonClick: () -> Unit,
     viewState: TokenDetailsViewState,
+    tokenBounds: TokenSharedBounds,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { EthText(viewState.name) },
+                title = { EthText(viewState.name, modifier = tokenBounds.name) },
                 navigationIcon = {
                     EthIconButton(onClick = onUpButtonClick) {
                         Icon(painterResource(Res.drawable.arrow_back_24px), stringResource(Res.string.back))
@@ -140,17 +144,19 @@ fun TokenDetailsScreenContent(
                 Icon(
                     painter = painterResource(viewState.icon),
                     contentDescription = null,
-                    modifier = Modifier.size(72.dp),
+                    modifier = tokenBounds.icon.size(72.dp),
                     tint = Color.Unspecified,
                 )
-                EthText(viewState.symbol, style = EthTextStyle.Title)
+                EthText(viewState.symbol, modifier = tokenBounds.symbol, style = EthTextStyle.Title)
                 EthText(
                     text = viewState.balance?.let { "$it ${viewState.symbol}" }
                         ?: stringResource(Res.string.token_details_unavailable),
+                    modifier = tokenBounds.balance,
                     style = EthTextStyle.Headline,
                 )
                 EthText(
                     text = viewState.fiatValue ?: stringResource(Res.string.wallet_fiat_unavailable),
+                    modifier = tokenBounds.fiatValue,
                     style = EthTextStyle.Title,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -247,6 +253,7 @@ private fun TokenDetailsScreenContentPreview() {
             onReceiveButtonClick = {},
             onHistoryButtonClick = {},
             viewState = usdcOnMainnet.toDetailsViewState(ETH_MAINNET_CHAIN_ID).copy(balance = "500.00"),
+            tokenBounds = TokenSharedBounds.None,
         )
     }
 }

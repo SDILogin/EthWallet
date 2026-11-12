@@ -110,6 +110,12 @@ private const val BALANCE_CARD_SHARED_KEY = "wallet-balance-card"
 private const val BUTTONS_PANEL_SHARED_KEY = "wallet-buttons-panel"
 private const val TOKENS_CARD_SHARED_KEY = "wallet-tokens-card"
 private const val TOKEN_ROW_SHARED_KEY_PREFIX = "wallet-token-row-"
+private const val TOKEN_ICON_SHARED_KEY_PREFIX = "wallet-token-icon-"
+private const val TOKEN_NAME_SHARED_KEY_PREFIX = "wallet-token-name-"
+private const val TOKEN_SYMBOL_SHARED_KEY_PREFIX = "wallet-token-symbol-"
+private const val TOKEN_BALANCE_SHARED_KEY_PREFIX = "wallet-token-balance-"
+private const val TOKEN_FIAT_SHARED_KEY_PREFIX = "wallet-token-fiat-"
+private const val TOKEN_PART_OVERLAY_Z_INDEX = 2f
 private const val BLOCK_OVERLAY_Z_INDEX = 0f
 private const val TOKEN_ROW_OVERLAY_Z_INDEX = 1f
 private const val TWO_COLUMNS_MIN_WIDTH_DP = 600
@@ -123,6 +129,7 @@ class WalletSharedBounds(
     val buttonsPanel: Modifier,
     val tokensCard: Modifier,
     val tokenRows: Map<EthAddress, Modifier>,
+    val tokens: Map<EthAddress, TokenSharedBounds>,
 ) {
     companion object {
         val None = WalletSharedBounds(
@@ -130,6 +137,7 @@ class WalletSharedBounds(
             buttonsPanel = Modifier,
             tokensCard = Modifier,
             tokenRows = emptyMap(),
+            tokens = emptyMap(),
         )
     }
 }
@@ -155,6 +163,37 @@ private fun WalletTransitionScopes.sharedBounds(key: String, zIndexInOverlay: Fl
     }
 
 @Composable
+private fun WalletTransitionScopes.sharedScaledBounds(key: String): Modifier =
+    with(sharedTransitionScope) {
+        Modifier.sharedBounds(
+            sharedContentState = rememberSharedContentState(key),
+            animatedVisibilityScope = animatedVisibilityScope,
+            zIndexInOverlay = TOKEN_PART_OVERLAY_Z_INDEX,
+        )
+    }
+
+/**
+ * Modifiers that connect the parts of one token on the wallet screen and on the token details screen.
+ */
+class TokenSharedBounds(
+    val icon: Modifier,
+    val name: Modifier,
+    val symbol: Modifier,
+    val balance: Modifier,
+    val fiatValue: Modifier,
+) {
+    companion object {
+        val None = TokenSharedBounds(
+            icon = Modifier,
+            name = Modifier,
+            symbol = Modifier,
+            balance = Modifier,
+            fiatValue = Modifier,
+        )
+    }
+}
+
+@Composable
 internal fun WalletTransitionScopes.tokensContainerBounds(): Modifier =
     sharedBounds(key = TOKENS_CARD_SHARED_KEY, zIndexInOverlay = BLOCK_OVERLAY_Z_INDEX)
 
@@ -169,18 +208,36 @@ internal fun WalletTransitionScopes.tokenRowBounds(tokens: List<EthAddress>): Ma
         }
     }
 
-private data class WalletPane(val address: EthAddress, val manageTokens: Boolean)
+@Composable
+internal fun WalletTransitionScopes.tokenBounds(token: EthAddress): TokenSharedBounds {
+    val tokenKey = token.lowercase().toString()
+    return TokenSharedBounds(
+        icon = sharedScaledBounds(TOKEN_ICON_SHARED_KEY_PREFIX + tokenKey),
+        name = sharedScaledBounds(TOKEN_NAME_SHARED_KEY_PREFIX + tokenKey),
+        symbol = sharedScaledBounds(TOKEN_SYMBOL_SHARED_KEY_PREFIX + tokenKey),
+        balance = sharedScaledBounds(TOKEN_BALANCE_SHARED_KEY_PREFIX + tokenKey),
+        fiatValue = sharedScaledBounds(TOKEN_FIAT_SHARED_KEY_PREFIX + tokenKey),
+    )
+}
+
+private data class WalletPane(
+    val address: EthAddress,
+    val manageTokens: Boolean,
+    val detailsTokenAddress: EthAddress?,
+)
 
 /**
- * One instance shows all wallets and the manage tokens screen of each wallet.
+ * One instance shows all wallets, and the manage tokens and token details screens of each wallet.
  * A change of [walletAddress] keeps the balance card, the action buttons and the tokens card
  * in place. A change of [manageTokens] connects the tokens card and its rows with the tokens list.
+ * A non-null [detailsTokenAddress] shows the details of this token and connects the token icons.
  */
 @OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun WalletScreen(
     walletAddress: EthAddress,
     manageTokens: Boolean,
+    detailsTokenAddress: EthAddress?,
     onUpButtonClick: () -> Unit,
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
@@ -195,7 +252,11 @@ fun WalletScreen(
     val screenTransition = rememberScreenTransition()
     SharedTransitionLayout(modifier = modifier) {
         AnimatedContent(
-            targetState = WalletPane(address = walletAddress, manageTokens = manageTokens),
+            targetState = WalletPane(
+                address = walletAddress,
+                manageTokens = manageTokens,
+                detailsTokenAddress = detailsTokenAddress,
+            ),
             transitionSpec = {
                 fadeIn(tween(WALLET_SWITCH_MS)) togetherWith fadeOut(tween(WALLET_SWITCH_MS))
             },
@@ -208,6 +269,16 @@ fun WalletScreen(
                 TokensListScreen(
                     walletAddress = pane.address,
                     onBackPressed = onUpButtonClick,
+                    transitionScopes = scopes,
+                )
+            } else if (pane.detailsTokenAddress != null) {
+                TokenDetailsScreen(
+                    walletAddress = pane.address,
+                    tokenAddress = pane.detailsTokenAddress,
+                    onUpButtonClick = onUpButtonClick,
+                    onSendButtonClick = onSendButtonClick,
+                    onReceiveButtonClick = onReceiveButtonClick,
+                    onHistoryButtonClick = { onHistoryButtonClick(pane.address.toString()) },
                     transitionScopes = scopes,
                 )
             } else {
@@ -247,6 +318,9 @@ fun WalletScreen(
                         ),
                         tokensCard = scopes.tokensContainerBounds(),
                         tokenRows = scopes.tokenRowBounds(viewState.favoriteTokens.map { it.address }),
+                        tokens = viewState.favoriteTokens.associate { token ->
+                            token.address to key(token.address) { scopes.tokenBounds(token.address) }
+                        },
                     ),
                 )
             }
@@ -318,7 +392,7 @@ fun WalletScreenContent(
                         WalletBalanceLoadState.Error -> BalanceErrorCard(onRetry = onRetry)
                         WalletBalanceLoadState.Loading,
                         WalletBalanceLoadState.Content,
-                            -> TotalFiatBalanceCard(
+                        -> TotalFiatBalanceCard(
                             modifier = Modifier.fillMaxWidth().then(sharedBounds.balanceCard),
                             fiatBalance = viewState.totalBalanceUsd,
                             ethBalance = viewState.totalBalanceEth,
@@ -347,6 +421,7 @@ fun WalletScreenContent(
                             onEditButtonClick = onEditButtonClick,
                             onTokenClick = onTokenClick,
                             tokenRowModifiers = sharedBounds.tokenRows,
+                            tokenBounds = sharedBounds.tokens,
                             modifier = sharedBounds.tokensCard.padding(16.dp),
                         )
                     }
@@ -362,6 +437,7 @@ private fun TokensSection(
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
     tokenRowModifiers: Map<EthAddress, Modifier>,
+    tokenBounds: Map<EthAddress, TokenSharedBounds>,
     modifier: Modifier = Modifier,
 ) {
     EthCard(modifier = modifier) {
@@ -394,6 +470,7 @@ private fun TokensSection(
                             TokenRow(
                                 token = token,
                                 onTokenClick = onTokenClick,
+                                sharedBounds = tokenBounds[token.address] ?: TokenSharedBounds.None,
                                 modifier = Modifier
                                     .width(itemWidth)
                                     .then(tokenRowModifiers[token.address] ?: Modifier),
@@ -467,9 +544,11 @@ private fun BalanceErrorCard(
 private fun TokenRow(
     token: FavoriteToken,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
+    sharedBounds: TokenSharedBounds,
     modifier: Modifier = Modifier,
 ) {
     TokenItem(
+        sharedBounds = sharedBounds,
         tokenAddress = token.address,
         tokenName = token.name,
         tokenSymbol = token.ticker,
@@ -683,6 +762,7 @@ private fun TokenItem(
     tokenSymbol: String,
     tokenBalance: String,
     fiatValue: String?,
+    sharedBounds: TokenSharedBounds,
     modifier: Modifier = Modifier,
 ) {
     val tokenIcon: DrawableResource = remember(tokenAddress) {
@@ -694,7 +774,7 @@ private fun TokenItem(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            modifier = Modifier.size(48.dp),
+            modifier = sharedBounds.icon.size(48.dp),
             painter = painterResource(tokenIcon),
             contentDescription = null,
             tint = Color.Unspecified,
@@ -705,11 +785,13 @@ private fun TokenItem(
         Column(modifier = Modifier.weight(1f)) {
             EthText(
                 text = tokenName,
+                modifier = sharedBounds.name,
                 style = EthTextStyle.Title,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             EthText(
                 text = tokenSymbol,
+                modifier = sharedBounds.symbol,
                 style = EthTextStyle.Caption,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -718,11 +800,13 @@ private fun TokenItem(
         Column(horizontalAlignment = Alignment.End) {
             EthText(
                 text = "$tokenBalance $tokenSymbol",
+                modifier = sharedBounds.balance,
                 style = EthTextStyle.Title,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             EthText(
                 text = fiatValue ?: stringResource(Res.string.wallet_fiat_unavailable),
+                modifier = sharedBounds.fiatValue,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
