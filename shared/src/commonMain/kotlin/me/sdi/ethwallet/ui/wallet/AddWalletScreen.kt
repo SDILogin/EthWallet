@@ -103,10 +103,11 @@ fun AddWalletScreen(
                 .fillMaxSize()
                 .padding(top = paddingValues.calculateTopPadding()),
             buttonsVisible = contentVisible,
-        ) { contentPadding ->
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(bottom = 120.dp)
                     .padding(16.dp),
                 contentAlignment = Alignment.Center,
             ) {
