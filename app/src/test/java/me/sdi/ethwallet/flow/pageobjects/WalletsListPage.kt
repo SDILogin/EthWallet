@@ -12,10 +12,6 @@ import me.sdi.ethwallet.flow.clickContentDescription
 import me.sdi.ethwallet.flow.clickText
 
 class WalletsListPage(private val composeTestRule: ComposeTestRule) {
-    fun assertAddWalletIsHidden() {
-        composeTestRule.onAllNodesWithContentDescription("Add wallet").assertCountEquals(0)
-    }
-
     fun openAddWalletMenu() {
         composeTestRule.waitUntil(10000) {
             composeTestRule.onAllNodesWithContentDescription("Add wallet").fetchSemanticsNodes().isNotEmpty()
@@ -38,6 +34,7 @@ class WalletsListPage(private val composeTestRule: ComposeTestRule) {
     }
 
     fun clickCreateWallet() {
+        openAddWalletMenu()
         composeTestRule.waitUntil(10000) {
             composeTestRule.onAllNodesWithText("Create new wallet").fetchSemanticsNodes().isNotEmpty()
         }

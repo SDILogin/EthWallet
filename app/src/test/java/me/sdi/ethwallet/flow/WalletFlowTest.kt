@@ -454,12 +454,13 @@ class WalletFlowTest : KoinTest {
     }
 
     @Test
-    fun emptyWalletsListDoesNotShowAddWalletFab() {
+    fun emptyWalletsListShowsAddWalletActions() {
         onboardingPage.clickCreatePinCode()
         setPinCodePage.enterPin(PIN)
         setPinCodePage.enterPin(PIN)
 
-        walletsListPage.assertAddWalletIsHidden()
+        walletsListPage.openAddWalletMenu()
+        walletsListPage.assertAddWalletActions()
     }
 
     @Test

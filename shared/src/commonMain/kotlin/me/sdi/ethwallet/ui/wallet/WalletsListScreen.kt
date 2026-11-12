@@ -9,17 +9,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -47,7 +43,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -65,8 +60,6 @@ import me.sdi.ethwallet.resources.check_24px
 import me.sdi.ethwallet.resources.delete
 import me.sdi.ethwallet.resources.error_something_went_wrong
 import me.sdi.ethwallet.resources.more_vert_24px
-import me.sdi.ethwallet.resources.onboarding_create_wallet
-import me.sdi.ethwallet.resources.onboarding_import_wallet
 import me.sdi.ethwallet.resources.settings_24px
 import me.sdi.ethwallet.resources.wallet_label
 import me.sdi.ethwallet.resources.wallet_label_error_length
@@ -96,7 +89,6 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletsListScreen(
     selectedWalletAddress: EthAddress?,
@@ -104,8 +96,6 @@ fun WalletsListScreen(
     onWalletSelected: (EthAddress) -> Unit,
     onWalletDeleted: (EthAddress) -> Unit,
     onAddWalletClick: () -> Unit,
-    onImportWallet: () -> Unit,
-    onCreateWallet: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -131,8 +121,6 @@ fun WalletsListScreen(
         onWalletSelected = onWalletSelected,
         onEvent = viewModel::onEvent,
         onAddWalletClick = onAddWalletClick,
-        onImportWallet = onImportWallet,
-        onCreateWallet = onCreateWallet,
         onSettingsClick = onSettingsClick,
     )
 }
@@ -147,8 +135,6 @@ private fun WalletsListScreenContent(
     onWalletSelected: (EthAddress) -> Unit,
     onEvent: (WalletsListEvent) -> Unit,
     onAddWalletClick: () -> Unit,
-    onImportWallet: () -> Unit,
-    onCreateWallet: () -> Unit,
     onSettingsClick: () -> Unit,
 ) {
     Scaffold(
@@ -185,28 +171,14 @@ private fun WalletsListScreenContent(
         } else {
             EthButtonsLayout(
                 buttons = {
-                    if (uiState.wallets.isEmpty()) {
-                        EthButton(
-                            text = stringResource(Res.string.onboarding_import_wallet),
-                            onClick = onImportWallet,
-                            modifier = Modifier.fillMaxWidth(),
-                            style = EthButtonStyle.Secondary,
-                        )
-                        EthButton(
-                            text = stringResource(Res.string.onboarding_create_wallet),
-                            onClick = onCreateWallet,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        val addWalletLabel = stringResource(Res.string.wallets_list_add_wallet)
-                        EthButton(
-                            text = addWalletLabel,
-                            onClick = onAddWalletClick,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .semantics { contentDescription = addWalletLabel },
-                        )
-                    }
+                    val addWalletLabel = stringResource(Res.string.wallets_list_add_wallet)
+                    EthButton(
+                        text = addWalletLabel,
+                        onClick = onAddWalletClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { contentDescription = addWalletLabel },
+                    )
                 },
                 modifier = Modifier
                     .fillMaxSize()
@@ -218,7 +190,6 @@ private fun WalletsListScreenContent(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(contentPadding)
                             .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
@@ -235,6 +206,8 @@ private fun WalletsListScreenContent(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(16.dp),
                         )
+
+                        Spacer(modifier = Modifier.height(86.dp))
                     }
                 } else {
                     LazyVerticalGrid(
@@ -504,8 +477,6 @@ private fun WalletsListScreenPreview() {
             onWalletSelected = {},
             onEvent = {},
             onAddWalletClick = {},
-            onImportWallet = {},
-            onCreateWallet = {},
             onSettingsClick = {},
         )
     }

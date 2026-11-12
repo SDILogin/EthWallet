@@ -191,8 +191,6 @@ fun EthWalletApp() {
                         }
                         activeWalletAddress = null
                     },
-                    onImportWallet = { backStack.add(Destination.ImportWalletScreen) },
-                    onCreateWallet = { backStack.add(Destination.CreateWalletScreen) },
                     onSettingsClick = { backStack.add(Destination.SettingsScreen) },
                 )
             }

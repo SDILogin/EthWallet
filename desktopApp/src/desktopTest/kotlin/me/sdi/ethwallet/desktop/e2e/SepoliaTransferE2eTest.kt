@@ -91,7 +91,8 @@ class SepoliaTransferE2eTest {
         setPasswordPage.clickContinue()
 
         walletsListPage.assertWalletsListShown()
-        walletsListPage.clickImportWalletButton()
+        walletsListPage.clickAddWalletButton()
+        walletsListPage.clickImportWalletMenuItem()
         importWalletPage.assertShown()
         importWalletPage.inputWalletLabel(SENDER_LABEL)
         importWalletPage.inputSeedPhrase(seeds.seed1)
