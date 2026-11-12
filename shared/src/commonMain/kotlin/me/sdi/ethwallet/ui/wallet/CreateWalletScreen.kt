@@ -1,7 +1,5 @@
 package me.sdi.ethwallet.ui.wallet
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,12 +30,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -60,6 +56,7 @@ import me.sdi.ethwallet.resources.wallet_label_placeholder
 import me.sdi.ethwallet.resources.wallet_label_supporting
 import me.sdi.ethwallet.resources.warning_24px
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.components.rememberScreenTransition
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
 import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
@@ -73,9 +70,6 @@ import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-
-private const val START_ANIMATION_MS = 150
-private const val EXIT_MIN_ALPHA = 0.1f
 
 /**
  * Screen that displays the mnemonic phrase for a newly created wallet.
@@ -112,29 +106,14 @@ private fun CreateWalletScreenContent(
     modifier: Modifier = Modifier,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    val isPreview = LocalInspectionMode.current
-    var started by rememberSaveable { mutableStateOf(isPreview) }
-    LaunchedEffect(Unit) { started = true }
-    var exitAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val contentVisible = started && exitAction == null
-    val startProgress by animateFloatAsState(
-        targetValue = if (contentVisible) 1f else 0f,
-        animationSpec = tween(START_ANIMATION_MS),
-        finishedListener = { exitAction?.invoke() },
-    )
+    val transition = rememberScreenTransition()
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { EthText(stringResource(Res.string.create_wallet_title)) },
                 navigationIcon = {
-                    EthIconButton(
-                        onClick = {
-                            if (exitAction == null) {
-                                exitAction = onUpButtonClick
-                            }
-                        },
-                    ) {
+                    EthIconButton(onClick = { transition.exit(onUpButtonClick) }) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = null,
@@ -199,18 +178,12 @@ private fun CreateWalletScreenContent(
                 .fillMaxSize()
                 .padding(top = innerPadding.calculateTopPadding())
                 .imePadding(),
-            buttonsVisible = contentVisible,
+            buttonsVisible = transition.contentVisible,
         ) { contentPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer {
-                        alpha = if (exitAction == null) {
-                            startProgress
-                        } else {
-                            EXIT_MIN_ALPHA + (1f - EXIT_MIN_ALPHA) * startProgress
-                        }
-                    }
+                    .graphicsLayer { alpha = transition.fadeAlpha }
                     .verticalScroll(rememberScrollState())
                     .padding(contentPadding)
                     .padding(horizontal = 16.dp),
