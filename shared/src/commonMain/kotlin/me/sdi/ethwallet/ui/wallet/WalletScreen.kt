@@ -8,6 +8,8 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -57,6 +59,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -189,6 +192,20 @@ class TokenSharedBounds(
             symbol = Modifier,
             balance = Modifier,
             fiatValue = Modifier,
+        )
+    }
+}
+
+/**
+ * Slides a block in from below the window when its screen opens, and back when the screen closes.
+ */
+@Composable
+internal fun WalletTransitionScopes.slideFromBottom(delayMs: Int): Modifier {
+    val windowHeight = LocalWindowInfo.current.containerSize.height
+    return with(animatedVisibilityScope) {
+        Modifier.animateEnterExit(
+            enter = slideInVertically(tween(WALLET_SWITCH_MS, delayMs)) { windowHeight },
+            exit = slideOutVertically(tween(WALLET_SWITCH_MS)) { windowHeight },
         )
     }
 }
