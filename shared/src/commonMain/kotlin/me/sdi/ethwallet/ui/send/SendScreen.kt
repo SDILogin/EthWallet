@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -90,6 +91,7 @@ import me.sdi.ethwallet.resources.send_transfer_speed
 import me.sdi.ethwallet.resources.send_transfer_successful
 import me.sdi.ethwallet.ui.KnownToken
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.components.rememberScreenTransition
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthCard
@@ -113,6 +115,7 @@ import java.math.BigInteger
 
 private const val PICKER_ICON_OPEN_ROTATION = 180f
 private const val SECTION_ANIMATION_MS = 300
+private const val SPEED_TILES_FADE_DELAY_MS = 100
 
 private val SECTION_ENTER = fadeIn(
     animationSpec = tween(SECTION_ANIMATION_MS),
@@ -121,7 +124,6 @@ private val SECTION_EXIT = fadeOut(
     animationSpec = tween(SECTION_ANIMATION_MS),
 ) + shrinkVertically(animationSpec = tween(SECTION_ANIMATION_MS))
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SendScreen(
     walletAddress: EthAddress,
@@ -171,6 +173,7 @@ private fun SendScreenContent(
     onBackPress: () -> Unit,
 ) {
     var receiverWalletsExpanded by remember { mutableStateOf(false) }
+    val transition = rememberScreenTransition()
 
     Scaffold(
         modifier = modifier,
@@ -200,10 +203,12 @@ private fun SendScreenContent(
                 .fillMaxSize()
                 .padding(top = paddingValues.calculateTopPadding())
                 .imePadding(),
+            buttonsVisible = transition.contentVisible,
         ) { contentPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .graphicsLayer { alpha = transition.fadeAlpha }
                     .verticalScroll(rememberScrollState())
                     .padding(contentPadding)
                     .padding(16.dp),
@@ -262,6 +267,7 @@ private fun SendScreenContent(
 
                 GasSelector(
                     gas = viewState.gas,
+                    tilesVisible = transition.contentVisible,
                     onGasOptionSelected = { onEvent(SendEvent.OnGasOptionSelected(it)) },
                     onBaseFeeChanged = { onEvent(SendEvent.OnBaseFeeChanged(it)) },
                     onPriorityFeeChanged = { onEvent(SendEvent.OnPriorityFeeChanged(it)) },
@@ -318,13 +324,20 @@ private fun TokenSelector(
 @Composable
 private fun GasSelector(
     gas: GasViewState,
+    tilesVisible: Boolean,
     onGasOptionSelected: (GasOption) -> Unit,
     onBaseFeeChanged: (String) -> Unit,
     onPriorityFeeChanged: (String) -> Unit,
     onGasUnitsChanged: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
+    val tilesAlpha by animateFloatAsState(
+        targetValue = if (tilesVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = SECTION_ANIMATION_MS, delayMillis = SPEED_TILES_FADE_DELAY_MS),
+    )
+    Column(
+        modifier = modifier.graphicsLayer { alpha = tilesAlpha },
+    ) {
         EthText(
             text = stringResource(Res.string.send_transfer_speed),
             style = EthTextStyle.Title,

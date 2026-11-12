@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
@@ -63,6 +64,7 @@ import me.sdi.ethwallet.resources.send_token_usdc
 import me.sdi.ethwallet.resources.send_token_usdt
 import me.sdi.ethwallet.ui.KnownToken
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.components.rememberScreenTransition
 import me.sdi.ethwallet.ui.designsystem.EthChip
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
@@ -119,6 +121,7 @@ private fun ReceiveScreenContent(
     onBackPressed: () -> Unit,
     onEvent: (event: ReceiveQrEvent) -> Unit,
 ) {
+    val transition = rememberScreenTransition()
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -138,6 +141,7 @@ private fun ReceiveScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer { alpha = transition.fadeAlpha }
                 .padding(paddingValues)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
