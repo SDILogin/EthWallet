@@ -1,11 +1,16 @@
 package me.sdi.ethwallet.ui.send
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,7 +37,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -47,10 +54,10 @@ import me.sdi.ethwallet.core.transfer.Wei
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
-import me.sdi.ethwallet.resources.arrow_downward_24px
 import me.sdi.ethwallet.resources.back
 import me.sdi.ethwallet.resources.cancel_24px
 import me.sdi.ethwallet.resources.ic_eth_logo
+import me.sdi.ethwallet.resources.keyboard_arrow_down_24px
 import me.sdi.ethwallet.resources.send_address_placeholder
 import me.sdi.ethwallet.resources.send_amount
 import me.sdi.ethwallet.resources.send_amount_placeholder
@@ -67,8 +74,6 @@ import me.sdi.ethwallet.resources.send_enter_receiver_address
 import me.sdi.ethwallet.resources.send_fee_estimate
 import me.sdi.ethwallet.resources.send_gas_units
 import me.sdi.ethwallet.resources.send_gas_units_placeholder
-import me.sdi.ethwallet.resources.send_my_wallets
-import me.sdi.ethwallet.resources.send_no_other_wallets
 import me.sdi.ethwallet.resources.send_priority_fee
 import me.sdi.ethwallet.resources.send_priority_fee_placeholder
 import me.sdi.ethwallet.resources.send_receiver_address
@@ -106,8 +111,15 @@ import org.koin.core.parameter.parametersOf
 import java.math.BigDecimal
 import java.math.BigInteger
 
-private val SECTION_ENTER = fadeIn(animationSpec = tween(300)) + expandVertically(animationSpec = tween(300))
-private val SECTION_EXIT = fadeOut(animationSpec = tween(300)) + shrinkVertically(animationSpec = tween(300))
+private const val PICKER_ICON_OPEN_ROTATION = 180f
+private const val SECTION_ANIMATION_MS = 300
+
+private val SECTION_ENTER = fadeIn(
+    animationSpec = tween(SECTION_ANIMATION_MS),
+) + expandVertically(animationSpec = tween(SECTION_ANIMATION_MS))
+private val SECTION_EXIT = fadeOut(
+    animationSpec = tween(SECTION_ANIMATION_MS),
+) + shrinkVertically(animationSpec = tween(SECTION_ANIMATION_MS))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -201,6 +213,7 @@ private fun SendScreenContent(
                     ReceiverAddressInput(
                         addressState = viewState.receiverAddress,
                         receiverWallets = viewState.receiverWallets,
+                        walletsExpanded = receiverWalletsExpanded,
                         onAddressChanged = {
                             receiverWalletsExpanded = false
                             onEvent(SendEvent.OnReceiverAddressChanged(it))
@@ -212,16 +225,13 @@ private fun SendScreenContent(
                         enter = SECTION_ENTER,
                         exit = SECTION_EXIT,
                     ) {
-                        Column {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            ReceiverWalletDropdownList(
-                                wallets = viewState.receiverWallets,
-                                onWalletSelected = {
-                                    receiverWalletsExpanded = false
-                                    onEvent(SendEvent.OnReceiverWalletSelected(it))
-                                },
-                            )
-                        }
+                        ReceiverWalletDropdownList(
+                            wallets = viewState.receiverWallets,
+                            onWalletSelected = {
+                                receiverWalletsExpanded = false
+                                onEvent(SendEvent.OnReceiverWalletSelected(it))
+                            },
+                        )
                     }
                 }
 
@@ -408,14 +418,28 @@ private fun CustomFeeEstimate(customFeeUsd: String?) {
     }
 }
 
+private enum class ReceiverFieldAction { Clear, PickWallet, None }
+
 @Composable
 private fun ReceiverAddressInput(
     addressState: TextInputState,
     receiverWallets: List<EthWallet>,
+    walletsExpanded: Boolean,
     onAddressChanged: (String) -> Unit,
     onWalletPickerClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val pickerIconRotation by animateFloatAsState(
+        targetValue = if (walletsExpanded) PICKER_ICON_OPEN_ROTATION else 0f,
+        animationSpec = tween(SECTION_ANIMATION_MS),
+    )
+    val receiverFieldAction = if (addressState.value.isNotEmpty()) {
+        ReceiverFieldAction.Clear
+    } else if (receiverWallets.isNotEmpty()) {
+        ReceiverFieldAction.PickWallet
+    } else {
+        ReceiverFieldAction.None
+    }
     Column(modifier = modifier) {
         EthText(
             text = stringResource(Res.string.send_receiver_address),
@@ -431,28 +455,26 @@ private fun ReceiverAddressInput(
             isError = addressState.error != null,
             supportingText = addressState.error?.let { { EthText(it) } },
             trailingIcon = {
-                if (addressState.value.isEmpty()) {
-                    EthIconButton(
-                        onClick = onWalletPickerClick,
-                        enabled = receiverWallets.isNotEmpty(),
-                    ) {
-                        Icon(
-                            painter = painterResource(Res.drawable.arrow_downward_24px),
-                            contentDescription = stringResource(
-                                if (receiverWallets.isEmpty()) {
-                                    Res.string.send_no_other_wallets
-                                } else {
-                                    Res.string.send_select_wallet
-                                },
-                            ),
-                        )
-                    }
-                } else {
-                    EthIconButton(onClick = { onAddressChanged("") }) {
-                        Icon(
-                            painter = painterResource(Res.drawable.cancel_24px),
-                            contentDescription = stringResource(Res.string.send_clear_address),
-                        )
+                AnimatedContent(
+                    targetState = receiverFieldAction,
+                    transitionSpec = { fadeIn() + scaleIn() togetherWith fadeOut() + scaleOut() },
+                    contentAlignment = Alignment.Center,
+                ) { action ->
+                    when (action) {
+                        ReceiverFieldAction.Clear -> EthIconButton(onClick = { onAddressChanged("") }) {
+                            Icon(
+                                painter = painterResource(Res.drawable.cancel_24px),
+                                contentDescription = stringResource(Res.string.send_clear_address),
+                            )
+                        }
+                        ReceiverFieldAction.PickWallet -> EthIconButton(onClick = onWalletPickerClick) {
+                            Icon(
+                                painter = painterResource(Res.drawable.keyboard_arrow_down_24px),
+                                contentDescription = stringResource(Res.string.send_select_wallet),
+                                modifier = Modifier.rotate(pickerIconRotation),
+                            )
+                        }
+                        ReceiverFieldAction.None -> Unit
                     }
                 }
             },
@@ -468,13 +490,8 @@ private fun ReceiverWalletDropdownList(
     onWalletSelected: (EthAddress) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    EthCard(modifier = modifier.fillMaxWidth()) {
+    EthCard(modifier = modifier.fillMaxWidth(), attachedToTop = true) {
         Column {
-            EthText(
-                text = stringResource(Res.string.send_my_wallets),
-                style = EthTextStyle.Title,
-                modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp),
-            )
             wallets.forEach { wallet ->
                 DropdownMenuItem(
                     text = {
@@ -518,7 +535,11 @@ private fun AmountInput(
         isError = amountState.error != null,
         supportingText = supportingText?.let { { EthText(it) } },
         trailingIcon = {
-            if (amountState.value.isNotEmpty()) {
+            AnimatedVisibility(
+                visible = amountState.value.isNotEmpty(),
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut(),
+            ) {
                 EthIconButton(onClick = { onAmountChanged("") }) {
                     Icon(
                         painter = painterResource(Res.drawable.cancel_24px),

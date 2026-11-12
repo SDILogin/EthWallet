@@ -36,8 +36,7 @@ class SendPage(private val rule: ComposeTestRule) {
     }
 
     fun selectWallet(label: String) {
-        rule.awaitNode(hasText("My wallets"))
-        rule.clickNode(hasText(label) and hasClickAction() and hasAnyAncestor(hasAnyChild(hasText("My wallets"))))
+        rule.clickNode(hasText(label) and hasClickAction() and hasAnyAncestor(hasAnyChild(hasText("Receiver Address"))))
     }
 
     fun inputEthAmount(amount: String) {

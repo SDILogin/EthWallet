@@ -34,7 +34,6 @@ class SendPage(private val rule: ComposeTestRule) {
     }
 
     fun selectWallet(label: String) {
-        rule.awaitNode(hasText("My wallets"))
         rule.clickNode(hasText(label) and hasClickAction())
     }
 
