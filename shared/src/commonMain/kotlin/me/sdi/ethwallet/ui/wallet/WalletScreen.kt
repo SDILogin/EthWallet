@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -107,6 +108,8 @@ private const val WALLET_SWITCH_MS = 300
 private const val BALANCE_CARD_SHARED_KEY = "wallet-balance-card"
 private const val BUTTONS_PANEL_SHARED_KEY = "wallet-buttons-panel"
 private const val TOKENS_CARD_SHARED_KEY = "wallet-tokens-card"
+private const val TOKEN_ROW_SHARED_KEY_PREFIX = "wallet-token-row-"
+private const val TOKEN_ROW_OVERLAY_Z_INDEX = 1f
 private const val TWO_COLUMNS_MIN_WIDTH_DP = 600
 private const val THREE_COLUMNS_MIN_WIDTH_DP = 900
 
@@ -117,9 +120,15 @@ class WalletSharedBounds(
     val balanceCard: Modifier,
     val buttonsPanel: Modifier,
     val tokensCard: Modifier,
+    val tokenRows: Map<EthAddress, Modifier>,
 ) {
     companion object {
-        val None = WalletSharedBounds(balanceCard = Modifier, buttonsPanel = Modifier, tokensCard = Modifier)
+        val None = WalletSharedBounds(
+            balanceCard = Modifier,
+            buttonsPanel = Modifier,
+            tokensCard = Modifier,
+            tokenRows = emptyMap(),
+        )
     }
 }
 
@@ -191,6 +200,18 @@ fun WalletScreen(
                         animatedVisibilityScope = this@AnimatedContent,
                         resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
                     ),
+                    tokenRows = viewState.favoriteTokens.associate { token ->
+                        token.address to key(token.address) {
+                            Modifier.sharedBounds(
+                                sharedContentState = rememberSharedContentState(
+                                    TOKEN_ROW_SHARED_KEY_PREFIX + token.address,
+                                ),
+                                animatedVisibilityScope = this@AnimatedContent,
+                                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                                zIndexInOverlay = TOKEN_ROW_OVERLAY_Z_INDEX,
+                            )
+                        }
+                    },
                 ),
             )
         }
@@ -289,6 +310,7 @@ fun WalletScreenContent(
                             viewState = viewState,
                             onEditButtonClick = onEditButtonClick,
                             onTokenClick = onTokenClick,
+                            tokenRowModifiers = sharedBounds.tokenRows,
                             modifier = sharedBounds.tokensCard.padding(16.dp),
                         )
                     }
@@ -303,6 +325,7 @@ private fun TokensSection(
     viewState: WalletViewState,
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
+    tokenRowModifiers: Map<EthAddress, Modifier>,
     modifier: Modifier = Modifier,
 ) {
     EthCard(modifier = modifier) {
@@ -335,7 +358,9 @@ private fun TokensSection(
                             TokenRow(
                                 token = token,
                                 onTokenClick = onTokenClick,
-                                modifier = Modifier.width(itemWidth),
+                                modifier = Modifier
+                                    .width(itemWidth)
+                                    .then(tokenRowModifiers[token.address] ?: Modifier),
                             )
                         }
                     }
