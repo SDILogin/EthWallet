@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui.wallet
 
+import androidx.compose.animation.EnterExitState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,7 @@ import me.sdi.ethwallet.resources.wallet_receive
 import me.sdi.ethwallet.resources.wallet_send
 import me.sdi.ethwallet.ui.ETH_MAINNET_CHAIN_ID
 import me.sdi.ethwallet.ui.ETH_SEPOLIA_CHAIN_ID
+import me.sdi.ethwallet.ui.components.rememberScreenTransition
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
 import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
@@ -79,6 +81,9 @@ fun TokenDetailsScreen(
         parameters = { parametersOf(walletAddress, tokenAddress) },
     )
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
+    val screenTransition = rememberScreenTransition()
+    val screenStays = transitionScopes == null ||
+            transitionScopes.animatedVisibilityScope.transition.targetState == EnterExitState.Visible
     TokenDetailsScreenContent(
         modifier = modifier,
         onUpButtonClick = onUpButtonClick,
@@ -86,9 +91,10 @@ fun TokenDetailsScreen(
         onReceiveButtonClick = onReceiveButtonClick,
         onHistoryButtonClick = onHistoryButtonClick,
         viewState = viewState,
+        buttonsVisible = screenTransition.contentVisible && screenStays,
         tokenBounds = transitionScopes?.tokenBounds(tokenAddress) ?: TokenSharedBounds.None,
-        informationCardModifier = transitionScopes?.slideFromBottom(delayMs = 140) ?: Modifier,
-        historyCardModifier = transitionScopes?.slideFromBottom(delayMs = 200) ?: Modifier,
+        informationCardModifier = transitionScopes?.slideFromBottom(delayMs = 100) ?: Modifier,
+        historyCardModifier = transitionScopes?.slideFromBottom(delayMs = 40) ?: Modifier,
     )
 }
 
@@ -100,6 +106,7 @@ fun TokenDetailsScreenContent(
     onReceiveButtonClick: () -> Unit,
     onHistoryButtonClick: () -> Unit,
     viewState: TokenDetailsViewState,
+    buttonsVisible: Boolean,
     tokenBounds: TokenSharedBounds,
     informationCardModifier: Modifier,
     historyCardModifier: Modifier,
@@ -135,6 +142,7 @@ fun TokenDetailsScreenContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = innerPadding.calculateTopPadding()),
+            buttonsVisible = buttonsVisible,
         ) { contentPadding ->
             Column(
                 modifier = Modifier
@@ -262,6 +270,7 @@ private fun TokenDetailsScreenContentPreview() {
             onReceiveButtonClick = {},
             onHistoryButtonClick = {},
             viewState = usdcOnMainnet.toDetailsViewState(ETH_MAINNET_CHAIN_ID).copy(balance = "500.00"),
+            buttonsVisible = true,
             tokenBounds = TokenSharedBounds.None,
             informationCardModifier = Modifier,
             historyCardModifier = Modifier,
