@@ -72,7 +72,7 @@ fun AddWalletScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                modifier = Modifier.graphicsLayer { translationY = -size.height * (1f - startProgress) },
+                modifier = Modifier.graphicsLayer { alpha = startProgress },
                 title = { EthText(stringResource(Res.string.wallets_list_add_wallet)) },
                 navigationIcon = {
                     EthIconButton(onClick = { exitWith(onUpButtonClick) }) {
@@ -107,7 +107,6 @@ fun AddWalletScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(contentPadding)
                     .padding(16.dp),
                 contentAlignment = Alignment.Center,
             ) {
