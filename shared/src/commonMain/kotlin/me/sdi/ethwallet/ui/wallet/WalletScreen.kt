@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -427,7 +428,7 @@ fun WalletScreenContent(
                         onReceiveClick = onReceiveButtonClick,
                         onSendButtonClick = onSendButtonClick,
                         onHistoryButtonClick = onHistoryButtonClick,
-                        modifier = sharedBounds.buttonsPanel,
+                        modifier = sharedBounds.buttonsPanel.padding(16.dp),
                     )
                 }
 
@@ -470,7 +471,7 @@ private fun TokensSection(
                     maxWidth >= TWO_COLUMNS_MIN_WIDTH_DP.dp -> 2
                     else -> 1
                 }
-                val itemWidth = maxWidth / columnCount
+                val itemWidth = with(LocalDensity.current) { (constraints.maxWidth / columnCount).toDp() }
 
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),

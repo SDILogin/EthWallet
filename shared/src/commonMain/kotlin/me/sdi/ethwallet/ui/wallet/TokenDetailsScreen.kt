@@ -83,7 +83,7 @@ fun TokenDetailsScreen(
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
     val screenTransition = rememberScreenTransition()
     val screenStays = transitionScopes == null ||
-            transitionScopes.animatedVisibilityScope.transition.targetState == EnterExitState.Visible
+        transitionScopes.animatedVisibilityScope.transition.targetState == EnterExitState.Visible
     TokenDetailsScreenContent(
         modifier = modifier,
         onUpButtonClick = onUpButtonClick,
