@@ -2,7 +2,6 @@ package me.sdi.ethwallet.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
@@ -137,7 +136,7 @@ fun EthWalletApp() {
 
             entry<Destination.OnBoardingScreen> {
                 OnboardingScreen(
-                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                    modifier = Modifier.fillMaxSize(),
                     onContinueClick = {
                         when (appLockMethod) {
                             AppLockMethod.Pin -> backStack.add(Destination.SetPinCodeScreen)
@@ -212,7 +211,7 @@ fun EthWalletApp() {
                 metadata = detailPane(),
             ) {
                 CreateWalletScreen(
-                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                    modifier = Modifier.fillMaxSize(),
                     onUpButtonClick = { backStack.removeLastOrNull() },
                     onMnemonicSaved = {
                         activeWalletAddress = null
@@ -227,7 +226,7 @@ fun EthWalletApp() {
                 metadata = detailPane(),
             ) {
                 ImportWalletScreen(
-                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                    modifier = Modifier.fillMaxSize(),
                     onUpButtonClick = { backStack.removeLastOrNull() },
                     onWalletImported = {
                         activeWalletAddress = null
