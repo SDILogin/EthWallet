@@ -1,5 +1,7 @@
 package me.sdi.ethwallet.ui.wallet
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,8 +21,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.isSensitiveData
 import androidx.compose.ui.semantics.semantics
@@ -56,6 +64,8 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
+private const val START_ANIMATION_MS = 150
+private const val EXIT_MIN_ALPHA = 0.2f
 private const val PREVIEW_MNEMONIC = "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12"
 
 @Composable
@@ -91,13 +101,29 @@ private fun ImportWalletScreenContent(
     onUpButtonClick: () -> Unit,
     modifier: Modifier,
 ) {
+    val isPreview = LocalInspectionMode.current
+    var started by rememberSaveable { mutableStateOf(isPreview) }
+    LaunchedEffect(Unit) { started = true }
+    var exitAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val contentVisible = started && exitAction == null
+    val startProgress by animateFloatAsState(
+        targetValue = if (contentVisible) 1f else 0f,
+        animationSpec = tween(START_ANIMATION_MS),
+        finishedListener = { exitAction?.invoke() },
+    )
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { EthText(stringResource(Res.string.import_wallet_title)) },
                 navigationIcon = {
-                    EthIconButton(onClick = onUpButtonClick) {
+                    EthIconButton(
+                        onClick = {
+                            if (exitAction == null) {
+                                exitAction = onUpButtonClick
+                            }
+                        },
+                    ) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
@@ -121,10 +147,18 @@ private fun ImportWalletScreenContent(
                 .fillMaxSize()
                 .padding(top = innerPadding.calculateTopPadding())
                 .imePadding(),
+            buttonsVisible = contentVisible,
         ) { contentPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = if (exitAction == null) {
+                            startProgress
+                        } else {
+                            EXIT_MIN_ALPHA + (1f - EXIT_MIN_ALPHA) * startProgress
+                        }
+                    }
                     .verticalScroll(rememberScrollState())
                     .padding(contentPadding)
                     .padding(horizontal = 16.dp),
