@@ -63,7 +63,6 @@
 
     <!-- Send Screen -->
     <string name="send_title">Send</string>
-    <string name="send_clear_form">Clear Form</string>
     <string name="send_token">Token</string>
     <string name="send_token_eth">ETH</string>
     <string name="send_token_usdt">USDT</string>

@@ -226,9 +226,6 @@ class SendViewModel(
             SendEvent.OnSendClick -> {
                 handleTransferRequested()
             }
-            SendEvent.OnClearFormClick -> {
-                userInput.value = UserInput()
-            }
         }
     }
 

@@ -59,7 +59,6 @@ import me.sdi.ethwallet.resources.send_base_fee_placeholder
 import me.sdi.ethwallet.resources.send_clear_address
 import me.sdi.ethwallet.resources.send_clear_amount
 import me.sdi.ethwallet.resources.send_clear_base_fee
-import me.sdi.ethwallet.resources.send_clear_form
 import me.sdi.ethwallet.resources.send_clear_gas_units
 import me.sdi.ethwallet.resources.send_clear_priority_fee
 import me.sdi.ethwallet.resources.send_custom_gas_network_fee
@@ -87,7 +86,6 @@ import me.sdi.ethwallet.resources.send_transfer_successful
 import me.sdi.ethwallet.ui.KnownToken
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthButton
-import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
 import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthCard
 import me.sdi.ethwallet.ui.designsystem.EthChip
@@ -180,18 +178,6 @@ private fun SendScreenContent(
     ) { paddingValues ->
         EthButtonsLayout(
             buttons = {
-                AnimatedVisibility(
-                    visible = !viewState.transferring,
-                    enter = SECTION_ENTER,
-                    exit = SECTION_EXIT,
-                ) {
-                    EthButton(
-                        text = stringResource(Res.string.send_clear_form),
-                        onClick = { onEvent(SendEvent.OnClearFormClick) },
-                        modifier = Modifier.fillMaxWidth(),
-                        style = EthButtonStyle.Secondary,
-                    )
-                }
                 SendButton(
                     enabled = viewState.isTransferEnabled,
                     loading = viewState.transferring,
@@ -215,7 +201,10 @@ private fun SendScreenContent(
                     ReceiverAddressInput(
                         addressState = viewState.receiverAddress,
                         receiverWallets = viewState.receiverWallets,
-                        onAddressChanged = { onEvent(SendEvent.OnReceiverAddressChanged(it)) },
+                        onAddressChanged = {
+                            receiverWalletsExpanded = false
+                            onEvent(SendEvent.OnReceiverAddressChanged(it))
+                        },
                         onWalletPickerClick = { receiverWalletsExpanded = !receiverWalletsExpanded },
                     )
                     AnimatedVisibility(
@@ -442,15 +431,7 @@ private fun ReceiverAddressInput(
             isError = addressState.error != null,
             supportingText = addressState.error?.let { { EthText(it) } },
             trailingIcon = {
-                Row {
-                    if (addressState.value.isNotEmpty()) {
-                        EthIconButton(onClick = { onAddressChanged("") }) {
-                            Icon(
-                                painter = painterResource(Res.drawable.cancel_24px),
-                                contentDescription = stringResource(Res.string.send_clear_address),
-                            )
-                        }
-                    }
+                if (addressState.value.isEmpty()) {
                     EthIconButton(
                         onClick = onWalletPickerClick,
                         enabled = receiverWallets.isNotEmpty(),
@@ -464,6 +445,13 @@ private fun ReceiverAddressInput(
                                     Res.string.send_select_wallet
                                 },
                             ),
+                        )
+                    }
+                } else {
+                    EthIconButton(onClick = { onAddressChanged("") }) {
+                        Icon(
+                            painter = painterResource(Res.drawable.cancel_24px),
+                            contentDescription = stringResource(Res.string.send_clear_address),
                         )
                     }
                 }
