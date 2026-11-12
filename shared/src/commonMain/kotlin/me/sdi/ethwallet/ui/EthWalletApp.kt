@@ -50,7 +50,6 @@ import me.sdi.ethwallet.ui.wallet.PasswordUnlockScreen
 import me.sdi.ethwallet.ui.wallet.SetPasswordScreen
 import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.TokenDetailsScreen
-import me.sdi.ethwallet.ui.wallet.TokensListScreen
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
@@ -252,7 +251,12 @@ fun EthWalletApp() {
                     onHistoryButtonClick = { label ->
                         backStack.add(Destination.HistoryScreen(destination.ethAddress, label))
                     },
-                    onEditButtonClick = { backStack.add(Destination.TokensListScreen(destination.ethAddress)) },
+                    manageTokens = destination.manageTokens,
+                    onEditButtonClick = {
+                        if (backStack.lastOrNull() == destination) {
+                            backStack.add(destination.copy(manageTokens = true))
+                        }
+                    },
                     onTokenClick = { tokenAddress ->
                         backStack.add(Destination.TokenDetailsScreen(destination.ethAddress, tokenAddress.toString()))
                     },
@@ -273,17 +277,6 @@ fun EthWalletApp() {
                         backStack.add(Destination.HistoryScreen(destination.walletAddress, destination.walletAddress))
                     },
                     onUpButtonClick = { backStack.removeLastOrNull() },
-                )
-            }
-
-            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-            entry<Destination.TokensListScreen>(
-                metadata = detailPane(),
-            ) { destination ->
-                TokensListScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    walletAddress = EthAddress(destination.walletAddress),
-                    onBackPressed = { backStack.removeLastOrNull() },
                 )
             }
 

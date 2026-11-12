@@ -58,8 +58,10 @@ fun TokensListScreen(
     walletAddress: EthAddress,
     onBackPressed: () -> Unit,
     modifier: Modifier = Modifier,
+    transitionScopes: WalletTransitionScopes? = null,
 ) {
     val viewModel: TokensListViewModel = koinViewModel(
+        key = walletAddress.toString(),
         parameters = { parametersOf(walletAddress) },
     )
     val toastManager = rememberToastManager()
@@ -78,6 +80,10 @@ fun TokensListScreen(
         onBackPressed = onBackPressed,
         viewState = viewState,
         onEvent = viewModel::onEvent,
+        listModifier = transitionScopes?.tokensContainerBounds() ?: Modifier,
+        tokenRowModifiers = transitionScopes
+            ?.tokenRowBounds(viewState.tokenListItems.map { it.knownToken.ethAddress })
+            ?: emptyMap(),
     )
 }
 
@@ -88,6 +94,8 @@ private fun TokensListScreenContent(
     onBackPressed: () -> Unit,
     viewState: TokensListViewState,
     onEvent: (TokensListEvent) -> Unit,
+    listModifier: Modifier,
+    tokenRowModifiers: Map<EthAddress, Modifier>,
 ) {
     val listState = rememberLazyListState()
     var draggedTokenKey by remember { mutableStateOf<String?>(null) }
@@ -110,7 +118,7 @@ private fun TokensListScreenContent(
         },
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().then(listModifier),
             contentPadding = innerPadding,
             state = listState,
         ) {
@@ -154,7 +162,7 @@ private fun TokensListScreenContent(
                     }
                 }
                 TokenListItem(
-                    modifier = Modifier
+                    modifier = (tokenRowModifiers[tokenListItem.knownToken.ethAddress] ?: Modifier)
                         .zIndex(if (isDragging) 1f else 0f)
                         .graphicsLayer {
                             translationY = if (isDragging) {
@@ -253,6 +261,8 @@ private fun TokensListScreenContentPreview() {
                 },
             ),
             onEvent = {},
+            listModifier = Modifier,
+            tokenRowModifiers = emptyMap(),
         )
     }
 }

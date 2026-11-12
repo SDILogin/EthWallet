@@ -1,6 +1,7 @@
 package me.sdi.ethwallet.ui.wallet
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
@@ -109,6 +110,7 @@ private const val BALANCE_CARD_SHARED_KEY = "wallet-balance-card"
 private const val BUTTONS_PANEL_SHARED_KEY = "wallet-buttons-panel"
 private const val TOKENS_CARD_SHARED_KEY = "wallet-tokens-card"
 private const val TOKEN_ROW_SHARED_KEY_PREFIX = "wallet-token-row-"
+private const val BLOCK_OVERLAY_Z_INDEX = 0f
 private const val TOKEN_ROW_OVERLAY_Z_INDEX = 1f
 private const val TWO_COLUMNS_MIN_WIDTH_DP = 600
 private const val THREE_COLUMNS_MIN_WIDTH_DP = 900
@@ -133,13 +135,52 @@ class WalletSharedBounds(
 }
 
 /**
- * One instance shows all wallets. A change of [walletAddress] keeps the balance card, the action
- * buttons and the tokens card in place, and fades the content of the old wallet into the new one.
+ * Scopes of the transition inside [WalletScreen]. A screen uses them to connect its blocks with
+ * the blocks of the screen before or after it.
+ */
+class WalletTransitionScopes(
+    val sharedTransitionScope: SharedTransitionScope,
+    val animatedVisibilityScope: AnimatedVisibilityScope,
+)
+
+@Composable
+private fun WalletTransitionScopes.sharedBounds(key: String, zIndexInOverlay: Float): Modifier =
+    with(sharedTransitionScope) {
+        Modifier.sharedBounds(
+            sharedContentState = rememberSharedContentState(key),
+            animatedVisibilityScope = animatedVisibilityScope,
+            resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+            zIndexInOverlay = zIndexInOverlay,
+        )
+    }
+
+@Composable
+internal fun WalletTransitionScopes.tokensContainerBounds(): Modifier =
+    sharedBounds(key = TOKENS_CARD_SHARED_KEY, zIndexInOverlay = BLOCK_OVERLAY_Z_INDEX)
+
+@Composable
+internal fun WalletTransitionScopes.tokenRowBounds(tokens: List<EthAddress>): Map<EthAddress, Modifier> =
+    tokens.associateWith { address ->
+        key(address) {
+            sharedBounds(
+                key = TOKEN_ROW_SHARED_KEY_PREFIX + address.lowercase(),
+                zIndexInOverlay = TOKEN_ROW_OVERLAY_Z_INDEX,
+            )
+        }
+    }
+
+private data class WalletPane(val address: EthAddress, val manageTokens: Boolean)
+
+/**
+ * One instance shows all wallets and the manage tokens screen of each wallet.
+ * A change of [walletAddress] keeps the balance card, the action buttons and the tokens card
+ * in place. A change of [manageTokens] connects the tokens card and its rows with the tokens list.
  */
 @OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun WalletScreen(
     walletAddress: EthAddress,
+    manageTokens: Boolean,
     onUpButtonClick: () -> Unit,
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
@@ -154,66 +195,61 @@ fun WalletScreen(
     val screenTransition = rememberScreenTransition()
     SharedTransitionLayout(modifier = modifier) {
         AnimatedContent(
-            targetState = walletAddress,
+            targetState = WalletPane(address = walletAddress, manageTokens = manageTokens),
             transitionSpec = {
                 fadeIn(tween(WALLET_SWITCH_MS)) togetherWith fadeOut(tween(WALLET_SWITCH_MS))
             },
-        ) { address ->
-            val viewModel: WalletViewModel = koinViewModel(
-                key = address.toString(),
-                parameters = { parametersOf(address) },
+        ) { pane ->
+            val scopes = WalletTransitionScopes(
+                sharedTransitionScope = this@SharedTransitionLayout,
+                animatedVisibilityScope = this@AnimatedContent,
             )
-            LaunchedEffect(key1 = viewModel.news) {
-                viewModel.news.collect { news ->
-                    when (news) {
-                        WalletNews.ShowErrorMessage -> toastManager.showToast(refreshErrorMessage)
+            if (pane.manageTokens) {
+                TokensListScreen(
+                    walletAddress = pane.address,
+                    onBackPressed = onUpButtonClick,
+                    transitionScopes = scopes,
+                )
+            } else {
+                val viewModel: WalletViewModel = koinViewModel(
+                    key = pane.address.toString(),
+                    parameters = { parametersOf(pane.address) },
+                )
+                LaunchedEffect(key1 = viewModel.news) {
+                    viewModel.news.collect { news ->
+                        when (news) {
+                            WalletNews.ShowErrorMessage -> toastManager.showToast(refreshErrorMessage)
+                        }
                     }
                 }
-            }
 
-            val viewState by viewModel.viewState.collectAsState()
-            WalletScreenContent(
-                viewState = viewState,
-                onRefresh = { viewModel.onEvent(WalletEvent.Refresh) },
-                onRetry = { viewModel.onEvent(WalletEvent.Retry) },
-                showUpButton = showUpButton,
-                onUpButtonClick = onUpButtonClick,
-                onEditButtonClick = onEditButtonClick,
-                onTokenClick = onTokenClick,
-                onReceiveButtonClick = onReceiveButtonClick,
-                onSendButtonClick = onSendButtonClick,
-                onHistoryButtonClick = { onHistoryButtonClick(viewState.walletName) },
-                screenTransition = screenTransition,
-                sharedBounds = WalletSharedBounds(
-                    balanceCard = Modifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(BALANCE_CARD_SHARED_KEY),
-                        animatedVisibilityScope = this@AnimatedContent,
-                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                val viewState by viewModel.viewState.collectAsState()
+                WalletScreenContent(
+                    viewState = viewState,
+                    onRefresh = { viewModel.onEvent(WalletEvent.Refresh) },
+                    onRetry = { viewModel.onEvent(WalletEvent.Retry) },
+                    showUpButton = showUpButton,
+                    onUpButtonClick = onUpButtonClick,
+                    onEditButtonClick = onEditButtonClick,
+                    onTokenClick = onTokenClick,
+                    onReceiveButtonClick = onReceiveButtonClick,
+                    onSendButtonClick = onSendButtonClick,
+                    onHistoryButtonClick = { onHistoryButtonClick(viewState.walletName) },
+                    screenTransition = screenTransition,
+                    sharedBounds = WalletSharedBounds(
+                        balanceCard = scopes.sharedBounds(
+                            key = BALANCE_CARD_SHARED_KEY,
+                            zIndexInOverlay = BLOCK_OVERLAY_Z_INDEX,
+                        ),
+                        buttonsPanel = scopes.sharedBounds(
+                            key = BUTTONS_PANEL_SHARED_KEY,
+                            zIndexInOverlay = BLOCK_OVERLAY_Z_INDEX,
+                        ),
+                        tokensCard = scopes.tokensContainerBounds(),
+                        tokenRows = scopes.tokenRowBounds(viewState.favoriteTokens.map { it.address }),
                     ),
-                    buttonsPanel = Modifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(BUTTONS_PANEL_SHARED_KEY),
-                        animatedVisibilityScope = this@AnimatedContent,
-                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
-                    ),
-                    tokensCard = Modifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(TOKENS_CARD_SHARED_KEY),
-                        animatedVisibilityScope = this@AnimatedContent,
-                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
-                    ),
-                    tokenRows = viewState.favoriteTokens.associate { token ->
-                        token.address to key(token.address) {
-                            Modifier.sharedBounds(
-                                sharedContentState = rememberSharedContentState(
-                                    TOKEN_ROW_SHARED_KEY_PREFIX + token.address,
-                                ),
-                                animatedVisibilityScope = this@AnimatedContent,
-                                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
-                                zIndexInOverlay = TOKEN_ROW_OVERLAY_Z_INDEX,
-                            )
-                        }
-                    },
-                ),
-            )
+                )
+            }
         }
     }
 }
@@ -282,7 +318,7 @@ fun WalletScreenContent(
                         WalletBalanceLoadState.Error -> BalanceErrorCard(onRetry = onRetry)
                         WalletBalanceLoadState.Loading,
                         WalletBalanceLoadState.Content,
-                        -> TotalFiatBalanceCard(
+                            -> TotalFiatBalanceCard(
                             modifier = Modifier.fillMaxWidth().then(sharedBounds.balanceCard),
                             fiatBalance = viewState.totalBalanceUsd,
                             ethBalance = viewState.totalBalanceEth,
