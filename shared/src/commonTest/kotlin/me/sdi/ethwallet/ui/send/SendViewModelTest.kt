@@ -237,7 +237,7 @@ class SendViewModelTest {
 
         assertEquals(validEthAddress, viewModel.viewState.value.receiverAddress.value)
 
-        sendEvent(SendEvent.OnClearFormClick)
+        sendEvent(SendEvent.OnReceiverAddressChanged(""))
 
         assertEquals("", viewModel.viewState.value.receiverAddress.value)
     }
@@ -528,18 +528,6 @@ class SendViewModelTest {
     }
 
     @Test
-    fun should_clear_form_when_requested() = vmTest {
-        input1Eth()
-        sendEvent(SendEvent.OnClearFormClick)
-
-        val state = viewModel.viewState.value
-        assertEquals(EthContractAddress, state.selectedTokenContractAddress, "Token should be reset to ETH")
-        assertEquals("", state.receiverAddress.value, "Receiver address should be cleared")
-        assertEquals("", state.transferAmountInputState.value, "Amount should be cleared")
-        assertFalse(state.isTransferEnabled, "Transfer should not be enabled")
-    }
-
-    @Test
     fun should_default_to_default_gas_option() = vmTest {
         val selected = viewModel.viewState.value.gas.chips.first { it.selected }
         assertEquals(GasOption.Default, selected.option, "Default gas option should be selected by default")
@@ -712,20 +700,6 @@ class SendViewModelTest {
             viewModel.viewState.value.gas.baseFee.value,
             "A typed base fee should survive later suggestion emissions",
         )
-    }
-
-    @Test
-    fun should_reprefill_custom_fees_after_clear_form_on_next_emission() = vmTest {
-        seedFees()
-        sendEvent(SendEvent.OnClearFormClick)
-        assertEquals("", viewModel.viewState.value.gas.baseFee.value, "Clear form should blank the custom fees")
-
-        transferInteractor.feeSuggestionToReturn = FeeSuggestion(Wei(BigInteger("40000000000")), Wei(BigInteger("3000000000")))
-        advanceTimeBy(31.seconds)
-
-        val gas = viewModel.viewState.value.gas
-        assertEquals("60", gas.baseFee.value, "The next suggestion emission should re-prefill the Default max base fee")
-        assertEquals("3", gas.priorityFee.value, "The next suggestion emission should re-prefill the Default priority fee")
     }
 
     @Test
@@ -976,23 +950,6 @@ class SendViewModelTest {
             transferInteractor.fetchFeeSuggestionCallCount,
             "The suggestion should be refetched after 30 seconds",
         )
-    }
-
-    @Test
-    fun should_reset_gas_option_and_custom_fees_on_clear_form() = vmTest {
-        seedFees()
-        sendEvent(SendEvent.OnGasOptionSelected(GasOption.CustomFees))
-        sendEvent(SendEvent.OnBaseFeeChanged("30"))
-        sendEvent(SendEvent.OnClearFormClick)
-
-        val gas = viewModel.viewState.value.gas
-        assertEquals(
-            GasOption.Default,
-            gas.chips.first { it.selected }.option,
-            "Clear form should reset to the Default option",
-        )
-        assertEquals("", gas.baseFee.value, "Clear form should clear the custom base fee")
-        assertEquals("", gas.priorityFee.value, "Clear form should clear the custom priority fee")
     }
 
     @Test

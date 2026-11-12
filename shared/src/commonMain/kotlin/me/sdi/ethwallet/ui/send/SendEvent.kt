@@ -20,6 +20,4 @@ sealed interface SendEvent {
     data class OnGasUnitsChanged(val value: String) : SendEvent
 
     data object OnSendClick : SendEvent
-
-    data object OnClearFormClick : SendEvent
 }

@@ -1,12 +1,17 @@
 package me.sdi.ethwallet.ui.designsystem
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -33,10 +38,12 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import kotlin.math.roundToInt
 
 private const val BUTTONS_PADDING_DP = 16
 private const val BUTTONS_SPACING_DP = 8
 private const val BUTTONS_MAX_WIDTH_DP = 420
+private const val BUTTONS_SLIDE_MS = 300
 private const val BLUR_RADIUS_DP = 12
 private const val TINT_ALPHA = 0.3f
 
@@ -49,15 +56,24 @@ private const val TINT_ALPHA = 0.3f
  *
  * Buttons are centered and no wider than the max width. Put the primary button last.
  *
+ * A change of [buttonsVisible] slides the buttons area in from the bottom or out to the bottom.
+ * Keep [buttons] in the composition while the area is hidden, so the slide out can draw them.
+ *
  * Blur needs Android 12 or newer. Older Android versions show a translucent surface color.
  */
 @Composable
 fun EthButtonsLayout(
     buttons: @Composable ColumnScope.() -> Unit,
     modifier: Modifier = Modifier,
+    buttonsVisible: Boolean = true,
     content: @Composable (contentPadding: PaddingValues) -> Unit,
 ) {
     val contentPadding = remember { ButtonsAreaPadding() }
+    val visibleFraction = animateFloatAsState(
+        targetValue = if (buttonsVisible) 1f else 0f,
+        animationSpec = tween(BUTTONS_SLIDE_MS),
+    )
+    val navigationBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val hazeState = rememberHazeState()
     val surfaceColor = MaterialTheme.colorScheme.surface
     val hazeStyle = HazeStyle(
@@ -89,11 +105,14 @@ fun EthButtonsLayout(
         },
     ) { measurables, constraints ->
         val buttonsPlaceable = measurables[1].measure(constraints.copy(minHeight = 0))
-        contentPadding.bottomDp = buttonsPlaceable.height.toDp() + 8.dp
+        val visibleHeight = (buttonsPlaceable.height * visibleFraction.value).roundToInt()
+        contentPadding.bottomDp = maxOf(visibleHeight.toDp(), navigationBarHeight) + 8.dp
         val contentPlaceable = measurables[0].measure(constraints)
         layout(contentPlaceable.width, contentPlaceable.height) {
             contentPlaceable.place(0, 0)
-            buttonsPlaceable.place(0, contentPlaceable.height - buttonsPlaceable.height)
+            if (visibleHeight > 0) {
+                buttonsPlaceable.place(0, contentPlaceable.height - visibleHeight)
+            }
         }
     }
 }

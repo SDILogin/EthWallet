@@ -10,10 +10,6 @@ class WalletsListPage(private val rule: ComposeTestRule) {
         rule.awaitNode(hasText("My Wallets"))
     }
 
-    fun clickImportWalletButton() {
-        rule.clickNode(hasText("Import existing wallet") and hasClickAction())
-    }
-
     fun clickAddWalletButton() {
         rule.clickNode(hasContentDescription("Add wallet") and hasClickAction())
     }

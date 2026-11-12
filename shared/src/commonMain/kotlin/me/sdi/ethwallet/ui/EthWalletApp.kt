@@ -2,7 +2,6 @@ package me.sdi.ethwallet.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
@@ -44,17 +43,18 @@ import me.sdi.ethwallet.ui.send.SendScreen
 import me.sdi.ethwallet.ui.settings.ChangePinCodeScreen
 import me.sdi.ethwallet.ui.settings.SettingsScreen
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import me.sdi.ethwallet.ui.wallet.AddWalletScreen
 import me.sdi.ethwallet.ui.wallet.CreateWalletScreen
 import me.sdi.ethwallet.ui.wallet.ImportWalletScreen
 import me.sdi.ethwallet.ui.wallet.PasswordUnlockScreen
 import me.sdi.ethwallet.ui.wallet.SetPasswordScreen
 import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
-import me.sdi.ethwallet.ui.wallet.TokenDetailsScreen
-import me.sdi.ethwallet.ui.wallet.TokensListScreen
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
 import org.koin.compose.getKoin
+
+private const val WALLET_SCREEN_CONTENT_KEY = "WalletScreen"
 
 @Composable
 fun EthWalletApp() {
@@ -136,7 +136,7 @@ fun EthWalletApp() {
 
             entry<Destination.OnBoardingScreen> {
                 OnboardingScreen(
-                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                    modifier = Modifier.fillMaxSize(),
                     onContinueClick = {
                         when (appLockMethod) {
                             AppLockMethod.Pin -> backStack.add(Destination.SetPinCodeScreen)
@@ -164,6 +164,11 @@ fun EthWalletApp() {
                 WalletsListScreen(
                     modifier = Modifier.fillMaxSize(),
                     selectedWalletAddress = activeWalletAddress?.let(::EthAddress),
+                    buttonsVisible = backStack.none {
+                        it is Destination.AddWalletScreen ||
+                            it is Destination.CreateWalletScreen ||
+                            it is Destination.ImportWalletScreen
+                    },
                     onWalletSelected = { ethAddress ->
                         val destination = Destination.WalletScreen(ethAddress = ethAddress.toString())
                         if (backStack.lastOrNull() != destination) {
@@ -178,9 +183,26 @@ fun EthWalletApp() {
                             activeWalletAddress = null
                         }
                     },
+                    onAddWalletClick = {
+                        if (backStack.lastOrNull() != Destination.AddWalletScreen) {
+                            popToWalletsList()
+                            backStack.add(Destination.AddWalletScreen)
+                        }
+                        activeWalletAddress = null
+                    },
+                    onSettingsClick = { backStack.add(Destination.SettingsScreen) },
+                )
+            }
+
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.AddWalletScreen>(
+                metadata = detailPane(),
+            ) {
+                AddWalletScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onUpButtonClick = { backStack.removeLastOrNull() },
                     onImportWallet = { backStack.add(Destination.ImportWalletScreen) },
                     onCreateWallet = { backStack.add(Destination.CreateWalletScreen) },
-                    onSettingsClick = { backStack.add(Destination.SettingsScreen) },
                 )
             }
 
@@ -189,7 +211,7 @@ fun EthWalletApp() {
                 metadata = detailPane(),
             ) {
                 CreateWalletScreen(
-                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                    modifier = Modifier.fillMaxSize(),
                     onUpButtonClick = { backStack.removeLastOrNull() },
                     onMnemonicSaved = {
                         activeWalletAddress = null
@@ -204,7 +226,7 @@ fun EthWalletApp() {
                 metadata = detailPane(),
             ) {
                 ImportWalletScreen(
-                    modifier = Modifier.fillMaxSize().systemBarsPadding(),
+                    modifier = Modifier.fillMaxSize(),
                     onUpButtonClick = { backStack.removeLastOrNull() },
                     onWalletImported = {
                         activeWalletAddress = null
@@ -216,6 +238,7 @@ fun EthWalletApp() {
 
             @OptIn(ExperimentalMaterial3AdaptiveApi::class)
             entry<Destination.WalletScreen>(
+                clazzContentKey = { WALLET_SCREEN_CONTENT_KEY },
                 metadata = detailPane(),
             ) { destination ->
                 WalletScreen(
@@ -227,38 +250,18 @@ fun EthWalletApp() {
                     onHistoryButtonClick = { label ->
                         backStack.add(Destination.HistoryScreen(destination.ethAddress, label))
                     },
-                    onEditButtonClick = { backStack.add(Destination.TokensListScreen(destination.ethAddress)) },
+                    manageTokens = destination.manageTokens,
+                    onEditButtonClick = {
+                        if (backStack.lastOrNull() == destination) {
+                            backStack.add(destination.copy(manageTokens = true))
+                        }
+                    },
+                    detailsTokenAddress = destination.tokenAddress?.let(::EthAddress),
                     onTokenClick = { tokenAddress ->
-                        backStack.add(Destination.TokenDetailsScreen(destination.ethAddress, tokenAddress.toString()))
+                        if (backStack.lastOrNull() == destination) {
+                            backStack.add(destination.copy(tokenAddress = tokenAddress.toString()))
+                        }
                     },
-                )
-            }
-
-            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-            entry<Destination.TokenDetailsScreen>(
-                metadata = detailPane(),
-            ) { destination ->
-                TokenDetailsScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    walletAddress = EthAddress(destination.walletAddress),
-                    tokenAddress = EthAddress(destination.tokenAddress),
-                    onSendButtonClick = { backStack.add(Destination.SendScreen(destination.walletAddress)) },
-                    onReceiveButtonClick = { backStack.add(Destination.ReceiveQrScreen(destination.walletAddress)) },
-                    onHistoryButtonClick = {
-                        backStack.add(Destination.HistoryScreen(destination.walletAddress, destination.walletAddress))
-                    },
-                    onUpButtonClick = { backStack.removeLastOrNull() },
-                )
-            }
-
-            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-            entry<Destination.TokensListScreen>(
-                metadata = detailPane(),
-            ) { destination ->
-                TokensListScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    walletAddress = EthAddress(destination.walletAddress),
-                    onBackPressed = { backStack.removeLastOrNull() },
                 )
             }
 

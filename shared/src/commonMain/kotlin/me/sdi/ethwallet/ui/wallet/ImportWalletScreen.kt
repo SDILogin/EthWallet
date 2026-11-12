@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.isSensitiveData
 import androidx.compose.ui.semantics.semantics
@@ -45,6 +46,7 @@ import me.sdi.ethwallet.resources.wallet_label
 import me.sdi.ethwallet.resources.wallet_label_placeholder
 import me.sdi.ethwallet.resources.wallet_label_supporting
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.components.rememberScreenTransition
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
@@ -91,13 +93,14 @@ private fun ImportWalletScreenContent(
     onUpButtonClick: () -> Unit,
     modifier: Modifier,
 ) {
+    val transition = rememberScreenTransition()
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { EthText(stringResource(Res.string.import_wallet_title)) },
                 navigationIcon = {
-                    EthIconButton(onClick = onUpButtonClick) {
+                    EthIconButton(onClick = { transition.exit(onUpButtonClick) }) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
@@ -121,10 +124,12 @@ private fun ImportWalletScreenContent(
                 .fillMaxSize()
                 .padding(top = innerPadding.calculateTopPadding())
                 .imePadding(),
+            buttonsVisible = transition.contentVisible,
         ) { contentPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .graphicsLayer { alpha = transition.fadeAlpha }
                     .verticalScroll(rememberScrollState())
                     .padding(contentPadding)
                     .padding(horizontal = 16.dp),

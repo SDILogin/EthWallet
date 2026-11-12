@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui.wallet
 
+import androidx.compose.animation.EnterExitState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,7 @@ import me.sdi.ethwallet.resources.wallet_receive
 import me.sdi.ethwallet.resources.wallet_send
 import me.sdi.ethwallet.ui.ETH_MAINNET_CHAIN_ID
 import me.sdi.ethwallet.ui.ETH_SEPOLIA_CHAIN_ID
+import me.sdi.ethwallet.ui.components.rememberScreenTransition
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
 import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
@@ -72,11 +74,16 @@ fun TokenDetailsScreen(
     onReceiveButtonClick: () -> Unit,
     onHistoryButtonClick: () -> Unit,
     modifier: Modifier = Modifier,
+    transitionScopes: WalletTransitionScopes? = null,
 ) {
     val viewModel = koinViewModel<TokenDetailsViewModel>(
+        key = "$walletAddress-$tokenAddress",
         parameters = { parametersOf(walletAddress, tokenAddress) },
     )
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
+    val screenTransition = rememberScreenTransition()
+    val screenStays = transitionScopes == null ||
+        transitionScopes.animatedVisibilityScope.transition.targetState == EnterExitState.Visible
     TokenDetailsScreenContent(
         modifier = modifier,
         onUpButtonClick = onUpButtonClick,
@@ -84,6 +91,10 @@ fun TokenDetailsScreen(
         onReceiveButtonClick = onReceiveButtonClick,
         onHistoryButtonClick = onHistoryButtonClick,
         viewState = viewState,
+        buttonsVisible = screenTransition.contentVisible && screenStays,
+        tokenBounds = transitionScopes?.tokenBounds(tokenAddress) ?: TokenSharedBounds.None,
+        informationCardModifier = transitionScopes?.slideFromBottom(delayMs = 100) ?: Modifier,
+        historyCardModifier = transitionScopes?.slideFromBottom(delayMs = 40) ?: Modifier,
     )
 }
 
@@ -95,13 +106,17 @@ fun TokenDetailsScreenContent(
     onReceiveButtonClick: () -> Unit,
     onHistoryButtonClick: () -> Unit,
     viewState: TokenDetailsViewState,
+    buttonsVisible: Boolean,
+    tokenBounds: TokenSharedBounds,
+    informationCardModifier: Modifier,
+    historyCardModifier: Modifier,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { EthText(viewState.name) },
+                title = { EthText(viewState.name, modifier = tokenBounds.name) },
                 navigationIcon = {
                     EthIconButton(onClick = onUpButtonClick) {
                         Icon(painterResource(Res.drawable.arrow_back_24px), stringResource(Res.string.back))
@@ -127,35 +142,43 @@ fun TokenDetailsScreenContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = innerPadding.calculateTopPadding()),
+            buttonsVisible = buttonsVisible,
         ) { contentPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(contentPadding)
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(24.dp),
             ) {
-                Icon(
-                    painter = painterResource(viewState.icon),
-                    contentDescription = null,
-                    modifier = Modifier.size(72.dp),
-                    tint = Color.Unspecified,
-                )
-                EthText(viewState.symbol, style = EthTextStyle.Title)
-                EthText(
-                    text = viewState.balance?.let { "$it ${viewState.symbol}" }
-                        ?: stringResource(Res.string.token_details_unavailable),
-                    style = EthTextStyle.Headline,
-                )
-                EthText(
-                    text = viewState.fiatValue ?: stringResource(Res.string.wallet_fiat_unavailable),
-                    style = EthTextStyle.Title,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(viewState.icon),
+                        contentDescription = null,
+                        modifier = tokenBounds.icon.size(72.dp),
+                        tint = Color.Unspecified,
+                    )
+                    EthText(viewState.symbol, modifier = tokenBounds.symbol, style = EthTextStyle.Title)
+                    EthText(
+                        text = viewState.balance?.let { "$it ${viewState.symbol}" }
+                            ?: stringResource(Res.string.token_details_unavailable),
+                        modifier = tokenBounds.balance,
+                        style = EthTextStyle.Headline,
+                    )
+                    EthText(
+                        text = viewState.fiatValue ?: stringResource(Res.string.wallet_fiat_unavailable),
+                        modifier = tokenBounds.fiatValue,
+                        style = EthTextStyle.Title,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 EthCard(
-                    modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
+                    modifier = informationCardModifier.widthIn(max = 420.dp).fillMaxWidth(),
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
@@ -186,7 +209,7 @@ fun TokenDetailsScreenContent(
                 }
                 EthCard(
                     onClick = onHistoryButtonClick,
-                    modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
+                    modifier = historyCardModifier.widthIn(max = 420.dp).fillMaxWidth(),
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
@@ -247,6 +270,10 @@ private fun TokenDetailsScreenContentPreview() {
             onReceiveButtonClick = {},
             onHistoryButtonClick = {},
             viewState = usdcOnMainnet.toDetailsViewState(ETH_MAINNET_CHAIN_ID).copy(balance = "500.00"),
+            buttonsVisible = true,
+            tokenBounds = TokenSharedBounds.None,
+            informationCardModifier = Modifier,
+            historyCardModifier = Modifier,
         )
     }
 }

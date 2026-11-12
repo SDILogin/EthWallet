@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -34,7 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
@@ -64,6 +64,8 @@ import me.sdi.ethwallet.resources.send_token_usdc
 import me.sdi.ethwallet.resources.send_token_usdt
 import me.sdi.ethwallet.ui.KnownToken
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.components.rememberScreenTransition
+import me.sdi.ethwallet.ui.designsystem.EthChip
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
 import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.designsystem.EthTextField
@@ -119,6 +121,7 @@ private fun ReceiveScreenContent(
     onBackPressed: () -> Unit,
     onEvent: (event: ReceiveQrEvent) -> Unit,
 ) {
+    val transition = rememberScreenTransition()
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -138,6 +141,7 @@ private fun ReceiveScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer { alpha = transition.fadeAlpha }
                 .padding(paddingValues)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
@@ -179,46 +183,28 @@ private fun CurrencyPicker(
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // ETH Chip
-            FilterChip(
+            EthChip(
+                text = stringResource(Res.string.send_token_eth),
+                icon = painterResource(Res.drawable.ic_eth_logo),
                 selected = selectedTokenContract == EthContractAddress,
                 onClick = { onTokenSelected(EthContractAddress) },
-                label = { EthText(stringResource(Res.string.send_token_eth)) },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(Res.drawable.ic_eth_logo),
-                        tint = Color.Unspecified,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                    )
-                },
             )
 
-            // ERC20 Token Chips
             chainTokens.forEach { token ->
-                FilterChip(
+                val nameRes = when (token.symbol) {
+                    "USDT" -> Res.string.send_token_usdt
+                    "USDC" -> Res.string.send_token_usdc
+                    "DAI" -> Res.string.send_token_dai
+                    else -> null
+                }
+                EthChip(
+                    text = nameRes?.let { stringResource(it) } ?: token.symbol,
+                    icon = painterResource(token.iconRes),
                     selected = selectedTokenContract == token.ethAddress,
                     onClick = { onTokenSelected(token.ethAddress) },
-                    label = {
-                        val nameRes = when (token.symbol) {
-                            "USDT" -> Res.string.send_token_usdt
-                            "USDC" -> Res.string.send_token_usdc
-                            "DAI" -> Res.string.send_token_dai
-                            else -> null
-                        }
-                        EthText(nameRes?.let { stringResource(it) } ?: token.symbol)
-                    },
-                    leadingIcon = {
-                        Icon(
-                            painter = painterResource(token.iconRes),
-                            tint = Color.Unspecified,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
-                    },
                 )
             }
         }

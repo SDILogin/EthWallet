@@ -51,6 +51,30 @@ fun DesignSystemPreview() {
                     EthButton(text = "Disabled", onClick = {}, style = EthButtonStyle.Secondary, enabled = false)
                     EthButton(text = "Disabled", onClick = {}, style = EthButtonStyle.Text, enabled = false)
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    EthSelectableTile(
+                        title = "Slow",
+                        subtitle = "~$0.03",
+                        selected = false,
+                        onClick = {},
+                        modifier = Modifier.weight(1f),
+                    )
+                    EthSelectableTile(
+                        title = "Default",
+                        subtitle = "~$0.04",
+                        selected = true,
+                        onClick = {},
+                        modifier = Modifier.weight(1f),
+                    )
+                    EthSelectableTile(
+                        title = "Disabled",
+                        subtitle = "~$0.09",
+                        selected = false,
+                        onClick = {},
+                        modifier = Modifier.weight(1f),
+                        enabled = false,
+                    )
+                }
             }
         }
     }

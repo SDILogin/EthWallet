@@ -1,5 +1,16 @@
 package me.sdi.ethwallet.ui.wallet
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,15 +48,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -73,6 +88,8 @@ import me.sdi.ethwallet.resources.wallet_retry
 import me.sdi.ethwallet.resources.wallet_send
 import me.sdi.ethwallet.resources.wallet_tokens_erc20
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.components.ScreenTransition
+import me.sdi.ethwallet.ui.components.rememberScreenTransition
 import me.sdi.ethwallet.ui.components.shimmer
 import me.sdi.ethwallet.ui.daiOnSepolia
 import me.sdi.ethwallet.ui.designsystem.EthButton
@@ -92,13 +109,153 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 private const val TOKEN_SHIMMER_COUNT = 6
+private const val WALLET_SWITCH_MS = 300
+private const val BALANCE_CARD_SHARED_KEY = "wallet-balance-card"
+private const val BUTTONS_PANEL_SHARED_KEY = "wallet-buttons-panel"
+private const val TOKENS_CARD_SHARED_KEY = "wallet-tokens-card"
+private const val TOKEN_ROW_SHARED_KEY_PREFIX = "wallet-token-row-"
+private const val TOKEN_ICON_SHARED_KEY_PREFIX = "wallet-token-icon-"
+private const val TOKEN_NAME_SHARED_KEY_PREFIX = "wallet-token-name-"
+private const val TOKEN_SYMBOL_SHARED_KEY_PREFIX = "wallet-token-symbol-"
+private const val TOKEN_BALANCE_SHARED_KEY_PREFIX = "wallet-token-balance-"
+private const val TOKEN_FIAT_SHARED_KEY_PREFIX = "wallet-token-fiat-"
+private const val TOKEN_PART_OVERLAY_Z_INDEX = 2f
+private const val BLOCK_OVERLAY_Z_INDEX = 0f
+private const val TOKEN_ROW_OVERLAY_Z_INDEX = 1f
 private const val TWO_COLUMNS_MIN_WIDTH_DP = 600
 private const val THREE_COLUMNS_MIN_WIDTH_DP = 900
 
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+/**
+ * Modifiers that connect the main blocks of two wallet screens during a switch between wallets.
+ */
+class WalletSharedBounds(
+    val balanceCard: Modifier,
+    val buttonsPanel: Modifier,
+    val tokensCard: Modifier,
+    val tokenRows: Map<EthAddress, Modifier>,
+    val tokens: Map<EthAddress, TokenSharedBounds>,
+) {
+    companion object {
+        val None = WalletSharedBounds(
+            balanceCard = Modifier,
+            buttonsPanel = Modifier,
+            tokensCard = Modifier,
+            tokenRows = emptyMap(),
+            tokens = emptyMap(),
+        )
+    }
+}
+
+/**
+ * Scopes of the transition inside [WalletScreen]. A screen uses them to connect its blocks with
+ * the blocks of the screen before or after it.
+ */
+class WalletTransitionScopes(
+    val sharedTransitionScope: SharedTransitionScope,
+    val animatedVisibilityScope: AnimatedVisibilityScope,
+)
+
+@Composable
+private fun WalletTransitionScopes.sharedBounds(key: String, zIndexInOverlay: Float): Modifier =
+    with(sharedTransitionScope) {
+        Modifier.sharedBounds(
+            sharedContentState = rememberSharedContentState(key),
+            animatedVisibilityScope = animatedVisibilityScope,
+            resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+            zIndexInOverlay = zIndexInOverlay,
+        )
+    }
+
+@Composable
+private fun WalletTransitionScopes.sharedScaledBounds(key: String): Modifier =
+    with(sharedTransitionScope) {
+        Modifier.sharedBounds(
+            sharedContentState = rememberSharedContentState(key),
+            animatedVisibilityScope = animatedVisibilityScope,
+            zIndexInOverlay = TOKEN_PART_OVERLAY_Z_INDEX,
+        )
+    }
+
+/**
+ * Modifiers that connect the parts of one token on the wallet screen and on the token details screen.
+ */
+class TokenSharedBounds(
+    val icon: Modifier,
+    val name: Modifier,
+    val symbol: Modifier,
+    val balance: Modifier,
+    val fiatValue: Modifier,
+) {
+    companion object {
+        val None = TokenSharedBounds(
+            icon = Modifier,
+            name = Modifier,
+            symbol = Modifier,
+            balance = Modifier,
+            fiatValue = Modifier,
+        )
+    }
+}
+
+/**
+ * Slides a block in from below the window when its screen opens, and back when the screen closes.
+ */
+@Composable
+internal fun WalletTransitionScopes.slideFromBottom(delayMs: Int): Modifier {
+    val windowHeight = LocalWindowInfo.current.containerSize.height
+    return with(animatedVisibilityScope) {
+        Modifier.animateEnterExit(
+            enter = slideInVertically(tween(WALLET_SWITCH_MS, delayMs)) { windowHeight },
+            exit = slideOutVertically(tween(WALLET_SWITCH_MS)) { windowHeight },
+        )
+    }
+}
+
+@Composable
+internal fun WalletTransitionScopes.tokensContainerBounds(): Modifier =
+    sharedBounds(key = TOKENS_CARD_SHARED_KEY, zIndexInOverlay = BLOCK_OVERLAY_Z_INDEX)
+
+@Composable
+internal fun WalletTransitionScopes.tokenRowBounds(tokens: List<EthAddress>): Map<EthAddress, Modifier> =
+    tokens.associateWith { address ->
+        key(address) {
+            sharedBounds(
+                key = TOKEN_ROW_SHARED_KEY_PREFIX + address.lowercase(),
+                zIndexInOverlay = TOKEN_ROW_OVERLAY_Z_INDEX,
+            )
+        }
+    }
+
+@Composable
+internal fun WalletTransitionScopes.tokenBounds(token: EthAddress): TokenSharedBounds {
+    val tokenKey = token.lowercase().toString()
+    return TokenSharedBounds(
+        icon = sharedScaledBounds(TOKEN_ICON_SHARED_KEY_PREFIX + tokenKey),
+        name = sharedScaledBounds(TOKEN_NAME_SHARED_KEY_PREFIX + tokenKey),
+        symbol = sharedScaledBounds(TOKEN_SYMBOL_SHARED_KEY_PREFIX + tokenKey),
+        balance = sharedScaledBounds(TOKEN_BALANCE_SHARED_KEY_PREFIX + tokenKey),
+        fiatValue = sharedScaledBounds(TOKEN_FIAT_SHARED_KEY_PREFIX + tokenKey),
+    )
+}
+
+private data class WalletPane(
+    val address: EthAddress,
+    val manageTokens: Boolean,
+    val detailsTokenAddress: EthAddress?,
+)
+
+/**
+ * One instance shows all wallets, and the manage tokens and token details screens of each wallet.
+ * A change of [walletAddress] keeps the balance card, the action buttons and the tokens card
+ * in place. A change of [manageTokens] connects the tokens card and its rows with the tokens list.
+ * A non-null [detailsTokenAddress] shows the details of this token and connects the token icons.
+ */
+@OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun WalletScreen(
     walletAddress: EthAddress,
+    manageTokens: Boolean,
+    detailsTokenAddress: EthAddress?,
     onUpButtonClick: () -> Unit,
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
@@ -107,34 +264,86 @@ fun WalletScreen(
     onHistoryButtonClick: (walletLabel: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: WalletViewModel = koinViewModel(
-        parameters = { parametersOf(walletAddress) },
-    )
     val toastManager = rememberToastManager()
     val showUpButton = LocalListDetailSceneScope.current == null
     val refreshErrorMessage = stringResource(Res.string.wallet_refresh_error)
-    LaunchedEffect(key1 = viewModel.news) {
-        viewModel.news.collect { news ->
-            when (news) {
-                WalletNews.ShowErrorMessage -> toastManager.showToast(refreshErrorMessage)
+    val screenTransition = rememberScreenTransition()
+    SharedTransitionLayout(modifier = modifier) {
+        AnimatedContent(
+            targetState = WalletPane(
+                address = walletAddress,
+                manageTokens = manageTokens,
+                detailsTokenAddress = detailsTokenAddress,
+            ),
+            transitionSpec = {
+                fadeIn(tween(WALLET_SWITCH_MS)) togetherWith fadeOut(tween(WALLET_SWITCH_MS))
+            },
+        ) { pane ->
+            val scopes = WalletTransitionScopes(
+                sharedTransitionScope = this@SharedTransitionLayout,
+                animatedVisibilityScope = this@AnimatedContent,
+            )
+            if (pane.manageTokens) {
+                TokensListScreen(
+                    walletAddress = pane.address,
+                    onBackPressed = onUpButtonClick,
+                    transitionScopes = scopes,
+                )
+            } else if (pane.detailsTokenAddress != null) {
+                TokenDetailsScreen(
+                    walletAddress = pane.address,
+                    tokenAddress = pane.detailsTokenAddress,
+                    onUpButtonClick = onUpButtonClick,
+                    onSendButtonClick = onSendButtonClick,
+                    onReceiveButtonClick = onReceiveButtonClick,
+                    onHistoryButtonClick = { onHistoryButtonClick(pane.address.toString()) },
+                    transitionScopes = scopes,
+                )
+            } else {
+                val viewModel: WalletViewModel = koinViewModel(
+                    key = pane.address.toString(),
+                    parameters = { parametersOf(pane.address) },
+                )
+                LaunchedEffect(key1 = viewModel.news) {
+                    viewModel.news.collect { news ->
+                        when (news) {
+                            WalletNews.ShowErrorMessage -> toastManager.showToast(refreshErrorMessage)
+                        }
+                    }
+                }
+
+                val viewState by viewModel.viewState.collectAsState()
+                WalletScreenContent(
+                    viewState = viewState,
+                    onRefresh = { viewModel.onEvent(WalletEvent.Refresh) },
+                    onRetry = { viewModel.onEvent(WalletEvent.Retry) },
+                    showUpButton = showUpButton,
+                    onUpButtonClick = onUpButtonClick,
+                    onEditButtonClick = onEditButtonClick,
+                    onTokenClick = onTokenClick,
+                    onReceiveButtonClick = onReceiveButtonClick,
+                    onSendButtonClick = onSendButtonClick,
+                    onHistoryButtonClick = { onHistoryButtonClick(viewState.walletName) },
+                    screenTransition = screenTransition,
+                    sharedBounds = WalletSharedBounds(
+                        balanceCard = scopes.sharedBounds(
+                            key = BALANCE_CARD_SHARED_KEY,
+                            zIndexInOverlay = BLOCK_OVERLAY_Z_INDEX,
+                        ),
+                        buttonsPanel = scopes.sharedBounds(
+                            key = BUTTONS_PANEL_SHARED_KEY,
+                            zIndexInOverlay = BLOCK_OVERLAY_Z_INDEX,
+                        ),
+                        tokensCard = scopes.tokensContainerBounds(),
+                        tokenRows = scopes.tokenRowBounds(viewState.favoriteTokens.map { it.address }),
+                        tokens = viewState.favoriteTokens.associate { token ->
+                            token.address to key(token.address) { scopes.tokenBounds(token.address) }
+                        },
+                    ),
+                )
             }
         }
     }
-
-    val viewState by viewModel.viewState.collectAsState()
-    WalletScreenContent(
-        viewState = viewState,
-        onRefresh = { viewModel.onEvent(WalletEvent.Refresh) },
-        onRetry = { viewModel.onEvent(WalletEvent.Retry) },
-        showUpButton = showUpButton,
-        onUpButtonClick = onUpButtonClick,
-        onEditButtonClick = onEditButtonClick,
-        onTokenClick = onTokenClick,
-        onReceiveButtonClick = onReceiveButtonClick,
-        onSendButtonClick = onSendButtonClick,
-        onHistoryButtonClick = { onHistoryButtonClick(viewState.walletName) },
-        modifier = modifier,
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -151,6 +360,8 @@ fun WalletScreenContent(
     onSendButtonClick: () -> Unit,
     onHistoryButtonClick: () -> Unit,
     modifier: Modifier = Modifier,
+    screenTransition: ScreenTransition = rememberScreenTransition(),
+    sharedBounds: WalletSharedBounds = WalletSharedBounds.None,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     Scaffold(
@@ -185,6 +396,7 @@ fun WalletScreenContent(
                 columns = GridCells.Adaptive(300.dp),
                 modifier = Modifier
                     .fillMaxSize()
+                    .graphicsLayer { alpha = screenTransition.fadeAlpha }
                     .consumeWindowInsets(innerPadding),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
@@ -199,7 +411,7 @@ fun WalletScreenContent(
                         WalletBalanceLoadState.Loading,
                         WalletBalanceLoadState.Content,
                         -> TotalFiatBalanceCard(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().then(sharedBounds.balanceCard),
                             fiatBalance = viewState.totalBalanceUsd,
                             ethBalance = viewState.totalBalanceEth,
                             chainId = viewState.chainId,
@@ -216,6 +428,7 @@ fun WalletScreenContent(
                         onReceiveClick = onReceiveButtonClick,
                         onSendButtonClick = onSendButtonClick,
                         onHistoryButtonClick = onHistoryButtonClick,
+                        modifier = sharedBounds.buttonsPanel.padding(16.dp),
                     )
                 }
 
@@ -225,7 +438,9 @@ fun WalletScreenContent(
                             viewState = viewState,
                             onEditButtonClick = onEditButtonClick,
                             onTokenClick = onTokenClick,
-                            modifier = Modifier.padding(16.dp),
+                            tokenRowModifiers = sharedBounds.tokenRows,
+                            tokenBounds = sharedBounds.tokens,
+                            modifier = sharedBounds.tokensCard.padding(16.dp),
                         )
                     }
                 }
@@ -239,6 +454,8 @@ private fun TokensSection(
     viewState: WalletViewState,
     onEditButtonClick: () -> Unit,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
+    tokenRowModifiers: Map<EthAddress, Modifier>,
+    tokenBounds: Map<EthAddress, TokenSharedBounds>,
     modifier: Modifier = Modifier,
 ) {
     EthCard(modifier = modifier) {
@@ -254,7 +471,7 @@ private fun TokensSection(
                     maxWidth >= TWO_COLUMNS_MIN_WIDTH_DP.dp -> 2
                     else -> 1
                 }
-                val itemWidth = maxWidth / columnCount
+                val itemWidth = with(LocalDensity.current) { (constraints.maxWidth / columnCount).toDp() }
 
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -271,7 +488,10 @@ private fun TokensSection(
                             TokenRow(
                                 token = token,
                                 onTokenClick = onTokenClick,
-                                modifier = Modifier.width(itemWidth),
+                                sharedBounds = tokenBounds[token.address] ?: TokenSharedBounds.None,
+                                modifier = Modifier
+                                    .width(itemWidth)
+                                    .then(tokenRowModifiers[token.address] ?: Modifier),
                             )
                         }
                     }
@@ -342,9 +562,11 @@ private fun BalanceErrorCard(
 private fun TokenRow(
     token: FavoriteToken,
     onTokenClick: (tokenAddress: EthAddress) -> Unit,
+    sharedBounds: TokenSharedBounds,
     modifier: Modifier = Modifier,
 ) {
     TokenItem(
+        sharedBounds = sharedBounds,
         tokenAddress = token.address,
         tokenName = token.name,
         tokenSymbol = token.ticker,
@@ -364,11 +586,13 @@ private fun ButtonsPanel(
     onReceiveClick: () -> Unit,
     onSendButtonClick: () -> Unit,
     onHistoryButtonClick: () -> Unit,
+    modifier: Modifier,
 ) {
     val receiveTitle = stringResource(Res.string.wallet_receive)
     val sendTitle = stringResource(Res.string.wallet_send)
 
     Row(
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
@@ -556,6 +780,7 @@ private fun TokenItem(
     tokenSymbol: String,
     tokenBalance: String,
     fiatValue: String?,
+    sharedBounds: TokenSharedBounds,
     modifier: Modifier = Modifier,
 ) {
     val tokenIcon: DrawableResource = remember(tokenAddress) {
@@ -567,7 +792,7 @@ private fun TokenItem(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            modifier = Modifier.size(48.dp),
+            modifier = sharedBounds.icon.size(48.dp),
             painter = painterResource(tokenIcon),
             contentDescription = null,
             tint = Color.Unspecified,
@@ -578,11 +803,13 @@ private fun TokenItem(
         Column(modifier = Modifier.weight(1f)) {
             EthText(
                 text = tokenName,
+                modifier = sharedBounds.name,
                 style = EthTextStyle.Title,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             EthText(
                 text = tokenSymbol,
+                modifier = sharedBounds.symbol,
                 style = EthTextStyle.Caption,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -591,11 +818,13 @@ private fun TokenItem(
         Column(horizontalAlignment = Alignment.End) {
             EthText(
                 text = "$tokenBalance $tokenSymbol",
+                modifier = sharedBounds.balance,
                 style = EthTextStyle.Title,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             EthText(
                 text = fiatValue ?: stringResource(Res.string.wallet_fiat_unavailable),
+                modifier = sharedBounds.fiatValue,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

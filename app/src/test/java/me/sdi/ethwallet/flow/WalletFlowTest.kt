@@ -10,7 +10,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
@@ -434,7 +433,7 @@ class WalletFlowTest : KoinTest {
 
         composeTestRule.waitUntilTextExists("Receiver Address")
         composeTestRule.clickContentDescription("Select wallet")
-        composeTestRule.waitUntilTextExists("My wallets")
+        composeTestRule.waitUntilTextExists("Savings")
         composeTestRule.assertTextExists("Savings")
         composeTestRule.assertTextExists(savingsAddress)
         composeTestRule.clickText("Savings")
@@ -443,7 +442,7 @@ class WalletFlowTest : KoinTest {
     }
 
     @Test
-    fun sendScreenDisablesOwnedWalletPickerWhenNoOtherWalletExists() {
+    fun sendScreenHidesOwnedWalletPickerWhenNoOtherWalletExists() {
         runInitialWalletCreationFlow()
 
         walletsListPage.clickWallet("My Wallet")
@@ -451,16 +450,17 @@ class WalletFlowTest : KoinTest {
         walletPage.clickSend()
 
         composeTestRule.waitUntilTextExists("Receiver Address")
-        composeTestRule.onNodeWithContentDescription("No other wallets").assertIsNotEnabled()
+        composeTestRule.onNodeWithContentDescription("Select wallet").assertDoesNotExist()
     }
 
     @Test
-    fun emptyWalletsListDoesNotShowAddWalletFab() {
+    fun emptyWalletsListShowsAddWalletActions() {
         onboardingPage.clickCreatePinCode()
         setPinCodePage.enterPin(PIN)
         setPinCodePage.enterPin(PIN)
 
-        walletsListPage.assertAddWalletIsHidden()
+        walletsListPage.openAddWalletMenu()
+        walletsListPage.assertAddWalletActions()
     }
 
     @Test
