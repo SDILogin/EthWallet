@@ -1,5 +1,7 @@
 package me.sdi.ethwallet.ui.wallet
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,8 +13,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
@@ -32,6 +41,8 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 private const val LOGO_MAX_SIZE_DP = 120
+private const val LOGO_START_SCALE = 0.6f
+private const val START_ANIMATION_MS = 300
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,10 +52,18 @@ fun AddWalletScreen(
     onCreateWallet: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isPreview = LocalInspectionMode.current
+    var started by rememberSaveable { mutableStateOf(isPreview) }
+    LaunchedEffect(Unit) { started = true }
+    val startProgress by animateFloatAsState(
+        targetValue = if (started) 1f else 0f,
+        animationSpec = tween(START_ANIMATION_MS),
+    )
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
+                modifier = Modifier.graphicsLayer { translationY = -size.height * (1f - startProgress) },
                 title = { EthText(stringResource(Res.string.wallets_list_add_wallet)) },
                 navigationIcon = {
                     EthIconButton(onClick = onUpButtonClick) {
@@ -74,6 +93,7 @@ fun AddWalletScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = paddingValues.calculateTopPadding()),
+            buttonsVisible = started,
         ) { contentPadding ->
             Box(
                 modifier = Modifier
@@ -87,7 +107,13 @@ fun AddWalletScreen(
                     contentDescription = null,
                     modifier = Modifier
                         .sizeIn(maxWidth = LOGO_MAX_SIZE_DP.dp, maxHeight = LOGO_MAX_SIZE_DP.dp)
-                        .fillMaxSize(),
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            val scale = LOGO_START_SCALE + (1f - LOGO_START_SCALE) * startProgress
+                            alpha = startProgress
+                            scaleX = scale
+                            scaleY = scale
+                        },
                 )
             }
         }
