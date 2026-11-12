@@ -63,16 +63,21 @@ fun AddWalletScreen(
         animationSpec = tween(START_ANIMATION_MS),
         finishedListener = { exitAction?.invoke() },
     )
+    var topBarStaysOnExit by remember { mutableStateOf(false) }
     val exitWith: (() -> Unit) -> Unit = { action ->
         if (exitAction == null) {
             exitAction = action
         }
     }
+    val exitToNextScreen: (() -> Unit) -> Unit = { action ->
+        topBarStaysOnExit = true
+        exitWith(action)
+    }
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                modifier = Modifier.graphicsLayer { alpha = startProgress },
+                modifier = Modifier.graphicsLayer { alpha = if (topBarStaysOnExit) 1f else startProgress },
                 title = { EthText(stringResource(Res.string.wallets_list_add_wallet)) },
                 navigationIcon = {
                     EthIconButton(onClick = { exitWith(onUpButtonClick) }) {
@@ -89,13 +94,13 @@ fun AddWalletScreen(
             buttons = {
                 EthButton(
                     text = stringResource(Res.string.onboarding_import_wallet),
-                    onClick = { exitWith(onImportWallet) },
+                    onClick = { exitToNextScreen(onImportWallet) },
                     modifier = Modifier.fillMaxWidth(),
                     style = EthButtonStyle.Secondary,
                 )
                 EthButton(
                     text = stringResource(Res.string.onboarding_create_wallet),
-                    onClick = { exitWith(onCreateWallet) },
+                    onClick = { exitToNextScreen(onCreateWallet) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             },
