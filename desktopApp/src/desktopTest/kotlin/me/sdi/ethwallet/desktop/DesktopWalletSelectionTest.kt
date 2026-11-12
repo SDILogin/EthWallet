@@ -39,6 +39,7 @@ import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
 import org.junit.rules.TemporaryFolder
 import org.koin.compose.KoinApplication
+import org.koin.core.context.stopKoin
 import org.koin.dsl.koinConfiguration
 import org.koin.dsl.module
 import java.math.BigDecimal
@@ -53,6 +54,7 @@ class DesktopWalletSelectionTest {
     val rules: RuleChain = RuleChain.outerRule(temporaryFolder)
         .around(object : ExternalResource() {
             override fun after() {
+                stopKoin()
                 dataStoreScope.cancel()
             }
         })
@@ -64,14 +66,6 @@ class DesktopWalletSelectionTest {
             temporaryFolder.root.resolve("pin.preferences_pb")
         }
         val database = DesktopDatabaseBuilder.build(temporaryFolder.newFolder("database"))
-        runBlocking {
-            database.walletDao().insertWallet(
-                WalletEntity(address = MAIN_ADDRESS, encryptedPrivateKeyBase64 = "private-key", label = "Main"),
-            )
-            database.walletDao().insertWallet(
-                WalletEntity(address = SAVINGS_ADDRESS, encryptedPrivateKeyBase64 = "private-key", label = "Savings"),
-            )
-        }
         val testModule = module {
             single<DataStore<Preferences>> { dataStore }
             single<AppDatabase> { database }
@@ -116,6 +110,14 @@ class DesktopWalletSelectionTest {
         }
         compose.onNodeWithText("Continue").performClick()
         awaitText("No wallet has been selected yet")
+        runBlocking {
+            database.walletDao().insertWallet(
+                WalletEntity(address = MAIN_ADDRESS, encryptedPrivateKeyBase64 = "private-key", label = "Main"),
+            )
+            database.walletDao().insertWallet(
+                WalletEntity(address = SAVINGS_ADDRESS, encryptedPrivateKeyBase64 = "private-key", label = "Savings"),
+            )
+        }
         awaitText("Savings")
 
         compose.onNodeWithText("Main").performClick()

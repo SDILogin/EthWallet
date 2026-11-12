@@ -36,6 +36,7 @@ import org.junit.rules.RuleChain
 import org.junit.rules.TemporaryFolder
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
+import org.koin.core.context.stopKoin
 import org.koin.core.module.Module
 import org.koin.dsl.koinConfiguration
 import org.koin.dsl.module
@@ -49,6 +50,7 @@ class DesktopAppTest {
     val rules: RuleChain = RuleChain.outerRule(temporaryFolder)
         .around(object : ExternalResource() {
             override fun after() {
+                stopKoin()
                 dataStoreScope.cancel()
             }
         })

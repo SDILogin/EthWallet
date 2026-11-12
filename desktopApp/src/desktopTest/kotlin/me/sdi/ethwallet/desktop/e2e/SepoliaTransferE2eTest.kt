@@ -26,6 +26,7 @@ import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
 import org.junit.rules.TemporaryFolder
 import org.koin.compose.KoinApplication
+import org.koin.core.context.stopKoin
 import org.koin.dsl.koinConfiguration
 import org.koin.dsl.module
 import java.math.BigDecimal
@@ -41,6 +42,7 @@ class SepoliaTransferE2eTest {
     val rules: RuleChain = RuleChain.outerRule(temporaryFolder)
         .around(object : ExternalResource() {
             override fun after() {
+                stopKoin()
                 dataStoreScope.cancel()
             }
         })
