@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,7 +43,7 @@ import org.jetbrains.compose.resources.stringResource
 
 private const val LOGO_MAX_SIZE_DP = 120
 private const val LOGO_START_SCALE = 0.6f
-private const val START_ANIMATION_MS = 300
+private const val START_ANIMATION_MS = 150
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,10 +56,18 @@ fun AddWalletScreen(
     val isPreview = LocalInspectionMode.current
     var started by rememberSaveable { mutableStateOf(isPreview) }
     LaunchedEffect(Unit) { started = true }
+    var exitAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val contentVisible = started && exitAction == null
     val startProgress by animateFloatAsState(
-        targetValue = if (started) 1f else 0f,
+        targetValue = if (contentVisible) 1f else 0f,
         animationSpec = tween(START_ANIMATION_MS),
+        finishedListener = { exitAction?.invoke() },
     )
+    val exitWith: (() -> Unit) -> Unit = { action ->
+        if (exitAction == null) {
+            exitAction = action
+        }
+    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -66,7 +75,7 @@ fun AddWalletScreen(
                 modifier = Modifier.graphicsLayer { translationY = -size.height * (1f - startProgress) },
                 title = { EthText(stringResource(Res.string.wallets_list_add_wallet)) },
                 navigationIcon = {
-                    EthIconButton(onClick = onUpButtonClick) {
+                    EthIconButton(onClick = { exitWith(onUpButtonClick) }) {
                         Icon(
                             painter = painterResource(Res.drawable.arrow_back_24px),
                             contentDescription = stringResource(Res.string.back),
@@ -80,20 +89,20 @@ fun AddWalletScreen(
             buttons = {
                 EthButton(
                     text = stringResource(Res.string.onboarding_import_wallet),
-                    onClick = onImportWallet,
+                    onClick = { exitWith(onImportWallet) },
                     modifier = Modifier.fillMaxWidth(),
                     style = EthButtonStyle.Secondary,
                 )
                 EthButton(
                     text = stringResource(Res.string.onboarding_create_wallet),
-                    onClick = onCreateWallet,
+                    onClick = { exitWith(onCreateWallet) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = paddingValues.calculateTopPadding()),
-            buttonsVisible = started,
+            buttonsVisible = contentVisible,
         ) { contentPadding ->
             Box(
                 modifier = Modifier
