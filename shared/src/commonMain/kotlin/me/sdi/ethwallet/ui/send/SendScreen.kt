@@ -16,13 +16,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -35,7 +33,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -93,7 +90,9 @@ import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
 import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthCard
+import me.sdi.ethwallet.ui.designsystem.EthChip
 import me.sdi.ethwallet.ui.designsystem.EthIconButton
+import me.sdi.ethwallet.ui.designsystem.EthSelectableTile
 import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.designsystem.EthTextField
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
@@ -101,7 +100,6 @@ import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.ui.usdtOnMainnet
 import me.sdi.ethwallet.util.formatUsdCurrency
 import me.sdi.ethwallet.util.rememberToastManager
-import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -290,44 +288,28 @@ private fun TokenSelector(
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FilterChip(
+            EthChip(
+                text = stringResource(Res.string.send_token_eth),
+                icon = painterResource(Res.drawable.ic_eth_logo),
                 selected = selectedTokenContract == EthContractAddress,
                 onClick = { onTokenSelected(EthContractAddress) },
-                label = { EthText(stringResource(Res.string.send_token_eth)) },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(Res.drawable.ic_eth_logo),
-                        tint = Color.Unspecified,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                    )
-                },
             )
 
             chainTokens.forEach { token ->
-                FilterChip(
+                val nameRes = when (token.symbol) {
+                    "USDT" -> Res.string.send_token_usdt
+                    "USDC" -> Res.string.send_token_usdc
+                    "DAI" -> Res.string.send_token_dai
+                    else -> null
+                }
+                EthChip(
+                    text = nameRes?.let { stringResource(it) } ?: token.symbol,
+                    icon = painterResource(token.iconRes),
                     selected = selectedTokenContract == token.ethAddress,
                     onClick = { onTokenSelected(token.ethAddress) },
-                    label = {
-                        val nameRes = when (token.symbol) {
-                            "USDT" -> Res.string.send_token_usdt
-                            "USDC" -> Res.string.send_token_usdc
-                            "DAI" -> Res.string.send_token_dai
-                            else -> null
-                        }
-                        EthText(nameRes?.let { stringResource(it) } ?: token.symbol)
-                    },
-                    leadingIcon = {
-                        Icon(
-                            painter = painterResource(token.iconRes),
-                            tint = Color.Unspecified,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
-                    },
                 )
             }
         }
@@ -350,18 +332,19 @@ private fun GasSelector(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
+        val zeroFee = remember { formatUsdCurrency(BigDecimal.ZERO) }
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             gas.chips.forEach { chip ->
-                FilterChip(
+                EthSelectableTile(
+                    title = stringResource(chip.labelRes),
+                    subtitle = stringResource(Res.string.send_fee_estimate, chip.feeUsd ?: zeroFee),
                     selected = chip.selected,
                     enabled = chip.enabled,
                     onClick = { onGasOptionSelected(chip.option) },
-                    label = { GasChipLabel(chip.labelRes, chip.feeUsd) },
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
@@ -433,18 +416,6 @@ private fun CustomFeeEstimate(customFeeUsd: String?) {
                 style = EthTextStyle.Caption,
             )
         }
-    }
-}
-
-@Composable
-private fun GasChipLabel(labelRes: StringResource, feeUsd: String?) {
-    val zeroFee = remember { formatUsdCurrency(BigDecimal.ZERO) }
-    Column {
-        EthText(stringResource(labelRes))
-        EthText(
-            text = stringResource(Res.string.send_fee_estimate, feeUsd ?: zeroFee),
-            style = EthTextStyle.Caption,
-        )
     }
 }
 
