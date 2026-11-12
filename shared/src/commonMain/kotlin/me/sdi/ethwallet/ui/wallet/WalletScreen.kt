@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -73,6 +74,7 @@ import me.sdi.ethwallet.resources.wallet_retry
 import me.sdi.ethwallet.resources.wallet_send
 import me.sdi.ethwallet.resources.wallet_tokens_erc20
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
+import me.sdi.ethwallet.ui.components.rememberScreenTransition
 import me.sdi.ethwallet.ui.components.shimmer
 import me.sdi.ethwallet.ui.daiOnSepolia
 import me.sdi.ethwallet.ui.designsystem.EthButton
@@ -153,6 +155,7 @@ fun WalletScreenContent(
     modifier: Modifier = Modifier,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val transition = rememberScreenTransition()
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -185,6 +188,7 @@ fun WalletScreenContent(
                 columns = GridCells.Adaptive(300.dp),
                 modifier = Modifier
                     .fillMaxSize()
+                    .graphicsLayer { alpha = transition.fadeAlpha }
                     .consumeWindowInsets(innerPadding),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
