@@ -85,7 +85,8 @@ Before finishing code changes, run the narrowest useful Gradle task. If formatti
 - Follow `.editorconfig` and Spotless rules.
 - Use trailing commas where the existing Kotlin style uses them.
 - Keep changes focused. Do not perform broad refactors while fixing a narrow issue.
-- Do not add comments for obvious code. Add short comments only for non-obvious behavior.
+- Do not add inline comments. Only the project owner adds inline comments. KDoc is allowed when a declaration's contract is not clear from its signature. Rust `// SAFETY:` comments are allowed for unsafe operations.
+- Write KDoc and `// SAFETY:` comments in simplified English (ASD-STE100): short sentences, common words, one idea per sentence. State the exact fact and stop. The reader is not a native English speaker and does not read long comments.
 - Use ASCII unless the touched file already uses non-ASCII or the change requires it.
 - Tests should let unexpected exceptions fail normally. Do not catch or translate failures unless the behavior under test specifically requires it.
 

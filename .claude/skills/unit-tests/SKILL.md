@@ -3,10 +3,6 @@ name: unit-tests
 description: Generate unit tests for Kotlin/Android files. Use when user wants to create tests, write tests, or says "generate tests" for a specific file. Follows project patterns with fakes over mocks, linear test flows, and meaningful assert messages.
 ---
 
-# Unit Tests
-
-Generate comprehensive unit tests following project patterns.
-
 ## Core Rules
 
 ### No Conditional Asserts
@@ -45,7 +41,7 @@ assertTrue(items.all { it.isValid }, "All items should be valid")
 Mock frameworks hardcode method calls, breaking tests during refactoring.
 
 ```kotlin
-// WRONG - mockito ties to implementation
+// WRONG - MockK ties to implementation
 coEvery { repository.getUser(any()) } returns user
 
 // CORRECT - fake allows refactoring
@@ -76,23 +72,33 @@ Don't test every edge case. Tests should survive non-global refactoring. Focus o
 
 ## Coroutines Testing
 
-### setUp uses runBlocking
+Tests in `shared/src/commonTest` use `kotlin.test` annotations and assertions.
+
+### setUp sets the main dispatcher
 ```kotlin
-@Before
-fun setUp() = runBlocking {
+private val testDispatcher = StandardTestDispatcher()
+
+@BeforeTest
+fun setUp() {
+    Dispatchers.setMain(testDispatcher)
     repository = FakeRepository()
     viewModel = MyViewModel(repository)
+}
+
+@AfterTest
+fun tearDown() {
+    Dispatchers.resetMain()
 }
 ```
 
 ### @Test uses runTest
 ```kotlin
 @Test
-fun `should update state after event`() = runTest {
-    viewModel.onEvent(MyEvent.Start)
+fun input_change_updates_the_state() = runTest(testDispatcher) {
+    viewModel.onEvent(MyEvent.InputChanged("value"))
     advanceUntilIdle()
 
-    assertEquals(expected, viewModel.state.value, "State should update after Start")
+    assertEquals(expected, viewModel.viewState.value, "State should update after input")
 }
 ```
 
@@ -104,7 +110,7 @@ private val collectedStates = mutableListOf<MyState>()
 
 private fun TestScope.collectStates() {
     backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-        viewModel.state.collect { state ->
+        viewModel.viewState.collect { state ->
             collectedStates.add(state)
         }
     }
@@ -113,22 +119,22 @@ private fun TestScope.collectStates() {
 
 ## ViewModel Testing
 
-### MainDispatcherRule Required
-```kotlin
-@get:Rule
-val mainDispatcherRule = MainDispatcherRule()
-```
+### Main dispatcher
 
-### Send Start Event First
+Tests in `shared/src/commonTest` set the main dispatcher in `setUp` (see above). `MainDispatcherRule` is a JUnit rule in
+`app/src/test`. Use it only for tests in that source set.
 
-If ViewModel accepts initialization event, always send it:
+### Initial loading starts on the first collector
+
+A ViewModel that loads initial data does so inside `viewState.onStart {}`. For such a ViewModel, collect `viewState` before the assertions:
 ```kotlin
 @Test
-fun `should show error on invalid input`() = runTest {
-    viewModel.onEvent(MyEvent.Start)  // Always first
+fun invalid_input_shows_an_error() = runTest(testDispatcher) {
+    collectStates()
     viewModel.onEvent(MyEvent.InputChanged("invalid"))
+    advanceUntilIdle()
 
-    assertNotNull(viewModel.state.value.error, "Error should appear for invalid input")
+    assertNotNull(viewModel.viewState.value.error, "Error should appear for invalid input")
 }
 ```
 
@@ -138,8 +144,8 @@ Always enable logger for tracing test failures:
 ```kotlin
 import me.sdi.ethwallet.Logger
 
-@Before
-fun setUp() = runBlocking {
+@BeforeTest
+fun setUp() {
     Logger.enabled = true
     // ...
 }
@@ -167,36 +173,41 @@ private fun TestScope.submitForm() {
 ```kotlin
 @OptIn(ExperimentalCoroutinesApi::class)
 class MyViewModelTest {
-    @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
+    private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var repository: FakeRepository
     private lateinit var viewModel: MyViewModel
     private val collectedNews = mutableListOf<MyNews>()
 
-    @Before
-    fun setUp() = runBlocking {
+    @BeforeTest
+    fun setUp() {
         Logger.enabled = true
+        Dispatchers.setMain(testDispatcher)
         repository = FakeRepository()
         viewModel = MyViewModel(repository)
     }
 
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
-    fun `should initialize with default state`() = runTest {
-        val state = viewModel.state.value
+    fun state_is_empty_before_the_first_collector() = runTest(testDispatcher) {
+        val state = viewModel.viewState.value
 
         assertFalse(state.isLoading, "Should not be loading initially")
         assertTrue(state.items.isEmpty(), "Items should be empty initially")
     }
 
     @Test
-    fun `should load items on start`() = runTest {
+    fun items_load_when_the_screen_collects_the_state() = runTest(testDispatcher) {
         repository.itemsToReturn = listOf(Item("1"), Item("2"))
 
-        viewModel.onEvent(MyEvent.Start)
+        collectStates()
         advanceUntilIdle()
 
-        val items = viewModel.state.value.items
+        val items = viewModel.viewState.value.items
         assertEquals(2, items.size, "Should load 2 items from repository")
     }
 }
