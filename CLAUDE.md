@@ -39,7 +39,9 @@ Follow these rules when writing code. Check every diff against them during revie
 
 ## Comments
 
-Avoid comments for obvious behavior. Use KDoc sparingly when a declaration's contract is not clear from its signature. Rust `// SAFETY:` comments are allowed for unsafe operations and should state the binding or memory invariant being relied upon.
+No inline comments in code. Only the project owner adds inline comments. Use KDoc sparingly when a declaration's contract is not clear from its signature. Rust `// SAFETY:` comments are allowed for unsafe operations and should state the binding or memory invariant being relied upon.
+
+Write KDoc and `// SAFETY:` comments in simplified English (ASD-STE100): short sentences, common words, one idea per sentence. State the exact fact and stop. The reader is not a native English speaker and does not read long comments.
 
 ## Formatting
 

@@ -3,8 +3,6 @@ name: docker-agent
 description: Start an autonomous Claude Code agent in a Docker Desktop container for one EthWallet task. Idle containers are reused. The agent plans, implements, opens a PR, and answers PR comments. Use on the host machine (not inside Docker) when the user wants to delegate tasks to Docker agents, swarm several in parallel, or check the status of Docker agents. Takes a task reference and the task description.
 ---
 
-# Docker Agent
-
 Each agent container works on one task at a time. A container runs two Claude Code agents in tmux:
 
 - The coder, in the tmux session `agent`: Opus 5.5 (medium effort) with Fable as the advisor. It does the task.
