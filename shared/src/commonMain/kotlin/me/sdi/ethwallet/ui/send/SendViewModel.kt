@@ -29,6 +29,8 @@ import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
+import me.sdi.ethwallet.core.history.Transfer
+import me.sdi.ethwallet.core.history.TransferHistoryRepository
 import me.sdi.ethwallet.core.history.pendingTransfer
 import me.sdi.ethwallet.core.transfer.ETH_TRANSFER_GAS_UNITS
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
@@ -72,6 +74,7 @@ class SendViewModel(
     private val transferInteractor: TransferInteractor,
     private val fiatRateProvider: FiatRateProvider,
     private val walletRepository: WalletRepository,
+    private val historyRepository: TransferHistoryRepository,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val userInput = MutableStateFlow(restoreUserInput())
@@ -267,18 +270,20 @@ class SendViewModel(
                 val transactionHash = transferInteractor.transfer(transferData)
 
                 Logger.debug(TAG) { "Transfer successful: $transactionHash" }
-                val transfer = pendingTransfer(
-                    hash = transactionHash,
-                    timestamp = Clock.System.now().toEpochMilliseconds(),
-                    from = transferData.senderAddress,
-                    to = transferData.destinationAddress,
-                    amount = transferData.amount,
-                    estimatedFee = Wei(transferData.maxFeePerGas.value.multiply(transferData.gasUnits)),
-                    tokenAddress = token?.ethAddress,
-                    tokenSymbol = token?.symbol,
-                    tokenDecimals = token?.decimals,
+                saveSentTransfer(
+                    pendingTransfer(
+                        hash = transactionHash,
+                        timestamp = Clock.System.now().toEpochMilliseconds(),
+                        from = transferData.senderAddress,
+                        to = transferData.destinationAddress,
+                        amount = transferData.amount,
+                        estimatedFee = Wei(transferData.maxFeePerGas.value.multiply(transferData.gasUnits)),
+                        tokenAddress = token?.ethAddress,
+                        tokenSymbol = token?.symbol,
+                        tokenDecimals = token?.decimals,
+                    ),
                 )
-                newsChannel.trySend(SendNews.TransferSuccess(transfer))
+                newsChannel.trySend(SendNews.TransferSuccess(transactionHash))
 
                 userInput.value = UserInput()
             } catch (e: CancellationException) {
@@ -292,6 +297,16 @@ class SendViewModel(
             } finally {
                 isTransferring.value = false
             }
+        }
+    }
+
+    private suspend fun saveSentTransfer(transfer: Transfer) {
+        try {
+            historyRepository.upsert(walletAddress, listOf(transfer))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Logger.warn(TAG, e) { "Failed to save the sent transfer" }
         }
     }
 

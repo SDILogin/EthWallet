@@ -49,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
-import me.sdi.ethwallet.core.history.Transfer
 import me.sdi.ethwallet.core.transfer.ERC20_TRANSFER_GAS_UNITS
 import me.sdi.ethwallet.core.transfer.ETH_TRANSFER_GAS_UNITS
 import me.sdi.ethwallet.core.transfer.Wei
@@ -132,7 +131,7 @@ fun SendScreen(
         parameters = { parametersOf(walletAddress) },
     ),
     onBackPress: () -> Unit,
-    onTransferSent: (Transfer) -> Unit,
+    onTransferSent: (transactionHash: String) -> Unit,
 ) {
     val chainConfig: ChainConfig = koinInject()
     val chainTokens = remember(chainConfig.chainId) { supportedKnownTokens(chainConfig.chainId) }
@@ -143,7 +142,7 @@ fun SendScreen(
         viewModel.news.collect { news ->
             when (news) {
                 is SendNews.TransferSuccess -> {
-                    onTransferSent(news.transfer)
+                    onTransferSent(news.transactionHash)
                 }
                 is SendNews.TransferError -> {
                     toastManager.showToast(news.message)

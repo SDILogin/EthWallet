@@ -11,11 +11,9 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.ChainConfig
-import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthManager
 import me.sdi.ethwallet.core.history.HistoryInitializationStore
-import me.sdi.ethwallet.core.history.TransactionStatus
-import me.sdi.ethwallet.core.history.Transfer
+import me.sdi.ethwallet.core.history.TransferHistoryRepository
 import me.sdi.ethwallet.core.history.TransfersHistoryProvider
 import me.sdi.ethwallet.core.history.TransfersHistoryProviderBlockscout
 import me.sdi.ethwallet.core.security.AppLockMethod
@@ -29,7 +27,6 @@ import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
-import me.sdi.ethwallet.core.transfer.toWei
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.fakes.FakeBiometricUnlock
 import me.sdi.ethwallet.fakes.FakeDataCleaner
@@ -42,7 +39,8 @@ import me.sdi.ethwallet.fakes.FakePinCodeStorage
 import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
-import me.sdi.ethwallet.ui.history.TransactionResultViewModel
+import me.sdi.ethwallet.fakes.TransferHistoryRepositoryInMemory
+import me.sdi.ethwallet.ui.history.TransactionDetailsViewModel
 import me.sdi.ethwallet.ui.settings.ChangePinCodeViewModel
 import me.sdi.ethwallet.ui.settings.SettingsViewModel
 import me.sdi.ethwallet.ui.wallet.PasswordUnlockViewModel
@@ -172,15 +170,7 @@ class KoinModuleTest {
     }
 
     @Test
-    fun transactionResultViewModelResolvesWithSentTransfer() {
-        val sentTransfer = Transfer.Eth(
-            hash = "0x${"a".repeat(64)}",
-            timestamp = 1L,
-            from = EthAddress("0x${"1".repeat(40)}"),
-            to = EthAddress("0x${"2".repeat(40)}"),
-            valueWei = "1000".toBigInteger().toWei(),
-            status = TransactionStatus.Pending,
-        )
+    fun transactionDetailsViewModelResolvesWithTransactionHash() {
         val koin = koinApplication {
             modules(
                 commonModule,
@@ -198,13 +188,14 @@ class KoinModuleTest {
                     single<EthManager> { FakeEthManager() }
                     single<PrivateKeyEncryptor> { FakePrivateKeyEncryptor() }
                     single<HistoryInitializationStore> { HistoryInitializationStoreInMemory() }
+                    single<TransferHistoryRepository> { TransferHistoryRepositoryInMemory() }
                 },
             )
         }.koin
 
         assertNotNull(
-            koin.get<TransactionResultViewModel> { parametersOf(sentTransfer) },
-            "The result screen should resolve its ViewModel with a sent ETH transfer",
+            koin.get<TransactionDetailsViewModel> { parametersOf("0x${"a".repeat(64)}") },
+            "Transaction details should resolve its ViewModel with a transaction hash",
         )
     }
 }

@@ -24,6 +24,7 @@ import me.sdi.ethwallet.core.history.HistoryInitializationStore
 import me.sdi.ethwallet.core.history.HistoryLoadResult
 import me.sdi.ethwallet.core.history.HistoryPaginationCursor
 import me.sdi.ethwallet.core.history.HistoryUpdateInteractor
+import me.sdi.ethwallet.core.history.TransactionFee
 import me.sdi.ethwallet.core.history.TransactionStatus
 import me.sdi.ethwallet.core.history.Transfer
 import me.sdi.ethwallet.core.history.TransferHistoryRepository
@@ -864,12 +865,20 @@ class HistoryViewModelTest {
             }
         }
 
-        override fun observe(walletAddress: EthAddress, trxHash: String, logIndex: Int): Flow<Transfer> =
+        override fun observe(trxHash: String): Flow<Transfer?> =
             error("Single-transfer observation is not used by this test")
 
         override suspend fun read(walletAddress: EthAddress): List<Transfer> = items.value
 
         override suspend fun upsert(walletAddress: EthAddress, items: List<Transfer>) {
+            error("ViewModel must only observe the repository")
+        }
+
+        override suspend fun update(trxHash: String, status: TransactionStatus, fee: TransactionFee?) {
+            error("ViewModel must only observe the repository")
+        }
+
+        override suspend fun delete(walletAddress: EthAddress, items: List<Transfer>) {
             error("ViewModel must only observe the repository")
         }
     }

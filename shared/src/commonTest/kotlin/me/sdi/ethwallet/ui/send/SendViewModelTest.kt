@@ -33,6 +33,7 @@ import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeTransferInteractor
 import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
+import me.sdi.ethwallet.fakes.TransferHistoryRepositoryInMemory
 import me.sdi.ethwallet.ui.usdtOnMainnet
 import me.sdi.ethwallet.util.formatUsdCurrency
 import java.math.BigDecimal
@@ -56,6 +57,7 @@ class SendViewModelTest {
     private lateinit var fiatRateProvider: FakeFiatRateProvider
     private lateinit var walletDao: FakeWalletDao
     private lateinit var walletRepository: WalletRepository
+    private lateinit var historyRepository: TransferHistoryRepositoryInMemory
     private val historyInitializationStoreInMemory = HistoryInitializationStoreInMemory()
     private lateinit var viewModel: SendViewModel
     private val activeViewModels = mutableListOf<SendViewModel>()
@@ -86,6 +88,7 @@ class SendViewModelTest {
             privateKeyEncryptor = FakePrivateKeyEncryptor(),
             historyInitializationStore = historyInitializationStoreInMemory,
         )
+        historyRepository = TransferHistoryRepositoryInMemory()
         activeViewModels.clear()
         viewModel = newViewModel()
     }
@@ -96,6 +99,7 @@ class SendViewModelTest {
             transferInteractor = transferInteractor,
             fiatRateProvider = fiatRateProvider,
             walletRepository = walletRepository,
+            historyRepository = historyRepository,
             savedStateHandle = savedStateHandle,
         ).also { activeViewModels += it }
 
@@ -466,7 +470,9 @@ class SendViewModelTest {
         val finishedAt = Clock.System.now().toEpochMilliseconds()
 
         assertNotNull(transferInteractor.lastTransferData, "Transfer should be invoked")
-        val transfer = collectedNews.filterIsInstance<SendNews.TransferSuccess>().single().transfer
+        val transactionHash = collectedNews.filterIsInstance<SendNews.TransferSuccess>().single().transactionHash
+        assertEquals(expectedHash, transactionHash, "Should have correct transaction hash")
+        val transfer = historyRepository.read(senderAddress).single()
         assertTrue(transfer.timestamp in startedAt..finishedAt, "Timestamp should be the send time")
         assertEquals(
             Transfer.Eth(
@@ -482,7 +488,7 @@ class SendViewModelTest {
                 ),
             ),
             transfer,
-            "Success news should carry the pending ETH transfer",
+            "The pending ETH transfer should be saved to history",
         )
 
         val state = viewModel.viewState.value
@@ -492,7 +498,7 @@ class SendViewModelTest {
     }
 
     @Test
-    fun should_send_pending_erc20_transfer_after_successful_token_transfer() = vmTest {
+    fun should_save_pending_erc20_transfer_after_successful_token_transfer() = vmTest {
         val expectedHash = "0xTokenTransactionHash"
         transferInteractor.transferResult = Result.success(expectedHash)
         seedFees()
@@ -503,7 +509,8 @@ class SendViewModelTest {
         sendEvent(SendEvent.OnTransferAmountChanged("10.5"))
         clickSend()
 
-        val transfer = collectedNews.filterIsInstance<SendNews.TransferSuccess>().single().transfer
+        assertEquals(expectedHash, collectedNews.filterIsInstance<SendNews.TransferSuccess>().single().transactionHash)
+        val transfer = historyRepository.read(senderAddress).single()
         assertEquals(
             Transfer.Erc20(
                 hash = expectedHash,
@@ -522,7 +529,7 @@ class SendViewModelTest {
                 ),
             ),
             transfer,
-            "Success news should carry the pending token transfer",
+            "The pending token transfer should be saved to history",
         )
     }
 

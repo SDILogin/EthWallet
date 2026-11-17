@@ -31,9 +31,6 @@ data class HistoryRow(
             is Transfer.Eth -> "${item.hash}:native"
             is Transfer.Erc20 -> "${item.hash}:${item.logIndex}"
         }
-
-    // Native transactions have no transfer log; use the same sentinel as Room.
-    val logIndex: Int get() = (item as? Transfer.Erc20)?.logIndex ?: -1
 }
 
 internal fun EthAddress.shortHistoryAddress(): String = toString().let { "${it.take(6)}…${it.takeLast(4)}" }

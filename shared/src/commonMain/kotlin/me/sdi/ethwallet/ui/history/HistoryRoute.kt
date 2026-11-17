@@ -21,7 +21,7 @@ fun HistoryRoute(
     walletAddress: EthAddress,
     walletLabel: String,
     onBackPressed: () -> Unit,
-    onTransactionClick: (String, Int) -> Unit,
+    onTransactionClick: (String) -> Unit,
 ) {
     val viewModel: HistoryViewModel = koinViewModel(parameters = { parametersOf(walletAddress) })
     val chainConfig: ChainConfig = koinInject()
@@ -47,6 +47,6 @@ fun HistoryRoute(
         onLoadMore = { viewModel.onEvent(HistoryUserAction.LoadMore) },
         onRetryLoadMore = { viewModel.onEvent(HistoryUserAction.RetryLoadMore) },
         onBackPressed = onBackPressed,
-        onHistoryItemClick = { hash, logIndex -> onTransactionClick(hash.value, logIndex) },
+        onHistoryItemClick = { hash -> onTransactionClick(hash.value) },
     )
 }

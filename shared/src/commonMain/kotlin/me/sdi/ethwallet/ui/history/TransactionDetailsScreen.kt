@@ -97,10 +97,9 @@ import kotlin.time.Instant
 fun TransactionDetailsRoute(
     walletAddress: EthAddress,
     transactionHash: String,
-    logIndex: Int,
     onBackPressed: () -> Unit,
 ) {
-    val viewModel: TransactionDetailsViewModel = koinViewModel(parameters = { parametersOf(walletAddress, transactionHash, logIndex) })
+    val viewModel: TransactionDetailsViewModel = koinViewModel(parameters = { parametersOf(transactionHash) })
     val state by viewModel.viewState.collectAsState()
     val chainConfig: ChainConfig = koinInject()
     TransactionDetailsScreen(state, walletAddress, chainConfig, onBackPressed)
@@ -113,10 +112,8 @@ fun TransactionDetailsScreen(
     walletAddress: EthAddress,
     chainConfig: ChainConfig,
     onBackPressed: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     Scaffold(
-        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { EthText(stringResource(Res.string.transaction_details_title)) },

@@ -69,6 +69,7 @@ class HistoryUpdateInteractorDefault(
             }
         }
 
+        resolveSentTokenPlaceholders(walletAddress, cachedTransfers, refreshedTransfers)
         historyRepository.upsert(walletAddress, refreshedTransfers)
         initializationStore.markInitialized(chainId, walletAddress)
 
@@ -85,6 +86,39 @@ class HistoryUpdateInteractorDefault(
         )
         historyRepository.upsert(walletAddress, page.items)
         return HistoryLoadResult(page.toHistoryPaginationCursor(chainId, walletAddress))
+    }
+
+    /**
+     * A sent token transfer is saved before mining, without its log index. The fetched row with the real index
+     * replaces it. A reverted token transfer has no log, so its status is read by hash.
+     */
+    private suspend fun resolveSentTokenPlaceholders(
+        walletAddress: EthAddress,
+        cachedTransfers: List<Transfer>,
+        fetchedTransfers: List<Transfer>,
+    ) {
+        val remaining = deleteReplacedPlaceholders(walletAddress, cachedTransfers, fetchedTransfers)
+        for (placeholder in remaining.filter { it.status == TransactionStatus.Pending }) {
+            val summary = historyProvider.getTransaction(placeholder.hash)
+            if (summary?.status == TransactionStatus.Failed) {
+                historyRepository.update(placeholder.hash, summary.status, summary.fee)
+            }
+        }
+    }
+
+    private suspend fun deleteReplacedPlaceholders(
+        walletAddress: EthAddress,
+        cachedTransfers: List<Transfer>,
+        fetchedTransfers: List<Transfer>,
+    ): List<Transfer> {
+        val fetchedTokenHashes = fetchedTransfers.filterIsInstance<Transfer.Erc20>().mapTo(mutableSetOf()) { it.hash.lowercase() }
+        val (replaced, remaining) = cachedTransfers
+            .filter { it is Transfer.Erc20 && it.logIndex == UNKNOWN_LOG_INDEX }
+            .partition { it.hash.lowercase() in fetchedTokenHashes }
+        if (replaced.isNotEmpty()) {
+            historyRepository.delete(walletAddress, replaced)
+        }
+        return remaining
     }
 
     private fun TransfersPage.nextRequestForRefresh(

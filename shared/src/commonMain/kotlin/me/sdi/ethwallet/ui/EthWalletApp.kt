@@ -32,15 +32,11 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import me.sdi.ethwallet.core.EthAddress
-import me.sdi.ethwallet.core.history.Transfer
-import me.sdi.ethwallet.core.history.pendingTransfer
 import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.PinSession
-import me.sdi.ethwallet.core.transfer.toWei
 import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.history.HistoryRoute
 import me.sdi.ethwallet.ui.history.TransactionDetailsRoute
-import me.sdi.ethwallet.ui.history.TransactionResultScreen
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.receive.ReceiveScreen
 import me.sdi.ethwallet.ui.send.SendScreen
@@ -286,8 +282,8 @@ fun EthWalletApp() {
                 HistoryRoute(
                     walletAddress = EthAddress(destination.ethAddress),
                     walletLabel = destination.walletLabel,
-                    onTransactionClick = { hash, logIndex ->
-                        backStack.add(Destination.TransactionDetails(destination.ethAddress, hash, logIndex))
+                    onTransactionClick = { hash ->
+                        backStack.add(Destination.TransactionDetails(destination.ethAddress, hash))
                     },
                     onBackPressed = { backStack.removeLastOrNull() },
                 )
@@ -300,7 +296,6 @@ fun EthWalletApp() {
                 TransactionDetailsRoute(
                     walletAddress = EthAddress(destination.ethAddress),
                     transactionHash = destination.transactionHash,
-                    logIndex = destination.logIndex,
                     onBackPressed = { backStack.removeLastOrNull() },
                 )
             }
@@ -313,21 +308,10 @@ fun EthWalletApp() {
                     modifier = Modifier.fillMaxSize(),
                     walletAddress = EthAddress(destination.ethAddress),
                     onBackPress = { backStack.removeLastOrNull() },
-                    onTransferSent = { transfer ->
+                    onTransferSent = { transactionHash ->
                         backStack.removeLastOrNull()
-                        backStack.add(transfer.toResultDestination())
+                        backStack.add(Destination.TransactionDetails(destination.ethAddress, transactionHash))
                     },
-                )
-            }
-
-            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-            entry<Destination.TransactionResult>(
-                metadata = detailPane(),
-            ) { destination ->
-                TransactionResultScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    transfer = destination.toTransfer(),
-                    onBackPressed = { backStack.removeLastOrNull() },
                 )
             }
 
@@ -387,33 +371,3 @@ fun EthWalletApp() {
         )
     }
 }
-
-private fun Transfer.toResultDestination(): Destination.TransactionResult {
-    val erc20 = this as? Transfer.Erc20
-    return Destination.TransactionResult(
-        ethAddress = from.toString(),
-        transactionHash = hash,
-        receiverAddress = to.toString(),
-        tokenAddress = erc20?.tokenAddress?.toString(),
-        tokenSymbol = erc20?.tokenSymbol,
-        tokenDecimals = erc20?.tokenDecimals,
-        amount = when (this) {
-            is Transfer.Eth -> valueWei.value.toString()
-            is Transfer.Erc20 -> value
-        },
-        feeWei = checkNotNull(fee) { "A sent transfer has an estimated fee" }.value.value.toString(),
-        timestamp = timestamp,
-    )
-}
-
-private fun Destination.TransactionResult.toTransfer(): Transfer = pendingTransfer(
-    hash = transactionHash,
-    timestamp = timestamp,
-    from = EthAddress(ethAddress),
-    to = EthAddress(receiverAddress),
-    amount = amount.toBigInteger(),
-    estimatedFee = feeWei.toBigInteger().toWei(),
-    tokenAddress = tokenAddress?.let(::EthAddress),
-    tokenSymbol = tokenSymbol,
-    tokenDecimals = tokenDecimals,
-)
