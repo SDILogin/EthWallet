@@ -3,7 +3,7 @@
 Allow an unlocked user to change their PIN from the Settings screen.
 
 Desktop no longer uses the PIN: since #307 Secure Desktop private key storage and app unlock it uses a wallet
-password (docs/tasks/desktop-secure-key-storage/spec.md). The Desktop parts below describe the earlier design.
+password (docs/tasks/done/desktop-secure-key-storage/spec.md). The Desktop parts below describe the earlier design.
 
 ## Scope
 

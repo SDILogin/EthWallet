@@ -33,7 +33,7 @@ must not let anyone decrypt wallet private keys.
 ## Decisions
 
 Implemented together with #307 Secure Desktop private key storage and app unlock; the password flow, threat boundary
-and research are in docs/tasks/desktop-secure-key-storage/spec.md.
+and research are in docs/tasks/done/desktop-secure-key-storage/spec.md.
 
 - Secure Enclave wrapping key, not a Keychain item: a CryptoKit `SecureEnclave.P256.KeyAgreement.PrivateKey` is stored
   only as its `dataRepresentation` blob in the DataStore, needs no Keychain entitlement, and works for unsigned

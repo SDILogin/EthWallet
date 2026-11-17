@@ -9,6 +9,16 @@ Kotlin Multiplatform Ethereum wallet for Android, Desktop, and iOS.
 - Read the task through the Agent Board MCP before referencing it; do not guess, shorten, or paraphrase its title.
 - Always use the Agent Board MCP for every board operation, including reading, creating, claiming, noting, updating, releasing, and completing tasks. Never use a browser, screen capture or recording, UI automation, direct HTTP, or the board database.
 
+## Task Specs
+
+- Each task spec is `docs/tasks/<state>/<task-name>/spec.md`. Extra task files stay in the same folder.
+- `docs/tasks/backlog/` contains only specs of tasks that are not done.
+- `docs/tasks/done/` contains specs of completed tasks.
+- Write a new spec in `backlog/`.
+- Move the task folder from `backlog/` to `done/` with `git mv` in the commit that completes the task.
+- When the done scope differs from the spec, update the spec in the same commit.
+- Link other specs by their full path. Update the links when a folder moves.
+
 ## Stack
 
 - Jetpack Compose Multiplatform
