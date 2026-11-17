@@ -299,7 +299,7 @@ private fun DetailsContent(
                 DetailsCard {
                     CopyValue(stringResource(Res.string.transaction_details_contract), transfer.tokenAddress.toString())
                     EthText(
-                        if (transfer.logIndex >= 0) {
+                        if (transfer.logIndex != UNKNOWN_LOG_INDEX) {
                             stringResource(Res.string.transaction_details_metadata, transfer.tokenDecimals, transfer.logIndex)
                         } else {
                             stringResource(Res.string.transaction_details_metadata_no_index, transfer.tokenDecimals)
@@ -386,6 +386,13 @@ internal class TransactionDetailsPreviewProvider : PreviewParameterProvider<Tran
             ),
         ),
         TransactionDetailsState.Content(tokenTransfer.copy(status = TransactionStatus.Failed)),
+        TransactionDetailsState.Content(
+            tokenTransfer.copy(
+                logIndex = UNKNOWN_LOG_INDEX,
+                status = TransactionStatus.Pending,
+                fee = tokenTransfer.fee?.copy(estimated = true),
+            ),
+        ),
         TransactionDetailsState.Loading,
         TransactionDetailsState.Unavailable,
         TransactionDetailsState.Error,

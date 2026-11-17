@@ -279,19 +279,28 @@ class TransferHistoryProviderBlockscoutTest {
 
     @Test
     fun transaction_lookup_returns_null_for_unknown_transaction() = runTest {
-        val client = createHttpClient(
+        assertNull(statusProvider(HttpStatusCode.NotFound).getTransaction(hash))
+    }
+
+    @Test
+    fun transaction_lookup_fails_for_server_error() = runTest {
+        assertFailsWith<IllegalStateException> {
+            statusProvider(HttpStatusCode.TooManyRequests).getTransaction(hash)
+        }
+    }
+
+    private fun statusProvider(status: HttpStatusCode) = TransfersHistoryProviderBlockscout(
+        createHttpClient(
             MockEngine {
                 respond(
-                    """{"message":"Not found"}""",
-                    HttpStatusCode.NotFound,
+                    """{"message":"${status.description}"}""",
+                    status,
                     headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
                 )
             },
-        )
-        val provider = TransfersHistoryProviderBlockscout(client, "https://history.example.test")
-
-        assertNull(provider.getTransaction(hash))
-    }
+        ),
+        "https://history.example.test",
+    )
 
     private fun provider(response: (HttpRequestData) -> String) = TransfersHistoryProviderBlockscout(
         createHttpClient(MockEngine { respondJson(response(it)) }),

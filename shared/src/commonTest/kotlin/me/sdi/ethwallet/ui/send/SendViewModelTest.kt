@@ -32,6 +32,7 @@ import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeTransferInteractor
 import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
+import me.sdi.ethwallet.ui.history.UNKNOWN_LOG_INDEX
 import me.sdi.ethwallet.ui.usdtOnMainnet
 import me.sdi.ethwallet.util.formatUsdCurrency
 import java.math.BigDecimal
@@ -509,7 +510,7 @@ class SendViewModelTest {
                 timestamp = transfer.timestamp,
                 from = senderAddress,
                 to = EthAddress(validEthAddress),
-                logIndex = -1,
+                logIndex = UNKNOWN_LOG_INDEX,
                 tokenAddress = usdtOnMainnet.ethAddress,
                 tokenSymbol = usdtOnMainnet.symbol,
                 tokenDecimals = usdtOnMainnet.decimals,

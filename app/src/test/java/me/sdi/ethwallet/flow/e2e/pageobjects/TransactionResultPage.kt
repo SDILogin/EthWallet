@@ -7,7 +7,7 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 class TransactionResultPage(private val rule: ComposeTestRule) {
     fun assertShown() {
         rule.awaitNode(hasText("Transaction details"))
-        rule.awaitNode(hasText("Sent"))
+        rule.awaitNode(hasText("Transaction hash"))
     }
 
     fun awaitConfirmed(timeoutMillis: Long) {

@@ -21,7 +21,7 @@ history DB can not be the status source for a sent transaction.
   "Transaction details" title.
 - `TransactionResultViewModel` starts from the sent transfer (status Pending, estimated fee) and polls the Blockscout
   transaction by hash until the status is Confirmed or Failed. A 404 means "not indexed yet" and keeps Pending.
-  Network errors keep the last status and poll again.
+  Lookup errors keep the last status and poll again.
 - The sent transfer is carried in the navigation destination. It is not written to the history DB.
 - Update the live Sepolia E2E tests: after a send they wait for "Confirmed" on the result screen.
 

@@ -5,6 +5,7 @@ import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.SerialName
@@ -101,12 +102,17 @@ class TransfersHistoryProviderBlockscout(
 
     override suspend fun getTransaction(hash: String): TransactionSummary? {
         val response = httpClient.get("$apiBaseUrl/transactions/$hash")
-        if (response.status == HttpStatusCode.NotFound) return null
-        val transaction = response.body<BlockscoutTransactionStatus>()
-        return TransactionSummary(
-            status = transactionStatus(transaction.blockNumber, transaction.status),
-            fee = transactionFee(transaction.fee, required = false),
-        )
+        return when {
+            response.status.isSuccess() -> {
+                val transaction = response.body<BlockscoutTransactionStatus>()
+                TransactionSummary(
+                    status = transactionStatus(transaction.blockNumber, transaction.status),
+                    fee = transactionFee(transaction.fee, required = false),
+                )
+            }
+            response.status == HttpStatusCode.NotFound -> null
+            else -> error("Transaction lookup failed: ${response.status}")
+        }
     }
 
     private suspend inline fun <reified T> load(

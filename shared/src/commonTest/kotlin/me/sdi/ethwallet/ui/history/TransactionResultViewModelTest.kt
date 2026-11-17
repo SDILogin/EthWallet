@@ -44,7 +44,7 @@ class TransactionResultViewModelTest {
         timestamp = 1L,
         from = sender,
         to = receiver,
-        logIndex = -1,
+        logIndex = UNKNOWN_LOG_INDEX,
         tokenAddress = EthAddress("0x${"3".repeat(40)}"),
         tokenSymbol = "USDT",
         tokenDecimals = 6,
@@ -56,8 +56,8 @@ class TransactionResultViewModelTest {
     private val walletRepository = WalletRepository(
         walletDao = FakeWalletDao().apply {
             wallets = listOf(
-                WalletEntity(sender.toString(), "unused", "Main"),
-                WalletEntity(receiver.toString(), "unused", "Savings"),
+                WalletEntity(address = sender.toString(), encryptedPrivateKeyBase64 = "unused", label = "Main"),
+                WalletEntity(address = receiver.toString(), encryptedPrivateKeyBase64 = "unused", label = "Savings"),
             )
         },
         ethManager = FakeEthManager(),

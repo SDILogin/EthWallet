@@ -32,8 +32,6 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import me.sdi.ethwallet.core.EthAddress
-import me.sdi.ethwallet.core.history.TransactionFee
-import me.sdi.ethwallet.core.history.TransactionStatus
 import me.sdi.ethwallet.core.history.Transfer
 import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.PinSession
@@ -42,6 +40,7 @@ import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.history.HistoryRoute
 import me.sdi.ethwallet.ui.history.TransactionDetailsRoute
 import me.sdi.ethwallet.ui.history.TransactionResultScreen
+import me.sdi.ethwallet.ui.history.pendingTransfer
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.receive.ReceiveScreen
 import me.sdi.ethwallet.ui.send.SendScreen
@@ -407,31 +406,14 @@ private fun Transfer.toResultDestination(): Destination.TransactionResult {
     )
 }
 
-private fun Destination.TransactionResult.toTransfer(): Transfer {
-    val fee = TransactionFee(feeWei.toBigInteger().toWei(), estimated = true)
-    return if (tokenAddress == null) {
-        Transfer.Eth(
-            hash = transactionHash,
-            timestamp = timestamp,
-            from = EthAddress(ethAddress),
-            to = EthAddress(receiverAddress),
-            valueWei = amount.toBigInteger().toWei(),
-            status = TransactionStatus.Pending,
-            fee = fee,
-        )
-    } else {
-        Transfer.Erc20(
-            hash = transactionHash,
-            timestamp = timestamp,
-            from = EthAddress(ethAddress),
-            to = EthAddress(receiverAddress),
-            logIndex = -1,
-            tokenAddress = EthAddress(tokenAddress),
-            tokenSymbol = tokenSymbol,
-            tokenDecimals = checkNotNull(tokenDecimals) { "A token transfer has decimals" },
-            value = amount,
-            status = TransactionStatus.Pending,
-            fee = fee,
-        )
-    }
-}
+private fun Destination.TransactionResult.toTransfer(): Transfer = pendingTransfer(
+    hash = transactionHash,
+    timestamp = timestamp,
+    from = EthAddress(ethAddress),
+    to = EthAddress(receiverAddress),
+    amount = amount.toBigInteger(),
+    estimatedFee = feeWei.toBigInteger().toWei(),
+    tokenAddress = tokenAddress?.let(::EthAddress),
+    tokenSymbol = tokenSymbol,
+    tokenDecimals = tokenDecimals,
+)
