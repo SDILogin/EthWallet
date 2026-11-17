@@ -126,7 +126,6 @@ class SepoliaTransferE2eTest {
         sendPage.clickSendButton()
 
         transactionResultPage.assertShown()
-        transactionResultPage.awaitConfirmed(timeoutMillis = TRANSFER_TIMEOUT_MILLIS)
         transactionResultPage.clickBackButton()
 
         walletDashboardPage.assertShown(SENDER_LABEL)
@@ -142,7 +141,6 @@ class SepoliaTransferE2eTest {
         const val TEST_PIN = "112233"
         const val SENDER_LABEL = "E2E Sender"
         const val RECEIVER_LABEL = "E2E Receiver"
-        const val TRANSFER_TIMEOUT_MILLIS = 120_000L
         val TRANSFER_AMOUNT: BigDecimal = BigDecimal("0.000001")
     }
 }

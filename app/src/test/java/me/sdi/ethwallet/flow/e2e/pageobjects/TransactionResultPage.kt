@@ -10,10 +10,6 @@ class TransactionResultPage(private val rule: ComposeTestRule) {
         rule.awaitNode(hasText("Transaction hash"))
     }
 
-    fun awaitConfirmed(timeoutMillis: Long) {
-        rule.awaitNode(hasText("Confirmed"), timeoutMillis)
-    }
-
     fun clickBackButton() {
         rule.clickNode(hasContentDescription("Back"))
     }

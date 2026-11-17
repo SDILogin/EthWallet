@@ -300,10 +300,10 @@ private fun DetailsContent(
                 DetailsCard {
                     CopyValue(stringResource(Res.string.transaction_details_contract), transfer.tokenAddress.toString())
                     EthText(
-                        if (transfer.logIndex != UNKNOWN_LOG_INDEX) {
-                            stringResource(Res.string.transaction_details_metadata, transfer.tokenDecimals, transfer.logIndex)
-                        } else {
+                        if (transfer.logIndex == UNKNOWN_LOG_INDEX) {
                             stringResource(Res.string.transaction_details_metadata_no_index, transfer.tokenDecimals)
+                        } else {
+                            stringResource(Res.string.transaction_details_metadata, transfer.tokenDecimals, transfer.logIndex)
                         },
                         Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                         style = EthTextStyle.Caption,
