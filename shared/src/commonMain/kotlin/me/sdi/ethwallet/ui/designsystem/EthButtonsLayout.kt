@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -46,6 +47,8 @@ private const val BUTTONS_MAX_WIDTH_DP = 420
 private const val BUTTONS_SLIDE_MS = 300
 private const val BLUR_RADIUS_DP = 12
 private const val TINT_ALPHA = 0.3f
+private const val CONTENT_LAYOUT_ID = "content"
+private const val BUTTONS_LAYOUT_ID = "buttons"
 
 /**
  * Places [buttons] over the bottom of [content] and blurs the part of [content] under them.
@@ -81,14 +84,18 @@ fun EthButtonsLayout(
         tint = HazeTint(surfaceColor.copy(alpha = TINT_ALPHA)),
         blurRadius = BLUR_RADIUS_DP.dp,
     )
+
+    // High probably this is an over-engineering from coding agent.
+    // Alternative solution is a Box with onSizeChange modifier or similar.
     Layout(
         modifier = modifier,
         content = {
-            Box(modifier = Modifier.hazeSource(hazeState)) {
+            Box(modifier = Modifier.layoutId(CONTENT_LAYOUT_ID).hazeSource(hazeState)) {
                 content(contentPadding)
             }
             Column(
                 modifier = Modifier
+                    .layoutId(BUTTONS_LAYOUT_ID)
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     .hazeEffect(state = hazeState, style = hazeStyle)
@@ -104,10 +111,12 @@ fun EthButtonsLayout(
             )
         },
     ) { measurables, constraints ->
-        val buttonsPlaceable = measurables[1].measure(constraints.copy(minHeight = 0))
+        val buttonsMeasurable = measurables.first { it.layoutId == BUTTONS_LAYOUT_ID }
+        val contentMeasurable = measurables.first { it.layoutId == CONTENT_LAYOUT_ID }
+        val buttonsPlaceable = buttonsMeasurable.measure(constraints.copy(minHeight = 0))
         val visibleHeight = (buttonsPlaceable.height * visibleFraction.value).roundToInt()
         contentPadding.bottomDp = maxOf(visibleHeight.toDp(), navigationBarHeight) + 8.dp
-        val contentPlaceable = measurables[0].measure(constraints)
+        val contentPlaceable = contentMeasurable.measure(constraints)
         layout(contentPlaceable.width, contentPlaceable.height) {
             contentPlaceable.place(0, 0)
             if (visibleHeight > 0) {
