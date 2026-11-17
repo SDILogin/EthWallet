@@ -159,8 +159,8 @@ private fun ImportWalletScreenContent(
                     onValueChange = { onEvent(ImportWalletEvent.LabelChanged(it)) },
                     label = stringResource(Res.string.wallet_label),
                     modifier = Modifier
-                        .fillMaxWidth()
                         .widthIn(max = 420.dp)
+                        .fillMaxWidth()
                         .testTag("wallet-label-input"),
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
                     placeholder = { EthText(stringResource(Res.string.wallet_label_placeholder)) },
@@ -186,8 +186,8 @@ private fun ImportWalletScreenContent(
                         label = stringResource(Res.string.import_wallet_recovery_phrase_label),
                         modifier =
                             Modifier
-                                .fillMaxWidth()
                                 .widthIn(max = 420.dp)
+                                .fillMaxWidth()
                                 .semantics { isSensitiveData = true },
                         keyboardOptions =
                             KeyboardOptions(
