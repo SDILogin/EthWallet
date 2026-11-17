@@ -2,7 +2,7 @@
 
 #307 Secure Desktop private key storage and app unlock. Private keys on Desktop (Apple Silicon macOS) must be
 stored safely and must not be easy to decrypt, also from a copy of the app data files. This task includes the
-scope of #303 Protect Desktop master KEK before persisting wallets (docs/tasks/desktop-master-kek/spec.md).
+scope of #303 Protect Desktop master KEK before persisting wallets (docs/tasks/done/desktop-master-kek/spec.md).
 
 ## Background
 

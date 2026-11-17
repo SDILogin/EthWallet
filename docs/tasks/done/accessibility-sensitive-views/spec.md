@@ -1,7 +1,7 @@
 # Task
 
-Mark the views that show or accept secrets, and the transfer confirmation, as accessibility data sensitive, so
-that accessibility services that are not real accessibility tools cannot read them or act on them.
+Mark the views that show or accept secrets as accessibility data sensitive, so that accessibility services that
+are not real accessibility tools cannot read them or act on them.
 
 ## Background
 
@@ -9,8 +9,8 @@ that accessibility services that are not real accessibility tools cannot read th
   that do not declare `android:isAccessibilityTool="true"`. Such services, including malware the user was tricked
   into enabling, cannot read the content of these views or interact with them. On Android 16 (API 36) and higher
   they also cannot inject gestures that target them.
-- No view in the app is marked today. A malicious accessibility service can read the recovery phrase, watch the
-  PIN being entered on the in-app keypad, and tap the send button on the user's behalf.
+- No view in the app is marked today. A malicious accessibility service can read the recovery phrase and the
+  entered PIN.
 - OWASP MASTG: MASTG-BEST-0075 "Restricting Accessibility Service Access to Sensitive Views" (see also
   MASTG-KNOW-0143 and MASTG-BEST-0040).
 
@@ -21,9 +21,7 @@ covers the sensitive content, not on whole screens:
 
 - Recovery phrase display: `MnemonicCard` (`CreateWalletScreen`).
 - Recovery phrase input: the recovery phrase field on `ImportWalletScreen`.
-- PIN entry: `PinCodeInput` and the keypads (`PinNumberPad`, the keypad in `VerifyPinCodeScreen`) on the set,
-  verify, and change PIN screens.
-- Transfer confirmation: the send button and the recipient and amount fields on `SendScreen`.
+- PIN entry: `PinCodeInput` on the set, verify, and change PIN screens.
 
 Also:
 
@@ -34,10 +32,16 @@ Also:
 - Out of scope: overlay or tapjacking protection with `filterTouchesWhenObscured` (MASTG-BEST-0040), screenshots
   (accepted as is), and Desktop, which has no equivalent.
 
+## Decisions
+
+- The PIN keypads (`PinNumberPad`, the keypad in `VerifyPinCodeScreen`) are not marked. Their button captions are
+  digits that every user sees. They are not secrets. `PinCodeInput` shows the PIN state and is marked.
+- `SendScreen` is not marked. The send button, the recipient, and the amount are not secrets.
+
 ## Accessibility impact
 
 - TalkBack and other services that declare `isAccessibilityTool="true"` keep full access. The marked views must
-  remain usable with TalkBack: the PIN keypad buttons must still be announced and activatable.
+  remain usable with TalkBack.
 - Password managers and automation apps lose access to the marked views. That is acceptable here.
 - Devices below Android 14 ignore the flag; there is no platform fallback.
 
