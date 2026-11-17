@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -146,11 +147,13 @@ private fun ReceiveScreenContent(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             CurrencyPicker(
                 selectedTokenContract = viewState.selectedTokenContract,
                 chainTokens = chainTokens,
                 onTokenSelected = { onEvent(ReceiveQrEvent.OnTokenSelected(it)) },
+                modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
             )
 
             AmountInput(
@@ -158,6 +161,7 @@ private fun ReceiveScreenContent(
                 amountError = viewState.amountError,
                 onAmountChanged = { onEvent(ReceiveQrEvent.OnAmountChanged(it)) },
                 onClearAmount = { onEvent(ReceiveQrEvent.OnClearAmount) },
+                modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
             )
 
             QrCodeDisplay(

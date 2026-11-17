@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -213,8 +214,9 @@ private fun SendScreenContent(
                     .padding(contentPadding)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Column {
+                Column(modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth()) {
                     ReceiverAddressInput(
                         addressState = viewState.receiverAddress,
                         receiverWallets = viewState.receiverWallets,
@@ -244,9 +246,10 @@ private fun SendScreenContent(
                     selectedTokenContract = viewState.selectedTokenContractAddress,
                     chainTokens = chainTokens,
                     onTokenSelected = { onEvent(SendEvent.OnTokenSelected(it)) },
+                    modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
                 )
 
-                Column {
+                Column(modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth()) {
                     EthText(
                         text = stringResource(Res.string.send_amount),
                         style = EthTextStyle.Title,
@@ -272,6 +275,7 @@ private fun SendScreenContent(
                     onBaseFeeChanged = { onEvent(SendEvent.OnBaseFeeChanged(it)) },
                     onPriorityFeeChanged = { onEvent(SendEvent.OnPriorityFeeChanged(it)) },
                     onGasUnitsChanged = { onEvent(SendEvent.OnGasUnitsChanged(it)) },
+                    modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
                 )
             }
         }
