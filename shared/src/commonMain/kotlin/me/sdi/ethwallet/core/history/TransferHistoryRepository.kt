@@ -12,7 +12,7 @@ import me.sdi.ethwallet.database.entity.TransferHistoryEntity
 interface TransferHistoryRepository {
     fun observe(walletAddress: EthAddress): Flow<List<Transfer>>
 
-    /** Emits the transfer with the lowest log index for the hash on the current chain, or null. */
+    /** Emits the transfer of the hash on the current chain with the lowest log index, or null. A row with a fee wins. */
     fun observe(trxHash: String): Flow<Transfer?>
 
     suspend fun read(walletAddress: EthAddress): List<Transfer>

@@ -24,7 +24,7 @@ interface TransferHistoryDao {
         """
             SELECT * FROM transaction_history
             WHERE chain_id = :chainId AND transaction_hash = :trxHash
-            ORDER BY log_index ASC, wallet_address ASC
+            ORDER BY log_index ASC, fee_wei IS NULL ASC, wallet_address ASC
             LIMIT 1
         """,
     )

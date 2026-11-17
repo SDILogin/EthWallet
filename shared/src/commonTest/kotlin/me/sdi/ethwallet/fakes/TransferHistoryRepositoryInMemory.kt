@@ -20,7 +20,7 @@ class TransferHistoryRepositoryInMemory : TransferHistoryRepository {
     override fun observe(trxHash: String): Flow<Transfer?> = rows.map { items ->
         items.map { it.second }
             .filter { it.hash.equals(trxHash, ignoreCase = true) }
-            .minByOrNull { it.identity.second }
+            .minWithOrNull(compareBy({ it.identity.second }, { it.fee == null }))
     }
 
     override suspend fun read(walletAddress: EthAddress): List<Transfer> =

@@ -3,7 +3,7 @@ package me.sdi.ethwallet.core.history
 import me.sdi.ethwallet.core.EthAddress
 
 interface HistoryUpdateInteractor {
-    /** Loads new transfers and pending statuses, then saves them. Replaced token placeholders are deleted last. */
+    /** Saves new transfers and deletes replaced token placeholders. Then reads the status of unlisted pending transfers. */
     suspend fun refresh(chainId: Long, walletAddress: EthAddress): HistoryLoadResult
 
     /** Loads one page from each active source. The cursor advances only after the DB batch succeeds. */
@@ -69,11 +69,10 @@ class HistoryUpdateInteractorDefault(
             }
         }
 
-        val finalStatuses = readFinalStatusesOfUnlistedPending(cachedTransfers, refreshedTransfers)
         historyRepository.upsert(walletAddress, refreshedTransfers)
-        finalStatuses.forEach { (hash, summary) -> historyRepository.update(hash, summary.status, summary.fee) }
         deleteReplacedPlaceholders(walletAddress, cachedTransfers, refreshedTransfers)
         initializationStore.markInitialized(chainId, walletAddress)
+        updateUnlistedPendingStatuses(cachedTransfers, refreshedTransfers)
 
         val olderHistoryCursor = firstPage.toHistoryPaginationCursor(chainId, walletAddress)
         return HistoryLoadResult(olderHistoryCursor)
@@ -94,21 +93,18 @@ class HistoryUpdateInteractorDefault(
      * A sent transfer is saved as Pending before the API lists it. Some sent transfers are never listed: a reverted
      * token transfer has no log. Their status is read by hash.
      */
-    private suspend fun readFinalStatusesOfUnlistedPending(
-        cachedTransfers: List<Transfer>,
-        fetchedTransfers: List<Transfer>,
-    ): Map<String, TransactionSummary> {
+    private suspend fun updateUnlistedPendingStatuses(cachedTransfers: List<Transfer>, fetchedTransfers: List<Transfer>) {
         val fetchedHashes = fetchedTransfers.mapTo(mutableSetOf()) { it.hash.lowercase() }
-        return cachedTransfers
+        val unlistedHashes = cachedTransfers
             .filter { it.status == TransactionStatus.Pending && it.hash.lowercase() !in fetchedHashes }
             .map { it.hash }
             .distinctBy { it.lowercase() }
-            .mapNotNull { hash ->
-                historyProvider.getTransaction(hash)
-                    ?.takeIf { it.status != TransactionStatus.Pending }
-                    ?.let { hash to it }
+        for (hash in unlistedHashes) {
+            val summary = historyProvider.getTransaction(hash)
+            if (summary != null && summary.status != TransactionStatus.Pending) {
+                historyRepository.update(hash, summary.status, summary.fee)
             }
-            .toMap()
+        }
     }
 
     /** A sent token transfer is saved without its log index. The fetched transfer with the real index replaces it. */

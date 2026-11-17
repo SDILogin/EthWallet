@@ -189,6 +189,14 @@ class TransferHistoryDaoTest {
     }
 
     @Test
+    fun observe_transaction_prefers_row_with_fee_for_same_log_index() = runTest {
+        val outgoing = entity("hash", walletAddress = OTHER_WALLET).copy(feeWei = "300")
+        dao.upsertAll(listOf(entity("hash", walletAddress = WALLET), outgoing))
+
+        assertEquals(outgoing, dao.observeTransaction(chainId = 1, trxHash = "hash").first())
+    }
+
+    @Test
     fun update_sets_status_of_all_rows_and_replaces_only_stored_fees() = runTest {
         val outgoing = entity("hash", status = "Pending").copy(feeWei = "500", feeEstimated = true)
         val incoming = entity("hash", walletAddress = OTHER_WALLET, status = "Pending")
