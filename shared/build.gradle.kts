@@ -116,6 +116,7 @@ kotlin {
                 implementation(libs.compose.resources)
                 implementation(libs.jetbrains.ui.tooling.preview)
                 implementation(libs.haze)
+                implementation(libs.compottie)
 
                 // Ktor
                 implementation(libs.ktor.client.core)

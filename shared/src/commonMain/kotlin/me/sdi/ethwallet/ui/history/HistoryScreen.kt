@@ -1,5 +1,6 @@
 package me.sdi.ethwallet.ui.history
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,11 +32,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -44,6 +47,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import io.github.alexzhirkevich.compottie.Compottie
+import io.github.alexzhirkevich.compottie.LottieCompositionSpec
+import io.github.alexzhirkevich.compottie.rememberLottieComposition
+import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.history.TransactionStatus
 import me.sdi.ethwallet.core.history.Transfer
@@ -99,6 +106,8 @@ import java.math.BigInteger
 import java.util.Calendar
 import java.util.TimeZone
 import kotlin.time.Instant
+
+private const val EMPTY_HISTORY_ANIMATION_SIZE_DP = 160
 
 @Composable
 fun HistoryScreen(
@@ -277,12 +286,7 @@ private fun RefreshableContent(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Icon(
-                            painterResource(Res.drawable.history_24px),
-                            null,
-                            Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        EmptyHistoryAnimation()
                         Spacer(Modifier.height(16.dp))
                         EthText(
                             stringResource(Res.string.history_empty_title),
@@ -352,6 +356,23 @@ private fun RefreshableContent(
             }
         }
     }
+}
+
+@Composable
+private fun EmptyHistoryAnimation() {
+    val composition by rememberLottieComposition {
+        LottieCompositionSpec.JsonString(Res.readBytes("files/empty_history.json").decodeToString())
+    }
+    Image(
+        painter = rememberLottiePainter(
+            composition = composition,
+            iterations = Compottie.IterateForever,
+            enableExpressions = false,
+        ),
+        contentDescription = null,
+        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+        modifier = Modifier.size(EMPTY_HISTORY_ANIMATION_SIZE_DP.dp),
+    )
 }
 
 @Composable
