@@ -48,20 +48,23 @@ class TransactionDetailsViewModel(
 
     val viewState = repository
         .observe(transactionHash)
-        .filterNotNull()
         .combine(statusUpdates) { transfer, _ -> transfer }
         .map { transfer ->
-            val wallets = walletRepository.observeAllWallets().first()
-            val fromWalletLabel = wallets.firstOrNull { it.address.lowercase() == transfer.from.lowercase() }?.label
-            val toWalletLabel = wallets.firstOrNull { it.address.lowercase() == transfer.to.lowercase() }?.label
-            TransactionDetailsState.Content(
-                transfer = transfer,
-                fromWalletLabel = fromWalletLabel,
-                toWalletLabel = toWalletLabel,
-            ) as TransactionDetailsState
+            if (transfer == null) {
+                TransactionDetailsState.Unavailable
+            } else {
+                val wallets = walletRepository.observeAllWallets().first()
+                val fromWalletLabel = wallets.firstOrNull { it.address.lowercase() == transfer.from.lowercase() }?.label
+                val toWalletLabel = wallets.firstOrNull { it.address.lowercase() == transfer.to.lowercase() }?.label
+                TransactionDetailsState.Content(
+                    transfer = transfer,
+                    fromWalletLabel = fromWalletLabel,
+                    toWalletLabel = toWalletLabel,
+                )
+            }
         }
         .catch {
-            Logger.warn(TAG, it) { "Failed ot get transaction details" }
+            Logger.warn(TAG, it) { "Failed to get transaction details" }
             emit(TransactionDetailsState.Error)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TransactionDetailsState.Loading)

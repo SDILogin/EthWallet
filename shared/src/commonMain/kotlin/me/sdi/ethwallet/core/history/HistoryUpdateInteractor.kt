@@ -3,7 +3,7 @@ package me.sdi.ethwallet.core.history
 import me.sdi.ethwallet.core.EthAddress
 
 interface HistoryUpdateInteractor {
-    /** Loads new transfers and pending statuses, then saves the complete refresh in one DB batch. */
+    /** Loads new transfers and pending statuses, then saves them. Replaced token placeholders are deleted last. */
     suspend fun refresh(chainId: Long, walletAddress: EthAddress): HistoryLoadResult
 
     /** Loads one page from each active source. The cursor advances only after the DB batch succeeds. */
@@ -69,8 +69,10 @@ class HistoryUpdateInteractorDefault(
             }
         }
 
-        resolveSentTokenPlaceholders(walletAddress, cachedTransfers, refreshedTransfers)
+        val finalStatuses = readFinalStatusesOfUnlistedPending(cachedTransfers, refreshedTransfers)
         historyRepository.upsert(walletAddress, refreshedTransfers)
+        finalStatuses.forEach { (hash, summary) -> historyRepository.update(hash, summary.status, summary.fee) }
+        deleteReplacedPlaceholders(walletAddress, cachedTransfers, refreshedTransfers)
         initializationStore.markInitialized(chainId, walletAddress)
 
         val olderHistoryCursor = firstPage.toHistoryPaginationCursor(chainId, walletAddress)
@@ -89,36 +91,39 @@ class HistoryUpdateInteractorDefault(
     }
 
     /**
-     * A sent token transfer is saved before mining, without its log index. The fetched row with the real index
-     * replaces it. A reverted token transfer has no log, so its status is read by hash.
+     * A sent transfer is saved as Pending before the API lists it. Some sent transfers are never listed: a reverted
+     * token transfer has no log. Their status is read by hash.
      */
-    private suspend fun resolveSentTokenPlaceholders(
-        walletAddress: EthAddress,
+    private suspend fun readFinalStatusesOfUnlistedPending(
         cachedTransfers: List<Transfer>,
         fetchedTransfers: List<Transfer>,
-    ) {
-        val remaining = deleteReplacedPlaceholders(walletAddress, cachedTransfers, fetchedTransfers)
-        for (placeholder in remaining.filter { it.status == TransactionStatus.Pending }) {
-            val summary = historyProvider.getTransaction(placeholder.hash)
-            if (summary?.status == TransactionStatus.Failed) {
-                historyRepository.update(placeholder.hash, summary.status, summary.fee)
+    ): Map<String, TransactionSummary> {
+        val fetchedHashes = fetchedTransfers.mapTo(mutableSetOf()) { it.hash.lowercase() }
+        return cachedTransfers
+            .filter { it.status == TransactionStatus.Pending && it.hash.lowercase() !in fetchedHashes }
+            .map { it.hash }
+            .distinctBy { it.lowercase() }
+            .mapNotNull { hash ->
+                historyProvider.getTransaction(hash)
+                    ?.takeIf { it.status != TransactionStatus.Pending }
+                    ?.let { hash to it }
             }
-        }
+            .toMap()
     }
 
+    /** A sent token transfer is saved without its log index. The fetched transfer with the real index replaces it. */
     private suspend fun deleteReplacedPlaceholders(
         walletAddress: EthAddress,
         cachedTransfers: List<Transfer>,
         fetchedTransfers: List<Transfer>,
-    ): List<Transfer> {
+    ) {
         val fetchedTokenHashes = fetchedTransfers.filterIsInstance<Transfer.Erc20>().mapTo(mutableSetOf()) { it.hash.lowercase() }
-        val (replaced, remaining) = cachedTransfers
-            .filter { it is Transfer.Erc20 && it.logIndex == UNKNOWN_LOG_INDEX }
-            .partition { it.hash.lowercase() in fetchedTokenHashes }
+        val replaced = cachedTransfers.filter {
+            it is Transfer.Erc20 && it.logIndex == UNKNOWN_LOG_INDEX && it.hash.lowercase() in fetchedTokenHashes
+        }
         if (replaced.isNotEmpty()) {
             historyRepository.delete(walletAddress, replaced)
         }
-        return remaining
     }
 
     private fun TransfersPage.nextRequestForRefresh(

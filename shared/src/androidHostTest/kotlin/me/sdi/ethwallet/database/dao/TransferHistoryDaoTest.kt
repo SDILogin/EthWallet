@@ -169,6 +169,60 @@ class TransferHistoryDaoTest {
         assertEquals(listOf(20L, 20L, 18L, 15L), repository.observe(wallet).first().map { it.timestamp })
     }
 
+    @Test
+    fun observe_transaction_filters_by_chain_and_hash_and_returns_lowest_log_index() = runTest {
+        val tokenRow = entity("hash").copy(logIndex = 4)
+        dao.upsertAll(
+            listOf(
+                tokenRow,
+                entity("hash", walletAddress = OTHER_WALLET).copy(logIndex = 2),
+                entity("hash", chainId = 2).copy(logIndex = 0),
+                entity("other").copy(logIndex = 0),
+            ),
+        )
+
+        assertEquals(
+            entity("hash", walletAddress = OTHER_WALLET).copy(logIndex = 2),
+            dao.observeTransaction(chainId = 1, trxHash = "hash").first(),
+        )
+        assertEquals(null, dao.observeTransaction(chainId = 1, trxHash = "missing").first())
+    }
+
+    @Test
+    fun update_sets_status_of_all_rows_and_replaces_only_stored_fees() = runTest {
+        val outgoing = entity("hash", status = "Pending").copy(feeWei = "500", feeEstimated = true)
+        val incoming = entity("hash", walletAddress = OTHER_WALLET, status = "Pending")
+        dao.upsertAll(listOf(outgoing, incoming))
+
+        dao.update(chainId = 1, trxHash = "hash", status = "Confirmed", feeWei = "300", feeEstimated = false)
+
+        assertEquals(
+            setOf(
+                outgoing.copy(status = "Confirmed", feeWei = "300", feeEstimated = false),
+                incoming.copy(status = "Confirmed"),
+            ),
+            (dao.readWalletTransfers(1, WALLET) + dao.readWalletTransfers(1, OTHER_WALLET)).toSet(),
+        )
+
+        dao.update(chainId = 1, trxHash = "hash", status = "Failed", feeWei = null, feeEstimated = false)
+
+        assertEquals(
+            listOf(outgoing.copy(status = "Failed", feeWei = "300", feeEstimated = false)),
+            dao.readWalletTransfers(1, WALLET),
+        )
+    }
+
+    @Test
+    fun delete_removes_only_matching_primary_key() = runTest {
+        val placeholder = entity("hash").copy(logIndex = -1)
+        val real = entity("hash").copy(logIndex = 3)
+        dao.upsertAll(listOf(placeholder, real))
+
+        dao.delete(listOf(placeholder))
+
+        assertEquals(listOf(real), dao.readWalletTransfers(1, WALLET))
+    }
+
     private fun entity(
         hash: String,
         chainId: Long = 1,
@@ -193,5 +247,6 @@ class TransferHistoryDaoTest {
 
     private companion object {
         const val WALLET = "0x1111111111111111111111111111111111111111"
+        const val OTHER_WALLET = "0x2222222222222222222222222222222222222222"
     }
 }

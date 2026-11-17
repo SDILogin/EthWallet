@@ -180,6 +180,21 @@ class HistoryUpdateInteractorTest {
     }
 
     @Test
+    fun refresh_reads_status_of_unlisted_pending_eth_transfer() = runTest {
+        val sentToContract = native(30, TransactionStatus.Pending)
+        val repository = Repository(listOf(native(10), token(9), sentToContract))
+        val provider = FakeTransfersHistoryProvider(listOf(page(native(10))), listOf(page(token(9))))
+        provider.summaries[sentToContract.hash] = TransactionSummary(TransactionStatus.Confirmed, null)
+        interactor(provider, repository).refresh(chainId, wallet)
+
+        assertEquals(
+            TransactionStatus.Confirmed,
+            repository.items.single { it.hash == sentToContract.hash }.status,
+            "A pending transfer that the list does not return should get its status by hash",
+        )
+    }
+
+    @Test
     fun refresh_marks_reverted_token_placeholder_failed_and_keeps_unknown_one_pending() = runTest {
         val reverted = token(30).copy(logIndex = UNKNOWN_LOG_INDEX, status = TransactionStatus.Pending)
         val unknown = token(31).copy(logIndex = UNKNOWN_LOG_INDEX, status = TransactionStatus.Pending)
@@ -286,8 +301,8 @@ class HistoryUpdateInteractorTest {
             items = items.map { transfer ->
                 if (transfer.hash.equals(trxHash, ignoreCase = true)) {
                     when (transfer) {
-                        is Transfer.Eth -> transfer.copy(status = status, fee = fee ?: transfer.fee)
-                        is Transfer.Erc20 -> transfer.copy(status = status, fee = fee ?: transfer.fee)
+                        is Transfer.Eth -> transfer.copy(status = status, fee = transfer.fee?.let { fee ?: it })
+                        is Transfer.Erc20 -> transfer.copy(status = status, fee = transfer.fee?.let { fee ?: it })
                     }
                 } else {
                     transfer

@@ -26,8 +26,10 @@ DB-first design: the sent transfer is saved to the history DB, and the details s
   the last status and poll again.
 - A sent token transfer has no log index before mining. It is saved with `UNKNOWN_LOG_INDEX` (-1). An ETH transfer
   uses the same index, but a token transfer sent by the app has zero ETH value, so it has no ETH row with the same
-  key. History refresh deletes the placeholder when Blockscout returns a token transfer with the same hash. A
-  reverted token transfer has no log, so refresh reads a Pending placeholder by hash and marks it Failed.
+  key. History refresh deletes the placeholder after it saves a token transfer with the same hash.
+- Some sent transfers are never listed by Blockscout: a reverted token transfer has no log, and ETH sent to a
+  contract is filtered out. Before it saves, History refresh reads the status of each cached Pending transfer that
+  the fetched pages do not contain. A final status updates the rows of the hash.
 - The local send time differs from the history rule "do not invent a timestamp". The Blockscout row replaces it
   after indexing.
 - Update the live Sepolia E2E tests: after a send they open the details screen. Desktop waits for "Confirmed".
@@ -40,6 +42,6 @@ DB-first design: the sent transfer is saved to the history DB, and the details s
 ## Definition of done
 
 - The details screen shows the sent transfer and its live status on Android and Desktop.
-- Unit tests cover the saved transfer, polling (not indexed, Confirmed, Failed, errors, resubscription), and the
-  placeholder cleanup in refresh.
+- Unit tests cover the saved transfer, polling (missing row, not indexed, Confirmed, Failed, errors,
+  resubscription), the status lookup and placeholder cleanup in refresh, and the new Room queries.
 - `./gradlew spotlessApply`, shared tests, and the app and desktop test compilation pass.

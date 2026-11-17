@@ -122,7 +122,7 @@ fun pendingTransfer(
     }
 }
 
-internal val Transfer.logIndex: Int get() = (this as? Transfer.Erc20)?.logIndex ?: -1
+internal val Transfer.logIndex: Int get() = (this as? Transfer.Erc20)?.logIndex ?: UNKNOWN_LOG_INDEX
 
 internal val Transfer.identity: Pair<String, Int> get() = hash.lowercase() to logIndex
 

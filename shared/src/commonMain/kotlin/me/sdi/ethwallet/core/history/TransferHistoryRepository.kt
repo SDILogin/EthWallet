@@ -19,7 +19,7 @@ interface TransferHistoryRepository {
 
     suspend fun upsert(walletAddress: EthAddress, items: List<Transfer>)
 
-    /** Sets the status of all transfers of the hash. A null [fee] keeps the stored fee. */
+    /** Sets the status of all transfers of the hash. The [fee] replaces only a stored fee. A null [fee] changes no fee. */
     suspend fun update(trxHash: String, status: TransactionStatus, fee: TransactionFee?)
 
     suspend fun delete(walletAddress: EthAddress, items: List<Transfer>)

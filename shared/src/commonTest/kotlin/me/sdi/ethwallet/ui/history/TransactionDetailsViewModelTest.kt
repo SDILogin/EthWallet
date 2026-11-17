@@ -84,8 +84,21 @@ class TransactionDetailsViewModelTest {
         val refreshed = updated.copy(value = "400000000")
         repository.upsert(wallet, listOf(refreshed))
         runCurrent()
-        assertEquals(content(refreshed, from = "Renamed", to = null), viewModel.viewState.value, "Wallet labels should be read again")
+        assertEquals(
+            TransactionDetailsState.Content(transfer = refreshed, fromWalletLabel = "Renamed", toWalletLabel = null),
+            viewModel.viewState.value,
+            "Wallet labels should be read again",
+        )
         assertEquals(0, provider.calls, "A confirmed transfer should not be polled")
+    }
+
+    @Test
+    fun missingTransferIsUnavailable() = detailsTest { viewModel ->
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.viewState.collect {} }
+        runCurrent()
+
+        assertEquals(TransactionDetailsState.Unavailable, viewModel.viewState.value, "A missing transfer should be unavailable")
+        assertEquals(0, provider.calls, "A missing transfer should not be polled")
     }
 
     @Test
@@ -170,8 +183,8 @@ class TransactionDetailsViewModelTest {
         assertEquals(1, provider.calls, "Resubscription should not poll after a final status")
     }
 
-    private fun content(transfer: Transfer, from: String? = "Main", to: String? = "Savings") =
-        TransactionDetailsState.Content(transfer = transfer, fromWalletLabel = from, toWalletLabel = to)
+    private fun content(transfer: Transfer) =
+        TransactionDetailsState.Content(transfer = transfer, fromWalletLabel = "Main", toWalletLabel = "Savings")
 
     private fun detailsTest(body: suspend TestScope.(TransactionDetailsViewModel) -> Unit) = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))

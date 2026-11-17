@@ -283,7 +283,7 @@ fun EthWalletApp() {
                     walletAddress = EthAddress(destination.ethAddress),
                     walletLabel = destination.walletLabel,
                     onTransactionClick = { hash ->
-                        backStack.add(Destination.TransactionDetails(destination.ethAddress, hash))
+                        backStack.add(Destination.TransactionDetails(ethAddress = destination.ethAddress, transactionHash = hash))
                     },
                     onBackPressed = { backStack.removeLastOrNull() },
                 )
@@ -310,7 +310,9 @@ fun EthWalletApp() {
                     onBackPress = { backStack.removeLastOrNull() },
                     onTransferSent = { transactionHash ->
                         backStack.removeLastOrNull()
-                        backStack.add(Destination.TransactionDetails(destination.ethAddress, transactionHash))
+                        backStack.add(
+                            Destination.TransactionDetails(ethAddress = destination.ethAddress, transactionHash = transactionHash),
+                        )
                     },
                 )
             }

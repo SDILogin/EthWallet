@@ -38,8 +38,8 @@ class TransferHistoryRepositoryInMemory : TransferHistoryRepository {
             current.map { (wallet, transfer) ->
                 if (transfer.hash.equals(trxHash, ignoreCase = true)) {
                     wallet to when (transfer) {
-                        is Transfer.Eth -> transfer.copy(status = status, fee = fee ?: transfer.fee)
-                        is Transfer.Erc20 -> transfer.copy(status = status, fee = fee ?: transfer.fee)
+                        is Transfer.Eth -> transfer.copy(status = status, fee = transfer.fee?.let { fee ?: it })
+                        is Transfer.Erc20 -> transfer.copy(status = status, fee = transfer.fee?.let { fee ?: it })
                     }
                 } else {
                     wallet to transfer
