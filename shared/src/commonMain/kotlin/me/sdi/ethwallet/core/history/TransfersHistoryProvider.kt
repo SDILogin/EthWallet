@@ -2,6 +2,7 @@ package me.sdi.ethwallet.core.history
 
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.transfer.Wei
+import java.math.BigInteger
 
 interface TransfersHistoryProvider {
     suspend fun getTransfers(
@@ -77,6 +78,48 @@ sealed interface Transfer {
         override val status: TransactionStatus = TransactionStatus.Confirmed,
         override val fee: TransactionFee? = null,
     ) : Transfer
+}
+
+internal const val UNKNOWN_LOG_INDEX = -1
+
+/** Builds a sent transfer that is not mined yet. A null [tokenAddress] means ETH. */
+fun pendingTransfer(
+    hash: String,
+    timestamp: Long,
+    from: EthAddress,
+    to: EthAddress,
+    amount: BigInteger,
+    estimatedFee: Wei,
+    tokenAddress: EthAddress?,
+    tokenSymbol: String?,
+    tokenDecimals: Int?,
+): Transfer {
+    val fee = TransactionFee(estimatedFee, estimated = true)
+    return if (tokenAddress == null) {
+        Transfer.Eth(
+            hash = hash,
+            timestamp = timestamp,
+            from = from,
+            to = to,
+            valueWei = Wei(amount),
+            status = TransactionStatus.Pending,
+            fee = fee,
+        )
+    } else {
+        Transfer.Erc20(
+            hash = hash,
+            timestamp = timestamp,
+            from = from,
+            to = to,
+            logIndex = UNKNOWN_LOG_INDEX,
+            tokenAddress = tokenAddress,
+            tokenSymbol = tokenSymbol,
+            tokenDecimals = checkNotNull(tokenDecimals) { "A token transfer has decimals" },
+            value = amount.toString(),
+            status = TransactionStatus.Pending,
+            fee = fee,
+        )
+    }
 }
 
 internal val Transfer.logIndex: Int get() = (this as? Transfer.Erc20)?.logIndex ?: -1

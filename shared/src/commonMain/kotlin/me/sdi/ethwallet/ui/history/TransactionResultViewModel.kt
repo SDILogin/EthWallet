@@ -11,22 +11,16 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.flow.stateIn
 import me.sdi.ethwallet.Logger
-import me.sdi.ethwallet.core.EthAddress
-import me.sdi.ethwallet.core.history.TransactionFee
 import me.sdi.ethwallet.core.history.TransactionStatus
 import me.sdi.ethwallet.core.history.TransactionSummary
 import me.sdi.ethwallet.core.history.Transfer
 import me.sdi.ethwallet.core.history.TransfersHistoryProvider
-import me.sdi.ethwallet.core.transfer.Wei
 import me.sdi.ethwallet.data.repository.WalletRepository
-import java.math.BigInteger
 import kotlin.time.Duration.Companion.milliseconds
 
 private const val TAG = "TransactionResult"
 
 private const val STATUS_POLL_INTERVAL_MS = 5_000L
-
-internal const val UNKNOWN_LOG_INDEX = -1
 
 class TransactionResultViewModel(
     transfer: Transfer,
@@ -68,45 +62,5 @@ private fun Transfer.updatedWith(summary: TransactionSummary): Transfer {
     return when (this) {
         is Transfer.Eth -> copy(status = summary.status, fee = fee)
         is Transfer.Erc20 -> copy(status = summary.status, fee = fee)
-    }
-}
-
-/** Builds a sent transfer that is not mined yet. A null [tokenAddress] means ETH. */
-internal fun pendingTransfer(
-    hash: String,
-    timestamp: Long,
-    from: EthAddress,
-    to: EthAddress,
-    amount: BigInteger,
-    estimatedFee: Wei,
-    tokenAddress: EthAddress?,
-    tokenSymbol: String?,
-    tokenDecimals: Int?,
-): Transfer {
-    val fee = TransactionFee(estimatedFee, estimated = true)
-    return if (tokenAddress == null) {
-        Transfer.Eth(
-            hash = hash,
-            timestamp = timestamp,
-            from = from,
-            to = to,
-            valueWei = Wei(amount),
-            status = TransactionStatus.Pending,
-            fee = fee,
-        )
-    } else {
-        Transfer.Erc20(
-            hash = hash,
-            timestamp = timestamp,
-            from = from,
-            to = to,
-            logIndex = UNKNOWN_LOG_INDEX,
-            tokenAddress = tokenAddress,
-            tokenSymbol = tokenSymbol,
-            tokenDecimals = checkNotNull(tokenDecimals) { "A token transfer has decimals" },
-            value = amount.toString(),
-            status = TransactionStatus.Pending,
-            fee = fee,
-        )
     }
 }

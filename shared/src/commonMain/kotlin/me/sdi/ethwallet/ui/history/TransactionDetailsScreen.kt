@@ -42,6 +42,7 @@ import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.history.TransactionFee
 import me.sdi.ethwallet.core.history.TransactionStatus
 import me.sdi.ethwallet.core.history.Transfer
+import me.sdi.ethwallet.core.history.UNKNOWN_LOG_INDEX
 import me.sdi.ethwallet.core.transfer.toWei
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px

@@ -29,6 +29,7 @@ import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
+import me.sdi.ethwallet.core.history.pendingTransfer
 import me.sdi.ethwallet.core.transfer.ETH_TRANSFER_GAS_UNITS
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
 import me.sdi.ethwallet.core.transfer.Gwei
@@ -44,7 +45,6 @@ import me.sdi.ethwallet.core.transfer.wei
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.ui.findKnownToken
-import me.sdi.ethwallet.ui.history.pendingTransfer
 import me.sdi.ethwallet.util.formatUsdCurrency
 import java.math.BigDecimal
 import java.math.BigInteger

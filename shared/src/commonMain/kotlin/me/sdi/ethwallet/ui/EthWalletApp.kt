@@ -33,6 +33,7 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.history.Transfer
+import me.sdi.ethwallet.core.history.pendingTransfer
 import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.PinSession
 import me.sdi.ethwallet.core.transfer.toWei
@@ -40,7 +41,6 @@ import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.history.HistoryRoute
 import me.sdi.ethwallet.ui.history.TransactionDetailsRoute
 import me.sdi.ethwallet.ui.history.TransactionResultScreen
-import me.sdi.ethwallet.ui.history.pendingTransfer
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.receive.ReceiveScreen
 import me.sdi.ethwallet.ui.send.SendScreen

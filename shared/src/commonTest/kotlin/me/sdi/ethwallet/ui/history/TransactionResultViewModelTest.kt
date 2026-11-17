@@ -19,6 +19,7 @@ import me.sdi.ethwallet.core.history.TransactionSummary
 import me.sdi.ethwallet.core.history.Transfer
 import me.sdi.ethwallet.core.history.TransfersHistoryProvider
 import me.sdi.ethwallet.core.history.TransfersPageRequest
+import me.sdi.ethwallet.core.history.UNKNOWN_LOG_INDEX
 import me.sdi.ethwallet.core.transfer.toWei
 import me.sdi.ethwallet.data.repository.WalletRepository
 import me.sdi.ethwallet.database.entity.WalletEntity
@@ -102,6 +103,42 @@ class TransactionResultViewModelTest {
         assertEquals(content(sent.copy(status = TransactionStatus.Failed)), viewModel.viewState.value, "Failed status should be shown")
         advanceTimeBy((POLL_STEP_MS * 4).milliseconds)
         assertEquals(1, provider.calls, "Polling should stop after a final status")
+    }
+
+    @Test
+    fun ethTransferIsConfirmed() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        try {
+            val ethTransfer = Transfer.Eth(
+                hash = hash,
+                timestamp = 1L,
+                from = sender,
+                to = receiver,
+                valueWei = "1000".toBigInteger().toWei(),
+                status = TransactionStatus.Pending,
+                fee = estimatedFee,
+            )
+            provider.responses += Result.success(TransactionSummary(TransactionStatus.Confirmed, actualFee))
+            val viewModel = TransactionResultViewModel(
+                transfer = ethTransfer,
+                historyProvider = provider,
+                walletRepository = walletRepository,
+            )
+            store.put("result", viewModel)
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.viewState.collect {} }
+            runCurrent()
+
+            assertEquals(
+                content(ethTransfer.copy(status = TransactionStatus.Confirmed, fee = actualFee)),
+                viewModel.viewState.value,
+                "ETH transfer should show the confirmed status",
+            )
+        } finally {
+            store.clear()
+            runCurrent()
+            Dispatchers.resetMain()
+        }
     }
 
     @Test

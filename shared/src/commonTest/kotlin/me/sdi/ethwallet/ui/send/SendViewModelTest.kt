@@ -20,6 +20,7 @@ import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.history.TransactionFee
 import me.sdi.ethwallet.core.history.TransactionStatus
 import me.sdi.ethwallet.core.history.Transfer
+import me.sdi.ethwallet.core.history.UNKNOWN_LOG_INDEX
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
 import me.sdi.ethwallet.core.transfer.TransferException
 import me.sdi.ethwallet.core.transfer.Wei
@@ -32,7 +33,6 @@ import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeTransferInteractor
 import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
-import me.sdi.ethwallet.ui.history.UNKNOWN_LOG_INDEX
 import me.sdi.ethwallet.ui.usdtOnMainnet
 import me.sdi.ethwallet.util.formatUsdCurrency
 import java.math.BigDecimal
