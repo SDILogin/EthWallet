@@ -97,7 +97,6 @@
     <string name="send_custom_gas_network_fee">Network fee: ~%1$s</string>
     <string name="send_sending">Sending…</string>
     <string name="send_transaction">Send Transaction</string>
-    <string name="send_transfer_successful">Transfer successful! Hash: %1$s</string>
 
     <!-- Receive Screen -->
     <string name="receive_title">Receive</string>
@@ -241,6 +240,7 @@
     <string name="transaction_details_token">Token</string>
     <string name="transaction_details_contract">Token contract</string>
     <string name="transaction_details_metadata">ERC-20 · %1$d decimals · Event index %2$d</string>
+    <string name="transaction_details_metadata_no_index">ERC-20 · %1$d decimals</string>
     <string name="transaction_details_explorer">View in explorer</string>
     <string name="transaction_details_copy">Copy %1$s</string>
     <string name="token_details_information">Token information</string>

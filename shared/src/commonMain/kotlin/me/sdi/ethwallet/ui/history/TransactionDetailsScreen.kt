@@ -70,6 +70,7 @@ import me.sdi.ethwallet.resources.transaction_details_fee
 import me.sdi.ethwallet.resources.transaction_details_from
 import me.sdi.ethwallet.resources.transaction_details_hash
 import me.sdi.ethwallet.resources.transaction_details_metadata
+import me.sdi.ethwallet.resources.transaction_details_metadata_no_index
 import me.sdi.ethwallet.resources.transaction_details_network
 import me.sdi.ethwallet.resources.transaction_details_title
 import me.sdi.ethwallet.resources.transaction_details_to
@@ -111,8 +112,10 @@ fun TransactionDetailsScreen(
     walletAddress: EthAddress,
     chainConfig: ChainConfig,
     onBackPressed: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { EthText(stringResource(Res.string.transaction_details_title)) },
@@ -296,7 +299,11 @@ private fun DetailsContent(
                 DetailsCard {
                     CopyValue(stringResource(Res.string.transaction_details_contract), transfer.tokenAddress.toString())
                     EthText(
-                        stringResource(Res.string.transaction_details_metadata, transfer.tokenDecimals, transfer.logIndex),
+                        if (transfer.logIndex >= 0) {
+                            stringResource(Res.string.transaction_details_metadata, transfer.tokenDecimals, transfer.logIndex)
+                        } else {
+                            stringResource(Res.string.transaction_details_metadata_no_index, transfer.tokenDecimals)
+                        },
                         Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                         style = EthTextStyle.Caption,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

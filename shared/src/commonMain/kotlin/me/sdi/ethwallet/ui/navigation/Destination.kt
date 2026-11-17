@@ -52,6 +52,19 @@ sealed interface Destination : NavKey {
     data class TransactionDetails(val ethAddress: String, val transactionHash: String, val logIndex: Int) : Destination
 
     @Serializable
+    data class TransactionResult(
+        val ethAddress: String,
+        val transactionHash: String,
+        val receiverAddress: String,
+        val tokenAddress: String?,
+        val tokenSymbol: String?,
+        val tokenDecimals: Int?,
+        val amount: String,
+        val feeWei: String,
+        val timestamp: Long,
+    ) : Destination
+
+    @Serializable
     data object SettingsScreen : Destination
 
     @Serializable

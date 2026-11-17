@@ -11,6 +11,7 @@ import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.history.Transfer
 import me.sdi.ethwallet.core.history.TransferHistoryRepository
+import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
 
 class TransactionDetailsViewModel(
@@ -23,20 +24,23 @@ class TransactionDetailsViewModel(
     val viewState = repository
         .observe(walletAddress, transactionHash, logIndex)
         .map { transfer ->
-            val wallets = walletRepository.observeAllWallets().first()
-            val fromWalletLabel = wallets.firstOrNull { it.address.lowercase() == transfer.from.lowercase() }?.label
-            val toWalletLabel = wallets.firstOrNull { it.address.lowercase() == transfer.to.lowercase() }?.label
-            TransactionDetailsState.Content(
-                transfer = transfer,
-                fromWalletLabel = fromWalletLabel,
-                toWalletLabel = toWalletLabel,
-            ) as TransactionDetailsState
+            transfer.toDetailsContent(walletRepository.observeAllWallets().first()) as TransactionDetailsState
         }
         .catch {
             Logger.warn("TransactionDetails", it) { "Failed ot get transaction details" }
             emit(TransactionDetailsState.Error)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TransactionDetailsState.Loading)
+}
+
+internal fun Transfer.toDetailsContent(wallets: List<EthWallet>): TransactionDetailsState.Content {
+    val fromWalletLabel = wallets.firstOrNull { it.address.lowercase() == from.lowercase() }?.label
+    val toWalletLabel = wallets.firstOrNull { it.address.lowercase() == to.lowercase() }?.label
+    return TransactionDetailsState.Content(
+        transfer = this,
+        fromWalletLabel = fromWalletLabel,
+        toWalletLabel = toWalletLabel,
+    )
 }
 
 sealed interface TransactionDetailsState {

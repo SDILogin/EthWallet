@@ -40,6 +40,7 @@ import me.sdi.ethwallet.kotlin.EthereumNetwork
 import me.sdi.ethwallet.kotlin.JsonRpcTransport
 import me.sdi.ethwallet.ui.history.HistoryViewModel
 import me.sdi.ethwallet.ui.history.TransactionDetailsViewModel
+import me.sdi.ethwallet.ui.history.TransactionResultViewModel
 import me.sdi.ethwallet.ui.receive.ReceiveQrViewModel
 import me.sdi.ethwallet.ui.send.SendViewModel
 import me.sdi.ethwallet.ui.settings.ChangePinCodeViewModel
@@ -142,6 +143,14 @@ val commonModule = module {
             transactionHash = params.get(),
             logIndex = params.get(),
             repository = get(),
+            walletRepository = get<WalletRepository>(),
+        )
+    }
+
+    viewModel<TransactionResultViewModel> { params ->
+        TransactionResultViewModel(
+            transfer = params.get(),
+            historyProvider = get(),
             walletRepository = get<WalletRepository>(),
         )
     }

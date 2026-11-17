@@ -17,6 +17,9 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.json.Json
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
+import me.sdi.ethwallet.core.history.TransactionFee
+import me.sdi.ethwallet.core.history.TransactionStatus
+import me.sdi.ethwallet.core.history.Transfer
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
 import me.sdi.ethwallet.core.transfer.TransferException
 import me.sdi.ethwallet.core.transfer.Wei
@@ -41,6 +44,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -456,16 +460,69 @@ class SendViewModelTest {
         collectNews()
 
         input1Eth()
+        val startedAt = Clock.System.now().toEpochMilliseconds()
         clickSend()
+        val finishedAt = Clock.System.now().toEpochMilliseconds()
 
         assertNotNull(transferInteractor.lastTransferData, "Transfer should be invoked")
-        val transactionHash = collectedNews.filterIsInstance<SendNews.TransferSuccess>().first().transactionHash
-        assertEquals(expectedHash, transactionHash, "Should have correct transaction hash")
+        val transfer = collectedNews.filterIsInstance<SendNews.TransferSuccess>().single().transfer
+        assertTrue(transfer.timestamp in startedAt..finishedAt, "Timestamp should be the send time")
+        assertEquals(
+            Transfer.Eth(
+                hash = expectedHash,
+                timestamp = transfer.timestamp,
+                from = senderAddress,
+                to = EthAddress(validEthAddress),
+                valueWei = Wei(BigInteger("1000000000000000000")),
+                status = TransactionStatus.Pending,
+                fee = TransactionFee(
+                    Wei(presetMaxFeeWei(GasOption.Default).multiply(BigInteger.valueOf(ETH_GAS_UNITS))),
+                    estimated = true,
+                ),
+            ),
+            transfer,
+            "Success news should carry the pending ETH transfer",
+        )
 
         val state = viewModel.viewState.value
         assertFalse(state.transferring, "Should not be loading after success")
         assertEquals("", state.receiverAddress.value, "Form should be cleared after success")
         assertEquals("", state.transferAmountInputState.value, "Amount should be cleared after success")
+    }
+
+    @Test
+    fun should_send_pending_erc20_transfer_after_successful_token_transfer() = vmTest {
+        val expectedHash = "0xTokenTransactionHash"
+        transferInteractor.transferResult = Result.success(expectedHash)
+        seedFees()
+        collectNews()
+
+        sendEvent(SendEvent.OnTokenSelected(usdtOnMainnet.ethAddress))
+        sendEvent(SendEvent.OnReceiverAddressChanged(validEthAddress))
+        sendEvent(SendEvent.OnTransferAmountChanged("10.5"))
+        clickSend()
+
+        val transfer = collectedNews.filterIsInstance<SendNews.TransferSuccess>().single().transfer
+        assertEquals(
+            Transfer.Erc20(
+                hash = expectedHash,
+                timestamp = transfer.timestamp,
+                from = senderAddress,
+                to = EthAddress(validEthAddress),
+                logIndex = -1,
+                tokenAddress = usdtOnMainnet.ethAddress,
+                tokenSymbol = usdtOnMainnet.symbol,
+                tokenDecimals = usdtOnMainnet.decimals,
+                value = "10500000",
+                status = TransactionStatus.Pending,
+                fee = TransactionFee(
+                    Wei(presetMaxFeeWei(GasOption.Default).multiply(BigInteger.valueOf(ERC20_GAS_UNITS))),
+                    estimated = true,
+                ),
+            ),
+            transfer,
+            "Success news should carry the pending token transfer",
+        )
     }
 
     @Test

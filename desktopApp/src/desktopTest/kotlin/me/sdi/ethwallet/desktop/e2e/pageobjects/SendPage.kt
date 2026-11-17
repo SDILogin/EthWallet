@@ -63,18 +63,6 @@ class SendPage(private val rule: ComposeTestRule) {
         awaitSubmissionStartedOrFormCleared()
     }
 
-    fun awaitTransferFormCleared(timeoutMillis: Long = TRANSFER_TIMEOUT_MILLIS) {
-        rule.waitUntil(timeoutMillis) {
-            rule.onAllNodes(hasSetTextAction())
-                .fetchSemanticsNodes()
-                .all { node ->
-                    node.config.getOrElse(SemanticsProperties.EditableText) { AnnotatedString("") }
-                        .text
-                        .isEmpty()
-                }
-        }
-    }
-
     fun clickBackButton() {
         rule.clickNode(hasContentDescription("Back"))
     }
@@ -108,6 +96,5 @@ class SendPage(private val rule: ComposeTestRule) {
         const val SEND_TIMEOUT_MILLIS = 30_000L
         const val SUBMISSION_START_TIMEOUT_MILLIS = 10_000L
         const val MAX_SCROLL_GESTURES = 6
-        const val TRANSFER_TIMEOUT_MILLIS = 120_000L
     }
 }

@@ -11,6 +11,7 @@ import io.ktor.http.headersOf
 import io.ktor.serialization.JsonConvertException
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.core.transfer.toWei
 import me.sdi.ethwallet.di.createHttpClient
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -249,6 +250,47 @@ class TransferHistoryProviderBlockscoutTest {
         assertFailsWith<IllegalStateException> {
             provider.getTransfers(wallet, TransfersPageRequest.Skip, TransfersPageRequest.First)
         }
+    }
+
+    @Test
+    fun transaction_lookup_maps_pending_confirmed_and_failed_statuses() = runTest {
+        val requests = mutableListOf<HttpRequestData>()
+        var response = """{"hash":"$hash","timestamp":null,"block_number":null,"status":null,"fee":{"type":"maximum","value":"300"}}"""
+        val provider = provider { request ->
+            requests += request
+            response
+        }
+
+        assertEquals(
+            TransactionSummary(TransactionStatus.Pending, TransactionFee("300".toBigInteger().toWei(), estimated = true)),
+            provider.getTransaction(hash),
+        )
+        assertEquals("/api/v2/transactions/$hash", requests.single().url.encodedPath)
+
+        response = """{"hash":"$hash","timestamp":"$time","block_number":123,"status":"ok","fee":{"type":"actual","value":"200"}}"""
+        assertEquals(
+            TransactionSummary(TransactionStatus.Confirmed, TransactionFee("200".toBigInteger().toWei(), estimated = false)),
+            provider.getTransaction(hash),
+        )
+
+        response = """{"hash":"$hash","timestamp":"$time","block_number":123,"status":"error","fee":null}"""
+        assertEquals(TransactionSummary(TransactionStatus.Failed, null), provider.getTransaction(hash))
+    }
+
+    @Test
+    fun transaction_lookup_returns_null_for_unknown_transaction() = runTest {
+        val client = createHttpClient(
+            MockEngine {
+                respond(
+                    """{"message":"Not found"}""",
+                    HttpStatusCode.NotFound,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+            },
+        )
+        val provider = TransfersHistoryProviderBlockscout(client, "https://history.example.test")
+
+        assertNull(provider.getTransaction(hash))
     }
 
     private fun provider(response: (HttpRequestData) -> String) = TransfersHistoryProviderBlockscout(

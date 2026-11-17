@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
+import me.sdi.ethwallet.core.history.Transfer
 import me.sdi.ethwallet.core.transfer.ERC20_TRANSFER_GAS_UNITS
 import me.sdi.ethwallet.core.transfer.ETH_TRANSFER_GAS_UNITS
 import me.sdi.ethwallet.core.transfer.Wei
@@ -88,7 +89,6 @@ import me.sdi.ethwallet.resources.send_token_usdc
 import me.sdi.ethwallet.resources.send_token_usdt
 import me.sdi.ethwallet.resources.send_transaction
 import me.sdi.ethwallet.resources.send_transfer_speed
-import me.sdi.ethwallet.resources.send_transfer_successful
 import me.sdi.ethwallet.ui.KnownToken
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.components.rememberScreenTransition
@@ -132,18 +132,18 @@ fun SendScreen(
         parameters = { parametersOf(walletAddress) },
     ),
     onBackPress: () -> Unit,
+    onTransferSent: (Transfer) -> Unit,
 ) {
     val chainConfig: ChainConfig = koinInject()
     val chainTokens = remember(chainConfig.chainId) { supportedKnownTokens(chainConfig.chainId) }
     val viewState by viewModel.viewState.collectAsState()
     val toastManager = rememberToastManager()
-    val transferSuccessMessage = stringResource(Res.string.send_transfer_successful)
 
     LaunchedEffect(key1 = viewModel.news) {
         viewModel.news.collect { news ->
             when (news) {
                 is SendNews.TransferSuccess -> {
-                    toastManager.showToast("$transferSuccessMessage ${news.transactionHash}")
+                    onTransferSent(news.transfer)
                 }
                 is SendNews.TransferError -> {
                     toastManager.showToast(news.message)

@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.SerialName
@@ -98,6 +99,16 @@ class TransfersHistoryProviderBlockscout(
         )
     }
 
+    override suspend fun getTransaction(hash: String): TransactionSummary? {
+        val response = httpClient.get("$apiBaseUrl/transactions/$hash")
+        if (response.status == HttpStatusCode.NotFound) return null
+        val transaction = response.body<BlockscoutTransactionStatus>()
+        return TransactionSummary(
+            status = transactionStatus(transaction.blockNumber, transaction.status),
+            fee = transactionFee(transaction.fee, required = false),
+        )
+    }
+
     private suspend inline fun <reified T> load(
         address: EthAddress,
         endpoint: String,
@@ -146,22 +157,32 @@ private data class BlockscoutTransaction(
         )
     }
 
-    fun transactionStatus(): TransactionStatus = when {
-        blockNumber == null -> TransactionStatus.Pending
-        status == "ok" -> TransactionStatus.Confirmed
-        status == "error" -> TransactionStatus.Failed
-        else -> error("Unknown transaction status")
-    }
+    fun transactionStatus(): TransactionStatus = transactionStatus(blockNumber, status)
 
-    fun transactionFee(required: Boolean): TransactionFee? {
-        val data = fee
-        if (data == null) {
-            require(!required) { "Missing outgoing transaction fee" }
-            return null
-        }
-        require(data.type == "actual" || data.type == "maximum") { "Unknown transaction fee type" }
-        return TransactionFee(data.value.nonNegativeInteger().toWei(), estimated = data.type == "maximum")
+    fun transactionFee(required: Boolean): TransactionFee? = transactionFee(fee, required)
+}
+
+@Serializable
+private data class BlockscoutTransactionStatus(
+    @SerialName("block_number") val blockNumber: Long? = null,
+    val status: String? = null,
+    val fee: BlockscoutFee? = null,
+)
+
+private fun transactionStatus(blockNumber: Long?, status: String?): TransactionStatus = when {
+    blockNumber == null -> TransactionStatus.Pending
+    status == "ok" -> TransactionStatus.Confirmed
+    status == "error" -> TransactionStatus.Failed
+    else -> error("Unknown transaction status")
+}
+
+private fun transactionFee(fee: BlockscoutFee?, required: Boolean): TransactionFee? {
+    if (fee == null) {
+        require(!required) { "Missing outgoing transaction fee" }
+        return null
     }
+    require(fee.type == "actual" || fee.type == "maximum") { "Unknown transaction fee type" }
+    return TransactionFee(fee.value.nonNegativeInteger().toWei(), estimated = fee.type == "maximum")
 }
 
 @Serializable

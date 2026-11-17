@@ -9,7 +9,12 @@ interface TransfersHistoryProvider {
         eth: TransfersPageRequest = TransfersPageRequest.First,
         erc20: TransfersPageRequest = TransfersPageRequest.First,
     ): CombinedTransfersPage
+
+    /** Returns null when the API does not know the transaction yet. */
+    suspend fun getTransaction(hash: String): TransactionSummary?
 }
+
+data class TransactionSummary(val status: TransactionStatus, val fee: TransactionFee?)
 
 sealed interface TransfersPageRequest {
     data object First : TransfersPageRequest

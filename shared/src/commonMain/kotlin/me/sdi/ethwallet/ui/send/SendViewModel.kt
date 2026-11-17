@@ -29,6 +29,9 @@ import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
 import me.sdi.ethwallet.core.FiatRateProvider
+import me.sdi.ethwallet.core.history.TransactionFee
+import me.sdi.ethwallet.core.history.TransactionStatus
+import me.sdi.ethwallet.core.history.Transfer
 import me.sdi.ethwallet.core.transfer.ETH_TRANSFER_GAS_UNITS
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
 import me.sdi.ethwallet.core.transfer.Gwei
@@ -43,11 +46,13 @@ import me.sdi.ethwallet.core.transfer.toWei
 import me.sdi.ethwallet.core.transfer.wei
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
+import me.sdi.ethwallet.ui.KnownToken
 import me.sdi.ethwallet.ui.findKnownToken
 import me.sdi.ethwallet.util.formatUsdCurrency
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.math.RoundingMode
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 
 private const val TAG = "SendViewModel"
@@ -257,10 +262,20 @@ class SendViewModel(
         viewModelScope.launch {
             try {
                 val transferData = viewState.value.createTransferData(walletAddress)
+                val token = if (transferData.contractAddress == EthContractAddress) {
+                    null
+                } else {
+                    checkNotNull(findKnownToken(transferData.contractAddress)) { "Send offers only known tokens" }
+                }
                 val transactionHash = transferInteractor.transfer(transferData)
 
                 Logger.debug(TAG) { "Transfer successful: $transactionHash" }
-                newsChannel.trySend(SendNews.TransferSuccess(transactionHash))
+                val transfer = transferData.toPendingTransfer(
+                    hash = transactionHash,
+                    token = token,
+                    timestamp = Clock.System.now().toEpochMilliseconds(),
+                )
+                newsChannel.trySend(SendNews.TransferSuccess(transfer))
 
                 userInput.value = UserInput()
             } catch (e: CancellationException) {
@@ -437,6 +452,35 @@ private fun SendViewState.createTransferData(senderAddress: EthAddress): Transfe
         maxPriorityFeePerGas = checkNotNull(gas.priorityFeeWei) { "Priority fee must be resolved when the transfer gate passed" },
         gasUnits = checkNotNull(gas.gasUnitsValue) { "Gas units must be resolved when the transfer gate passed" },
     )
+}
+
+private fun TransferData.toPendingTransfer(hash: String, token: KnownToken?, timestamp: Long): Transfer {
+    val fee = TransactionFee(Wei(maxFeePerGas.value.multiply(gasUnits)), estimated = true)
+    return if (token == null) {
+        Transfer.Eth(
+            hash = hash,
+            timestamp = timestamp,
+            from = senderAddress,
+            to = destinationAddress,
+            valueWei = Wei(amount),
+            status = TransactionStatus.Pending,
+            fee = fee,
+        )
+    } else {
+        Transfer.Erc20(
+            hash = hash,
+            timestamp = timestamp,
+            from = senderAddress,
+            to = destinationAddress,
+            logIndex = -1,
+            tokenAddress = contractAddress,
+            tokenSymbol = token.symbol,
+            tokenDecimals = token.decimals,
+            value = amount.toString(),
+            status = TransactionStatus.Pending,
+            fee = fee,
+        )
+    }
 }
 
 private fun TransferException.asString(): String = when (this) {

@@ -219,6 +219,8 @@ class HistoryUpdateInteractorTest {
                 }
             return CombinedTransfersPage(select(ethPages, eth), select(tokenPages, erc20))
         }
+
+        override suspend fun getTransaction(hash: String): TransactionSummary? = error("Not used by history updates")
     }
 
     private class Repository(initial: List<Transfer> = emptyList()) : TransferHistoryRepository {

@@ -32,11 +32,16 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.core.history.TransactionFee
+import me.sdi.ethwallet.core.history.TransactionStatus
+import me.sdi.ethwallet.core.history.Transfer
 import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.PinSession
+import me.sdi.ethwallet.core.transfer.toWei
 import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.history.HistoryRoute
 import me.sdi.ethwallet.ui.history.TransactionDetailsRoute
+import me.sdi.ethwallet.ui.history.TransactionResultScreen
 import me.sdi.ethwallet.ui.navigation.Destination
 import me.sdi.ethwallet.ui.receive.ReceiveScreen
 import me.sdi.ethwallet.ui.send.SendScreen
@@ -309,6 +314,21 @@ fun EthWalletApp() {
                     modifier = Modifier.fillMaxSize(),
                     walletAddress = EthAddress(destination.ethAddress),
                     onBackPress = { backStack.removeLastOrNull() },
+                    onTransferSent = { transfer ->
+                        backStack.removeLastOrNull()
+                        backStack.add(transfer.toResultDestination())
+                    },
+                )
+            }
+
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            entry<Destination.TransactionResult>(
+                metadata = detailPane(),
+            ) { destination ->
+                TransactionResultScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    transfer = destination.toTransfer(),
+                    onBackPressed = { backStack.removeLastOrNull() },
                 )
             }
 
@@ -365,6 +385,53 @@ fun EthWalletApp() {
                         .copy(horizontalPartitionSpacerSize = 0.dp),
                 ),
             ),
+        )
+    }
+}
+
+private fun Transfer.toResultDestination(): Destination.TransactionResult {
+    val erc20 = this as? Transfer.Erc20
+    return Destination.TransactionResult(
+        ethAddress = from.toString(),
+        transactionHash = hash,
+        receiverAddress = to.toString(),
+        tokenAddress = erc20?.tokenAddress?.toString(),
+        tokenSymbol = erc20?.tokenSymbol,
+        tokenDecimals = erc20?.tokenDecimals,
+        amount = when (this) {
+            is Transfer.Eth -> valueWei.value.toString()
+            is Transfer.Erc20 -> value
+        },
+        feeWei = checkNotNull(fee) { "A sent transfer has an estimated fee" }.value.value.toString(),
+        timestamp = timestamp,
+    )
+}
+
+private fun Destination.TransactionResult.toTransfer(): Transfer {
+    val fee = TransactionFee(feeWei.toBigInteger().toWei(), estimated = true)
+    return if (tokenAddress == null) {
+        Transfer.Eth(
+            hash = transactionHash,
+            timestamp = timestamp,
+            from = EthAddress(ethAddress),
+            to = EthAddress(receiverAddress),
+            valueWei = amount.toBigInteger().toWei(),
+            status = TransactionStatus.Pending,
+            fee = fee,
+        )
+    } else {
+        Transfer.Erc20(
+            hash = transactionHash,
+            timestamp = timestamp,
+            from = EthAddress(ethAddress),
+            to = EthAddress(receiverAddress),
+            logIndex = -1,
+            tokenAddress = EthAddress(tokenAddress),
+            tokenSymbol = tokenSymbol,
+            tokenDecimals = checkNotNull(tokenDecimals) { "A token transfer has decimals" },
+            value = amount,
+            status = TransactionStatus.Pending,
+            fee = fee,
         )
     }
 }

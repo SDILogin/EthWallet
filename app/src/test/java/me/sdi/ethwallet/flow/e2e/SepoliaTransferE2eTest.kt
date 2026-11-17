@@ -13,6 +13,7 @@ import me.sdi.ethwallet.flow.e2e.pageobjects.ImportWalletPage
 import me.sdi.ethwallet.flow.e2e.pageobjects.OnboardingPage
 import me.sdi.ethwallet.flow.e2e.pageobjects.SendPage
 import me.sdi.ethwallet.flow.e2e.pageobjects.SetPinCodePage
+import me.sdi.ethwallet.flow.e2e.pageobjects.TransactionResultPage
 import me.sdi.ethwallet.flow.e2e.pageobjects.WalletDashboardPage
 import me.sdi.ethwallet.flow.e2e.pageobjects.WalletsListPage
 import org.junit.After
@@ -43,6 +44,7 @@ class SepoliaTransferE2eTest {
     private val importWalletPage = ImportWalletPage(composeTestRule)
     private val walletDashboardPage = WalletDashboardPage(composeTestRule)
     private val sendPage = SendPage(composeTestRule)
+    private val transactionResultPage = TransactionResultPage(composeTestRule)
 
     private lateinit var activityController: ActivityController<WalletFlowTestActivity>
     private lateinit var seeds: SepoliaE2eSeeds
@@ -122,8 +124,10 @@ class SepoliaTransferE2eTest {
         sendPage.inputEthAmount(TRANSFER_AMOUNT.toPlainString())
         sendPage.assertDefaultFeesSelectedAndReady()
         sendPage.clickSendButton()
-        sendPage.awaitTransferFormCleared(timeoutMillis = TRANSFER_TIMEOUT_MILLIS)
-        sendPage.clickBackButton()
+
+        transactionResultPage.assertShown()
+        transactionResultPage.awaitConfirmed(timeoutMillis = TRANSFER_TIMEOUT_MILLIS)
+        transactionResultPage.clickBackButton()
 
         walletDashboardPage.assertShown(SENDER_LABEL)
         walletDashboardPage.clickBackButton()
