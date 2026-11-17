@@ -41,9 +41,9 @@ import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import kotlin.math.roundToInt
 
-private const val BUTTONS_PADDING_DP = 16
+private const val BUTTONS_PADDING_DP = 24
 private const val BUTTONS_SPACING_DP = 8
-private const val BUTTONS_MAX_WIDTH_DP = 420
+private const val BUTTONS_AREA_MAX_WIDTH_DP = 452
 private const val BUTTONS_SLIDE_MS = 300
 private const val BLUR_RADIUS_DP = 12
 private const val TINT_ALPHA = 0.3f
@@ -100,12 +100,12 @@ fun EthButtonsLayout(
                     .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     .hazeEffect(state = hazeState, style = hazeStyle)
                     .navigationBarsPadding()
+                    .wrapContentWidth()
+                    .widthIn(max = BUTTONS_AREA_MAX_WIDTH_DP.dp)
                     .padding(
                         horizontal = BUTTONS_PADDING_DP.dp,
                         vertical = 8.dp,
-                    )
-                    .wrapContentWidth()
-                    .widthIn(max = BUTTONS_MAX_WIDTH_DP.dp),
+                    ),
                 verticalArrangement = Arrangement.spacedBy(BUTTONS_SPACING_DP.dp),
                 content = buttons,
             )
