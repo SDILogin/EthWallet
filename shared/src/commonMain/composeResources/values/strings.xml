@@ -29,6 +29,8 @@
     <!-- Wallets List Screen -->
     <string name="wallets_list_title">My Wallets</string>
     <string name="wallets_list_no_wallets">No wallets found</string>
+    <string name="wallets_list_empty_title">Your wallets will be displayed here</string>
+    <string name="wallets_list_empty_message">You can create a new wallet or import an existing one</string>
     <string name="wallets_list_add_wallet">Add wallet</string>
     <string name="wallets_list_selected_wallet_icon">Selected wallet</string>
     <string name="wallets_list_delete_wallet">Delete wallet</string>

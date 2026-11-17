@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -51,7 +53,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import io.github.alexzhirkevich.compottie.Compottie
+import io.github.alexzhirkevich.compottie.LottieCompositionSpec
+import io.github.alexzhirkevich.compottie.rememberLottieComposition
+import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.resources.Res
@@ -72,6 +80,8 @@ import me.sdi.ethwallet.resources.wallet_rename
 import me.sdi.ethwallet.resources.wallet_rename_title
 import me.sdi.ethwallet.resources.wallet_settings
 import me.sdi.ethwallet.resources.wallets_list_add_wallet
+import me.sdi.ethwallet.resources.wallets_list_empty_message
+import me.sdi.ethwallet.resources.wallets_list_empty_title
 import me.sdi.ethwallet.resources.wallets_list_selected_wallet_icon
 import me.sdi.ethwallet.resources.wallets_list_title
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
@@ -88,6 +98,8 @@ import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+
+private const val EMPTY_WALLETS_ANIMATION_SIZE_DP = 160
 
 @Composable
 fun WalletsListScreen(
@@ -194,15 +206,17 @@ private fun WalletsListScreenContent(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
+                        EmptyWalletsAnimation()
+
                         EthText(
-                            text = "Your wallets will be displayed here",
+                            text = stringResource(Res.string.wallets_list_empty_title),
                             style = EthTextStyle.Title,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(16.dp),
                         )
 
                         EthText(
-                            text = "You can create a new wallet or import an existing one",
+                            text = stringResource(Res.string.wallets_list_empty_message),
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(16.dp),
                         )
@@ -245,6 +259,23 @@ private fun WalletsListScreenContent(
             onEvent = onEvent,
         )
     }
+}
+
+@Composable
+private fun EmptyWalletsAnimation() {
+    val composition by rememberLottieComposition {
+        LottieCompositionSpec.JsonString(Res.readBytes("files/empty_wallets.json").decodeToString())
+    }
+    Image(
+        painter = rememberLottiePainter(
+            composition = composition,
+            iterations = Compottie.IterateForever,
+            enableExpressions = false,
+        ),
+        contentDescription = null,
+        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+        modifier = Modifier.size(EMPTY_WALLETS_ANIMATION_SIZE_DP.dp),
+    )
 }
 
 @Composable
@@ -451,27 +482,36 @@ private fun EthAddress.abbreviated(): String {
     return "${address.take(6)}...${address.takeLast(4)}"
 }
 
+private class WalletsListUiStateProvider : PreviewParameterProvider<WalletsListUiState> {
+    override val values = sequenceOf(
+        WalletsListUiState(
+            wallets = listOf(
+                WalletListItemUiState(
+                    wallet = EthWallet(
+                        "Business Wallet",
+                        EthAddress("0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef"),
+                    ),
+                    totalBalanceUsd = "$12,345.67",
+                ),
+                WalletListItemUiState(
+                    wallet = EthWallet("Savings Wallet", EthAddress("0x9876543210987654321098765432109876543210")),
+                ),
+            ),
+            isLoading = false,
+        ),
+        WalletsListUiState(),
+    )
+}
+
 @FormFactorPreviews
 @Composable
-private fun WalletsListScreenPreview() {
+private fun WalletsListScreenPreview(
+    @PreviewParameter(WalletsListUiStateProvider::class) uiState: WalletsListUiState,
+) {
     MaterialTheme {
         WalletsListScreenContent(
             modifier = Modifier.fillMaxSize(),
-            uiState = WalletsListUiState(
-                wallets = listOf(
-                    WalletListItemUiState(
-                        wallet = EthWallet(
-                            "Business Wallet",
-                            EthAddress("0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef"),
-                        ),
-                        totalBalanceUsd = "$12,345.67",
-                    ),
-                    WalletListItemUiState(
-                        wallet = EthWallet("Savings Wallet", EthAddress("0x9876543210987654321098765432109876543210")),
-                    ),
-                ),
-                isLoading = false,
-            ),
+            uiState = uiState,
             selectedWalletAddress = null,
             buttonsVisible = true,
             onWalletSelected = {},

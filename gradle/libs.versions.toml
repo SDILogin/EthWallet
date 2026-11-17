@@ -40,6 +40,7 @@ composeAdaptive = "1.3.0-beta02"
 biometric = "1.1.0"
 fragment = "1.8.5"
 haze = "1.7.2"
+compottie = "2.2.4"
 
 [libraries]
 androidx-compose-ui-test = { module = "androidx.compose.ui:ui-test" }
@@ -106,6 +107,9 @@ androidx-datastore-preferences-core = { group = "androidx.datastore", name = "da
 
 # Haze
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+
+# Lottie
+compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }
 
 # Koin
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
