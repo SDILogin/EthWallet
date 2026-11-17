@@ -204,6 +204,8 @@
     <string name="history_loading">Loading history</string>
     <string name="history_empty_title">No activity yet</string>
     <string name="history_empty_message">Transfers for this wallet will appear here.</string>
+    <string name="history_load_error_title">Couldn't load history</string>
+    <string name="history_load_error_message">Check your connection and try again.</string>
     <string name="history_pending">Pending</string>
     <string name="history_today">Today</string>
     <string name="history_yesterday">Yesterday</string>
