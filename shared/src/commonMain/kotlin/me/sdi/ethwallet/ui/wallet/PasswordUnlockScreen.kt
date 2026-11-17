@@ -6,10 +6,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -21,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -29,7 +27,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.sdi.ethwallet.resources.Res
-import me.sdi.ethwallet.resources.ic_eth_logo
 import me.sdi.ethwallet.resources.logout_dialog_confirm
 import me.sdi.ethwallet.resources.logout_dialog_dismiss
 import me.sdi.ethwallet.resources.logout_dialog_title
@@ -41,6 +38,7 @@ import me.sdi.ethwallet.resources.password_reset_failed
 import me.sdi.ethwallet.resources.password_unlock
 import me.sdi.ethwallet.resources.password_unlock_failed
 import me.sdi.ethwallet.resources.password_wrong
+import me.sdi.ethwallet.ui.components.AnimatedEthLogo
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonStyle
@@ -48,11 +46,11 @@ import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 private const val ERROR_LINES = 3
+private const val LOGO_SIZE_DP = 156
 
 @Composable
 fun PasswordUnlockScreen(
@@ -144,12 +142,7 @@ private fun PasswordUnlockScreenContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
             ) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_eth_logo),
-                    tint = Color.Unspecified,
-                    contentDescription = null,
-                    modifier = Modifier.width(72.dp),
-                )
+                AnimatedEthLogo(modifier = Modifier.size(LOGO_SIZE_DP.dp))
                 EthText(
                     text = stringResource(Res.string.password_enter_title),
                     style = EthTextStyle.Headline,

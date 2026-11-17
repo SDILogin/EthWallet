@@ -1,6 +1,5 @@
 package me.sdi.ethwallet.ui.wallet
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,10 +21,10 @@ import androidx.compose.ui.unit.dp
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
 import me.sdi.ethwallet.resources.back
-import me.sdi.ethwallet.resources.ic_eth_logo
 import me.sdi.ethwallet.resources.onboarding_create_wallet
 import me.sdi.ethwallet.resources.onboarding_import_wallet
 import me.sdi.ethwallet.resources.wallets_list_add_wallet
+import me.sdi.ethwallet.ui.components.AnimatedEthLogo
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.components.rememberScreenTransition
 import me.sdi.ethwallet.ui.designsystem.EthButton
@@ -37,7 +36,7 @@ import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
-private const val LOGO_MAX_SIZE_DP = 120
+private const val LOGO_MAX_SIZE_DP = 160
 private const val LOGO_START_SCALE = 0.6f
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,9 +96,7 @@ fun AddWalletScreen(
                     .padding(16.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Image(
-                    painter = painterResource(Res.drawable.ic_eth_logo),
-                    contentDescription = null,
+                AnimatedEthLogo(
                     modifier = Modifier
                         .sizeIn(maxWidth = LOGO_MAX_SIZE_DP.dp, maxHeight = LOGO_MAX_SIZE_DP.dp)
                         .fillMaxSize()

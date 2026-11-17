@@ -7,15 +7,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -25,19 +23,20 @@ import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.resources.Res
-import me.sdi.ethwallet.resources.ic_eth_logo
 import me.sdi.ethwallet.resources.onboarding_title
 import me.sdi.ethwallet.resources.password_create_button
 import me.sdi.ethwallet.resources.pin_create_title
+import me.sdi.ethwallet.ui.components.AnimatedEthLogo
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
 import me.sdi.ethwallet.ui.designsystem.EthButton
 import me.sdi.ethwallet.ui.designsystem.EthButtonsLayout
 import me.sdi.ethwallet.ui.designsystem.EthText
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.getKoin
+
+private const val LOGO_SIZE_DP = 200
 
 @Composable
 fun OnboardingScreen(
@@ -96,12 +95,7 @@ private fun OnboardingScreenContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_eth_logo),
-                    tint = Color.Unspecified,
-                    contentDescription = null,
-                    modifier = Modifier.width(100.dp),
-                )
+                AnimatedEthLogo(modifier = Modifier.size(LOGO_SIZE_DP.dp))
 
                 Spacer(Modifier.height(16.dp))
 
