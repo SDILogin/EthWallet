@@ -47,7 +47,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
-import io.github.alexzhirkevich.compottie.Compottie
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
@@ -71,6 +70,8 @@ import me.sdi.ethwallet.resources.history_estimated_fee_short
 import me.sdi.ethwallet.resources.history_failed
 import me.sdi.ethwallet.resources.history_fee_short
 import me.sdi.ethwallet.resources.history_from
+import me.sdi.ethwallet.resources.history_load_error_message
+import me.sdi.ethwallet.resources.history_load_error_title
 import me.sdi.ethwallet.resources.history_load_more_error
 import me.sdi.ethwallet.resources.history_loading
 import me.sdi.ethwallet.resources.history_mainnet
@@ -80,7 +81,6 @@ import me.sdi.ethwallet.resources.history_pending
 import me.sdi.ethwallet.resources.history_receive_failed
 import me.sdi.ethwallet.resources.history_received
 import me.sdi.ethwallet.resources.history_receiving
-import me.sdi.ethwallet.resources.history_refresh_error
 import me.sdi.ethwallet.resources.history_self
 import me.sdi.ethwallet.resources.history_send_failed
 import me.sdi.ethwallet.resources.history_sending
@@ -108,6 +108,7 @@ import java.util.TimeZone
 import kotlin.time.Instant
 
 private const val EMPTY_HISTORY_ANIMATION_SIZE_DP = 160
+private const val HISTORY_ERROR_ANIMATION_SIZE_DP = 160
 
 @Composable
 fun HistoryScreen(
@@ -134,11 +135,25 @@ fun HistoryScreen(
             when (viewState) {
                 is HistoryViewState.Error -> {
                     Column(
-                        modifier = contentModifier,
+                        modifier = contentModifier.padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        EthText(stringResource(Res.string.history_refresh_error))
+                        HistoryErrorAnimation()
+                        Spacer(Modifier.height(16.dp))
+                        EthText(
+                            stringResource(Res.string.history_load_error_title),
+                            style = EthTextStyle.Title,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        EthText(
+                            stringResource(Res.string.history_load_error_message),
+                            style = EthTextStyle.Body,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(Modifier.height(24.dp))
                         EthButton(text = stringResource(Res.string.wallet_retry), onClick = onRetry)
                     }
                 }
@@ -366,12 +381,27 @@ private fun EmptyHistoryAnimation() {
     Image(
         painter = rememberLottiePainter(
             composition = composition,
-            iterations = Compottie.IterateForever,
             enableExpressions = false,
         ),
         contentDescription = null,
         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
         modifier = Modifier.size(EMPTY_HISTORY_ANIMATION_SIZE_DP.dp),
+    )
+}
+
+@Composable
+private fun HistoryErrorAnimation() {
+    val composition by rememberLottieComposition {
+        LottieCompositionSpec.JsonString(Res.readBytes("files/history_error.json").decodeToString())
+    }
+    Image(
+        painter = rememberLottiePainter(
+            composition = composition,
+            enableExpressions = false,
+        ),
+        contentDescription = null,
+        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+        modifier = Modifier.size(HISTORY_ERROR_ANIMATION_SIZE_DP.dp),
     )
 }
 
@@ -514,62 +544,70 @@ private fun HistoryItemIcon(row: HistoryRow) {
 
 private val previewWallet = EthAddress("0x1111111111111111111111111111111111111111")
 
-internal class HistoryPreviewProvider : PreviewParameterProvider<List<Transfer>?> {
-    override val values: Sequence<List<Transfer>?> = sequenceOf(
-        null,
-        emptyList(),
-        listOf(
-            Transfer.Eth(
-                "0x${"a".repeat(64)}",
-                Instant.parse("2026-09-07T08:00:00Z").toEpochMilliseconds(),
-                previewWallet,
-                EthAddress("0x2222222222222222222222222222222222222222"),
-                BigInteger("15000000000000000").toWei(),
-                TransactionStatus.Pending,
-            ),
-            Transfer.Erc20(
-                "0x${"b".repeat(64)}",
-                Instant.parse("2026-09-07T07:32:00Z").toEpochMilliseconds(),
-                EthAddress("0x2222222222222222222222222222222222222222"),
-                previewWallet,
-                0,
-                EthAddress("0x3333333333333333333333333333333333333333"),
-                "USDC",
-                6,
-                "250000000",
-            ),
-            Transfer.Eth(
-                "0x${"c".repeat(64)}",
-                Instant.parse("2026-09-07T06:05:00Z").toEpochMilliseconds(),
-                previewWallet,
-                EthAddress("0x2222222222222222222222222222222222222222"),
-                BigInteger("42000000000000000").toWei(),
-                TransactionStatus.Confirmed,
-            ),
-            Transfer.Eth(
-                "0x${"d".repeat(64)}",
-                Instant.parse("2026-09-07T05:15:00Z").toEpochMilliseconds(),
-                previewWallet,
-                previewWallet,
-                BigInteger("10000000000000000").toWei(),
-                TransactionStatus.Confirmed,
-            ),
-            Transfer.Eth(
-                "0x${"e".repeat(64)}",
-                Instant.parse("2026-09-06T11:42:00Z").toEpochMilliseconds(),
-                previewWallet,
-                EthAddress("0x2222222222222222222222222222222222222222"),
-                BigInteger("100000000000000000").toWei(),
-                TransactionStatus.Failed,
+internal class HistoryPreviewProvider : PreviewParameterProvider<HistoryViewState> {
+    override val values: Sequence<HistoryViewState> = sequenceOf(
+        HistoryViewState.Loading,
+        HistoryViewState.Error,
+        previewContent(emptyList()),
+        previewContent(
+            listOf(
+                Transfer.Eth(
+                    "0x${"a".repeat(64)}",
+                    Instant.parse("2026-09-07T08:00:00Z").toEpochMilliseconds(),
+                    previewWallet,
+                    EthAddress("0x2222222222222222222222222222222222222222"),
+                    BigInteger("15000000000000000").toWei(),
+                    TransactionStatus.Pending,
+                ),
+                Transfer.Erc20(
+                    "0x${"b".repeat(64)}",
+                    Instant.parse("2026-09-07T07:32:00Z").toEpochMilliseconds(),
+                    EthAddress("0x2222222222222222222222222222222222222222"),
+                    previewWallet,
+                    0,
+                    EthAddress("0x3333333333333333333333333333333333333333"),
+                    "USDC",
+                    6,
+                    "250000000",
+                ),
+                Transfer.Eth(
+                    "0x${"c".repeat(64)}",
+                    Instant.parse("2026-09-07T06:05:00Z").toEpochMilliseconds(),
+                    previewWallet,
+                    EthAddress("0x2222222222222222222222222222222222222222"),
+                    BigInteger("42000000000000000").toWei(),
+                    TransactionStatus.Confirmed,
+                ),
+                Transfer.Eth(
+                    "0x${"d".repeat(64)}",
+                    Instant.parse("2026-09-07T05:15:00Z").toEpochMilliseconds(),
+                    previewWallet,
+                    previewWallet,
+                    BigInteger("10000000000000000").toWei(),
+                    TransactionStatus.Confirmed,
+                ),
+                Transfer.Eth(
+                    "0x${"e".repeat(64)}",
+                    Instant.parse("2026-09-06T11:42:00Z").toEpochMilliseconds(),
+                    previewWallet,
+                    EthAddress("0x2222222222222222222222222222222222222222"),
+                    BigInteger("100000000000000000").toWei(),
+                    TransactionStatus.Failed,
+                ),
             ),
         ),
     )
 }
 
+private fun previewContent(transfers: List<Transfer>): HistoryViewState = HistoryViewState.Content(
+    items = transfers.mapNotNull { transfer -> transfer.toHistoryRow(previewWallet) },
+    refreshing = false,
+)
+
 @Composable
 @FormFactorPreviews
 private fun HistoryScreenPreview(
-    @PreviewParameter(HistoryPreviewProvider::class) items: List<Transfer>?,
+    @PreviewParameter(HistoryPreviewProvider::class) viewState: HistoryViewState,
 ) {
     EthWalletTheme {
         HistoryScreen(
@@ -577,14 +615,7 @@ private fun HistoryScreenPreview(
             onHistoryItemClick = {},
             walletLabel = "My Wallet",
             chainId = 11155111L,
-            viewState = items?.let {
-                HistoryViewState.Content(
-                    it.mapNotNull { item ->
-                        item.toHistoryRow(previewWallet)
-                    },
-                    false,
-                )
-            } ?: HistoryViewState.Loading,
+            viewState = viewState,
             onRetry = {},
             onRefresh = {},
             onLoadMore = {},
