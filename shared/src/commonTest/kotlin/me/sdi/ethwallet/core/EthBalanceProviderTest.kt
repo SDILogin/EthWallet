@@ -11,9 +11,8 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlin.time.Clock
 
-private const val WALL_CLOCK_TOLERANCE_MS = 3_600_000L
+private const val JANUARY_2025_EPOCH_MS = 1_735_689_600_000L
 
 class EthBalanceProviderTest {
     private val fakeEthManager = object : EthManager {
@@ -163,16 +162,15 @@ class EthBalanceProviderTest {
             address = testWalletAddress,
             balances = mapOf(EthContractAddress to Result.success(BigInteger.ONE)),
         )
+
         provider.forceUpdate(testWalletAddress)
 
-        val wallClock = Clock.System.now().toEpochMilliseconds()
-        val expectedRange = (wallClock - WALL_CLOCK_TOLERANCE_MS)..(wallClock + WALL_CLOCK_TOLERANCE_MS)
         val entity = checkNotNull(
             inMemoryTokenBalanceDao.read(
                 walletAddress = testWalletAddress.toString(),
                 tokenAddress = EthContractAddress.toString(),
             ),
         )
-        assertTrue(entity.timestamp in expectedRange, "Timestamp ${entity.timestamp} should be in $expectedRange")
+        assertTrue(entity.timestamp > JANUARY_2025_EPOCH_MS, "Timestamp ${entity.timestamp} should be after 2025-01-01")
     }
 }

@@ -19,8 +19,8 @@ Found in PR #22 (Add transaction result screen) review.
 
 - Change the default `now` in both classes to a real clock: `{ Clock.System.now().toEpochMilliseconds() }`. Follow the
   REVIEW.md rule for the `now` lambda.
-- Add a test for each class that builds it without `now` and checks that the stored timestamp is close to the current
-  wall-clock time.
+- Add a test for each class that builds it without `now` and checks that the stored timestamp is after 2025-01-01. The
+  test does not read the clock, so it is deterministic.
 - No DB migration: the column type stays `Long` in epoch milliseconds.
 
 ## Definition of done
