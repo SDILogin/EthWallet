@@ -22,6 +22,8 @@ import java.net.SocketTimeoutException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+import kotlin.time.Clock
 
 class FiatRateProviderCoinbaseTest {
     private val dao = InMemoryFiatRateDao()
@@ -58,6 +60,37 @@ class FiatRateProviderCoinbaseTest {
         val rows = dao.readAll(expected.keys.map { it.toString() })
         assertEquals(expected.size, rows.size)
         rows.forEach { assertEquals(currentTime, it.lastUpdatedTimestamp) }
+    }
+
+    @Test
+    fun forceUpdateWithDefaultClockStoresWallClockTimestamp() = runTest {
+        val provider = FiatRateProviderCoinbase(
+            httpClient = HttpClient(
+                MockEngine {
+                    respond(
+                        """{"data":{"amount":"1.01","currency":"USD"}}""",
+                        headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                    )
+                },
+            ) {
+                install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+            },
+            fiatRateDao = dao,
+        )
+        val addresses = allKnownTokens.map { it.ethAddress.toString() } + EthContractAddress.toString()
+        val before = Clock.System.now().toEpochMilliseconds()
+
+        provider.forceUpdate()
+
+        val after = Clock.System.now().toEpochMilliseconds()
+        val rows = dao.readAll(addresses)
+        assertEquals(addresses.size, rows.size, "Should store a rate for every supported address")
+        rows.forEach {
+            assertTrue(
+                it.lastUpdatedTimestamp in before..after,
+                "Timestamp ${it.lastUpdatedTimestamp} should be in $before..$after",
+            )
+        }
     }
 
     @Test

@@ -15,13 +15,14 @@ import me.sdi.ethwallet.database.dao.FiatRateDao
 import me.sdi.ethwallet.database.entity.FiatRateEntity
 import me.sdi.ethwallet.ui.allKnownTokens
 import java.math.BigDecimal
+import kotlin.time.Clock
 
 private const val TAG = "FiatRateProviderCoinbase"
 
 class FiatRateProviderCoinbase(
     private val httpClient: HttpClient,
     private val fiatRateDao: FiatRateDao,
-    private val now: () -> Long = { kotlin.time.TimeSource.Monotonic.markNow().elapsedNow().inWholeMilliseconds },
+    private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) : FiatRateProvider {
     private val addressesBySymbol = allKnownTokens.groupBy({ it.symbol }, { it.ethAddress }) +
         ("ETH" to listOf(EthContractAddress))

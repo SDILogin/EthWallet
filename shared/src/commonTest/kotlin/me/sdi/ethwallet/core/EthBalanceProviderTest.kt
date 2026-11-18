@@ -10,6 +10,8 @@ import java.math.BigInteger
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.time.Clock
 
 class EthBalanceProviderTest {
     private val fakeEthManager = object : EthManager {
@@ -147,5 +149,29 @@ class EthBalanceProviderTest {
             result[EthAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7")],
             "Should default to zero token balance",
         )
+    }
+
+    @Test
+    fun forceUpdate_with_default_clock_stores_wall_clock_timestamp() = runTest {
+        val provider = EthBalanceProvider(
+            ethManager = fakeEthManager,
+            tokenBalanceDao = inMemoryTokenBalanceDao,
+        )
+        fakeEthManager.setBalance(
+            address = testWalletAddress,
+            balances = mapOf(EthContractAddress to Result.success(BigInteger.ONE)),
+        )
+        val before = Clock.System.now().toEpochMilliseconds()
+
+        provider.forceUpdate(testWalletAddress)
+
+        val after = Clock.System.now().toEpochMilliseconds()
+        val entity = checkNotNull(
+            inMemoryTokenBalanceDao.read(
+                walletAddress = testWalletAddress.toString(),
+                tokenAddress = EthContractAddress.toString(),
+            ),
+        )
+        assertTrue(entity.timestamp in before..after, "Timestamp ${entity.timestamp} should be in $before..$after")
     }
 }
