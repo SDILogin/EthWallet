@@ -40,6 +40,8 @@ profiler.
 
 - `ethwallet-kotlin`: `createWallet`, `Mnemonic.parse`, `derivePrivateKey`, `deriveAddress` and `signTransaction`
   call Rust inside `withContext(Dispatchers.Default)`.
+  The first call on Desktop also extracts the native library on `Dispatchers.Default`. See
+  `docs/tasks/backlog/disk-access-on-io/spec.md`.
 - Desktop crypto: Secure Enclave (IO), Argon2 (Default), zxcvbn (Default), `KekCipher` (Default).
 - Android crypto: PBKDF2 in `PinCodeStorageDataStore` (Default), `KeyStoreEncryptor`,
   `MasterKekStorageAndroidKeyStore`, and the load and write paths of `KeyStorePinAttemptsGuard`.
@@ -48,6 +50,9 @@ profiler.
 - DataStore: only `data.first()` and `edit`.
 - Lottie: compottie reads and parses the JSON files on its IO dispatcher.
 - No `runBlocking`, `Thread.sleep` or `Future.get` in production code.
+- Small work on Main, no action: `MainActivity` builds Room but does not open the DB.
+  `ImportWalletViewModel.isValidMnemonic` does one regex split for each keystroke.
+  `JsonRpcTransportKtor.execute` reads small RPC responses in the caller context.
 
 ## Manual steps
 

@@ -16,7 +16,8 @@
   access function (io operation) must set `Dispatchers.IO` right where disk access happens. Suspendable function should
   not rely on client code -- client code is not responsible for dispatcher selection by default.
 - All disk access must run on `Dispatchers.IO`. This includes files, directories and native library
-  extraction. Do not run disk access on the main thread or on `Dispatchers.Default`.
+  extraction. Do not run disk access on the main thread or on `Dispatchers.Default`. A library that uses its own IO
+  executor (Room on Android, DataStore) follows this rule.
 - Error handling must be on the view model level. Interactor must rethrow exception instead of trying to wrap exception.
   Interactor and repositories must be flat. ViewModel must assume that all suspendable functions of interactor and
   repository can potentially throw exceptions. Exception -- public function that return Flow. Flow creation must be

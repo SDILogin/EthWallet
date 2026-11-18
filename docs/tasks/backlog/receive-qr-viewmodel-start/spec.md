@@ -6,11 +6,13 @@
 
 `shared/src/commonMain/kotlin/me/sdi/ethwallet/ui/receive/ReceiveQrViewModel.kt:70`: `init` launches four flows with
 `launchIn(viewModelScope)`. This breaks the `REVIEW.md` rule "ViewModel `init` must be fast and error-safe. Actual
-initialization must be triggered from inside `viewState.onStart {}`".
+initialization (for example initial data loading) must be triggered from inside `viewState.onStart {}`".
 
 Estimated severity: low. Platforms: Android and Desktop.
 
-Found in PR #27 (#10 Find long-running main thread operations; set up profiler and StrictMode). Static review only. Nothing was measured.
+Found in GitHub PR #27 for #10 Find long-running main thread operations; set up profiler and StrictMode.
+Static review only. Nothing was measured. Severity: high is more than 16 ms on a frame. Medium grows with data size
+or runs often. Low is a few ms or less, or one time at startup.
 
 ## Scope
 

@@ -15,7 +15,9 @@ dispatcher is set above the blocking call:
   `Dispatchers.Default`. The call already switches dispatcher: `KeyStoreEncryptor` on Android, `KekCipher` on
   Desktop.
 
-Found in PR #27 (#10 Find long-running main thread operations; set up profiler and StrictMode). Static review only. Nothing was measured.
+Found in GitHub PR #27 for #10 Find long-running main thread operations; set up profiler and StrictMode.
+Static review only. Nothing was measured. Severity: high is more than 16 ms on a frame. Medium grows with data size
+or runs often. Low is a few ms or less, or one time at startup.
 
 ## Scope
 

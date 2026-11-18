@@ -16,7 +16,9 @@ These suspend functions make binder calls on the caller thread. ViewModels call 
 
 Estimated severity: low. Platform: Android.
 
-Found in PR #27 (#10 Find long-running main thread operations; set up profiler and StrictMode). Static review only. Nothing was measured.
+Found in GitHub PR #27 for #10 Find long-running main thread operations; set up profiler and StrictMode.
+Static review only. Nothing was measured. Severity: high is more than 16 ms on a frame. Medium grows with data size
+or runs often. Low is a few ms or less, or one time at startup.
 
 ## Scope
 
