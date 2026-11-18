@@ -1,0 +1,80 @@
+use bip39::Language;
+use std::sync::LazyLock;
+
+use secp256k1::{All, PublicKey, Secp256k1, SecretKey};
+use sha2::{Digest as _, Sha256};
+use sha3::{Digest as _, Keccak256};
+
+pub const STATUS_OK: i32 = 0;
+pub const STATUS_INVALID_MNEMONIC: i32 = 1;
+pub const STATUS_INVALID_PRIVATE_KEY: i32 = 2;
+pub const STATUS_INVALID_ARGUMENT: i32 = 4;
+pub const STATUS_INVALID_TRANSACTION: i32 = 7;
+
+pub static SECP256K1: LazyLock<Secp256k1<All>> = LazyLock::new(Secp256k1::new);
+
+pub const SENTINEL: u8 = 0xa5;
+pub const SIGNED_TRANSACTION_CAPACITY_OVERHEAD: usize = 320;
+
+/// Returns true when `input` is an ASCII English BIP-39 mnemonic with a valid checksum.
+/// This check does not use the `bip39` parser. It uses only the `bip39` word list.
+pub fn is_valid_english_mnemonic(input: &[u8]) -> bool {
+    let Ok(text) = std::str::from_utf8(input) else {
+        return false;
+    };
+    if !text.is_ascii() {
+        return false;
+    }
+    let list = Language::English.word_list();
+    let indices: Option<Vec<u16>> = text
+        .split_whitespace()
+        .map(|word| {
+            list.iter()
+                .position(|candidate| *candidate == word)
+                .map(|index| index as u16)
+        })
+        .collect();
+    let Some(indices) = indices else {
+        return false;
+    };
+    if ![12, 15, 18, 21, 24].contains(&indices.len()) {
+        return false;
+    }
+    let total_bits = indices.len() * 11;
+    let checksum_bits = total_bits / 33;
+    let entropy_bits = total_bits - checksum_bits;
+    let mut bits = Vec::with_capacity(total_bits);
+    for index in indices {
+        for shift in (0..11).rev() {
+            bits.push((index >> shift) & 1 == 1);
+        }
+    }
+    let entropy: Vec<u8> = bits[..entropy_bits]
+        .chunks(8)
+        .map(|byte| {
+            byte.iter()
+                .fold(0_u8, |value, bit| (value << 1) | u8::from(*bit))
+        })
+        .collect();
+    let hash = Sha256::digest(&entropy);
+    (0..checksum_bits)
+        .all(|bit| ((hash[bit / 8] >> (7 - bit % 8)) & 1 == 1) == bits[entropy_bits + bit])
+}
+
+/// Returns the Ethereum address of `secret_key`.
+pub fn ethereum_address(secret_key: &SecretKey) -> [u8; 20] {
+    let public_key = PublicKey::from_secret_key(&SECP256K1, secret_key).serialize_uncompressed();
+    let hash = Keccak256::digest(&public_key[1..]);
+    hash[12..]
+        .try_into()
+        .expect("Keccak-256 output has 32 bytes")
+}
+
+/// Returns `value` without leading zero bytes.
+pub fn minimal_quantity(value: &[u8]) -> &[u8] {
+    let first_nonzero = value
+        .iter()
+        .position(|byte| *byte != 0)
+        .unwrap_or(value.len());
+    &value[first_nonzero..]
+}

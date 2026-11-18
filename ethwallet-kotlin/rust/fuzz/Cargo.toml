@@ -1,0 +1,49 @@
+[package]
+name = "ethwallet_crypto_fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+members = ["."]
+
+[dependencies]
+alloy-rlp = "0.3.12"
+arbitrary = { version = "1.4.1", features = ["derive"] }
+bip39 = { version = "2.2.2", default-features = false, features = ["std", "zeroize"] }
+ethwallet_crypto = { path = ".." }
+libfuzzer-sys = "0.4.10"
+secp256k1 = { version = "0.29.1", default-features = false, features = ["recovery", "std"] }
+sha2 = "0.10.9"
+sha3 = { version = "0.12.0", default-features = false }
+
+[[bin]]
+name = "validate_mnemonic"
+path = "fuzz_targets/validate_mnemonic.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "derive_private_key"
+path = "fuzz_targets/derive_private_key.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "derive_address"
+path = "fuzz_targets/derive_address.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sign_eip1559_transaction"
+path = "fuzz_targets/sign_eip1559_transaction.rs"
+test = false
+doc = false
+bench = false
