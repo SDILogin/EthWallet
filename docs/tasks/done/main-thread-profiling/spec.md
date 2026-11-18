@@ -15,8 +15,11 @@ Profile the app, enable StrictMode for development, and identify long-running op
 - Record each finding as a backlog task spec (see "Follow-up tasks").
 - Add the rule "all disk access runs on `Dispatchers.IO`" to `REVIEW.md`.
 - Add the rule "do not write code that violates StrictMode" to `CLAUDE.md`.
-- Fix library StrictMode violations. On Android, OkHttp uses `StatsTaggedSocketFactory`, which tags each socket
-  when it connects. Without it, the VM policy reports each OkHttp socket as untagged.
+- Fix library StrictMode violations. The Android Ktor OkHttp engine uses the app's `StatsTaggedSocketFactory`.
+  Without it, the VM policy reports each OkHttp socket as untagged. Android tags a socket when it creates the socket
+  file descriptor. OkHttp calls `setSoTimeout` before `connect`, and that call creates the file descriptor. So the
+  factory sets the thread tag and creates the file descriptor in `createSocket()`.
+- Other library violations (for example non-SDK API use) need a device run to find. They are not known yet.
 
 The StrictMode thread policy finds disk and network access. It does not find CPU work. CPU findings need the
 profiler.
