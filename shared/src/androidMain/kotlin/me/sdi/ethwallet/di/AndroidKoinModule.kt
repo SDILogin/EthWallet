@@ -7,6 +7,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import kotlinx.coroutines.Dispatchers
 import me.sdi.ethwallet.core.ChainConfig
+import me.sdi.ethwallet.core.network.StatsTaggedSocketFactory
 import me.sdi.ethwallet.core.security.AndroidBiometricUnlock
 import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.DataCleaner
@@ -62,7 +63,9 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
 
     single { chainConfig }
 
-    single<HttpClient> { createHttpClient(OkHttp.create()) }
+    single<HttpClient> {
+        createHttpClient(OkHttp.create { config { socketFactory(StatsTaggedSocketFactory()) } })
+    }
 
     single { AppLockMethod.Pin }
 

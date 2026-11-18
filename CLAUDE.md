@@ -34,7 +34,6 @@ Follow these rules when writing code. Check every diff against them during revie
 ## StrictMode
 
 Android debug builds enable StrictMode. It is forbidden to write code that violates StrictMode.
-Violations that come only from library internals (for example untagged OkHttp sockets) are not part of this rule.
 
 ## ethwallet-kotlin Rust Interop
 

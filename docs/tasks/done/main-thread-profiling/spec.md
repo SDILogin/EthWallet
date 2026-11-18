@@ -15,6 +15,8 @@ Profile the app, enable StrictMode for development, and identify long-running op
 - Record each finding as a backlog task spec (see "Follow-up tasks").
 - Add the rule "all disk access runs on `Dispatchers.IO`" to `REVIEW.md`.
 - Add the rule "do not write code that violates StrictMode" to `CLAUDE.md`.
+- Fix library StrictMode violations. On Android, OkHttp uses `StatsTaggedSocketFactory`, which tags each socket
+  when it connects. Without it, the VM policy reports each OkHttp socket as untagged.
 
 The StrictMode thread policy finds disk and network access. It does not find CPU work. CPU findings need the
 profiler.
@@ -64,8 +66,8 @@ These checks need a device or a Mac. They were not done.
 2. `adb logcat -c && adb logcat -s StrictMode:D`
 3. Do these flows: onboarding and PIN setup, PIN unlock, biometric unlock, wallets list, Receive with an amount,
    History refresh and load more, Send, Settings.
-4. Record each `StrictMode policy violation` with its stack trace. The VM policy can also log untagged socket and
-   non-SDK API use from libraries.
+4. Record each `StrictMode policy violation` with its stack trace. Library violations must be fixed too. An
+   `UntaggedSocketViolation` means that `StatsTaggedSocketFactory` does not work.
 
 ### CPU profile on Android
 
