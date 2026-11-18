@@ -31,6 +31,10 @@ Follow these rules when writing code. Check every diff against them during revie
 
 @REVIEW.md
 
+## StrictMode
+
+Android debug builds enable StrictMode. It is forbidden to write code that violates StrictMode.
+
 ## ethwallet-kotlin Rust Interop
 
 - `:ethwallet-kotlin` is the Kotlin Multiplatform Ethereum crypto library backed by Rust.
