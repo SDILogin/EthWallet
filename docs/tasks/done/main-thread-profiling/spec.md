@@ -26,7 +26,7 @@ profiler.
 
 ## Out of scope
 
-- Fixes for the findings.
+- Fixes for the main thread findings.
 - A Desktop StrictMode equivalent, macrobenchmark or baseline profile modules, iOS.
 
 ## Follow-up tasks
@@ -70,7 +70,7 @@ These checks need a device or a Mac. They were not done.
 3. Do these flows: onboarding and PIN setup, PIN unlock, biometric unlock, wallets list, Receive with an amount,
    History refresh and load more, Send, Settings.
 4. Record each `StrictMode policy violation` with its stack trace. Library violations must be fixed too. An
-   `UntaggedSocketViolation` means that `StatsTaggedSocketFactory` does not work.
+   `UntaggedSocketViolation` with OkHttp in the stack trace means that `StatsTaggedSocketFactory` does not work.
 
 ### CPU profile on Android
 

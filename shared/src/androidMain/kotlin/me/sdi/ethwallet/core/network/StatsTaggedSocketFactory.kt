@@ -12,8 +12,8 @@ private const val HTTP_SOCKET_STATS_TAG = 0xE7
  * Creates sockets with a traffic stats tag. StrictMode reports an untagged socket as a violation.
  *
  * Android tags a socket when it creates the socket file descriptor. A new `Socket` creates the file descriptor on the
- * first call that needs it. [createSocket] calls `setSoTimeout` while the thread tag is set, so the file descriptor
- * gets the tag.
+ * first call that needs it. The no-argument `createSocket()` calls `setSoTimeout` while the thread tag is set, so the
+ * file descriptor gets the tag.
  */
 class StatsTaggedSocketFactory : SocketFactory() {
     override fun createSocket(): Socket {
