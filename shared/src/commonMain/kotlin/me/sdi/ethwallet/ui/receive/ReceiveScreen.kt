@@ -73,6 +73,7 @@ import me.sdi.ethwallet.ui.designsystem.EthTextField
 import me.sdi.ethwallet.ui.designsystem.EthTextStyle
 import me.sdi.ethwallet.ui.supportedKnownTokens
 import me.sdi.ethwallet.ui.theme.EthWalletTheme
+import me.sdi.ethwallet.util.ToastHost
 import me.sdi.ethwallet.util.rememberToastManager
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -353,12 +354,14 @@ private fun ReceiveScreenContentPreview(
     @PreviewParameter(ReceiveQrViewStateProvider::class) viewState: ReceiveQrViewState,
 ) {
     EthWalletTheme {
-        ReceiveScreenContent(
-            modifier = Modifier,
-            viewState = viewState,
-            chainTokens = emptyList(),
-            onBackPressed = {},
-            onEvent = {},
-        )
+        ToastHost {
+            ReceiveScreenContent(
+                modifier = Modifier,
+                viewState = viewState,
+                chainTokens = emptyList(),
+                onBackPressed = {},
+                onEvent = {},
+            )
+        }
     }
 }

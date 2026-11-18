@@ -17,3 +17,8 @@ actual fun rememberToastManager(): ToastManager {
     val context = LocalContext.current
     return remember { ToastManager(context.applicationContext) }
 }
+
+@Composable
+actual fun ToastHost(content: @Composable () -> Unit) {
+    content()
+}

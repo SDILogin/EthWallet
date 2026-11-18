@@ -52,6 +52,7 @@ import me.sdi.ethwallet.ui.wallet.SetPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.VerifyPinCodeScreen
 import me.sdi.ethwallet.ui.wallet.WalletScreen
 import me.sdi.ethwallet.ui.wallet.WalletsListScreen
+import me.sdi.ethwallet.util.ToastHost
 import org.koin.compose.getKoin
 
 private const val WALLET_SCREEN_CONTENT_KEY = "WalletScreen"
@@ -354,22 +355,24 @@ fun EthWalletApp() {
             }
         }
 
-        @OptIn(ExperimentalMaterial3AdaptiveApi::class)
-        NavDisplay(
-            modifier = Modifier.fillMaxSize(),
-            backStack = backStack,
-            entryProvider = entryProvider,
-            entryDecorators = listOf(
-                rememberSaveableStateHolderNavEntryDecorator(),
-                rememberViewModelStoreNavEntryDecorator(),
-            ),
-            sceneStrategies = listOf(
-                rememberListDetailSceneStrategy(
-                    backNavigationBehavior = BackNavigationBehavior.PopLatest,
-                    directive = calculatePaneScaffoldDirective(currentWindowAdaptiveInfoV2())
-                        .copy(horizontalPartitionSpacerSize = 0.dp),
+        ToastHost {
+            @OptIn(ExperimentalMaterial3AdaptiveApi::class)
+            NavDisplay(
+                modifier = Modifier.fillMaxSize(),
+                backStack = backStack,
+                entryProvider = entryProvider,
+                entryDecorators = listOf(
+                    rememberSaveableStateHolderNavEntryDecorator(),
+                    rememberViewModelStoreNavEntryDecorator(),
                 ),
-            ),
-        )
+                sceneStrategies = listOf(
+                    rememberListDetailSceneStrategy(
+                        backNavigationBehavior = BackNavigationBehavior.PopLatest,
+                        directive = calculatePaneScaffoldDirective(currentWindowAdaptiveInfoV2())
+                            .copy(horizontalPartitionSpacerSize = 0.dp),
+                    ),
+                ),
+            )
+        }
     }
 }
