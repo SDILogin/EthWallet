@@ -10,6 +10,9 @@ import java.math.BigInteger
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+private const val JANUARY_2025_EPOCH_MS = 1_735_689_600_000L
 
 class EthBalanceProviderTest {
     private val fakeEthManager = object : EthManager {
@@ -147,5 +150,27 @@ class EthBalanceProviderTest {
             result[EthAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7")],
             "Should default to zero token balance",
         )
+    }
+
+    @Test
+    fun forceUpdate_with_default_clock_stores_wall_clock_timestamp() = runTest {
+        val provider = EthBalanceProvider(
+            ethManager = fakeEthManager,
+            tokenBalanceDao = inMemoryTokenBalanceDao,
+        )
+        fakeEthManager.setBalance(
+            address = testWalletAddress,
+            balances = mapOf(EthContractAddress to Result.success(BigInteger.ONE)),
+        )
+
+        provider.forceUpdate(testWalletAddress)
+
+        val entity = checkNotNull(
+            inMemoryTokenBalanceDao.read(
+                walletAddress = testWalletAddress.toString(),
+                tokenAddress = EthContractAddress.toString(),
+            ),
+        )
+        assertTrue(entity.timestamp > JANUARY_2025_EPOCH_MS, "Timestamp ${entity.timestamp} should be after 2025-01-01")
     }
 }

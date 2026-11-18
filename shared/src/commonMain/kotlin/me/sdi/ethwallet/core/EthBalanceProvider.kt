@@ -7,14 +7,14 @@ import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.entity.TokenBalanceEntity
 import me.sdi.ethwallet.database.entity.createTokenBalanceEntity
 import java.math.BigInteger
-import kotlin.time.TimeSource
+import kotlin.time.Clock
 
 private const val TAG = "EthBalanceProvider"
 
 class EthBalanceProvider(
     private val ethManager: EthManager,
     private val tokenBalanceDao: TokenBalanceDao,
-    private val now: () -> Long = { TimeSource.Monotonic.markNow().elapsedNow().inWholeMilliseconds },
+    private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) : BalanceProvider {
     override suspend fun forceUpdate(address: EthAddress) {
         Logger.debug(TAG) {
