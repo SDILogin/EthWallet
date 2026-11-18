@@ -1,6 +1,7 @@
 package me.sdi.ethwallet
 
 import android.app.Application
+import android.os.StrictMode
 import androidx.lifecycle.ProcessLifecycleOwner
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.di.appModules
@@ -13,6 +14,9 @@ import org.koin.core.context.startKoin
 class EthWalletApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        if (BuildConfig.DEBUG) {
+            enableStrictMode()
+        }
         val chainConfig = ChainConfig(
             rpcUrl = BuildConfig.ETH_RPC_URL,
             chainId = BuildConfig.ETH_CHAIN_ID,
@@ -29,4 +33,19 @@ class EthWalletApplication : Application() {
         registerActivityLifecycleCallbacks(koinApplication.koin.get<CurrentActivityHolder>())
         ProcessLifecycleOwner.get().lifecycle.addObserver(koinApplication.koin.get<AppForegroundTracker>())
     }
+}
+
+private fun enableStrictMode() {
+    StrictMode.setThreadPolicy(
+        StrictMode.ThreadPolicy.Builder()
+            .detectAll()
+            .penaltyLog()
+            .build(),
+    )
+    StrictMode.setVmPolicy(
+        StrictMode.VmPolicy.Builder()
+            .detectAll()
+            .penaltyLog()
+            .build(),
+    )
 }
