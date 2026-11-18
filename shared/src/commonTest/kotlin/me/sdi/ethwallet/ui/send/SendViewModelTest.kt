@@ -46,7 +46,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -101,6 +100,7 @@ class SendViewModelTest {
             walletRepository = walletRepository,
             historyRepository = historyRepository,
             savedStateHandle = savedStateHandle,
+            now = { SEND_TIME_MS },
         ).also { activeViewModels += it }
 
     private fun vmTest(body: suspend TestScope.() -> Unit) = runTest(testDispatcher, timeout = 10.seconds) {
@@ -465,19 +465,16 @@ class SendViewModelTest {
         collectNews()
 
         input1Eth()
-        val startedAt = Clock.System.now().toEpochMilliseconds()
         clickSend()
-        val finishedAt = Clock.System.now().toEpochMilliseconds()
 
         assertNotNull(transferInteractor.lastTransferData, "Transfer should be invoked")
         val transactionHash = collectedNews.filterIsInstance<SendNews.TransferSuccess>().single().transactionHash
         assertEquals(expectedHash, transactionHash, "Should have correct transaction hash")
         val transfer = historyRepository.read(senderAddress).single()
-        assertTrue(transfer.timestamp in startedAt..finishedAt, "Timestamp should be the send time")
         assertEquals(
             Transfer.Eth(
                 hash = expectedHash,
-                timestamp = transfer.timestamp,
+                timestamp = SEND_TIME_MS,
                 from = senderAddress,
                 to = EthAddress(validEthAddress),
                 valueWei = Wei(BigInteger("1000000000000000000")),
@@ -514,7 +511,7 @@ class SendViewModelTest {
         assertEquals(
             Transfer.Erc20(
                 hash = expectedHash,
-                timestamp = transfer.timestamp,
+                timestamp = SEND_TIME_MS,
                 from = senderAddress,
                 to = EthAddress(validEthAddress),
                 logIndex = UNKNOWN_LOG_INDEX,
@@ -1135,4 +1132,5 @@ class SendViewModelTest {
 }
 
 private const val ETH_GAS_UNITS = 21_000L
+private const val SEND_TIME_MS = 1_763_400_000_000L
 private const val ERC20_GAS_UNITS = 65_000L

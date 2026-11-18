@@ -40,6 +40,8 @@
 - Use `checkNotNull` (or `check`) for a state that the app flow guarantees. Do not return a fallback value for an
   impossible state. For example, the PIN verification screen is shown only after a PIN storage check, so the stored PIN
   artifacts are not null there.
+- Inject the current time as a constructor lambda `now: () -> Long` with a real clock as its default value. Tests pass a
+  fixed `now`.
 - Declare constants as file-level `private const val`, not file-level `private val`. `Duration` cannot be a `const`, so
   store time constants as primitives with a unit suffix: `private const val INDICATOR_ANIMATION_DELAY_MS = 300`.
   Convert to Kotlin `Duration` only on the call side.

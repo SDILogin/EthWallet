@@ -76,6 +76,7 @@ class SendViewModel(
     private val walletRepository: WalletRepository,
     private val historyRepository: TransferHistoryRepository,
     private val savedStateHandle: SavedStateHandle,
+    private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) : ViewModel() {
     private val userInput = MutableStateFlow(restoreUserInput())
 
@@ -273,7 +274,7 @@ class SendViewModel(
                 saveSentTransfer(
                     pendingTransfer(
                         hash = transactionHash,
-                        timestamp = Clock.System.now().toEpochMilliseconds(),
+                        timestamp = now(),
                         from = transferData.senderAddress,
                         to = transferData.destinationAddress,
                         amount = transferData.amount,
