@@ -122,11 +122,7 @@ fuzz_target!(|input: Input| {
     assert_eq!(original, low_s);
 
     let mut signing_payload = vec![0x02];
-    Header {
-        list: true,
-        payload_length: unsigned_fields.len(),
-    }
-    .encode(&mut signing_payload);
+    signing_payload.extend_from_slice(&rlp_list_header(unsigned_fields.len()));
     signing_payload.extend_from_slice(unsigned_fields);
     let signing_hash: [u8; 32] = Keccak256::digest(&signing_payload).into();
     let signature = RecoverableSignature::from_compact(
@@ -142,3 +138,14 @@ fuzz_target!(|input: Input| {
     let signer_hash = Keccak256::digest(&signer.serialize_uncompressed()[1..]);
     assert_eq!(expected_signer[..], signer_hash[12..]);
 });
+
+fn rlp_list_header(payload_length: usize) -> Vec<u8> {
+    if payload_length < 56 {
+        vec![0xc0 + payload_length as u8]
+    } else {
+        let length = minimal_quantity(&payload_length.to_be_bytes()).to_vec();
+        let mut header = vec![0xf7 + length.len() as u8];
+        header.extend_from_slice(&length);
+        header
+    }
+}

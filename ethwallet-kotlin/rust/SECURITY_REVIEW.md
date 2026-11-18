@@ -45,9 +45,11 @@ Kotlin API -> NativeCrypto (JVM/Android: JNI, iOS: cinterop) -> C ABI ewc_* -> R
 | `ewc_sign_eip1559_transaction` | 32-byte key, 32-byte quantities, 20-byte destination, data readable or NULL with length 0, output of `data_length + 320` bytes, 1 writable `size_t` | chain ID not zero, priority fee not above max fee, secp256k1 scalar range | OK, INVALID_TRANSACTION, INVALID_PRIVATE_KEY, ENTROPY_FAILURE |
 
 Each function except `ewc_abi_version` can also return INTERNAL_PANIC. ENTROPY_FAILURE in address derivation and
-signing comes from the first creation of the randomized secp256k1 context.
+signing comes from the creation of the randomized secp256k1 context. A `OnceLock` keeps the first result, so after
+one failure every later call fails.
 
-Status order: mnemonic, then passphrase, then indices. For signing: transaction fields, then private key.
+Status order: mnemonic, then passphrase, then indices. For signing: transaction fields, then ENTROPY_FAILURE, then
+private key. For address derivation: private key, then ENTROPY_FAILURE.
 
 Two elliptic-curve implementations are in use:
 
@@ -57,7 +59,8 @@ Two elliptic-curve implementations are in use:
 Rules that the review can check:
 
 - Each `ewc_*` function writes its outputs only on success.
-- On failure the JNI functions copy a zeroed native buffer to the Java output array.
+- When an `ewc_*` call fails, the JNI function copies a zeroed native buffer to the Java output array. When the
+  JNI code fails before the call, it returns without a write.
 - Each `ewc_*` function except `ewc_abi_version` catches panics and returns INTERNAL_PANIC (`ffi_status`). The JNI
   code outside these calls does not catch panics. The release profile uses `panic = "unwind"` and
   `overflow-checks = true`.
@@ -84,7 +87,7 @@ They use the buffer sizes and pointer forms of the bindings.
 | `validate_mnemonic` | raw bytes | An own BIP-39 check: ASCII, English word list, word count, SHA-256 checksum. The status must match. |
 | `derive_private_key` | raw bytes or a mnemonic from random entropy (12 to 24 words), passphrase bytes, NULL or non-null empty passphrase, any `u32` indices | The status must follow the order above. The expected status comes from the own BIP-39 check of `validate_mnemonic`. On failure the output must not change. On success the key must equal an own BIP-39 seed (PBKDF2-HMAC-SHA512, NFKD passphrase) and BIP-32 derivation on libsecp256k1. This compares `k256` with libsecp256k1. |
 | `derive_address` | 32 bytes | OK if and only if `secp256k1` accepts the scalar. The address must equal Keccak-256 of the public key, last 20 bytes. On failure the output must not change. The oracle uses the same crates as the library, so it checks the ABI handling only. |
-| `sign_eip1559_transaction` | key, chain ID, all fields, calldata, NULL or non-null empty calldata | The status must follow the order above. On failure the outputs must not change. On success: the length fits the capacity, the type byte is `0x02`, the RLP list has the input fields with minimal quantities, `y_parity` is 0 or 1, `s` is low, and the recovered signer is the key address. |
+| `sign_eip1559_transaction` | key, chain ID, all fields, calldata, NULL or non-null empty calldata | The status must follow the order above. On failure the outputs must not change. On success: the length fits the capacity, the type byte is `0x02`, the RLP list has the input fields with minimal quantities, `y_parity` is 0 or 1, `s` is low, and the recovered signer is the key address. The oracle decodes with the `alloy-rlp` decoder and writes the signing list header by hand. |
 
 Seeds:
 
@@ -98,10 +101,12 @@ never an INTERNAL_PANIC status in a fuzz run.
 ## Commands
 
 Fuzzing needs a nightly toolchain and `cargo install cargo-fuzz`. Each command in `fuzz/` needs `+nightly`,
-because `rust-toolchain.toml` pins the stable library toolchain.
+because `rust-toolchain.toml` pins the stable library toolchain. `CFLAGS` makes the `cc` crate build the
+libsecp256k1 C code with AddressSanitizer too.
 
 ```bash
 cd ethwallet-kotlin/rust/fuzz
+export CFLAGS="-fsanitize=address"
 mkdir -p corpus/validate_mnemonic corpus/derive_private_key corpus/derive_address corpus/sign_eip1559_transaction
 cargo +nightly fuzz run validate_mnemonic corpus/validate_mnemonic seeds/validate_mnemonic -- \
   -dict=bip39_english.dict -max_total_time=600
@@ -111,13 +116,16 @@ cargo +nightly fuzz run derive_address corpus/derive_address seeds/derive_addres
 cargo +nightly fuzz run sign_eip1559_transaction corpus/sign_eip1559_transaction -- -max_total_time=600
 ```
 
-`cargo fuzz` builds with AddressSanitizer. LeakSanitizer runs with it on Linux.
+After an ABI change, check that the targets still build: `cargo +nightly fuzz build` and
+`cargo clippy --all-targets -- -D warnings` in `fuzz/`.
+
+`cargo fuzz` builds the Rust code with AddressSanitizer. LeakSanitizer runs with it on Linux.
 
 Library tests with AddressSanitizer (Linux x86_64; on Apple Silicon macOS use `aarch64-apple-darwin`):
 
 ```bash
 cd ethwallet-kotlin/rust
-RUSTFLAGS="-Zsanitizer=address" RUSTDOCFLAGS="-Zsanitizer=address" CARGO_TARGET_DIR=target/asan \
+CFLAGS="-fsanitize=address" RUSTFLAGS="-Zsanitizer=address" CARGO_TARGET_DIR=target/asan \
   cargo +nightly test --target x86_64-unknown-linux-gnu --lib --tests
 ```
 
@@ -136,13 +144,20 @@ PBKDF2 is slow under Miri. The derivation tests take from 10 to 75 minutes.
 
 ## Sanitizer limits
 
-- AddressSanitizer instruments the Rust code only. The `secp256k1-sys` C code is built by the C compiler
-  without ASan.
+- With the `CFLAGS` above, AddressSanitizer also instruments the libsecp256k1 C code. Without it, the C code is
+  not instrumented.
 - Miri cannot run C code. The tests that reach libsecp256k1 (address derivation and signing) stop with
   "unsupported operation". Miri covers only the tests above.
 - The JNI bridge compiles only for Android and macOS. Linux runs do not cover it.
-- MemorySanitizer and ThreadSanitizer were not run. They need an instrumented standard library and instrumented
-  C code. The only shared state is the `OnceLock` secp256k1 context.
+- MemorySanitizer was not run. It needs `-Zbuild-std` and all C code built with MemorySanitizer. This task did not
+  set that up.
+- ThreadSanitizer builds with `-Zbuild-std`, but the Docker agent cannot run it. TSan needs ASLR off, and the
+  sandbox blocks `personality()`. The only shared state is the `OnceLock` secp256k1 context.
+- HWASan for Android is not set up in this project.
+- The signing target uses the default `-max_len` of 4096 bytes. Calldata of 65536 bytes or more, which uses a
+  longer RLP length header, is not fuzzed.
+- The derivation oracle uses `expect` on BIP-32 steps that fail with a probability of about 2^-127. Such a crash
+  would be an oracle limit, not a library defect.
 
 ## Checks on other platforms
 
@@ -151,8 +166,9 @@ These checks need macOS, iOS or an Android device. Run them before the review cl
 1. macOS on Apple Silicon: run the four fuzz commands above. This covers the `aarch64-apple-darwin` build.
 2. macOS on Apple Silicon: `./gradlew :ethwallet-kotlin:jvmTest`. This runs the JNI bridge through the JVM bindings.
 3. macOS with Xcode: `./gradlew :ethwallet-kotlin:iosSimulatorArm64Test`. This runs the cinterop bindings.
-4. Android arm64 device or emulator connected with `adb`: `./gradlew :ethwallet-kotlin:connectedAndroidDeviceTest`.
-5. Optional: HWASan on an arm64 Android device. The project has no HWASan build. It needs a separate setup.
+4. macOS on Apple Silicon: `./gradlew :ethwallet-kotlin:testAndroidHostTest`. This runs the Android JNI bridge on
+   the host.
+5. Android arm64 device or emulator connected with `adb`: `./gradlew :ethwallet-kotlin:connectedAndroidDeviceTest`.
 
 ## Questions for the reviewer
 
