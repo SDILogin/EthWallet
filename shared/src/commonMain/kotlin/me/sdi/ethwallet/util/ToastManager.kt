@@ -14,3 +14,9 @@ expect class ToastManager {
  */
 @Composable
 expect fun rememberToastManager(): ToastManager
+
+/**
+ * Shows toast messages from [rememberToastManager] calls inside [content].
+ */
+@Composable
+expect fun ToastHost(content: @Composable () -> Unit)
