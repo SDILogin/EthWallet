@@ -162,6 +162,60 @@ class HistoryUpdateInteractorTest {
         assertEquals(1, repository.writes.size)
     }
 
+    @Test
+    fun refresh_replaces_sent_token_placeholder_with_fetched_transfer() = runTest {
+        val placeholder = token(20).copy(logIndex = UNKNOWN_LOG_INDEX, status = TransactionStatus.Pending)
+        val repository = Repository(listOf(native(10), token(9), placeholder))
+        val provider = FakeTransfersHistoryProvider(
+            listOf(page(native(10))),
+            listOf(page(token(20), token(9))),
+        )
+        interactor(provider, repository).refresh(chainId, wallet)
+
+        assertEquals(
+            listOf(native(10), token(20), token(9)).sortedBy { it.timestamp },
+            repository.items.sortedBy { it.timestamp },
+            "The fetched transfer should replace the placeholder",
+        )
+    }
+
+    @Test
+    fun refresh_reads_status_of_unlisted_pending_eth_transfer() = runTest {
+        val sentToContract = native(30, TransactionStatus.Pending)
+        val repository = Repository(listOf(native(10), token(9), sentToContract))
+        val provider = FakeTransfersHistoryProvider(listOf(page(native(10))), listOf(page(token(9))))
+        provider.summaries[sentToContract.hash] = TransactionSummary(TransactionStatus.Confirmed, null)
+        interactor(provider, repository).refresh(chainId, wallet)
+
+        assertEquals(
+            TransactionStatus.Confirmed,
+            repository.items.single { it.hash == sentToContract.hash }.status,
+            "A pending transfer that the list does not return should get its status by hash",
+        )
+    }
+
+    @Test
+    fun refresh_marks_reverted_token_placeholder_failed_and_keeps_unknown_one_pending() = runTest {
+        val reverted = token(30).copy(logIndex = UNKNOWN_LOG_INDEX, status = TransactionStatus.Pending)
+        val unknown = token(31).copy(logIndex = UNKNOWN_LOG_INDEX, status = TransactionStatus.Pending)
+        val repository = Repository(listOf(native(10), token(9), reverted, unknown))
+        val provider = FakeTransfersHistoryProvider(listOf(page(native(10))), listOf(page(token(9))))
+        provider.summaries[reverted.hash] = TransactionSummary(TransactionStatus.Failed, null)
+        provider.summaries[unknown.hash] = null
+        interactor(provider, repository).refresh(chainId, wallet)
+
+        assertEquals(
+            TransactionStatus.Failed,
+            repository.items.single { it.hash == reverted.hash }.status,
+            "A reverted token transfer has no log, so its placeholder should be marked failed",
+        )
+        assertEquals(
+            TransactionStatus.Pending,
+            repository.items.single { it.hash == unknown.hash }.status,
+            "A transaction that is not indexed yet should stay pending",
+        )
+    }
+
     private fun interactor(provider: TransfersHistoryProvider, repository: TransferHistoryRepository) =
         HistoryUpdateInteractorDefault(provider, repository, initialization)
 
@@ -202,6 +256,7 @@ class HistoryUpdateInteractorTest {
     ) : TransfersHistoryProvider {
         val requests = mutableListOf<Pair<TransfersPageRequest, TransfersPageRequest>>()
         var failure: (TransfersPageRequest, TransfersPageRequest) -> Unit = { _, _ -> }
+        val summaries = mutableMapOf<String, TransactionSummary?>()
 
         override suspend fun getTransfers(
             address: EthAddress,
@@ -219,6 +274,8 @@ class HistoryUpdateInteractorTest {
                 }
             return CombinedTransfersPage(select(ethPages, eth), select(tokenPages, erc20))
         }
+
+        override suspend fun getTransaction(hash: String): TransactionSummary? = summaries[hash]
     }
 
     private class Repository(initial: List<Transfer> = emptyList()) : TransferHistoryRepository {
@@ -229,7 +286,7 @@ class HistoryUpdateInteractorTest {
 
         override fun observe(walletAddress: EthAddress): Flow<List<Transfer>> = flowOf(visible())
 
-        override fun observe(walletAddress: EthAddress, trxHash: String, logIndex: Int): Flow<Transfer> =
+        override fun observe(trxHash: String): Flow<Transfer?> =
             error("Single-transfer observation is not used by this test")
 
         override suspend fun read(walletAddress: EthAddress) = items
@@ -238,6 +295,24 @@ class HistoryUpdateInteractorTest {
             writes += items
             val updated = items.mapTo(mutableSetOf()) { it.identity }
             this.items = this.items.filterNot { it.identity in updated } + items.distinctBy { it.identity }
+        }
+
+        override suspend fun update(trxHash: String, status: TransactionStatus, fee: TransactionFee?) {
+            items = items.map { transfer ->
+                if (transfer.hash.equals(trxHash, ignoreCase = true)) {
+                    when (transfer) {
+                        is Transfer.Eth -> transfer.copy(status = status, fee = transfer.fee?.let { fee ?: it })
+                        is Transfer.Erc20 -> transfer.copy(status = status, fee = transfer.fee?.let { fee ?: it })
+                    }
+                } else {
+                    transfer
+                }
+            }
+        }
+
+        override suspend fun delete(walletAddress: EthAddress, items: List<Transfer>) {
+            val deleted = items.mapTo(mutableSetOf()) { it.identity }
+            this.items = this.items.filterNot { it.identity in deleted }
         }
     }
 }

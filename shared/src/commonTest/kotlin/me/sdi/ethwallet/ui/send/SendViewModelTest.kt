@@ -17,6 +17,10 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.json.Json
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
+import me.sdi.ethwallet.core.history.TransactionFee
+import me.sdi.ethwallet.core.history.TransactionStatus
+import me.sdi.ethwallet.core.history.Transfer
+import me.sdi.ethwallet.core.history.UNKNOWN_LOG_INDEX
 import me.sdi.ethwallet.core.transfer.FeeSuggestion
 import me.sdi.ethwallet.core.transfer.TransferException
 import me.sdi.ethwallet.core.transfer.Wei
@@ -29,6 +33,7 @@ import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeTransferInteractor
 import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
+import me.sdi.ethwallet.fakes.TransferHistoryRepositoryInMemory
 import me.sdi.ethwallet.ui.usdtOnMainnet
 import me.sdi.ethwallet.util.formatUsdCurrency
 import java.math.BigDecimal
@@ -51,6 +56,7 @@ class SendViewModelTest {
     private lateinit var fiatRateProvider: FakeFiatRateProvider
     private lateinit var walletDao: FakeWalletDao
     private lateinit var walletRepository: WalletRepository
+    private lateinit var historyRepository: TransferHistoryRepositoryInMemory
     private val historyInitializationStoreInMemory = HistoryInitializationStoreInMemory()
     private lateinit var viewModel: SendViewModel
     private val activeViewModels = mutableListOf<SendViewModel>()
@@ -81,6 +87,7 @@ class SendViewModelTest {
             privateKeyEncryptor = FakePrivateKeyEncryptor(),
             historyInitializationStore = historyInitializationStoreInMemory,
         )
+        historyRepository = TransferHistoryRepositoryInMemory()
         activeViewModels.clear()
         viewModel = newViewModel()
     }
@@ -91,7 +98,9 @@ class SendViewModelTest {
             transferInteractor = transferInteractor,
             fiatRateProvider = fiatRateProvider,
             walletRepository = walletRepository,
+            historyRepository = historyRepository,
             savedStateHandle = savedStateHandle,
+            now = { SEND_TIME_MS },
         ).also { activeViewModels += it }
 
     private fun vmTest(body: suspend TestScope.() -> Unit) = runTest(testDispatcher, timeout = 10.seconds) {
@@ -459,13 +468,66 @@ class SendViewModelTest {
         clickSend()
 
         assertNotNull(transferInteractor.lastTransferData, "Transfer should be invoked")
-        val transactionHash = collectedNews.filterIsInstance<SendNews.TransferSuccess>().first().transactionHash
+        val transactionHash = collectedNews.filterIsInstance<SendNews.TransferSuccess>().single().transactionHash
         assertEquals(expectedHash, transactionHash, "Should have correct transaction hash")
+        val transfer = historyRepository.read(senderAddress).single()
+        assertEquals(
+            Transfer.Eth(
+                hash = expectedHash,
+                timestamp = SEND_TIME_MS,
+                from = senderAddress,
+                to = EthAddress(validEthAddress),
+                valueWei = Wei(BigInteger("1000000000000000000")),
+                status = TransactionStatus.Pending,
+                fee = TransactionFee(
+                    Wei(presetMaxFeeWei(GasOption.Default).multiply(BigInteger.valueOf(ETH_GAS_UNITS))),
+                    estimated = true,
+                ),
+            ),
+            transfer,
+            "The pending ETH transfer should be saved to history",
+        )
 
         val state = viewModel.viewState.value
         assertFalse(state.transferring, "Should not be loading after success")
         assertEquals("", state.receiverAddress.value, "Form should be cleared after success")
         assertEquals("", state.transferAmountInputState.value, "Amount should be cleared after success")
+    }
+
+    @Test
+    fun should_save_pending_erc20_transfer_after_successful_token_transfer() = vmTest {
+        val expectedHash = "0xTokenTransactionHash"
+        transferInteractor.transferResult = Result.success(expectedHash)
+        seedFees()
+        collectNews()
+
+        sendEvent(SendEvent.OnTokenSelected(usdtOnMainnet.ethAddress))
+        sendEvent(SendEvent.OnReceiverAddressChanged(validEthAddress))
+        sendEvent(SendEvent.OnTransferAmountChanged("10.5"))
+        clickSend()
+
+        assertEquals(expectedHash, collectedNews.filterIsInstance<SendNews.TransferSuccess>().single().transactionHash)
+        val transfer = historyRepository.read(senderAddress).single()
+        assertEquals(
+            Transfer.Erc20(
+                hash = expectedHash,
+                timestamp = SEND_TIME_MS,
+                from = senderAddress,
+                to = EthAddress(validEthAddress),
+                logIndex = UNKNOWN_LOG_INDEX,
+                tokenAddress = usdtOnMainnet.ethAddress,
+                tokenSymbol = usdtOnMainnet.symbol,
+                tokenDecimals = usdtOnMainnet.decimals,
+                value = "10500000",
+                status = TransactionStatus.Pending,
+                fee = TransactionFee(
+                    Wei(presetMaxFeeWei(GasOption.Default).multiply(BigInteger.valueOf(ERC20_GAS_UNITS))),
+                    estimated = true,
+                ),
+            ),
+            transfer,
+            "The pending token transfer should be saved to history",
+        )
     }
 
     @Test
@@ -1070,4 +1132,5 @@ class SendViewModelTest {
 }
 
 private const val ETH_GAS_UNITS = 21_000L
+private const val SEND_TIME_MS = 1_763_400_000_000L
 private const val ERC20_GAS_UNITS = 65_000L

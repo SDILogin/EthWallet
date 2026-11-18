@@ -26,7 +26,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,11 +36,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.history.TransactionFee
 import me.sdi.ethwallet.core.history.TransactionStatus
 import me.sdi.ethwallet.core.history.Transfer
+import me.sdi.ethwallet.core.history.UNKNOWN_LOG_INDEX
 import me.sdi.ethwallet.core.transfer.toWei
 import me.sdi.ethwallet.resources.Res
 import me.sdi.ethwallet.resources.arrow_back_24px
@@ -70,6 +71,7 @@ import me.sdi.ethwallet.resources.transaction_details_fee
 import me.sdi.ethwallet.resources.transaction_details_from
 import me.sdi.ethwallet.resources.transaction_details_hash
 import me.sdi.ethwallet.resources.transaction_details_metadata
+import me.sdi.ethwallet.resources.transaction_details_metadata_no_index
 import me.sdi.ethwallet.resources.transaction_details_network
 import me.sdi.ethwallet.resources.transaction_details_title
 import me.sdi.ethwallet.resources.transaction_details_to
@@ -95,11 +97,10 @@ import kotlin.time.Instant
 fun TransactionDetailsRoute(
     walletAddress: EthAddress,
     transactionHash: String,
-    logIndex: Int,
     onBackPressed: () -> Unit,
 ) {
-    val viewModel: TransactionDetailsViewModel = koinViewModel(parameters = { parametersOf(walletAddress, transactionHash, logIndex) })
-    val state by viewModel.viewState.collectAsState()
+    val viewModel: TransactionDetailsViewModel = koinViewModel(parameters = { parametersOf(transactionHash) })
+    val state by viewModel.viewState.collectAsStateWithLifecycle()
     val chainConfig: ChainConfig = koinInject()
     TransactionDetailsScreen(state, walletAddress, chainConfig, onBackPressed)
 }
@@ -296,7 +297,11 @@ private fun DetailsContent(
                 DetailsCard {
                     CopyValue(stringResource(Res.string.transaction_details_contract), transfer.tokenAddress.toString())
                     EthText(
-                        stringResource(Res.string.transaction_details_metadata, transfer.tokenDecimals, transfer.logIndex),
+                        if (transfer.logIndex == UNKNOWN_LOG_INDEX) {
+                            stringResource(Res.string.transaction_details_metadata_no_index, transfer.tokenDecimals)
+                        } else {
+                            stringResource(Res.string.transaction_details_metadata, transfer.tokenDecimals, transfer.logIndex)
+                        },
                         Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                         style = EthTextStyle.Caption,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -379,6 +384,13 @@ internal class TransactionDetailsPreviewProvider : PreviewParameterProvider<Tran
             ),
         ),
         TransactionDetailsState.Content(tokenTransfer.copy(status = TransactionStatus.Failed)),
+        TransactionDetailsState.Content(
+            tokenTransfer.copy(
+                logIndex = UNKNOWN_LOG_INDEX,
+                status = TransactionStatus.Pending,
+                fee = tokenTransfer.fee?.copy(estimated = true),
+            ),
+        ),
         TransactionDetailsState.Loading,
         TransactionDetailsState.Unavailable,
         TransactionDetailsState.Error,

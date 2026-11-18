@@ -138,10 +138,9 @@ val commonModule = module {
 
     viewModel<TransactionDetailsViewModel> { params ->
         TransactionDetailsViewModel(
-            walletAddress = params.get(),
             transactionHash = params.get(),
-            logIndex = params.get(),
             repository = get(),
+            historyProvider = get(),
             walletRepository = get<WalletRepository>(),
         )
     }
@@ -254,6 +253,7 @@ val commonModule = module {
             transferInteractor = get(),
             fiatRateProvider = get(),
             walletRepository = get(),
+            historyRepository = get(),
             savedStateHandle = get(),
         )
     }

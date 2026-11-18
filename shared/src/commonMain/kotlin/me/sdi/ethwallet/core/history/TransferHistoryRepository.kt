@@ -2,7 +2,6 @@ package me.sdi.ethwallet.core.history
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
@@ -13,11 +12,17 @@ import me.sdi.ethwallet.database.entity.TransferHistoryEntity
 interface TransferHistoryRepository {
     fun observe(walletAddress: EthAddress): Flow<List<Transfer>>
 
-    fun observe(walletAddress: EthAddress, trxHash: String, logIndex: Int): Flow<Transfer>
+    /** Emits the transfer of the hash on the current chain with the lowest log index, or null. A row with a fee wins. */
+    fun observe(trxHash: String): Flow<Transfer?>
 
     suspend fun read(walletAddress: EthAddress): List<Transfer>
 
     suspend fun upsert(walletAddress: EthAddress, items: List<Transfer>)
+
+    /** Sets the status of all transfers of the hash. The [fee] replaces only a stored fee. A null [fee] changes no fee. */
+    suspend fun update(trxHash: String, status: TransactionStatus, fee: TransactionFee?)
+
+    suspend fun delete(walletAddress: EthAddress, items: List<Transfer>)
 }
 
 class TransferHistoryRepositoryRoom(
@@ -28,11 +33,9 @@ class TransferHistoryRepositoryRoom(
         transferHistoryDao.observe(chainConfig.chainId, walletAddress.normalized())
             .map { entities -> entities.mapNotNull(TransferHistoryEntity::toTransferOrNull) }
 
-    override fun observe(walletAddress: EthAddress, trxHash: String, logIndex: Int): Flow<Transfer> {
-        return transferHistoryDao
-            .observe(chainConfig.chainId, walletAddress.normalized(), trxHash.lowercase(), logIndex)
-            .mapNotNull { it.toTransferOrNull() }
-    }
+    override fun observe(trxHash: String): Flow<Transfer?> = transferHistoryDao
+        .observeTransaction(chainConfig.chainId, trxHash.lowercase())
+        .map { it?.toTransferOrNull() }
 
     override suspend fun read(walletAddress: EthAddress): List<Transfer> =
         transferHistoryDao.readWalletTransfers(
@@ -42,6 +45,22 @@ class TransferHistoryRepositoryRoom(
 
     override suspend fun upsert(walletAddress: EthAddress, items: List<Transfer>) {
         transferHistoryDao.upsertAll(
+            items.map { it.toEntity(chainConfig.chainId, walletAddress) },
+        )
+    }
+
+    override suspend fun update(trxHash: String, status: TransactionStatus, fee: TransactionFee?) {
+        transferHistoryDao.update(
+            chainId = chainConfig.chainId,
+            trxHash = trxHash.lowercase(),
+            status = status.name,
+            feeWei = fee?.value?.value?.toString(),
+            feeEstimated = fee?.estimated ?: false,
+        )
+    }
+
+    override suspend fun delete(walletAddress: EthAddress, items: List<Transfer>) {
+        transferHistoryDao.delete(
             items.map { it.toEntity(chainConfig.chainId, walletAddress) },
         )
     }

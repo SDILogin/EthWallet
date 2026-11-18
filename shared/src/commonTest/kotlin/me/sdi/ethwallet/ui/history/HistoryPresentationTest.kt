@@ -42,7 +42,6 @@ class HistoryPresentationTest {
         assertEquals(other, row.counterparty)
         assertEquals("-0.042", row.amount)
         assertEquals("ETH", row.symbol)
-        assertEquals(-1, row.logIndex)
     }
 
     @Test
@@ -52,7 +51,6 @@ class HistoryPresentationTest {
         assertEquals(other, row.counterparty)
         assertEquals("+250", row.amount)
         assertEquals("USDC", row.symbol)
-        assertEquals(4, row.logIndex)
     }
 
     @Test

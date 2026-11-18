@@ -282,8 +282,8 @@ fun EthWalletApp() {
                 HistoryRoute(
                     walletAddress = EthAddress(destination.ethAddress),
                     walletLabel = destination.walletLabel,
-                    onTransactionClick = { hash, logIndex ->
-                        backStack.add(Destination.TransactionDetails(destination.ethAddress, hash, logIndex))
+                    onTransactionClick = { hash ->
+                        backStack.add(Destination.TransactionDetails(ethAddress = destination.ethAddress, transactionHash = hash))
                     },
                     onBackPressed = { backStack.removeLastOrNull() },
                 )
@@ -296,7 +296,6 @@ fun EthWalletApp() {
                 TransactionDetailsRoute(
                     walletAddress = EthAddress(destination.ethAddress),
                     transactionHash = destination.transactionHash,
-                    logIndex = destination.logIndex,
                     onBackPressed = { backStack.removeLastOrNull() },
                 )
             }
@@ -309,6 +308,12 @@ fun EthWalletApp() {
                     modifier = Modifier.fillMaxSize(),
                     walletAddress = EthAddress(destination.ethAddress),
                     onBackPress = { backStack.removeLastOrNull() },
+                    onTransferSent = { transactionHash ->
+                        backStack.removeLastOrNull()
+                        backStack.add(
+                            Destination.TransactionDetails(ethAddress = destination.ethAddress, transactionHash = transactionHash),
+                        )
+                    },
                 )
             }
 

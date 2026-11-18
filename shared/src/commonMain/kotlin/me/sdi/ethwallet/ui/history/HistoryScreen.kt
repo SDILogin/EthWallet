@@ -112,7 +112,7 @@ private const val EMPTY_HISTORY_ANIMATION_SIZE_DP = 160
 @Composable
 fun HistoryScreen(
     modifier: Modifier,
-    onHistoryItemClick: (transactionHash: TransactionHash, logIndex: Int) -> Unit,
+    onHistoryItemClick: (transactionHash: TransactionHash) -> Unit,
     walletLabel: String,
     chainId: Long,
     viewState: HistoryViewState,
@@ -242,7 +242,7 @@ private fun RefreshableContent(
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onRetryLoadMore: () -> Unit,
-    onHistoryItemClick: (transactionHash: TransactionHash, logIndex: Int) -> Unit,
+    onHistoryItemClick: (transactionHash: TransactionHash) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val loadingDescription = stringResource(Res.string.history_loading)
@@ -379,7 +379,7 @@ private fun EmptyHistoryAnimation() {
 private fun HistoryListItem(
     row: HistoryRow,
     timeZone: TimeZone,
-    onHistoryItemClick: (transactionHash: TransactionHash, logIndex: Int) -> Unit,
+    onHistoryItemClick: (transactionHash: TransactionHash) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val title = stringResource(
@@ -421,10 +421,7 @@ private fun HistoryListItem(
         Row(
             modifier = Modifier.fillMaxWidth()
                 .clickable(role = Role.Button) {
-                    onHistoryItemClick(
-                        TransactionHash(row.item.hash),
-                        row.logIndex,
-                    )
+                    onHistoryItemClick(TransactionHash(row.item.hash))
                 }
                 .padding(horizontal = 16.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -577,7 +574,7 @@ private fun HistoryScreenPreview(
     EthWalletTheme {
         HistoryScreen(
             modifier = Modifier.fillMaxSize(),
-            onHistoryItemClick = { _, _ -> },
+            onHistoryItemClick = {},
             walletLabel = "My Wallet",
             chainId = 11155111L,
             viewState = items?.let {
