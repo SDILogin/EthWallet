@@ -73,6 +73,7 @@ fuzz_target!(|input: Input| {
     }
 
     assert!(output_length <= output.len());
+    assert!(output[output_length..].iter().all(|byte| *byte == SENTINEL));
     let signed = &output[..output_length];
     assert_eq!(0x02, signed[0]);
     let mut rest = &signed[1..];

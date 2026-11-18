@@ -41,16 +41,26 @@ Kotlin API -> NativeCrypto (JVM/Android: JNI, iOS: cinterop) -> C ABI ewc_* -> R
 | `ewc_create_mnemonic` | 107 writable output bytes, 1 writable `size_t` | entropy source | OK, ENTROPY_FAILURE |
 | `ewc_validate_mnemonic` | non-null input with `length` readable bytes | UTF-8, ASCII, BIP-39 English words, word count, checksum | OK, INVALID_MNEMONIC |
 | `ewc_derive_private_key` | non-null mnemonic, passphrase readable or NULL with length 0, 32 writable output bytes | mnemonic as above, passphrase UTF-8, account and address index below 2^31 | OK, INVALID_MNEMONIC, INVALID_ARGUMENT |
-| `ewc_derive_address` | 32 readable bytes, 20 writable bytes | secp256k1 scalar range | OK, INVALID_PRIVATE_KEY |
-| `ewc_sign_eip1559_transaction` | 32-byte key, 32-byte quantities, 20-byte destination, data readable or NULL with length 0, output of `data_length + 320` bytes, 1 writable `size_t` | chain ID not zero, priority fee not above max fee, secp256k1 scalar range | OK, INVALID_TRANSACTION, INVALID_PRIVATE_KEY |
+| `ewc_derive_address` | 32 readable bytes, 20 writable bytes | secp256k1 scalar range | OK, INVALID_PRIVATE_KEY, ENTROPY_FAILURE |
+| `ewc_sign_eip1559_transaction` | 32-byte key, 32-byte quantities, 20-byte destination, data readable or NULL with length 0, output of `data_length + 320` bytes, 1 writable `size_t` | chain ID not zero, priority fee not above max fee, secp256k1 scalar range | OK, INVALID_TRANSACTION, INVALID_PRIVATE_KEY, ENTROPY_FAILURE |
+
+Each function except `ewc_abi_version` can also return INTERNAL_PANIC. ENTROPY_FAILURE in address derivation and
+signing comes from the first creation of the randomized secp256k1 context.
 
 Status order: mnemonic, then passphrase, then indices. For signing: transaction fields, then private key.
 
+Two elliptic-curve implementations are in use:
+
+- BIP-32 key derivation uses the `bip32` crate with the pure Rust `k256` backend.
+- Address derivation and signing use the `secp256k1` crate, which wraps the libsecp256k1 C library.
+
 Rules that the review can check:
 
-- A function writes its outputs only on success.
-- Each function catches panics and returns INTERNAL_PANIC (`ffi_status`). The release profile uses
-  `panic = "unwind"` and `overflow-checks = true`.
+- Each `ewc_*` function writes its outputs only on success.
+- On failure the JNI functions copy a zeroed native buffer to the Java output array.
+- Each `ewc_*` function except `ewc_abi_version` catches panics and returns INTERNAL_PANIC (`ffi_status`). The JNI
+  code outside these calls does not catch panics. The release profile uses `panic = "unwind"` and
+  `overflow-checks = true`.
 - Owned secret copies use `Zeroizing`. The limits of this cleanup are in
   [the README "Secret handling" section](../README.md#secret-handling).
 
@@ -72,12 +82,15 @@ They use the buffer sizes and pointer forms of the bindings.
 | Target | Input | Oracle |
 | --- | --- | --- |
 | `validate_mnemonic` | raw bytes | An own BIP-39 check: ASCII, English word list, word count, SHA-256 checksum. The status must match. |
-| `derive_private_key` | raw bytes or a mnemonic from random entropy (12 to 24 words), passphrase bytes, NULL or non-null empty passphrase, any `u32` indices | The status must follow the order above. On failure the output must not change. On success the key must be a valid secp256k1 scalar. |
-| `derive_address` | 32 bytes | OK if and only if `secp256k1` accepts the scalar. The address must equal Keccak-256 of the public key, last 20 bytes. On failure the output must not change. |
+| `derive_private_key` | raw bytes or a mnemonic from random entropy (12 to 24 words), passphrase bytes, NULL or non-null empty passphrase, any `u32` indices | The status must follow the order above. The expected status comes from the own BIP-39 check of `validate_mnemonic`. On failure the output must not change. On success the key must equal an own BIP-39 seed (PBKDF2-HMAC-SHA512, NFKD passphrase) and BIP-32 derivation on libsecp256k1. This compares `k256` with libsecp256k1. |
+| `derive_address` | 32 bytes | OK if and only if `secp256k1` accepts the scalar. The address must equal Keccak-256 of the public key, last 20 bytes. On failure the output must not change. The oracle uses the same crates as the library, so it checks the ABI handling only. |
 | `sign_eip1559_transaction` | key, chain ID, all fields, calldata, NULL or non-null empty calldata | The status must follow the order above. On failure the outputs must not change. On success: the length fits the capacity, the type byte is `0x02`, the RLP list has the input fields with minimal quantities, `y_parity` is 0 or 1, `s` is low, and the recovered signer is the key address. |
 
-The `validate_mnemonic` target has seeds in `fuzz/seeds/validate_mnemonic` and the dictionary
-`fuzz/bip39_english.dict`.
+Seeds:
+
+- `fuzz/seeds/validate_mnemonic`: public BIP-39 vectors and near-valid mnemonics.
+- `fuzz/seeds/derive_address`: the scalars 0, 1, n - 1, n and 2^256 - 1.
+- `fuzz/bip39_english.dict`: the BIP-39 English word list as a libFuzzer dictionary. The mnemonic targets use it.
 
 `libfuzzer-sys` aborts on a panic before `ffi_status` can catch it. So a library panic is a fuzz crash. It is
 never an INTERNAL_PANIC status in a fuzz run.
@@ -92,14 +105,15 @@ cd ethwallet-kotlin/rust/fuzz
 mkdir -p corpus/validate_mnemonic corpus/derive_private_key corpus/derive_address corpus/sign_eip1559_transaction
 cargo +nightly fuzz run validate_mnemonic corpus/validate_mnemonic seeds/validate_mnemonic -- \
   -dict=bip39_english.dict -max_total_time=600
-cargo +nightly fuzz run derive_private_key corpus/derive_private_key -- -max_len=512 -max_total_time=600
-cargo +nightly fuzz run derive_address corpus/derive_address -- -max_total_time=600
+cargo +nightly fuzz run derive_private_key corpus/derive_private_key -- \
+  -dict=bip39_english.dict -max_len=512 -max_total_time=600
+cargo +nightly fuzz run derive_address corpus/derive_address seeds/derive_address -- -max_total_time=600
 cargo +nightly fuzz run sign_eip1559_transaction corpus/sign_eip1559_transaction -- -max_total_time=600
 ```
 
 `cargo fuzz` builds with AddressSanitizer. LeakSanitizer runs with it on Linux.
 
-Library tests with AddressSanitizer (Linux x86_64):
+Library tests with AddressSanitizer (Linux x86_64; on Apple Silicon macOS use `aarch64-apple-darwin`):
 
 ```bash
 cd ethwallet-kotlin/rust
@@ -111,17 +125,21 @@ Library tests with Miri (needs `rustup +nightly component add miri rust-src`):
 
 ```bash
 cd ethwallet-kotlin/rust
-cargo +nightly miri test --lib -- encodes_zero_quantities rejects_invalid_eip1559
+cargo +nightly miri test --lib -- encodes_zero_quantities rejects_invalid_eip1559 official_bip39_passphrase_vectors
 cargo +nightly miri test --test ffi_contract -- abi_version_is_one validates_the_canonical_english_mnemonic \
-  created_mnemonic_is_english_and_validates invalid_utf8_passphrase_does_not_write_output
+  created_mnemonic_is_english_and_validates invalid_utf8_passphrase_does_not_write_output \
+  rejects_bip32_indices_with_the_hardened_bit_set_without_writing_output \
+  passphrases_use_utf8_nfkd_and_preserve_case_whitespace_and_nul
 ```
+
+PBKDF2 is slow under Miri. The derivation tests take from 10 to 75 minutes.
 
 ## Sanitizer limits
 
 - AddressSanitizer instruments the Rust code only. The `secp256k1-sys` C code is built by the C compiler
   without ASan.
-- Miri cannot run C code. Each test that reaches `secp256k1` C code stops with "unsupported operation". Miri
-  covers only the tests above.
+- Miri cannot run C code. The tests that reach libsecp256k1 (address derivation and signing) stop with
+  "unsupported operation". Miri covers only the tests above.
 - The JNI bridge compiles only for Android and macOS. Linux runs do not cover it.
 - MemorySanitizer and ThreadSanitizer were not run. They need an instrumented standard library and instrumented
   C code. The only shared state is the `OnceLock` secp256k1 context.

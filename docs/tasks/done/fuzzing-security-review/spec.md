@@ -14,9 +14,11 @@ and no document for an external reviewer.
 - A cargo-fuzz crate in `ethwallet-kotlin/rust/fuzz/` with one target per semantic ABI function:
   `validate_mnemonic`, `derive_private_key`, `derive_address`, `sign_eip1559_transaction`.
 - The targets call only the public `ewc_*` functions. They respect the Kotlin preconditions: non-null mnemonic
-  pointer, fixed input sizes, output buffers sized as the bindings size them (107, 32, 20, `data_length + 320`).
-- Each target checks the result against an independent oracle, not only for crashes.
-- A seed corpus from public BIP-39 vectors and a BIP-39 English dictionary.
+  pointer, fixed input sizes, output buffers sized as the bindings size them (32, 20, `data_length + 320`).
+  `ewc_create_mnemonic` has no fuzzable input.
+- Each target checks the result against an oracle, not only for crashes. The mnemonic, derivation and signing
+  oracles do not use the library parser, derivation or encoder.
+- Seeds from public BIP-39 vectors and secp256k1 scalar bounds, and a BIP-39 English dictionary.
 - Supported sanitizer runs on Linux: AddressSanitizer and LeakSanitizer through the fuzz targets and the test
   suite, Miri on the tests that call no C code.
 - A review packet for an external reviewer: `ethwallet-kotlin/rust/SECURITY_REVIEW.md`.

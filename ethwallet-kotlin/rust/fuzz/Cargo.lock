@@ -280,10 +280,12 @@ dependencies = [
  "arbitrary",
  "bip39",
  "ethwallet_crypto",
+ "hmac",
  "libfuzzer-sys",
  "secp256k1 0.29.1",
  "sha2",
  "sha3",
+ "unicode-normalization",
 ]
 
 [[package]]

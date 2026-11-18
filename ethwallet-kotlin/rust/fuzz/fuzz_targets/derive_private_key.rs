@@ -2,9 +2,10 @@
 
 use arbitrary::Arbitrary;
 use bip39::{Language, Mnemonic};
-use ethwallet_crypto::{ewc_derive_address, ewc_derive_private_key, ewc_validate_mnemonic};
+use ethwallet_crypto::ewc_derive_private_key;
 use ethwallet_crypto_fuzz::{
     SENTINEL, STATUS_INVALID_ARGUMENT, STATUS_INVALID_MNEMONIC, STATUS_OK,
+    derive_bip44_private_key, is_valid_english_mnemonic,
 };
 use libfuzzer_sys::fuzz_target;
 
@@ -72,24 +73,23 @@ fuzz_target!(|input: Input| {
         )
     };
 
-    // SAFETY: `mnemonic` owns `mnemonic.len()` readable bytes.
-    let mnemonic_status = unsafe { ewc_validate_mnemonic(mnemonic.as_ptr(), mnemonic.len()) };
-    let expected = if mnemonic_status != STATUS_OK {
-        STATUS_INVALID_MNEMONIC
-    } else if std::str::from_utf8(&input.passphrase).is_err()
-        || input.account_index & HARDENED_BIT != 0
-        || input.address_index & HARDENED_BIT != 0
-    {
-        STATUS_INVALID_ARGUMENT
-    } else {
-        STATUS_OK
+    let arguments_are_valid = std::str::from_utf8(&input.passphrase).is_ok()
+        && input.account_index & HARDENED_BIT == 0
+        && input.address_index & HARDENED_BIT == 0;
+    let expected = match (is_valid_english_mnemonic(&mnemonic), arguments_are_valid) {
+        (true, true) => STATUS_OK,
+        (true, false) => STATUS_INVALID_ARGUMENT,
+        (false, _) => STATUS_INVALID_MNEMONIC,
     };
     assert_eq!(expected, status);
     if status == STATUS_OK {
-        let mut address = [SENTINEL; 20];
-        // SAFETY: the input has 32 readable bytes and the output has 20 writable bytes.
-        let address_status = unsafe { ewc_derive_address(output.as_ptr(), address.as_mut_ptr()) };
-        assert_eq!(STATUS_OK, address_status);
+        let expected_key = derive_bip44_private_key(
+            std::str::from_utf8(&mnemonic).expect("a valid mnemonic is ASCII"),
+            std::str::from_utf8(&input.passphrase).expect("the passphrase is UTF-8"),
+            input.account_index,
+            input.address_index,
+        );
+        assert_eq!(expected_key, output);
     } else {
         assert_eq!([SENTINEL; 32], output);
     }

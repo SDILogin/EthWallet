@@ -15,10 +15,12 @@ alloy-rlp = "0.3.12"
 arbitrary = { version = "1.4.1", features = ["derive"] }
 bip39 = { version = "2.2.2", default-features = false, features = ["std", "zeroize"] }
 ethwallet_crypto = { path = ".." }
+hmac = "0.12.1"
 libfuzzer-sys = "0.4.10"
 secp256k1 = { version = "0.29.1", default-features = false, features = ["recovery", "std"] }
 sha2 = "0.10.9"
 sha3 = { version = "0.12.0", default-features = false }
+unicode-normalization = "0.1.25"
 
 [[bin]]
 name = "validate_mnemonic"

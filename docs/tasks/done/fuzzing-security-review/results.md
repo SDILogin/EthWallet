@@ -10,19 +10,23 @@ Run on 2026-11-18 in the Linux x86_64 Docker agent (12 cores).
 
 | Target | Runs | Exec/s | Coverage | Corpus | Crashes |
 | --- | --- | --- | --- | --- | --- |
-| `validate_mnemonic` | 9,572,508 | 15,927 | 450 | 130 | 0 |
-| `derive_private_key` | 88,751 | 147 | 1182 | 165 | 0 |
-| `derive_address` | 7,734,480 | 12,869 | 175 | 3 | 0 |
-| `sign_eip1559_transaction` | 3,807,521 | 6,335 | 627 | 207 | 0 |
+| `validate_mnemonic` | 16,435,245 | 27,346 | 455 | 197 | 0 |
+| `derive_private_key` | 59,586 | 99 | 1398 | 209 | 0 |
+| `derive_address` | 14,220,156 | 23,660 | 175 | 3 | 0 |
+| `sign_eip1559_transaction` | 6,742,402 | 11,218 | 631 | 262 | 0 |
 
-`derive_private_key` is slow because each valid mnemonic runs PBKDF2 with 2048 rounds. Ten minutes is a smoke
-level for this target, not deep coverage.
+`derive_private_key` is slow because each valid mnemonic runs PBKDF2 with 2048 rounds twice: once in the library
+and once in the oracle. Ten minutes is a smoke level for this target, not deep coverage.
+
+The derivation and signing oracles were checked once with an inverted assertion. Both failed at once, so the
+success paths run and match the library.
 
 ## Sanitizers
 
 - AddressSanitizer on `cargo test --lib --tests`: 18 tests passed, no reports.
-- Miri: 6 tests passed, no undefined behavior. The other tests reach the `secp256k1` C code, and Miri stops
-  there with "unsupported operation".
+- Miri: 9 tests passed, no undefined behavior. They cover mnemonic validation and creation, BIP-39 seeds, BIP-32
+  derivation and RLP encoding. The other tests reach libsecp256k1 C code, and Miri stops there with
+  "unsupported operation".
 
 ## Findings
 
