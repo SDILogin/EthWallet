@@ -25,6 +25,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 
+private const val WALL_CLOCK_TOLERANCE_MS = 3_600_000L
+
 class FiatRateProviderCoinbaseTest {
     private val dao = InMemoryFiatRateDao()
     private val currentTime = 1000000L
@@ -78,17 +80,16 @@ class FiatRateProviderCoinbaseTest {
             fiatRateDao = dao,
         )
         val addresses = allKnownTokens.map { it.ethAddress.toString() } + EthContractAddress.toString()
-        val before = Clock.System.now().toEpochMilliseconds()
-
         provider.forceUpdate()
 
-        val after = Clock.System.now().toEpochMilliseconds()
+        val wallClock = Clock.System.now().toEpochMilliseconds()
+        val expectedRange = (wallClock - WALL_CLOCK_TOLERANCE_MS)..(wallClock + WALL_CLOCK_TOLERANCE_MS)
         val rows = dao.readAll(addresses)
         assertEquals(addresses.size, rows.size, "Should store a rate for every supported address")
         rows.forEach {
             assertTrue(
-                it.lastUpdatedTimestamp in before..after,
-                "Timestamp ${it.lastUpdatedTimestamp} should be in $before..$after",
+                it.lastUpdatedTimestamp in expectedRange,
+                "Timestamp ${it.lastUpdatedTimestamp} should be in $expectedRange",
             )
         }
     }
