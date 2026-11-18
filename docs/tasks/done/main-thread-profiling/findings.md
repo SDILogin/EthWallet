@@ -4,7 +4,7 @@ Static review only. Nothing was measured. Each item is a candidate. Severity is 
 
 - High: likely more than 16 ms on a frame, or a risk of ANR.
 - Medium: grows with data size or runs often.
-- Low: likely less than 1 ms, or one time at startup.
+- Low: a few ms or less, or one time at startup.
 
 `REVIEW.md` rule: "suspend function must be safe to call from main thread".
 
@@ -22,7 +22,7 @@ Static review only. Nothing was measured. Each item is a candidate. Severity is 
      `flowOn`.
    - `shared/src/commonMain/kotlin/me/sdi/ethwallet/ui/history/HistoryViewModel.kt:75`: `combine` maps each row to
      `HistoryRow` and formats amounts with `BigDecimal`.
-   - Room emits off Main. The `map` and `combine` lambdas run in the collector context, which is
+   - Room runs the query off Main. The `map` and `combine` lambdas run in the collector context, which is
      `viewModelScope` (Main).
    - The whole list is mapped again on each upsert during refresh.
 3. History date grouping in composition. Both platforms. Medium.
@@ -45,13 +45,13 @@ Static review only. Nothing was measured. Each item is a candidate. Severity is 
    - `shared/src/commonMain/kotlin/me/sdi/ethwallet/di/KoinModule.kt:288`.
    - Ktor builds the full body text of each request and response, also in release builds where `Logger` is
      disabled. This includes the large history pages.
-   - It is also a privacy risk: the bodies contain addresses and signed transactions.
+   - Debug builds print these bodies to logcat. They contain addresses and signed transactions.
 6. Biometric availability check outside `withContext`. Android. Low. Breaks the `REVIEW.md` rule.
    - `shared/src/androidMain/kotlin/me/sdi/ethwallet/core/security/AndroidBiometricUnlock.kt:91`:
      `canAuthenticate` is a binder call.
    - Called on Main from `VerifyPinCodeViewModel`, `SettingsViewModel` and `SetPinCodeViewModel`.
 7. Boot count read outside `withContext`. Android. Low. Breaks the `REVIEW.md` rule.
-   - `shared/src/androidMain/kotlin/me/sdi/ethwallet/core/security/KeyStorePinAttemptsGuard.kt:43`:
+   - `shared/src/androidMain/kotlin/me/sdi/ethwallet/core/security/KeyStorePinAttemptsGuard.kt:44`:
      `Settings.Global.getInt(BOOT_COUNT)` is a `ContentResolver` call.
    - Called from `freshState()`, `normalize()` and `onFailedAttempt()` outside `withContext(dispatcher)`.
 8. Disk access when Koin creates singletons on the UI thread. Desktop. Low, one time.
@@ -75,7 +75,8 @@ Static review only. Nothing was measured. Each item is a candidate. Severity is 
 
 - `WalletsListViewModel` injects `Dispatchers.IO` on the ViewModel level.
 - `CreateWalletViewModel.kt:51` uses `withContext(NonCancellable + Dispatchers.IO)`.
-- `EthTransferInteractor` wraps a call that already switches to `Dispatchers.Default`.
+- `EthTransferInteractor` wraps a call that already switches to `Dispatchers.Default` (`KeyStoreEncryptor` on
+  Android, `KekCipher` on Desktop).
 
 ## Checked as correct
 
