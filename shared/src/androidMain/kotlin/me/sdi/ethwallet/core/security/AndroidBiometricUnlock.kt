@@ -87,8 +87,10 @@ class AndroidBiometricUnlock(
 
     override suspend fun status(): BiometricStatus =
         try {
-            val biometricManager = BiometricManager.from(context)
-            when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
+            val canAuthenticate = withContext(dispatcher) {
+                BiometricManager.from(context).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            }
+            when (canAuthenticate) {
                 BiometricManager.BIOMETRIC_SUCCESS -> storedKeyStatus()
                 BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> BiometricStatus.NotEnrolled
                 else -> BiometricStatus.NotSupported

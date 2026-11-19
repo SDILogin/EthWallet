@@ -98,7 +98,13 @@ class KeyStorePinAttemptsGuard(
         val lockDuration = if (locked) PinLockPolicy.lockDuration(newTotal) else Duration.ZERO
         val deadline = if (locked) elapsedRealtime() + lockDuration.inWholeMilliseconds else null
 
-        writeState(PinAttemptsPersistentState(newTotal, deadline, bootCount()))
+        writeState(
+            PinAttemptsPersistentState(
+                totalFailures = newTotal,
+                lockDeadlineElapsedMillis = deadline,
+                bootCount = currentBootCount(),
+            ),
+        )
         return activeOf(newTotal, lockDuration)
     }
 
@@ -118,10 +124,13 @@ class KeyStorePinAttemptsGuard(
         }
     }
 
-    private fun freshState() = PinAttemptsPersistentState(totalFailures = 0, lockDeadlineElapsedMillis = null, bootCount = bootCount())
+    private suspend fun freshState() =
+        PinAttemptsPersistentState(totalFailures = 0, lockDeadlineElapsedMillis = null, bootCount = currentBootCount())
+
+    private suspend fun currentBootCount(): Int = withContext(dispatcher) { bootCount() }
 
     private suspend fun normalize(state: PinAttemptsPersistentState): PinLockState {
-        val currentBoot = bootCount()
+        val currentBoot = currentBootCount()
         val now = elapsedRealtime()
         val deadline = state.lockDeadlineElapsedMillis
 
