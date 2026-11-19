@@ -279,13 +279,15 @@ fun createHttpClient(engine: io.ktor.client.engine.HttpClientEngine): HttpClient
                 },
             )
         }
-        install(Logging) {
-            logger = object : Logger {
-                override fun log(message: String) {
-                    WalletLogger.debug("KtorHttpClient") { message }
+        if (WalletLogger.enabled) {
+            install(Logging) {
+                logger = object : Logger {
+                    override fun log(message: String) {
+                        WalletLogger.debug("KtorHttpClient") { message }
+                    }
                 }
+                level = LogLevel.ALL
             }
-            level = LogLevel.ALL
         }
     }
 }
