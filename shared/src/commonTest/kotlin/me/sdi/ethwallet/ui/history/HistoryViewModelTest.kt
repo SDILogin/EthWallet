@@ -9,6 +9,7 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -405,6 +406,7 @@ class HistoryViewModelTest {
             val vm = app.koin.get<HistoryViewModel> { parametersOf(wallet) }
             store.put("history", vm)
             backgroundScope.launch { vm.viewState.collect {} }
+            vm.viewState.first { it is HistoryViewState.Content }
             runCurrent()
             assertEquals(listOf(wallet), repository.observedAddresses)
             assertEquals(listOf(wallet), updater.addresses)
@@ -684,6 +686,7 @@ class HistoryViewModelTest {
             historyInitializationStore = historyInitializationStoreInMemory,
             chainId = chainId,
             walletAccounts = accounts,
+            mappingDispatcher = dispatcher,
         ).also {
             store.put("history", it)
             if (subscribe) backgroundScope.launch { it.viewState.collect {} }

@@ -3,7 +3,9 @@ package me.sdi.ethwallet.ui.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -41,6 +44,7 @@ class HistoryViewModel(
     private val historyInitializationStore: HistoryInitializationStore,
     private val chainId: Long,
     private val walletAccounts: Flow<List<EthWallet>>,
+    private val mappingDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
     private var historyRequestRunning = false
 
@@ -77,7 +81,9 @@ class HistoryViewModel(
                             it.address.toString().lowercase()
                         }
                         items.mapNotNull { it.toHistoryRow(walletAddress, addresses) }
-                    }.collect { rows ->
+                    }
+                    .flowOn(mappingDispatcher)
+                    .collect { rows ->
                         updateViewState(HistoryEvent.HistoryItemsListChange(rows, initialized))
                     }
             }
