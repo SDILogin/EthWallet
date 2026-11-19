@@ -6,18 +6,27 @@ Evidence tags:
 
 - **[Linux]**: ran in the agent container (Linux x86_64, Docker, cargo 1.97.1, cargo-ndk 4.1.2, NDK
   30.0.14904198) on 2026-11-18.
-- **[Source]**: primary source. Link and access date 2026-11-18.
+- **[Source]**: primary source. Link and access date 2026-11-18, unless the claim states another date.
 - **[Unverified]**: needs macOS or iOS. See "Manual checks".
 - **[Inference]**: reasoning from code or docs, not tested.
 - **[Repo]**: read from the repository at commit `0fc6515`. The baseline section uses this tag for all its facts.
 
 In the option sections, a statement without a tag is [Inference].
 
+"IDE sync" means the Gradle import that IntelliJ IDEA or Android Studio runs. No IDE ran in this research. Every
+sync result is a run of `./gradlew :ethwallet-kotlin:prepareKotlinIdeaImport`.
+
+- [Source] The Kotlin Gradle plugin 2.4.10 describes this task as "Umbrella for all tasks required to run before
+  IDEA/Gradle import". Link:
+  https://github.com/JetBrains/kotlin/blob/v2.4.10/libraries/tools/kotlin-gradle-plugin/src/common/kotlin/org/jetbrains/kotlin/gradle/plugin/ide/PrepareKotlinIdeaImportTask.kt
+  (accessed 2026-11-19).
+- [Inference] When this task fails, IDE sync fails. When it passes, the cargo part of IDE sync passes.
+
 ## Recommendation
 
-1. Now: fix the IDE sync wiring. This is independent and can land first. Step A fixes sync on Linux hosts. The
-   value of step B on macOS depends on manual checks 1 and 2. Then move the Rust build logic into a typed
-   convention plugin (option 3).
+1. Now: fix the IDE sync wiring. This is independent and can land first. Step A removes the
+   `prepareKotlinIdeaImport` failure on Linux hosts. The value of step B on macOS depends on manual checks 1 and 2.
+   Then move the Rust build logic into a typed convention plugin (option 3).
 2. Keep the handwritten JNI and C ABI. Decide on UniFFI (option 4) only after #277 Try UniFFI for Rust/KMP
    bindings reports.
 3. Do not publish prebuilt artifacts (option 1) until CI with macOS runners exists.
@@ -59,11 +68,11 @@ In the option sections, a statement without a tag is [Inference].
 
 - `./gradlew --no-daemon :ethwallet-kotlin:buildRustAndroid`: succeeded in 6m20s. This was one cold, no-daemon run
   in a Linux VM.
-- `./gradlew :ethwallet-kotlin:prepareKotlinIdeaImport` (the task that IDE sync runs): failed after 22s.
+- `./gradlew :ethwallet-kotlin:prepareKotlinIdeaImport` (the task that IDE sync runs, see above): failed after 22s.
   - The task graph includes `buildRustIosArm64`, `buildRustIosSimulatorArm64`, and `buildRustIosX64`. The cause is
     `dependsOn(rustBuildTask)` on the cinterop tasks.
   - The failure: `secp256k1-sys` cannot run `clang` for `aarch64-apple-ios`.
-  - Result: IDE sync of `:ethwallet-kotlin` fails on Linux.
+  - Result [Inference]: IDE sync of `:ethwallet-kotlin` fails on a Linux host. No IDE ran.
 - The same run with the `dependsOn(rustBuildTask)` lines removed from the cinterop tasks succeeded on Linux.
   - This was a throwaway worktree, not part of this change.
   - It took 3m14s with `--no-daemon`, including the Kotlin/Native distribution download. This is not a sync time.
@@ -148,8 +157,8 @@ typed tasks with `@Input`/`@OutputFile` properties and an extension (for example
 - **IDE sync**: the fix is in the wiring, not in the plugin. It has two steps.
   - Step A, Linux sync: add the iOS cargo dependency only when the host is macOS. On other hosts the iOS cinterop
     tasks are skipped, so they do not need the archive.
-    - [Linux] Sync passes on Linux when the cinterop tasks do not depend on cargo. This proves only that the Linux
-      failure goes away. It does not test the macOS path.
+    - [Linux] `prepareKotlinIdeaImport` passes on Linux when the cinterop tasks do not depend on cargo. This proves
+      only that the Linux failure goes away. It does not test the macOS path.
   - Step B, macOS sync (optional): move `-libraryPath`/`-staticLibrary` from cinterop `extraOpts` to the binaries'
     `linkerOpts`, and remove the cinterop dependency on cargo. Then sync needs only the header.
     - Cost [Inference]: cinterop `-staticLibrary` packs the archive into the klib, and downstream iOS frameworks get
@@ -247,11 +256,11 @@ answer.
   - Option 4, UniFFI: source build and bindgen.
   - Option 5, Android only: source build.
 - **IDE sync**
-  - Baseline: fails on Linux. On macOS, cold sync builds three iOS targets (unverified).
+  - Baseline: `prepareKotlinIdeaImport` fails on Linux. On macOS, cold sync builds three iOS targets (unverified).
   - Option 1, prebuilt: fast.
   - Option 2, plugin: not applicable.
-  - Option 3, convention plugin: Linux fixed by step A (failure gone on Linux). macOS needs step B, which is
-    unverified and moves the archive out of the klib.
+  - Option 3, convention plugin: step A removes the `prepareKotlinIdeaImport` failure on Linux. macOS needs step
+    B, which is unverified and moves the archive out of the klib.
   - Option 4, UniFFI: same as the chosen build.
   - Option 5, Android only: fixed.
 - **Cost**
