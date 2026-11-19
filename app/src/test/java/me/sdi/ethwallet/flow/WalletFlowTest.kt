@@ -573,7 +573,7 @@ class WalletFlowTest : KoinTest {
         lockApp()
         composeTestRule.clickText("Forgot PIN Code?")
         composeTestRule.clickText("Confirm logout")
-        composeTestRule.assertTextExists("Create PIN Code")
+        composeTestRule.waitUntilTextExists("Create PIN Code")
 
         runInitialWalletCreationFlow()
 

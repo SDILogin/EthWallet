@@ -18,6 +18,16 @@ This is the probable cause. It is not confirmed.
 - Make the test wait for the state that it asserts. Do not add sleeps or retries.
 - Check the other `assertTextExists` calls in `WalletFlowTest` that follow an asynchronous action.
 
+## Result
+
+- Cause: "Confirm logout" runs `dataCleaner.clean()`. `DataCleanerRoomDb` clears the tables on `Dispatchers.IO`.
+  Compose test idling does not wait for `Dispatchers.IO`. The `LoggedOut` navigation can come after the assertion.
+- The cause is confirmed by reproduction with an injected delay. A temporary cleaner with a 300 ms delay on
+  `Dispatchers.IO` made line 576 fail. With `waitUntilTextExists`, the test passed with the same delay.
+- Line 576 now uses `waitUntilTextExists("Create PIN Code")`.
+- The other `assertTextExists` calls have no step on an untracked dispatcher between the action and the text. They
+  are not changed.
+
 ## Definition of done
 
 - The test passes in repeated full `:app:testDebugUnitTest` runs.
