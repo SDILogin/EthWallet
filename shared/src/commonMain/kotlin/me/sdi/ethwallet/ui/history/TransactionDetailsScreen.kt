@@ -27,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -263,9 +264,10 @@ private fun DetailsContent(
                 )
                 HorizontalDivider()
                 val timeZone = TimeZone.getDefault()
+                val dateFormats = remember(timeZone.id) { HistoryDateFormats(timeZone) }
                 DetailValue(
                     stringResource(Res.string.transaction_details_date),
-                    "${formatHistoryDate(transfer.timestamp, timeZone)}, ${formatHistoryTime(transfer.timestamp, timeZone)}",
+                    "${dateFormats.date(transfer.timestamp)}, ${dateFormats.time(transfer.timestamp)}",
                 )
                 transfer.fee?.let { fee ->
                     HorizontalDivider()

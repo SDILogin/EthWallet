@@ -274,19 +274,22 @@ private fun RefreshableContent(
         }
     }
     val timeZone = TimeZone.getDefault()
-    val groups = remember(rows, timeZone.id) {
+    val dateFormats = remember(timeZone.id) { HistoryDateFormats(timeZone) }
+    val groups = remember(rows, dateFormats) {
         rows.groupBy { row ->
             if (row.status == TransactionStatus.Pending) {
                 "pending"
             } else {
-                historyDateKey(row.timestampMillis, timeZone)
+                dateFormats.dateKey(row.timestampMillis)
             }
         }
     }
-    val today = Calendar.getInstance(timeZone)
-    val todayKey = historyDateKey(today.timeInMillis, timeZone)
-    today.add(Calendar.DAY_OF_YEAR, -1)
-    val yesterdayKey = historyDateKey(today.timeInMillis, timeZone)
+    val (todayKey, yesterdayKey) = remember(rows, isRefreshing, dateFormats) {
+        val today = Calendar.getInstance(timeZone)
+        val todayKey = dateFormats.dateKey(today.timeInMillis)
+        today.add(Calendar.DAY_OF_YEAR, -1)
+        todayKey to dateFormats.dateKey(today.timeInMillis)
+    }
 
     PullToRefreshBox(modifier = modifier, isRefreshing = isRefreshing, onRefresh = onRefresh) {
         LazyColumn(
@@ -323,7 +326,7 @@ private fun RefreshableContent(
                             "pending" -> stringResource(Res.string.history_pending)
                             todayKey -> stringResource(Res.string.history_today)
                             yesterdayKey -> stringResource(Res.string.history_yesterday)
-                            else -> formatHistoryDate(group.first().timestampMillis, timeZone)
+                            else -> dateFormats.date(group.first().timestampMillis)
                         }
                         EthText(
                             title,
@@ -333,7 +336,7 @@ private fun RefreshableContent(
                         )
                     }
                     items(group, key = { it.key }, contentType = { "history" }) { row ->
-                        HistoryListItem(row, timeZone, onHistoryItemClick)
+                        HistoryListItem(row, dateFormats, onHistoryItemClick)
                     }
                 }
             }
@@ -408,7 +411,7 @@ private fun HistoryErrorAnimation() {
 @Composable
 private fun HistoryListItem(
     row: HistoryRow,
-    timeZone: TimeZone,
+    dateFormats: HistoryDateFormats,
     onHistoryItemClick: (transactionHash: TransactionHash) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -441,7 +444,7 @@ private fun HistoryListItem(
         TransactionStatus.Pending -> MaterialTheme.colorScheme.primary
         TransactionStatus.Confirmed -> MaterialTheme.colorScheme.onSurface
     }
-    val time = formatHistoryTime(row.timestampMillis, timeZone)
+    val time = dateFormats.time(row.timestampMillis)
     val subtitle = when (row.status) {
         TransactionStatus.Pending -> stringResource(Res.string.history_pending)
         TransactionStatus.Failed -> listOfNotNull(stringResource(Res.string.history_failed), time).joinToString(" · ")

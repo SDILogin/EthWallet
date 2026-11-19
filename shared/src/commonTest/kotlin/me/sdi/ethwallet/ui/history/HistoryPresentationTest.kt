@@ -98,8 +98,8 @@ class HistoryPresentationTest {
     @Test
     fun date_grouping_uses_local_day() {
         val timestamp = native.requiredRow(wallet).timestampMillis
-        assertEquals("2026-09-07", historyDateKey(timestamp, TimeZone.getTimeZone("UTC")))
-        assertEquals("2026-09-08", historyDateKey(timestamp, TimeZone.getTimeZone("Asia/Bangkok")))
+        assertEquals("2026-09-07", HistoryDateFormats(TimeZone.getTimeZone("UTC")).dateKey(timestamp))
+        assertEquals("2026-09-08", HistoryDateFormats(TimeZone.getTimeZone("Asia/Bangkok")).dateKey(timestamp))
     }
 
     @Test

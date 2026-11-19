@@ -35,11 +35,14 @@ data class HistoryRow(
 
 internal fun EthAddress.shortHistoryAddress(): String = toString().let { "${it.take(6)}…${it.takeLast(4)}" }
 
-internal fun historyDateKey(timestampMillis: Long, timeZone: TimeZone): String =
-    SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).apply { this.timeZone = timeZone }.format(Date(timestampMillis))
+internal class HistoryDateFormats(timeZone: TimeZone) {
+    private val keyFormat = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).apply { this.timeZone = timeZone }
+    private val timeFormat = DateFormat.getTimeInstance(DateFormat.SHORT).apply { this.timeZone = timeZone }
+    private val dateFormat = DateFormat.getDateInstance(DateFormat.MEDIUM).apply { this.timeZone = timeZone }
 
-internal fun formatHistoryTime(timestampMillis: Long, timeZone: TimeZone): String =
-    DateFormat.getTimeInstance(DateFormat.SHORT).apply { this.timeZone = timeZone }.format(Date(timestampMillis))
+    fun dateKey(timestampMillis: Long): String = keyFormat.format(Date(timestampMillis))
 
-internal fun formatHistoryDate(timestampMillis: Long, timeZone: TimeZone): String =
-    DateFormat.getDateInstance(DateFormat.MEDIUM).apply { this.timeZone = timeZone }.format(Date(timestampMillis))
+    fun time(timestampMillis: Long): String = timeFormat.format(Date(timestampMillis))
+
+    fun date(timestampMillis: Long): String = dateFormat.format(Date(timestampMillis))
+}

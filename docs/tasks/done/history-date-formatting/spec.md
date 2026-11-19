@@ -22,7 +22,10 @@ or runs often. Low is a few ms or less, or one time at startup.
 ## Scope
 
 - Create one date formatter for each time zone and reuse it for all rows.
-- Calculate the today and yesterday keys one time for each time zone, not on each recomposition.
+- Calculate the today and yesterday keys one time for each time zone, rows list and refresh, not on each
+  recomposition. A refresh after midnight updates the Today and Yesterday headers.
+- `TransactionDetailsScreen.kt` uses the same `HistoryDateFormats` class, because the old top-level format functions
+  are removed.
 - Keep the same group keys and the same displayed text.
 
 ## Definition of done
