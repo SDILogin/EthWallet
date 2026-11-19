@@ -34,8 +34,16 @@ or runs often. Low is a few ms or less, or one time at startup.
 - Run the row mapping in `TransferHistoryRepositoryRoom.observe` and the `HistoryRow` mapping in `HistoryViewModel`
   on `Dispatchers.Default`.
 - Decode and map Blockscout responses on `Dispatchers.Default` at the lowest level, in
-  `TransfersHistoryProviderBlockscout`.
+  `TransfersHistoryProviderBlockscout.getTransfers` and `getTransaction`.
 - Map the cached table in `TransferHistoryRepositoryRoom.read` on `Dispatchers.Default`.
+- `HistoryViewModel` takes the mapping dispatcher as a constructor parameter. The default is `Dispatchers.Default`.
+  Tests pass the test dispatcher.
+
+## Out of scope
+
+- The filters over the cached list in `HistoryUpdateInteractorDefault.refresh`.
+- The `toEntity` mapping of one page in `TransferHistoryRepositoryRoom.upsert` and `delete`.
+- The single-row mapping in `TransferHistoryRepositoryRoom.observe(trxHash)`.
 
 ## Definition of done
 

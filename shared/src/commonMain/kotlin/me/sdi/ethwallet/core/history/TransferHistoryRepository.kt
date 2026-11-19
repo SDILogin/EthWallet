@@ -1,7 +1,10 @@
 package me.sdi.ethwallet.core.history
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthAddress
@@ -32,16 +35,19 @@ class TransferHistoryRepositoryRoom(
     override fun observe(walletAddress: EthAddress): Flow<List<Transfer>> =
         transferHistoryDao.observe(chainConfig.chainId, walletAddress.normalized())
             .map { entities -> entities.mapNotNull(TransferHistoryEntity::toTransferOrNull) }
+            .flowOn(Dispatchers.Default)
 
     override fun observe(trxHash: String): Flow<Transfer?> = transferHistoryDao
         .observeTransaction(chainConfig.chainId, trxHash.lowercase())
         .map { it?.toTransferOrNull() }
 
-    override suspend fun read(walletAddress: EthAddress): List<Transfer> =
-        transferHistoryDao.readWalletTransfers(
+    override suspend fun read(walletAddress: EthAddress): List<Transfer> {
+        val entities = transferHistoryDao.readWalletTransfers(
             chainConfig.chainId,
             walletAddress.normalized(),
-        ).mapNotNull(TransferHistoryEntity::toTransferOrNull)
+        )
+        return withContext(Dispatchers.Default) { entities.mapNotNull(TransferHistoryEntity::toTransferOrNull) }
+    }
 
     override suspend fun upsert(walletAddress: EthAddress, items: List<Transfer>) {
         transferHistoryDao.upsertAll(

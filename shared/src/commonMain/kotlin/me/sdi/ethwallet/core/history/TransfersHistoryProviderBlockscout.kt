@@ -6,8 +6,9 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -28,7 +29,7 @@ class TransfersHistoryProviderBlockscout(
         address: EthAddress,
         eth: TransfersPageRequest,
         erc20: TransfersPageRequest,
-    ): CombinedTransfersPage = coroutineScope {
+    ): CombinedTransfersPage = withContext(Dispatchers.Default) {
         val transactions = async {
             if (eth == TransfersPageRequest.Skip) null else load<BlockscoutTransaction>(address, "transactions", eth)
         }
@@ -100,9 +101,9 @@ class TransfersHistoryProviderBlockscout(
         )
     }
 
-    override suspend fun getTransaction(hash: String): TransactionSummary? {
+    override suspend fun getTransaction(hash: String): TransactionSummary? = withContext(Dispatchers.Default) {
         val response = httpClient.get("$apiBaseUrl/transactions/$hash")
-        return when {
+        when {
             response.status.isSuccess() -> {
                 val transaction = response.body<BlockscoutTransactionStatus>()
                 TransactionSummary(
