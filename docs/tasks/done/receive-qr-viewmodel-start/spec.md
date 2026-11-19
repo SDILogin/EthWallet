@@ -17,6 +17,10 @@ or runs often. Low is a few ms or less, or one time at startup.
 ## Scope
 
 - Start the flows from `viewState.onStart {}`. Keep the current behavior.
+- `viewState` uses `SharingStarted.Lazily`. The flows start once, on the first collection, and run until the
+  ViewModel is cleared.
+- The screen collects `viewState` after its first composition. So the first frame shows no wallet address and no QR
+  code. The next frame shows them.
 
 ## Definition of done
 

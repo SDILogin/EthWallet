@@ -51,6 +51,23 @@ class ReceiveQrViewModelTest {
     }
 
     @Test
+    fun viewState_collection_should_fill_wallet_address_and_qr_payload() = runTest(testDispatcher) {
+        val collector = mutableListOf<ReceiveQrViewState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.viewState.collect { collector.add(it) }
+        }
+
+        testScheduler.advanceUntilIdle()
+
+        val finalState = collector.last()
+        assertEquals(testAddress, finalState.walletAddress, "Wallet address should be filled after collection starts")
+        assertTrue(
+            finalState.qrPayload?.contains(testAddress.toString()) == true,
+            "QR code should contain wallet address after collection starts",
+        )
+    }
+
+    @Test
     fun onTokenSelected_should_update_selected_token() = runTest(testDispatcher) {
         val collector = mutableListOf<ReceiveQrViewState>()
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {

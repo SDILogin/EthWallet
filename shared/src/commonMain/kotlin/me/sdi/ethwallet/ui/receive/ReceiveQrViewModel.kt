@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.EthAddress
@@ -32,17 +34,38 @@ private const val AMOUNT_MAX_LENGTH = 50
 class ReceiveQrViewModel(
     private val walletAddress: EthAddress,
 ) : ViewModel() {
-    val viewState: StateFlow<ReceiveQrViewState>
-        field = MutableStateFlow(ReceiveQrViewState())
+    private val state = MutableStateFlow(ReceiveQrViewState())
+
+    val viewState: StateFlow<ReceiveQrViewState> = state
+        .onStart {
+            state
+                .onEach { Logger.debug(TAG) { "ViewState: $it" } }
+                .launchIn(viewModelScope)
+
+            news
+                .onEach { Logger.debug(TAG) { "News: $it" } }
+                .launchIn(viewModelScope)
+
+            qrCodePayload
+                .onEach { qrPayload -> state.update { vs -> vs.copy(qrPayload = qrPayload) } }
+                .catch { e -> Logger.warn(TAG) { "Failed to generate QR code: ${e.message}" } }
+                .launchIn(viewModelScope)
+
+            receiverAddress
+                .onEach { address -> state.update { vs -> vs.copy(walletAddress = address) } }
+                .catch { e -> Logger.warn(TAG) { "Failed to load wallet address: ${e.message}" } }
+                .launchIn(viewModelScope)
+        }
+        .stateIn(viewModelScope, SharingStarted.Lazily, state.value)
 
     private val receiverAddress: Flow<EthAddress> = flowOf(walletAddress)
 
-    private val selectedTokenContractAddress: Flow<EthAddress> = viewState
+    private val selectedTokenContractAddress: Flow<EthAddress> = state
         .map { it.selectedTokenContract }
         .distinctUntilChanged()
         .onEach { Logger.debug(TAG) { "(flow) Selected token contract: $it" } }
 
-    private val amount: Flow<BigDecimal?> = viewState
+    private val amount: Flow<BigDecimal?> = state
         .map { state -> state.amount.toBigDecimalOrNull()?.takeIf { state.amountError == null } }
         .distinctUntilChanged()
         .onEach { Logger.debug(TAG) { "(flow) Amount changed: $it" } }
@@ -67,26 +90,6 @@ class ReceiveQrViewModel(
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
 
-    init {
-        viewState
-            .onEach { Logger.debug(TAG) { "ViewState: $it" } }
-            .launchIn(viewModelScope)
-
-        news
-            .onEach { Logger.debug(TAG) { "News: $it" } }
-            .launchIn(viewModelScope)
-
-        qrCodePayload
-            .onEach { qrPayload -> viewState.update { vs -> vs.copy(qrPayload = qrPayload) } }
-            .catch { e -> Logger.warn(TAG) { "Failed to generate QR code: ${e.message}" } }
-            .launchIn(viewModelScope)
-
-        receiverAddress
-            .onEach { address -> viewState.update { vs -> vs.copy(walletAddress = address) } }
-            .catch { e -> Logger.warn(TAG) { "Failed to load wallet address: ${e.message}" } }
-            .launchIn(viewModelScope)
-    }
-
     fun onEvent(event: ReceiveQrEvent) {
         Logger.debug(TAG) { "onEvent: $event" }
         when (event) {
@@ -106,7 +109,7 @@ class ReceiveQrViewModel(
             "Selected $selectedTokenName"
         }
 
-        viewState.update { it.copy(selectedTokenContract = contractAddress) }
+        state.update { it.copy(selectedTokenContract = contractAddress) }
     }
 
     private fun handleAmountChanged(amount: String) {
@@ -120,7 +123,7 @@ class ReceiveQrViewModel(
             trimmedAmount
         }
 
-        viewState.update { vs ->
+        state.update { vs ->
             vs.copy(amount = formattedAmount)
         }
     }
@@ -128,6 +131,6 @@ class ReceiveQrViewModel(
     private fun handleClearAmount() {
         Logger.debug(TAG) { "Clear amount requested" }
 
-        viewState.update { it.copy(amount = "") }
+        state.update { it.copy(amount = "") }
     }
 }
