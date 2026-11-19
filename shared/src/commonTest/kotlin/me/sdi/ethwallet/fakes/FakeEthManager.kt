@@ -35,7 +35,6 @@ class FakeEthManager : EthManager {
     var exceptionToThrow: Throwable? = null
     var lastImportedMnemonic: String? = null
     var balanceResult: Map<EthAddress, Result<BigInteger>> = emptyMap()
-    var beforeCreateWallet: (suspend () -> Unit)? = null
 
     override suspend fun getBalance(address: EthAddress): Map<EthAddress, Result<BigInteger>> = balanceResult
 
@@ -52,7 +51,6 @@ class FakeEthManager : EthManager {
     ): String = throw NotImplementedError()
 
     override suspend fun createWallet(): EthCreationResult {
-        beforeCreateWallet?.invoke()
         exceptionToThrow?.let { throw it }
         if (shouldThrowException) throw RuntimeException("Wallet creation failed")
         return creationResult
