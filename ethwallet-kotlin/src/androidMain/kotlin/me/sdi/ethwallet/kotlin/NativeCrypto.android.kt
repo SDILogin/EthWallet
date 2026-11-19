@@ -10,6 +10,10 @@ internal actual object NativeCrypto {
         checkAbiVersion()
     }
 
+    actual suspend fun load() {
+        nativeLibrary.value
+    }
+
     actual fun createMnemonic(): CharArray {
         ensureNativeLibrary()
         val output = ByteArray(NATIVE_MNEMONIC_MAXIMUM_LENGTH)

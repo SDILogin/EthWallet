@@ -30,6 +30,7 @@ class Mnemonic private constructor(
          * Parses and validates a BIP-39 phrase.
          */
         suspend fun parse(value: CharSequence): Mnemonic = withContext(Dispatchers.Default) {
+            NativeCrypto.load()
             val normalized = normalizeMnemonic(value)
             val bytes = normalized.copyAsciiBytes()
             var accepted = false

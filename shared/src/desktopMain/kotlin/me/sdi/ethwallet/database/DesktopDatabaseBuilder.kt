@@ -7,9 +7,6 @@ import java.io.File
 
 object DesktopDatabaseBuilder {
     fun build(directory: File): AppDatabase {
-        check(directory.isDirectory || directory.mkdirs()) {
-            "Cannot create database directory: $directory"
-        }
         return Room.databaseBuilder<AppDatabase>(
             name = File(directory, "ethwallet_db").absolutePath,
         )

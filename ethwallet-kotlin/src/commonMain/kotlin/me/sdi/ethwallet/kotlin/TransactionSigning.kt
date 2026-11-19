@@ -25,6 +25,7 @@ data class Eip1559TransactionPayload(
 
 suspend fun PrivateKey.signTransaction(payload: Eip1559TransactionPayload): ByteArray =
     withContext(Dispatchers.Default) {
+        NativeCrypto.load()
         requireUsable()
         val privateKey = copyBytes()
         try {

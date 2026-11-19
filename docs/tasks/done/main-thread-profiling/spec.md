@@ -36,7 +36,7 @@ profiler.
 - `docs/tasks/backlog/history-date-formatting/spec.md`
 - `docs/tasks/backlog/ktor-logging-level/spec.md`
 - `docs/tasks/backlog/android-binder-calls-off-main/spec.md`
-- `docs/tasks/backlog/disk-access-on-io/spec.md`
+- `docs/tasks/done/disk-access-on-io/spec.md`
 - `docs/tasks/backlog/http-client-creation/spec.md`
 - `docs/tasks/done/receive-qr-viewmodel-start/spec.md`
 - `docs/tasks/backlog/dispatcher-lowest-level/spec.md`
@@ -46,7 +46,7 @@ profiler.
 - `ethwallet-kotlin`: `createWallet`, `Mnemonic.parse`, `derivePrivateKey`, `deriveAddress` and `signTransaction`
   call Rust inside `withContext(Dispatchers.Default)`.
   The first call on Desktop also extracts the native library on `Dispatchers.Default`. See
-  `docs/tasks/backlog/disk-access-on-io/spec.md`.
+  `docs/tasks/done/disk-access-on-io/spec.md`.
 - Desktop crypto: Secure Enclave (IO), Argon2 (Default), zxcvbn (Default), `KekCipher` (Default).
 - Android crypto: PBKDF2 in `PinCodeStorageDataStore` (Default), `KeyStoreEncryptor`,
   `MasterKekStorageAndroidKeyStore`, and the load and write paths of `KeyStorePinAttemptsGuard`.

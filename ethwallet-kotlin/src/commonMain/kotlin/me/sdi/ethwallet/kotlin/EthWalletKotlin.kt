@@ -25,6 +25,7 @@ private const val PENDING_BLOCK = "pending"
  */
 object EthWalletKotlin {
     suspend fun createWallet(): Mnemonic = withContext(Dispatchers.Default) {
+        NativeCrypto.load()
         Mnemonic.fromNativeCharacters(NativeCrypto.createMnemonic())
     }
 
@@ -157,6 +158,7 @@ suspend fun Mnemonic.derivePrivateKey(
     derivationPath: EthereumDerivationPath,
     passphrase: String = "",
 ): PrivateKey = withContext(Dispatchers.Default) {
+    NativeCrypto.load()
     requireUsable()
     val passphraseBytes = passphrase.encodeToByteArray(throwOnInvalidSequence = true)
     try {
@@ -179,6 +181,7 @@ suspend fun Mnemonic.derivePrivateKey(
 }
 
 suspend fun PrivateKey.deriveAddress(): String = withContext(Dispatchers.Default) {
+    NativeCrypto.load()
     requireUsable()
     val privateKeyBytes = copyBytes()
     try {

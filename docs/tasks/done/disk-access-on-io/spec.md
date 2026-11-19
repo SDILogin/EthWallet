@@ -24,6 +24,12 @@ or runs often. Low is a few ms or less, or one time at startup.
 ## Scope
 
 - Run each disk access above on `Dispatchers.IO`.
+- `pinArtifactsDataStore` creates the directory in the DataStore path producer. DataStore calls it on first
+  access, on its IO scope.
+- `DesktopDatabaseBuilder` does not create the directory. Room creates the parent directory of the database file on
+  first open, on its IO query context. A desktop test covers a missing directory.
+- `NativeCrypto.load()` loads the native library. The JVM actual runs on `Dispatchers.IO`. The Android and iOS
+  actuals do not change the dispatcher.
 
 ## Definition of done
 

@@ -1,5 +1,7 @@
 package me.sdi.ethwallet.kotlin
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.file.Files
 
@@ -7,6 +9,12 @@ internal actual object NativeCrypto {
     private val nativeLibrary = lazy {
         loadAppleSiliconMacOsLibrary()
         checkAbiVersion()
+    }
+
+    actual suspend fun load() {
+        withContext(Dispatchers.IO) {
+            nativeLibrary.value
+        }
     }
 
     actual fun createMnemonic(): CharArray {
