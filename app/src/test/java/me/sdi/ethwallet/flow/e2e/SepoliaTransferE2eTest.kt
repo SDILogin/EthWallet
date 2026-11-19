@@ -53,10 +53,10 @@ class SepoliaTransferE2eTest {
     @Before
     fun setUp() {
         seeds = SepoliaE2eSeeds.load()
-        startSepoliaE2eKoin(RuntimeEnvironment.getApplication())
-        koinStarted = true
         Logger.enabled = true
         Logger.printer = { level, tag, msg -> println("[${level.name.first()}] $tag: $msg") }
+        startSepoliaE2eKoin(RuntimeEnvironment.getApplication())
+        koinStarted = true
         activityController = Robolectric.buildActivity(WalletFlowTestActivity::class.java).setup()
     }
 
