@@ -101,7 +101,6 @@ class WalletsListViewModelTest {
                 explorerBaseUrl = "https://example.com",
                 transactionHistoryApiBaseUrl = "https://history.example.test",
             ),
-            backgroundDispatcher = testDispatcher,
         )
     }
 

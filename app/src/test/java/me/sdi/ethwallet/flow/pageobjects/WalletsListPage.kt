@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTextReplacement
 import me.sdi.ethwallet.flow.clickContentDescription
 import me.sdi.ethwallet.flow.clickText
+import me.sdi.ethwallet.flow.waitUntilTextExists
 
 class WalletsListPage(private val composeTestRule: ComposeTestRule) {
     fun openAddWalletMenu() {
@@ -75,6 +76,7 @@ class WalletsListPage(private val composeTestRule: ComposeTestRule) {
     }
 
     fun clickWallet(label: String) {
+        composeTestRule.waitUntilTextExists(label)
         composeTestRule.clickText(label)
     }
 

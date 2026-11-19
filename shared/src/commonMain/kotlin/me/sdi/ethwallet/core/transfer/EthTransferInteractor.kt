@@ -1,11 +1,9 @@
 package me.sdi.ethwallet.core.transfer
 
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.core.BalanceProvider
 import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.EthContractAddress
@@ -116,11 +114,9 @@ class EthTransferInteractor(
 
     private suspend fun decryptPrivateKey(address: EthAddress): PrivateKey {
         val encryptedPrivateKey = walletRepository.getEncryptedPrivateKey(address)
-        return withContext(Dispatchers.Default) {
-            privateKeyEncryptor.decryptPrivateKey(
-                encryptedPrivateKey,
-                address.toString(),
-            )
-        }
+        return privateKeyEncryptor.decryptPrivateKey(
+            encryptedPrivateKey,
+            address.toString(),
+        )
     }
 }

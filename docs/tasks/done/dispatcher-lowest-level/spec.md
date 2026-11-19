@@ -23,7 +23,11 @@ or runs often. Low is a few ms or less, or one time at startup.
 
 - Remove the dispatcher from these callers. Make sure the called functions set the dispatcher where the blocking
   work happens.
-- Keep `NonCancellable` where the current behavior needs it.
+- Remove `NonCancellable` and the `cleared` flag from `CreateWalletViewModel`. Nobody uses a key that is generated
+  after the screen closes, so it is not a risk.
+- Fix the `KekCipher` KDoc. It says that callers own threading, but both functions set `Dispatchers.Default`.
+- Remove the lock in `CreateWalletViewModel` and the atomic in `WalletsListViewModel`. Their code now runs only on Main.
+- In the UI flow tests, wait for the wallet label before the click. The wallets list now updates on Main a little later.
 
 ## Definition of done
 
