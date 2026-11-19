@@ -29,28 +29,37 @@ struct Input {
 }
 
 fuzz_target!(|input: Input| {
-    let data_pointer = if input.data.is_empty() && input.null_empty_data {
+    let private_key = Box::<[u8]>::from(input.private_key.as_slice());
+    let nonce = Box::<[u8]>::from(input.nonce.as_slice());
+    let max_priority_fee_per_gas = Box::<[u8]>::from(input.max_priority_fee_per_gas.as_slice());
+    let max_fee_per_gas = Box::<[u8]>::from(input.max_fee_per_gas.as_slice());
+    let gas_limit = Box::<[u8]>::from(input.gas_limit.as_slice());
+    let destination = Box::<[u8]>::from(input.destination.as_slice());
+    let value = Box::<[u8]>::from(input.value.as_slice());
+    let data = Box::<[u8]>::from(input.data.as_slice());
+    let data_pointer = if data.is_empty() && input.null_empty_data {
         std::ptr::null()
     } else {
-        input.data.as_ptr()
+        data.as_ptr()
     };
     let mut output = vec![SENTINEL; input.data.len() + SIGNED_TRANSACTION_CAPACITY_OVERHEAD];
     let mut output_length = usize::MAX;
 
-    // SAFETY: each fixed input has its ABI size. The data pointer owns `data.len()` bytes or is
-    // null with length zero. The output has the capacity that the Kotlin bindings allocate.
+    // SAFETY: each input is a separate heap buffer of its ABI size. The data pointer owns
+    // `data.len()` bytes or is null with length zero. The output has the capacity that the Kotlin
+    // bindings allocate.
     let status = unsafe {
         ewc_sign_eip1559_transaction(
-            input.private_key.as_ptr(),
+            private_key.as_ptr(),
             input.chain_id,
-            input.nonce.as_ptr(),
-            input.max_priority_fee_per_gas.as_ptr(),
-            input.max_fee_per_gas.as_ptr(),
-            input.gas_limit.as_ptr(),
-            input.destination.as_ptr(),
-            input.value.as_ptr(),
+            nonce.as_ptr(),
+            max_priority_fee_per_gas.as_ptr(),
+            max_fee_per_gas.as_ptr(),
+            gas_limit.as_ptr(),
+            destination.as_ptr(),
+            value.as_ptr(),
             data_pointer,
-            input.data.len(),
+            data.len(),
             output.as_mut_ptr(),
             &mut output_length,
         )

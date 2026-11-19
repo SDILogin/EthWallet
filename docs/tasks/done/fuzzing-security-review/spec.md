@@ -17,7 +17,8 @@ and no document for an external reviewer.
   pointer, fixed input sizes, output buffers sized as the bindings size them (32, 20, `data_length + 320`).
   `ewc_create_mnemonic` has no fuzzable input.
 - Each target checks the result against an oracle, not only for crashes. The mnemonic, derivation and signing
-  oracles do not use the library parser, derivation or encoder.
+  oracles do not call the library parser, derivation or encoding functions. The signing oracle uses the same
+  `alloy-rlp` crate, but only its decoder.
 - Seeds from public BIP-39 vectors and secp256k1 scalar bounds, and a BIP-39 English dictionary.
 - Supported sanitizer runs on Linux: AddressSanitizer and LeakSanitizer through the fuzz targets and the test
   suite, Miri on the tests that call no C code.

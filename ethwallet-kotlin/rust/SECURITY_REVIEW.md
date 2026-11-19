@@ -95,8 +95,11 @@ Seeds:
 - `fuzz/seeds/derive_address`: the scalars 0, 1, n - 1, n and 2^256 - 1.
 - `fuzz/bip39_english.dict`: the BIP-39 English word list as a libFuzzer dictionary. The mnemonic targets use it.
 
-`libfuzzer-sys` aborts on a panic before `ffi_status` can catch it. So a library panic is a fuzz crash. It is
-never an INTERNAL_PANIC status in a fuzz run.
+`libfuzzer-sys` aborts on a panic before `ffi_status` can catch it. So a library panic is a fuzz crash. A returned
+INTERNAL_PANIC status fails the status assertion, so it is also a fuzz crash.
+
+Each harness copies every input into its own heap buffer of the exact size. So AddressSanitizer reports a read
+past any input.
 
 ## Commands
 
@@ -129,6 +132,26 @@ CFLAGS="-fsanitize=address" RUSTFLAGS="-Zsanitizer=address" CARGO_TARGET_DIR=tar
   cargo +nightly test --target x86_64-unknown-linux-gnu --lib --tests
 ```
 
+MemorySanitizer fuzzing of the target that calls no C code (Linux x86_64):
+
+```bash
+cd ethwallet-kotlin/rust/fuzz
+unset CFLAGS
+mkdir -p corpus/msan_validate_mnemonic
+CARGO_TARGET_DIR=target/msan cargo +nightly fuzz run --sanitizer memory --build-std validate_mnemonic corpus/msan_validate_mnemonic \
+  seeds/validate_mnemonic -- -dict=bip39_english.dict -max_total_time=600
+```
+
+ThreadSanitizer on the library tests (needs a host that allows ASLR to be turned off; on Apple Silicon macOS use
+`aarch64-apple-darwin`):
+
+```bash
+cd ethwallet-kotlin/rust
+unset CFLAGS
+RUSTFLAGS="-Zsanitizer=thread" CARGO_TARGET_DIR=target/tsan \
+  cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu --lib --tests
+```
+
 Library tests with Miri (needs `rustup +nightly component add miri rust-src`):
 
 ```bash
@@ -149,13 +172,19 @@ PBKDF2 is slow under Miri. The derivation tests take from 10 to 75 minutes.
 - Miri cannot run C code. The tests that reach libsecp256k1 (address derivation and signing) stop with
   "unsupported operation". Miri covers only the tests above.
 - The JNI bridge compiles only for Android and macOS. Linux runs do not cover it.
-- MemorySanitizer was not run. It needs `-Zbuild-std` and all C code built with MemorySanitizer. This task did not
-  set that up.
+- MemorySanitizer runs only on `validate_mnemonic`, which calls no C code. The other targets reach libsecp256k1.
+  MemorySanitizer needs that C code built with clang, and the Docker agent has only gcc.
 - ThreadSanitizer builds with `-Zbuild-std`, but the Docker agent cannot run it. TSan needs ASLR off, and the
   sandbox blocks `personality()`. The only shared state is the `OnceLock` secp256k1 context.
+- On macOS, Apple clang may build the C code with an ASan version that does not link with the rustc ASan runtime.
+  If the link fails, run without `CFLAGS` and record the C code as not instrumented.
+- `derive_private_key` reaches success only with generated mnemonics. A raw mnemonic with unusual whitespace almost
+  never becomes valid in that target. `validate_mnemonic` covers whitespace parsing.
 - HWASan for Android is not set up in this project.
 - The signing target uses the default `-max_len` of 4096 bytes. Calldata of 65536 bytes or more, which uses a
   longer RLP length header, is not fuzzed.
+- No oracle accepts ENTROPY_FAILURE. A `getrandom` failure would show up as a fuzz crash.
+- On Linux the `cc` crate builds the C code with gcc. Its ASan code links with the rustc (LLVM) ASan runtime.
 - The derivation oracle uses `expect` on BIP-32 steps that fail with a probability of about 2^-127. Such a crash
   would be an oracle limit, not a library defect.
 
@@ -169,6 +198,9 @@ These checks need macOS, iOS or an Android device. Run them before the review cl
 4. macOS on Apple Silicon: `./gradlew :ethwallet-kotlin:testAndroidHostTest`. This runs the Android JNI bridge on
    the host.
 5. Android arm64 device or emulator connected with `adb`: `./gradlew :ethwallet-kotlin:connectedAndroidDeviceTest`.
+6. macOS on Apple Silicon: the AddressSanitizer library test command above with
+   `--target aarch64-apple-darwin`.
+7. macOS on Apple Silicon: the ThreadSanitizer command above with `--target aarch64-apple-darwin`.
 
 ## Questions for the reviewer
 
@@ -181,4 +213,7 @@ These checks need macOS, iOS or an Android device. Run them before the review cl
    failure?
 5. Are the documented zeroization limits acceptable for this wallet? Which copies stay in memory?
 6. Is the secp256k1 context randomization enough? Is a low-s signature always produced?
-7. Does BIP-39 parsing accept only the inputs that the Kotlin normalization can produce, and is a wider set a risk?
+7. `Mnemonic.parse` rejects an empty phrase before the native call. For an empty mnemonic, the iOS binding returns
+   INVALID_ARGUMENT (`IllegalStateException`) and the JNI bridge returns INVALID_MNEMONIC
+   (`IllegalArgumentException`). Is this difference a risk?
+8. Does BIP-39 parsing accept only the inputs that the Kotlin normalization can produce, and is a wider set a risk?

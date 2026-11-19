@@ -36,8 +36,8 @@ struct Input {
 }
 
 fuzz_target!(|input: Input| {
-    let mnemonic = match input.mnemonic {
-        MnemonicInput::Raw(bytes) => bytes,
+    let mnemonic: Box<[u8]> = match input.mnemonic {
+        MnemonicInput::Raw(bytes) => bytes.into(),
         MnemonicInput::Generated(word_count, entropy) => {
             let entropy_length = match word_count {
                 WordCount::Twelve => 16,
@@ -50,12 +50,14 @@ fuzz_target!(|input: Input| {
                 .expect("entropy length is valid")
                 .to_string()
                 .into_bytes()
+                .into()
         }
     };
-    let passphrase_pointer = if input.passphrase.is_empty() && input.null_empty_passphrase {
+    let passphrase = Box::<[u8]>::from(input.passphrase.as_slice());
+    let passphrase_pointer = if passphrase.is_empty() && input.null_empty_passphrase {
         std::ptr::null()
     } else {
-        input.passphrase.as_ptr()
+        passphrase.as_ptr()
     };
     let mut output = [SENTINEL; 32];
 
@@ -66,7 +68,7 @@ fuzz_target!(|input: Input| {
             mnemonic.as_ptr(),
             mnemonic.len(),
             passphrase_pointer,
-            input.passphrase.len(),
+            passphrase.len(),
             input.account_index,
             input.address_index,
             output.as_mut_ptr(),
