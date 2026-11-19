@@ -44,7 +44,7 @@ or runs often. Low is a few ms or less, or one time at startup.
 
 ### Decision
 
-- The real time is less than 16 ms only if the container is more than 25 times slower. This is not likely.
+- The real time is less than 16 ms only if the container is about 24 to 75 times slower. This is not likely.
 - So the client is created off the main thread on Android and Desktop. Android uses the same code path.
 - Koin locks each `single` while it creates it. A warm-up in the background does not help if Main asks for the client first.
 
