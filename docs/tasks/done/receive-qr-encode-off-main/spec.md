@@ -29,3 +29,8 @@ or runs often. Low is a few ms or less, or one time at startup.
 - `QRCodeWriter.encode` does not run on the main thread.
 - The QR code looks the same as before on Android and Desktop.
 - `./gradlew spotlessApply` and the app and desktop tests pass.
+
+## Done notes
+
+- The quiet zone is now always the ZXing default of 4 modules. The old pixel matrix added extra margin, so the code
+  is drawn up to about 20% larger in the same 300 dp box. The module pattern and colors are the same.

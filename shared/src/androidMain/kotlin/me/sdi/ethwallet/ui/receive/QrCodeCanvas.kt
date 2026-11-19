@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.Logger
 
 @Composable
@@ -34,18 +36,13 @@ actual fun QrCodeCanvas(
     val sizePx = with(density) { size.toPx().toInt() }
     LaunchedEffect(qrData) {
         Logger.debug("QrCodeCanvas") { "Generating QR code for $qrData" }
-        bitMatrix = try {
-            // qrcode data based size
-            val qrSize = if (qrData.length > 100) 300 else 150
-            QRCodeWriter().encode(
-                qrData,
-                BarcodeFormat.QR_CODE,
-                qrSize,
-                qrSize,
-            )
-        } catch (t: Throwable) {
-            Logger.warn("QrCode", t) { "Error generating QR code" }
-            null
+        bitMatrix = withContext(Dispatchers.Default) {
+            try {
+                QRCodeWriter().encode(qrData, BarcodeFormat.QR_CODE, 0, 0)
+            } catch (t: Throwable) {
+                Logger.warn("QrCode", t) { "Error generating QR code" }
+                null
+            }
         }
         loading = false
     }
