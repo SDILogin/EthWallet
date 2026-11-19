@@ -15,7 +15,7 @@ pub const STATUS_INVALID_TRANSACTION: i32 = 7;
 
 pub static SECP256K1: LazyLock<Secp256k1<All>> = LazyLock::new(Secp256k1::new);
 
-const HARDENED_OFFSET: u32 = 1 << 31;
+pub const HARDENED_OFFSET: u32 = 1 << 31;
 const PBKDF2_ROUNDS: usize = 2048;
 
 pub const SENTINEL: u8 = 0xa5;
@@ -66,7 +66,6 @@ pub fn is_valid_english_mnemonic(input: &[u8]) -> bool {
         .all(|bit| ((hash[bit / 8] >> (7 - bit % 8)) & 1 == 1) == bits[entropy_bits + bit])
 }
 
-/// Returns the Ethereum address of `secret_key`.
 pub fn ethereum_address(secret_key: &SecretKey) -> [u8; 20] {
     let public_key = PublicKey::from_secret_key(&SECP256K1, secret_key).serialize_uncompressed();
     let hash = Keccak256::digest(&public_key[1..]);
@@ -75,7 +74,6 @@ pub fn ethereum_address(secret_key: &SecretKey) -> [u8; 20] {
         .expect("Keccak-256 output has 32 bytes")
 }
 
-/// Returns `value` without leading zero bytes.
 pub fn minimal_quantity(value: &[u8]) -> &[u8] {
     let first_nonzero = value
         .iter()

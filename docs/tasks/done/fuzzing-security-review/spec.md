@@ -21,7 +21,8 @@ and no document for an external reviewer.
   `alloy-rlp` crate, but only its decoder.
 - Seeds from public BIP-39 vectors and secp256k1 scalar bounds, and a BIP-39 English dictionary.
 - Supported sanitizer runs on Linux: AddressSanitizer and LeakSanitizer through the fuzz targets and the test
-  suite, Miri on the tests that call no C code.
+  suite, Miri on the tests that call no C code, MemorySanitizer on the fuzz target that calls no C code, and a
+  ThreadSanitizer attempt on the tests.
 - A review packet for an external reviewer: `ethwallet-kotlin/rust/SECURITY_REVIEW.md`.
 - The run results of this task: `docs/tasks/done/fuzzing-security-review/results.md`.
 

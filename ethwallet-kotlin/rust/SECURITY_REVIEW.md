@@ -85,7 +85,7 @@ They use the buffer sizes and pointer forms of the bindings.
 | Target | Input | Oracle |
 | --- | --- | --- |
 | `validate_mnemonic` | raw bytes | An own BIP-39 check: ASCII, English word list, word count, SHA-256 checksum. The status must match. |
-| `derive_private_key` | raw bytes or a mnemonic from random entropy (12 to 24 words), passphrase bytes, NULL or non-null empty passphrase, any `u32` indices | The status must follow the order above. The expected status comes from the own BIP-39 check of `validate_mnemonic`. On failure the output must not change. On success the key must equal an own BIP-39 seed (PBKDF2-HMAC-SHA512, NFKD passphrase) and BIP-32 derivation on libsecp256k1. This compares `k256` with libsecp256k1. |
+| `derive_private_key` | raw bytes or a mnemonic from random entropy (12 to 24 words), passphrase bytes, NULL or non-null empty passphrase, any `u32` indices | The status must follow the order above. The expected status comes from the own BIP-39 check of `validate_mnemonic`. On failure the output must not change. On success the key must equal an own BIP-39 seed (PBKDF2-HMAC-SHA512, NFKD passphrase) and BIP-32 derivation on libsecp256k1. This compares `k256` with libsecp256k1. The oracle uses the same `hmac`, `sha2` and `unicode-normalization` crates as the library, so it does not find a defect in these crates. |
 | `derive_address` | 32 bytes | OK if and only if `secp256k1` accepts the scalar. The address must equal Keccak-256 of the public key, last 20 bytes. On failure the output must not change. The oracle uses the same crates as the library, so it checks the ABI handling only. |
 | `sign_eip1559_transaction` | key, chain ID, all fields, calldata, NULL or non-null empty calldata | The status must follow the order above. On failure the outputs must not change. On success: the length fits the capacity, the type byte is `0x02`, the RLP list has the input fields with minimal quantities, `y_parity` is 0 or 1, `s` is low, and the recovered signer is the key address. The oracle decodes with the `alloy-rlp` decoder and writes the signing list header by hand. |
 
@@ -93,7 +93,9 @@ Seeds:
 
 - `fuzz/seeds/validate_mnemonic`: public BIP-39 vectors and near-valid mnemonics.
 - `fuzz/seeds/derive_address`: the scalars 0, 1, n - 1, n and 2^256 - 1.
-- `fuzz/bip39_english.dict`: the BIP-39 English word list as a libFuzzer dictionary. The mnemonic targets use it.
+- `fuzz/bip39_english.dict`: the BIP-39 English word list as a libFuzzer dictionary. `validate_mnemonic` uses it. The
+  `derive_private_key` command also passes it, but it helps little there: `arbitrary` puts a control byte before
+  each byte of the raw mnemonic, so a dictionary word does not arrive as one piece.
 
 `libfuzzer-sys` aborts on a panic before `ffi_status` can catch it. So a library panic is a fuzz crash. A returned
 INTERNAL_PANIC status fails the status assertion, so it is also a fuzz crash.
@@ -103,7 +105,8 @@ past any input.
 
 ## Commands
 
-Fuzzing needs a nightly toolchain and `cargo install cargo-fuzz`. Each command in `fuzz/` needs `+nightly`,
+Fuzzing needs a nightly toolchain and `cargo install cargo-fuzz`. Each `cargo fuzz` command and each sanitizer
+command needs `+nightly`,
 because `rust-toolchain.toml` pins the stable library toolchain. `CFLAGS` makes the `cc` crate build the
 libsecp256k1 C code with AddressSanitizer too.
 
@@ -181,8 +184,9 @@ PBKDF2 is slow under Miri. The derivation tests take from 10 to 75 minutes.
 - `derive_private_key` reaches success only with generated mnemonics. A raw mnemonic with unusual whitespace almost
   never becomes valid in that target. `validate_mnemonic` covers whitespace parsing.
 - HWASan for Android is not set up in this project.
-- The signing target uses the default `-max_len` of 4096 bytes. Calldata of 65536 bytes or more, which uses a
-  longer RLP length header, is not fuzzed.
+- The signing target uses the default `-max_len` of 4096 bytes. `arbitrary` puts a control byte before each
+  calldata byte, so the calldata stays below about 2 KB. This covers the 1-byte and 2-byte RLP length headers.
+  Calldata of 65536 bytes or more, which uses a longer RLP length header, is not fuzzed.
 - No oracle accepts ENTROPY_FAILURE. A `getrandom` failure would show up as a fuzz crash.
 - On Linux the `cc` crate builds the C code with gcc. Its ASan code links with the rustc (LLVM) ASan runtime.
 - The derivation oracle uses `expect` on BIP-32 steps that fail with a probability of about 2^-127. Such a crash

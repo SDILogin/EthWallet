@@ -4,12 +4,10 @@ use arbitrary::Arbitrary;
 use bip39::{Language, Mnemonic};
 use ethwallet_crypto::ewc_derive_private_key;
 use ethwallet_crypto_fuzz::{
-    SENTINEL, STATUS_INVALID_ARGUMENT, STATUS_INVALID_MNEMONIC, STATUS_OK,
+    HARDENED_OFFSET, SENTINEL, STATUS_INVALID_ARGUMENT, STATUS_INVALID_MNEMONIC, STATUS_OK,
     derive_bip44_private_key, is_valid_english_mnemonic,
 };
 use libfuzzer_sys::fuzz_target;
-
-const HARDENED_BIT: u32 = 1 << 31;
 
 #[derive(Arbitrary, Debug)]
 enum MnemonicInput {
@@ -76,8 +74,8 @@ fuzz_target!(|input: Input| {
     };
 
     let arguments_are_valid = std::str::from_utf8(&input.passphrase).is_ok()
-        && input.account_index & HARDENED_BIT == 0
-        && input.address_index & HARDENED_BIT == 0;
+        && input.account_index & HARDENED_OFFSET == 0
+        && input.address_index & HARDENED_OFFSET == 0;
     let expected = match (is_valid_english_mnemonic(&mnemonic), arguments_are_valid) {
         (true, true) => STATUS_OK,
         (true, false) => STATUS_INVALID_ARGUMENT,
