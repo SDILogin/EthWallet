@@ -17,6 +17,8 @@ private val OWNER_ONLY_DIRECTORY = PosixFilePermissions.fromString("rwx------")
  * Opens the preferences store holding the protected master KEK inside [directory], which is created (or
  * tightened) so that only its owner may enter it.
  *
+ * The path producer creates the directory. DataStore calls it on first access, on its IO scope.
+ *
  * The protection has to sit on the directory: DataStore writes through a temporary file created
  * under the process umask and renamed over the target, so any mode set on the stored file itself is
  * dropped by the next write. A directory no other user can traverse keeps both files unreachable.
@@ -27,13 +29,13 @@ private val OWNER_ONLY_DIRECTORY = PosixFilePermissions.fromString("rwx------")
  */
 fun pinArtifactsDataStore(directory: File): DataStore<Preferences> {
     val path = directory.toPath().toAbsolutePath()
-    if (FileSystems.getDefault().supportedFileAttributeViews().contains(POSIX_VIEW)) {
-        Files.createDirectories(path, PosixFilePermissions.asFileAttribute(OWNER_ONLY_DIRECTORY))
-        Files.setPosixFilePermissions(path, OWNER_ONLY_DIRECTORY)
-    } else {
-        Files.createDirectories(path)
+    return PreferenceDataStoreFactory.createWithPath {
+        if (FileSystems.getDefault().supportedFileAttributeViews().contains(POSIX_VIEW)) {
+            Files.createDirectories(path, PosixFilePermissions.asFileAttribute(OWNER_ONLY_DIRECTORY))
+            Files.setPosixFilePermissions(path, OWNER_ONLY_DIRECTORY)
+        } else {
+            Files.createDirectories(path)
+        }
+        path.resolve(ARTIFACTS_FILE_NAME).toString().toPath()
     }
-
-    val artifactsFile = path.resolve(ARTIFACTS_FILE_NAME)
-    return PreferenceDataStoreFactory.createWithPath { artifactsFile.toString().toPath() }
 }

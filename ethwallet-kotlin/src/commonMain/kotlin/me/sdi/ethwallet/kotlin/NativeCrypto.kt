@@ -1,6 +1,8 @@
 package me.sdi.ethwallet.kotlin
 
 internal expect object NativeCrypto {
+    suspend fun load()
+
     fun createMnemonic(): CharArray
 
     fun validateMnemonic(mnemonic: ByteArray)
