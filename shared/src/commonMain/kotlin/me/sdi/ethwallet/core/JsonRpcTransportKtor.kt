@@ -7,14 +7,16 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import me.sdi.ethwallet.kotlin.JsonRpcTransport
 
 class JsonRpcTransportKtor(
-    private val httpClient: HttpClient,
+    private val httpClient: Lazy<HttpClient>,
     private val rpcUrl: String,
 ) : JsonRpcTransport {
     override suspend fun execute(requestJson: String): String =
-        httpClient
+        withContext(Dispatchers.IO) { httpClient.value }
             .post(rpcUrl) {
                 setBody(requestJson)
                 contentType(ContentType.Application.Json)

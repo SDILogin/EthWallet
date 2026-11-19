@@ -27,6 +27,10 @@ import me.sdi.ethwallet.core.security.PinCodeStorage
 import me.sdi.ethwallet.core.security.PrivateKeyEncryptor
 import me.sdi.ethwallet.core.security.biometry.BiometricStatus
 import me.sdi.ethwallet.core.security.biometry.BiometricUnlock
+import me.sdi.ethwallet.database.dao.FiatRateDao
+import me.sdi.ethwallet.database.dao.InMemoryFiatRateDao
+import me.sdi.ethwallet.database.dao.InMemoryTokenBalanceDao
+import me.sdi.ethwallet.database.dao.TokenBalanceDao
 import me.sdi.ethwallet.database.dao.WalletDao
 import me.sdi.ethwallet.fakes.FakeBiometricUnlock
 import me.sdi.ethwallet.fakes.FakeDataCleaner
@@ -40,11 +44,13 @@ import me.sdi.ethwallet.fakes.FakePrivateKeyEncryptor
 import me.sdi.ethwallet.fakes.FakeWalletDao
 import me.sdi.ethwallet.fakes.HistoryInitializationStoreInMemory
 import me.sdi.ethwallet.fakes.TransferHistoryRepositoryInMemory
+import me.sdi.ethwallet.kotlin.JsonRpcTransport
 import me.sdi.ethwallet.ui.history.TransactionDetailsViewModel
 import me.sdi.ethwallet.ui.settings.ChangePinCodeViewModel
 import me.sdi.ethwallet.ui.settings.SettingsViewModel
 import me.sdi.ethwallet.ui.wallet.PasswordUnlockViewModel
 import me.sdi.ethwallet.ui.wallet.SetPasswordViewModel
+import me.sdi.ethwallet.ui.wallet.WalletsListViewModel
 import org.koin.core.parameter.parametersOf
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
@@ -197,5 +203,35 @@ class KoinModuleTest {
             koin.get<TransactionDetailsViewModel> { parametersOf("0x${"a".repeat(64)}") },
             "Transaction details should resolve its ViewModel with a transaction hash",
         )
+    }
+
+    @Test
+    fun networkConsumersResolveWithoutCreatingHttpClient() {
+        val koin = koinApplication {
+            modules(
+                commonModule,
+                module {
+                    single {
+                        ChainConfig(
+                            rpcUrl = "https://rpc.example.test",
+                            chainId = 1L,
+                            explorerBaseUrl = "https://explorer.example.test",
+                            transactionHistoryApiBaseUrl = "https://history.example.test",
+                        )
+                    }
+                    single<HttpClient> { error("HttpClient must not be created during injection") }
+                    single<WalletDao> { FakeWalletDao() }
+                    single<TokenBalanceDao> { InMemoryTokenBalanceDao() }
+                    single<FiatRateDao> { InMemoryFiatRateDao() }
+                    single<EthManager> { FakeEthManager() }
+                    single<PrivateKeyEncryptor> { FakePrivateKeyEncryptor() }
+                    single<HistoryInitializationStore> { HistoryInitializationStoreInMemory() }
+                },
+            )
+        }.koin
+
+        assertNotNull(koin.get<WalletsListViewModel>(), "Wallets list should resolve without creating HttpClient")
+        assertNotNull(koin.get<JsonRpcTransport>(), "RPC transport should resolve without creating HttpClient")
+        assertNotNull(koin.get<TransfersHistoryProvider>(), "History provider should resolve without creating HttpClient")
     }
 }

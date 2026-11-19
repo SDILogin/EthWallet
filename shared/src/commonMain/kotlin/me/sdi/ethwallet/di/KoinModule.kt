@@ -67,12 +67,12 @@ val commonModule = module {
     single<HistoryInitializationStore> { HistoryInitializationStoreDataStore(get()) }
     single<CoroutineScope> { CoroutineScope(SupervisorJob()) }
 
-    single<JsonRpcTransport> { JsonRpcTransportKtor(get(), get<ChainConfig>().rpcUrl) }
+    single<JsonRpcTransport> { JsonRpcTransportKtor(lazy { get<HttpClient>() }, get<ChainConfig>().rpcUrl) }
     single { EthereumNetwork(get<ChainConfig>().chainId, get()) }
     single<EthManager> { EthManagerKotlin(get()) }
     single<TransfersHistoryProvider> {
         TransfersHistoryProviderBlockscout(
-            httpClient = get(),
+            httpClient = lazy { get<HttpClient>() },
             baseUrl = get<ChainConfig>().transactionHistoryApiBaseUrl,
         )
     }
@@ -134,7 +134,7 @@ val commonModule = module {
     }
 
     factory<BalanceProvider> { EthBalanceProvider(get(), get()) }
-    factory<FiatRateProvider> { FiatRateProviderCoinbase(get(), get()) }
+    factory<FiatRateProvider> { FiatRateProviderCoinbase(httpClient = lazy { get<HttpClient>() }, fiatRateDao = get()) }
 
     viewModel<TransactionDetailsViewModel> { params ->
         TransactionDetailsViewModel(

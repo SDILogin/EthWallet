@@ -20,7 +20,7 @@ import java.math.BigInteger
 import kotlin.time.Instant
 
 class TransfersHistoryProviderBlockscout(
-    private val httpClient: HttpClient,
+    private val httpClient: Lazy<HttpClient>,
     baseUrl: String,
 ) : TransfersHistoryProvider {
     private val apiBaseUrl = "${baseUrl.trimEnd('/')}/api/v2"
@@ -30,14 +30,16 @@ class TransfersHistoryProviderBlockscout(
         eth: TransfersPageRequest,
         erc20: TransfersPageRequest,
     ): CombinedTransfersPage = withContext(Dispatchers.Default) {
+        val client = withContext(Dispatchers.IO) { httpClient.value }
         val transactions = async {
-            if (eth == TransfersPageRequest.Skip) null else load<BlockscoutTransaction>(address, "transactions", eth)
+            if (eth == TransfersPageRequest.Skip) null else load<BlockscoutTransaction>(client, address, "transactions", eth)
         }
         val tokens = async {
             if (erc20 == TransfersPageRequest.Skip) {
                 null
             } else {
                 load<BlockscoutTokenTransfer>(
+                    client,
                     address,
                     "token-transfers",
                     erc20,
@@ -60,7 +62,7 @@ class TransfersHistoryProviderBlockscout(
             val outgoing = address.matches(from)
             val transaction = if (outgoing) {
                 transactionByHash.getOrPut(item.transactionHash.lowercase()) {
-                    httpClient.get("$apiBaseUrl/transactions/${item.transactionHash}").body<BlockscoutTransaction>()
+                    client.get("$apiBaseUrl/transactions/${item.transactionHash}").body<BlockscoutTransaction>()
                 }
             } else {
                 null
@@ -102,7 +104,7 @@ class TransfersHistoryProviderBlockscout(
     }
 
     override suspend fun getTransaction(hash: String): TransactionSummary? = withContext(Dispatchers.Default) {
-        val response = httpClient.get("$apiBaseUrl/transactions/$hash")
+        val response = withContext(Dispatchers.IO) { httpClient.value }.get("$apiBaseUrl/transactions/$hash")
         when {
             response.status.isSuccess() -> {
                 val transaction = response.body<BlockscoutTransactionStatus>()
@@ -117,10 +119,11 @@ class TransfersHistoryProviderBlockscout(
     }
 
     private suspend inline fun <reified T> load(
+        client: HttpClient,
         address: EthAddress,
         endpoint: String,
         request: TransfersPageRequest,
-    ): BlockscoutPage<T> = httpClient.get("$apiBaseUrl/addresses/$address/$endpoint") {
+    ): BlockscoutPage<T> = client.get("$apiBaseUrl/addresses/$address/$endpoint") {
         if (request is TransfersPageRequest.Next) {
             request.parameters.forEach { (key, value) -> parameter(key, value) }
         }

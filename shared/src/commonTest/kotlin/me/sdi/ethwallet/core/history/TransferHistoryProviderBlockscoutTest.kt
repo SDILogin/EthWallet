@@ -246,7 +246,7 @@ class TransferHistoryProviderBlockscoutTest {
                 if (request.url.encodedPath.endsWith("/token-transfers")) respondJson(page(token())) else error("Fee lookup failed")
             },
         )
-        val provider = TransfersHistoryProviderBlockscout(client, "https://history.example.test")
+        val provider = TransfersHistoryProviderBlockscout(lazyOf(client), "https://history.example.test")
         assertFailsWith<IllegalStateException> {
             provider.getTransfers(wallet, TransfersPageRequest.Skip, TransfersPageRequest.First)
         }
@@ -290,20 +290,22 @@ class TransferHistoryProviderBlockscoutTest {
     }
 
     private fun statusProvider(status: HttpStatusCode) = TransfersHistoryProviderBlockscout(
-        createHttpClient(
-            MockEngine {
-                respond(
-                    """{"message":"${status.description}"}""",
-                    status,
-                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
-                )
-            },
+        lazyOf(
+            createHttpClient(
+                MockEngine {
+                    respond(
+                        """{"message":"${status.description}"}""",
+                        status,
+                        headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                    )
+                },
+            ),
         ),
         "https://history.example.test",
     )
 
     private fun provider(response: (HttpRequestData) -> String) = TransfersHistoryProviderBlockscout(
-        createHttpClient(MockEngine { respondJson(response(it)) }),
+        lazyOf(createHttpClient(MockEngine { respondJson(response(it)) })),
         "https://history.example.test/",
     )
 

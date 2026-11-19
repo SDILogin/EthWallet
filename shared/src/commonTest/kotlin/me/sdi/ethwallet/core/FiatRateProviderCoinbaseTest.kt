@@ -66,16 +66,18 @@ class FiatRateProviderCoinbaseTest {
     @Test
     fun forceUpdateWithDefaultClockStoresWallClockTimestamp() = runTest {
         val provider = FiatRateProviderCoinbase(
-            httpClient = HttpClient(
-                MockEngine {
-                    respond(
-                        """{"data":{"amount":"1.01","currency":"USD"}}""",
-                        headers = headersOf(HttpHeaders.ContentType, "application/json"),
-                    )
+            httpClient = lazyOf(
+                HttpClient(
+                    MockEngine {
+                        respond(
+                            """{"data":{"amount":"1.01","currency":"USD"}}""",
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    },
+                ) {
+                    install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
                 },
-            ) {
-                install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-            },
+            ),
             fiatRateDao = dao,
         )
         val addresses = allKnownTokens.map { it.ethAddress.toString() } + EthContractAddress.toString()
@@ -159,9 +161,11 @@ class FiatRateProviderCoinbaseTest {
     }
 
     private fun provider(engine: MockEngine) = FiatRateProviderCoinbase(
-        HttpClient(engine) {
-            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-        },
+        lazyOf(
+            HttpClient(engine) {
+                install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+            },
+        ),
         dao,
         now = { currentTime },
     )
