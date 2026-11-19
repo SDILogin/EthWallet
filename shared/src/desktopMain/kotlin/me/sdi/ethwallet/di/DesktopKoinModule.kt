@@ -2,9 +2,10 @@ package me.sdi.ethwallet.di
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import me.sdi.ethwallet.core.ChainConfig
+import me.sdi.ethwallet.core.HttpClientProvider
+import me.sdi.ethwallet.core.HttpClientProviderLazy
 import me.sdi.ethwallet.core.security.AppLockMethod
 import me.sdi.ethwallet.core.security.DataCleaner
 import me.sdi.ethwallet.core.security.DataCleanerComposite
@@ -64,7 +65,7 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
 
     single { chainConfig }
 
-    single<HttpClient> { createHttpClient(OkHttp.create()) }
+    single<HttpClientProvider> { HttpClientProviderLazy { createHttpClient(OkHttp.create()) } }
 
     single { AppLockMethod.Password }
     single<MasterKekProtection> { MasterKekProtectionSecureEnclave() }

@@ -1,16 +1,13 @@
 package me.sdi.ethwallet.core
 
-import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.database.dao.FiatRateDao
@@ -22,7 +19,7 @@ import kotlin.time.Clock
 private const val TAG = "FiatRateProviderCoinbase"
 
 class FiatRateProviderCoinbase(
-    private val httpClient: Lazy<HttpClient>,
+    private val httpClientProvider: HttpClientProvider,
     private val fiatRateDao: FiatRateDao,
     private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) : FiatRateProvider {
@@ -31,7 +28,7 @@ class FiatRateProviderCoinbase(
 
     override suspend fun forceUpdate() {
         try {
-            val client = withContext(Dispatchers.IO) { httpClient.value }
+            val client = httpClientProvider.provide()
             val rows = coroutineScope {
                 addressesBySymbol.map { (symbol, addresses) ->
                     async {

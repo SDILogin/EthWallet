@@ -50,7 +50,8 @@ or runs often. Low is a few ms or less, or one time at startup.
 
 ### Change
 
-- `JsonRpcTransportKtor`, `FiatRateProviderCoinbase` and `TransfersHistoryProviderBlockscout` take `Lazy<HttpClient>`.
-- They read the client in `withContext(Dispatchers.IO)`. The first network request creates the client.
+- `HttpClientProvider` has one function: `suspend fun provide(): HttpClient`. The caller must be in a coroutine.
+- `HttpClientProviderLazy` creates the client on `Dispatchers.IO` at the first `provide()` call. Later calls return the same client.
+- Koin binds `HttpClientProvider` on Android and Desktop. Koin does not bind `HttpClient`.
+- `JsonRpcTransportKtor`, `FiatRateProviderCoinbase` and `TransfersHistoryProviderBlockscout` get the client from `provide()`.
 - The first network request is slower by the creation time. This time is not on Main.
-- `KoinModuleTest` resolves `WalletsListViewModel` and the network consumers with an `HttpClient` that fails on creation.

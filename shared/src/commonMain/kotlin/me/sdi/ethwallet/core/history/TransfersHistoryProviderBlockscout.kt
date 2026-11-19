@@ -15,12 +15,13 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonPrimitive
 import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.core.HttpClientProvider
 import me.sdi.ethwallet.core.transfer.toWei
 import java.math.BigInteger
 import kotlin.time.Instant
 
 class TransfersHistoryProviderBlockscout(
-    private val httpClient: Lazy<HttpClient>,
+    private val httpClientProvider: HttpClientProvider,
     baseUrl: String,
 ) : TransfersHistoryProvider {
     private val apiBaseUrl = "${baseUrl.trimEnd('/')}/api/v2"
@@ -30,7 +31,7 @@ class TransfersHistoryProviderBlockscout(
         eth: TransfersPageRequest,
         erc20: TransfersPageRequest,
     ): CombinedTransfersPage = withContext(Dispatchers.Default) {
-        val client = withContext(Dispatchers.IO) { httpClient.value }
+        val client = httpClientProvider.provide()
         val transactions = async {
             if (eth == TransfersPageRequest.Skip) null else load<BlockscoutTransaction>(client, address, "transactions", eth)
         }
@@ -104,7 +105,7 @@ class TransfersHistoryProviderBlockscout(
     }
 
     override suspend fun getTransaction(hash: String): TransactionSummary? = withContext(Dispatchers.Default) {
-        val response = withContext(Dispatchers.IO) { httpClient.value }.get("$apiBaseUrl/transactions/$hash")
+        val response = httpClientProvider.provide().get("$apiBaseUrl/transactions/$hash")
         when {
             response.status.isSuccess() -> {
                 val transaction = response.body<BlockscoutTransactionStatus>()

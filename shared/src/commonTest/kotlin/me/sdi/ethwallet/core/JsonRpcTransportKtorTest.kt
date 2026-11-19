@@ -39,7 +39,7 @@ class JsonRpcTransportKtorTest {
             }
         }
 
-        val result = JsonRpcTransportKtor(lazyOf(client), "https://rpc.example.test").execute(requestJson)
+        val result = JsonRpcTransportKtor(HttpClientProvider { client }, "https://rpc.example.test").execute(requestJson)
 
         assertEquals(responseJson, result)
         assertEquals(HttpMethod.Post, request?.method)
@@ -59,7 +59,7 @@ class JsonRpcTransportKtorTest {
                 }
             }
 
-            assertEquals(responseJson, JsonRpcTransportKtor(lazyOf(client), "https://rpc.example.test").execute("{}"))
+            assertEquals(responseJson, JsonRpcTransportKtor(HttpClientProvider { client }, "https://rpc.example.test").execute("{}"))
         }
     }
 
@@ -74,7 +74,7 @@ class JsonRpcTransportKtorTest {
         }
 
         val thrown = assertFailsWith<SentinelTransportFailure> {
-            JsonRpcTransportKtor(lazyOf(client), "https://rpc.example.test").execute("{}")
+            JsonRpcTransportKtor(HttpClientProvider { client }, "https://rpc.example.test").execute("{}")
         }
 
         assertSame(failure, thrown)
@@ -91,7 +91,7 @@ class JsonRpcTransportKtorTest {
         }
 
         val thrown = assertFailsWith<SentinelCancellationException> {
-            JsonRpcTransportKtor(lazyOf(client), "https://rpc.example.test").execute("{}")
+            JsonRpcTransportKtor(HttpClientProvider { client }, "https://rpc.example.test").execute("{}")
         }
 
         assertSame(failure, thrown)

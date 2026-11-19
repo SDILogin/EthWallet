@@ -66,7 +66,7 @@ class FiatRateProviderCoinbaseTest {
     @Test
     fun forceUpdateWithDefaultClockStoresWallClockTimestamp() = runTest {
         val provider = FiatRateProviderCoinbase(
-            httpClient = lazyOf(
+            httpClientProvider = HttpClientProvider {
                 HttpClient(
                     MockEngine {
                         respond(
@@ -76,8 +76,8 @@ class FiatRateProviderCoinbaseTest {
                     },
                 ) {
                     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-                },
-            ),
+                }
+            },
             fiatRateDao = dao,
         )
         val addresses = allKnownTokens.map { it.ethAddress.toString() } + EthContractAddress.toString()
@@ -161,11 +161,11 @@ class FiatRateProviderCoinbaseTest {
     }
 
     private fun provider(engine: MockEngine) = FiatRateProviderCoinbase(
-        lazyOf(
+        HttpClientProvider {
             HttpClient(engine) {
                 install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-            },
-        ),
+            }
+        },
         dao,
         now = { currentTime },
     )
