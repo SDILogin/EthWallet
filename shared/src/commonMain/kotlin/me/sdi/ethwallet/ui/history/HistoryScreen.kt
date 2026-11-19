@@ -89,8 +89,6 @@ import me.sdi.ethwallet.resources.history_sepolia
 import me.sdi.ethwallet.resources.history_this_wallet
 import me.sdi.ethwallet.resources.history_title
 import me.sdi.ethwallet.resources.history_to
-import me.sdi.ethwallet.resources.history_today
-import me.sdi.ethwallet.resources.history_yesterday
 import me.sdi.ethwallet.resources.switch_account_24px
 import me.sdi.ethwallet.resources.wallet_retry
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
@@ -103,7 +101,6 @@ import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import java.math.BigInteger
-import java.util.Calendar
 import java.util.TimeZone
 import kotlin.time.Instant
 
@@ -278,17 +275,11 @@ private fun RefreshableContent(
     val groups = remember(rows, dateFormats) {
         rows.groupBy { row ->
             if (row.status == TransactionStatus.Pending) {
-                "pending"
+                null
             } else {
-                dateFormats.dateKey(row.timestampMillis)
+                historyLocalDay(row.timestampMillis, timeZone)
             }
         }
-    }
-    val (todayKey, yesterdayKey) = remember(rows, isRefreshing, dateFormats) {
-        val today = Calendar.getInstance(timeZone)
-        val todayKey = dateFormats.dateKey(today.timeInMillis)
-        today.add(Calendar.DAY_OF_YEAR, -1)
-        todayKey to dateFormats.dateKey(today.timeInMillis)
     }
 
     PullToRefreshBox(modifier = modifier, isRefreshing = isRefreshing, onRefresh = onRefresh) {
@@ -320,13 +311,12 @@ private fun RefreshableContent(
                     }
                 }
             } else {
-                groups.forEach { (key, group) ->
-                    item(key = "header:$key", contentType = "header") {
-                        val title = when (key) {
-                            "pending" -> stringResource(Res.string.history_pending)
-                            todayKey -> stringResource(Res.string.history_today)
-                            yesterdayKey -> stringResource(Res.string.history_yesterday)
-                            else -> dateFormats.date(group.first().timestampMillis)
+                groups.forEach { (localDay, group) ->
+                    item(key = "header:${localDay ?: "pending"}", contentType = "header") {
+                        val title = if (localDay == null) {
+                            stringResource(Res.string.history_pending)
+                        } else {
+                            dateFormats.date(group.first().timestampMillis)
                         }
                         EthText(
                             title,
