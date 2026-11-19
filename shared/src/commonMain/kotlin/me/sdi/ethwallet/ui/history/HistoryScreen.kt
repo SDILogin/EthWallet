@@ -326,7 +326,7 @@ private fun RefreshableContent(
                         )
                     }
                     items(group, key = { it.key }, contentType = { "history" }) { row ->
-                        HistoryListItem(row, dateFormats, onHistoryItemClick)
+                        HistoryListItem(row, dateFormats.time(row.timestampMillis), onHistoryItemClick)
                     }
                 }
             }
@@ -401,7 +401,7 @@ private fun HistoryErrorAnimation() {
 @Composable
 private fun HistoryListItem(
     row: HistoryRow,
-    dateFormats: HistoryDateFormats,
+    time: String,
     onHistoryItemClick: (transactionHash: TransactionHash) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -434,7 +434,6 @@ private fun HistoryListItem(
         TransactionStatus.Pending -> MaterialTheme.colorScheme.primary
         TransactionStatus.Confirmed -> MaterialTheme.colorScheme.onSurface
     }
-    val time = dateFormats.time(row.timestampMillis)
     val subtitle = when (row.status) {
         TransactionStatus.Pending -> stringResource(Res.string.history_pending)
         TransactionStatus.Failed -> listOfNotNull(stringResource(Res.string.history_failed), time).joinToString(" · ")
