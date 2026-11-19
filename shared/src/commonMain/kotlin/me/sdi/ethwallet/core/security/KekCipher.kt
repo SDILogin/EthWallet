@@ -11,7 +11,7 @@ import javax.crypto.spec.SecretKeySpec
  * Software AES-256-GCM layer used to wrap a secret under an in-memory key.
  *
  * Blobs are shaped `iv(12) ‖ ciphertext+tag`; a fresh [SecureRandom] IV is prepended on every
- * [encrypt]. Callers own threading — these functions run synchronously on the caller's thread.
+ * [encrypt]. Both functions run on [Dispatchers.Default].
  */
 object KekCipher {
     private const val TRANSFORMATION = "AES/GCM/NoPadding"

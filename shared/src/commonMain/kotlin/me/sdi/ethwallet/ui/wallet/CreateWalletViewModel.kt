@@ -3,7 +3,6 @@ package me.sdi.ethwallet.ui.wallet
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -34,7 +33,6 @@ class CreateWalletViewModel(
     private val newsChannel = Channel<CreateWalletNews>(Channel.BUFFERED)
     val news: Flow<CreateWalletNews> = newsChannel.receiveAsFlow().onEach { Logger.debug(TAG) { "News: $it" } }
 
-    private val lifecycleLock = Any()
     private var cleared = false
     private var ethCreationResult: EthCreationResult? = null
 
@@ -48,23 +46,15 @@ class CreateWalletViewModel(
             .launchIn(viewModelScope)
 
         viewModelScope.launch {
-            withContext(NonCancellable + Dispatchers.IO) {
+            withContext(NonCancellable) {
                 val generatedResult = ethManager.createWallet()
-                val accepted = synchronized(lifecycleLock) {
-                    if (cleared) {
-                        false
-                    } else {
-                        ethCreationResult = generatedResult
-                        true
-                    }
-                }
-                if (!accepted) {
+                if (cleared) {
                     generatedResult.privateKey.clear()
-                    return@withContext
-                }
-
-                viewState.update {
-                    it.copy(seedPhrase = generatedResult.seedPhrase)
+                } else {
+                    ethCreationResult = generatedResult
+                    viewState.update {
+                        it.copy(seedPhrase = generatedResult.seedPhrase)
+                    }
                 }
             }
         }
@@ -102,11 +92,9 @@ class CreateWalletViewModel(
     }
 
     override fun onCleared() {
-        synchronized(lifecycleLock) {
-            cleared = true
-            ethCreationResult?.privateKey?.clear()
-            ethCreationResult = null
-        }
+        cleared = true
+        ethCreationResult?.privateKey?.clear()
+        ethCreationResult = null
         super.onCleared()
     }
 

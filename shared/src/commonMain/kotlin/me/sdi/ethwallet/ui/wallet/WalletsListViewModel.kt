@@ -3,9 +3,7 @@ package me.sdi.ethwallet.ui.wallet
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -25,7 +23,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.plus
 import kotlinx.coroutines.yield
 import me.sdi.ethwallet.Logger
 import me.sdi.ethwallet.core.BalanceProvider
@@ -34,8 +31,6 @@ import me.sdi.ethwallet.core.EthAddress
 import me.sdi.ethwallet.core.FiatRateProvider
 import me.sdi.ethwallet.data.repository.EthWallet
 import me.sdi.ethwallet.data.repository.WalletRepository
-import kotlin.concurrent.atomics.AtomicBoolean
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 private const val TAG = "WalletsListViewModel"
 
@@ -45,7 +40,6 @@ class WalletsListViewModel(
     private val balanceProvider: BalanceProvider,
     private val fiatRateProvider: FiatRateProvider,
     private val chainConfig: ChainConfig,
-    private val backgroundDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     val uiState: StateFlow<WalletsListUiState>
         field = MutableStateFlow(WalletsListUiState(isLoading = true))
@@ -58,7 +52,7 @@ class WalletsListViewModel(
 
         walletRepository.observeAllWallets().distinctUntilChanged().flatMapLatest { wallets ->
             channelFlow {
-                launch(CoroutineName("WalletsListRefresh") + backgroundDispatcher) {
+                launch(CoroutineName("WalletsListRefresh")) {
                     refreshWallets(wallets)
                 }
                 observeWalletItems(wallets).collect { walletItems ->
@@ -76,7 +70,7 @@ class WalletsListViewModel(
             Logger.warn(TAG, error) { "Failed to observe wallet balances" }
             uiState.update { it.copy(isLoading = false) }
             newsChannel.send(WalletsListNews.ShowErrorMessage)
-        }.launchIn(viewModelScope + backgroundDispatcher)
+        }.launchIn(viewModelScope)
     }
 
     private fun observeWalletItems(wallets: List<EthWallet>): Flow<List<WalletListItemUiState>> {
@@ -107,26 +101,25 @@ class WalletsListViewModel(
         }
     }
 
-    @OptIn(ExperimentalAtomicApi::class)
     private suspend fun refreshWallets(wallets: List<EthWallet>) = coroutineScope {
         if (wallets.isEmpty()) return@coroutineScope
 
-        val isAnyJobFailed = AtomicBoolean(false)
+        var isAnyJobFailed = false
         val jobs = wallets.map { wallet ->
             launch(CoroutineName("WalletsListRefresh-${wallet.address}")) {
                 val walletUpdateSuccess = refreshWalletBalance(wallet.address)
                 if (!walletUpdateSuccess) {
-                    isAnyJobFailed.store(true)
+                    isAnyJobFailed = true
                 }
             }
         }
         val fiatRateRefreshSuccess = refreshFiatRates()
         if (!fiatRateRefreshSuccess) {
-            isAnyJobFailed.store(true)
+            isAnyJobFailed = true
         }
 
         jobs.joinAll()
-        if (isAnyJobFailed.load()) {
+        if (isAnyJobFailed) {
             newsChannel.send(WalletsListNews.ShowErrorMessage)
         }
     }
