@@ -38,7 +38,7 @@ profiler.
 - `docs/tasks/backlog/android-binder-calls-off-main/spec.md`
 - `docs/tasks/backlog/disk-access-on-io/spec.md`
 - `docs/tasks/backlog/http-client-creation/spec.md`
-- `docs/tasks/backlog/receive-qr-viewmodel-start/spec.md`
+- `docs/tasks/done/receive-qr-viewmodel-start/spec.md`
 - `docs/tasks/backlog/dispatcher-lowest-level/spec.md`
 
 ## Checked as correct
