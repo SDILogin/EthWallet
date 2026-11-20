@@ -37,7 +37,7 @@ profiler.
 - `docs/tasks/done/ktor-logging-level/spec.md`
 - `docs/tasks/done/android-binder-calls-off-main/spec.md`
 - `docs/tasks/done/disk-access-on-io/spec.md`
-- `docs/tasks/backlog/http-client-creation/spec.md`
+- `docs/tasks/done/http-client-creation/spec.md`
 - `docs/tasks/done/receive-qr-viewmodel-start/spec.md`
 - `docs/tasks/done/dispatcher-lowest-level/spec.md`
 
