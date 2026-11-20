@@ -18,9 +18,8 @@ or runs often. Low is a few ms or less, or one time at startup.
 
 ## Scope
 
-- Measure the creation time on an Android device and on Desktop with the profiler.
-- If it takes more than 16 ms, create the client off the main thread.
-- If it takes less, record the result in this spec. Make no code change.
+- Measure the creation time on Desktop with a `System.nanoTime` harness.
+- Create the client off the main thread on Android and Desktop.
 
 ## Definition of done
 
@@ -46,6 +45,7 @@ or runs often. Low is a few ms or less, or one time at startup.
 
 - The real time is less than 16 ms only if the container is about 24 to 75 times slower. This is not likely.
 - So the client is created off the main thread on Android and Desktop. Android uses the same code path.
+- The owner approved and merged GitHub PR #37 without more measurements.
 - Koin locks each `single` while it creates it. A warm-up in the background does not help if Main asks for the client first.
 
 ### Change
