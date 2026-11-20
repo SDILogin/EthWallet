@@ -31,7 +31,7 @@ profiler.
 
 ## Follow-up tasks
 
-- `docs/tasks/backlog/receive-qr-encode-off-main/spec.md`
+- `docs/tasks/done/receive-qr-encode-off-main/spec.md`
 - `docs/tasks/done/history-off-main/spec.md`
 - `docs/tasks/done/history-date-formatting/spec.md`
 - `docs/tasks/done/ktor-logging-level/spec.md`
