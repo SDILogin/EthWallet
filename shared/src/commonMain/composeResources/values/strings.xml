@@ -206,8 +206,6 @@
     <string name="history_load_error_title">Couldn't load history</string>
     <string name="history_load_error_message">Check your connection and try again.</string>
     <string name="history_pending">Pending</string>
-    <string name="history_today">Today</string>
-    <string name="history_yesterday">Yesterday</string>
     <string name="history_date_unavailable">Date unavailable</string>
     <string name="history_time_unavailable">Time unavailable</string>
     <string name="history_end">End of history · Times shown in your local timezone</string>

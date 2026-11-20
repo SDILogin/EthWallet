@@ -5,6 +5,7 @@ import me.sdi.ethwallet.core.history.TransactionFee
 import me.sdi.ethwallet.core.history.TransactionStatus
 import me.sdi.ethwallet.core.history.Transfer
 import me.sdi.ethwallet.core.transfer.toWei
+import java.time.LocalDate
 import java.util.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -98,8 +99,8 @@ class HistoryPresentationTest {
     @Test
     fun date_grouping_uses_local_day() {
         val timestamp = native.requiredRow(wallet).timestampMillis
-        assertEquals("2026-09-07", historyDateKey(timestamp, TimeZone.getTimeZone("UTC")))
-        assertEquals("2026-09-08", historyDateKey(timestamp, TimeZone.getTimeZone("Asia/Bangkok")))
+        assertEquals(LocalDate.of(2026, 9, 7).toEpochDay(), historyLocalDay(timestamp, TimeZone.getTimeZone("UTC")))
+        assertEquals(LocalDate.of(2026, 9, 8).toEpochDay(), historyLocalDay(timestamp, TimeZone.getTimeZone("Asia/Bangkok")))
     }
 
     @Test

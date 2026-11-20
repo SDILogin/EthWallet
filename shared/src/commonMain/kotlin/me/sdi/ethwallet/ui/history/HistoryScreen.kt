@@ -89,8 +89,6 @@ import me.sdi.ethwallet.resources.history_sepolia
 import me.sdi.ethwallet.resources.history_this_wallet
 import me.sdi.ethwallet.resources.history_title
 import me.sdi.ethwallet.resources.history_to
-import me.sdi.ethwallet.resources.history_today
-import me.sdi.ethwallet.resources.history_yesterday
 import me.sdi.ethwallet.resources.switch_account_24px
 import me.sdi.ethwallet.resources.wallet_retry
 import me.sdi.ethwallet.ui.components.FormFactorPreviews
@@ -103,7 +101,6 @@ import me.sdi.ethwallet.ui.theme.EthWalletTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import java.math.BigInteger
-import java.util.Calendar
 import java.util.TimeZone
 import kotlin.time.Instant
 
@@ -274,19 +271,16 @@ private fun RefreshableContent(
         }
     }
     val timeZone = TimeZone.getDefault()
-    val groups = remember(rows, timeZone.id) {
+    val dateFormats = remember(timeZone.id) { HistoryDateFormats(timeZone) }
+    val groups = remember(rows, dateFormats) {
         rows.groupBy { row ->
             if (row.status == TransactionStatus.Pending) {
-                "pending"
+                null
             } else {
-                historyDateKey(row.timestampMillis, timeZone)
+                historyLocalDay(row.timestampMillis, timeZone)
             }
         }
     }
-    val today = Calendar.getInstance(timeZone)
-    val todayKey = historyDateKey(today.timeInMillis, timeZone)
-    today.add(Calendar.DAY_OF_YEAR, -1)
-    val yesterdayKey = historyDateKey(today.timeInMillis, timeZone)
 
     PullToRefreshBox(modifier = modifier, isRefreshing = isRefreshing, onRefresh = onRefresh) {
         LazyColumn(
@@ -317,13 +311,12 @@ private fun RefreshableContent(
                     }
                 }
             } else {
-                groups.forEach { (key, group) ->
-                    item(key = "header:$key", contentType = "header") {
-                        val title = when (key) {
-                            "pending" -> stringResource(Res.string.history_pending)
-                            todayKey -> stringResource(Res.string.history_today)
-                            yesterdayKey -> stringResource(Res.string.history_yesterday)
-                            else -> formatHistoryDate(group.first().timestampMillis, timeZone)
+                groups.forEach { (localDay, group) ->
+                    item(key = "header:${localDay ?: "pending"}", contentType = "header") {
+                        val title = if (localDay == null) {
+                            stringResource(Res.string.history_pending)
+                        } else {
+                            dateFormats.date(group.first().timestampMillis)
                         }
                         EthText(
                             title,
@@ -333,7 +326,7 @@ private fun RefreshableContent(
                         )
                     }
                     items(group, key = { it.key }, contentType = { "history" }) { row ->
-                        HistoryListItem(row, timeZone, onHistoryItemClick)
+                        HistoryListItem(row, dateFormats.time(row.timestampMillis), onHistoryItemClick)
                     }
                 }
             }
@@ -408,7 +401,7 @@ private fun HistoryErrorAnimation() {
 @Composable
 private fun HistoryListItem(
     row: HistoryRow,
-    timeZone: TimeZone,
+    time: String,
     onHistoryItemClick: (transactionHash: TransactionHash) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -441,7 +434,6 @@ private fun HistoryListItem(
         TransactionStatus.Pending -> MaterialTheme.colorScheme.primary
         TransactionStatus.Confirmed -> MaterialTheme.colorScheme.onSurface
     }
-    val time = formatHistoryTime(row.timestampMillis, timeZone)
     val subtitle = when (row.status) {
         TransactionStatus.Pending -> stringResource(Res.string.history_pending)
         TransactionStatus.Failed -> listOfNotNull(stringResource(Res.string.history_failed), time).joinToString(" · ")

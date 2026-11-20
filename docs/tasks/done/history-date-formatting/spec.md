@@ -22,8 +22,12 @@ or runs often. Low is a few ms or less, or one time at startup.
 ## Scope
 
 - Create one date formatter for each time zone and reuse it for all rows.
-- Calculate the today and yesterday keys one time for each time zone, not on each recomposition.
-- Keep the same group keys and the same displayed text.
+- Group rows by the local day number. Do not format a date string for a group key.
+- Remove the Today and Yesterday headers. Each day header shows the date in the device locale format. The PR #35 review
+  asked for this.
+- `TransactionDetailsScreen.kt` uses the same `HistoryDateFormats` class, because the old top-level format functions
+  are removed.
+- Keep the same displayed text for times, other date headers and transaction details.
 
 ## Definition of done
 

@@ -33,7 +33,7 @@ profiler.
 
 - `docs/tasks/backlog/receive-qr-encode-off-main/spec.md`
 - `docs/tasks/done/history-off-main/spec.md`
-- `docs/tasks/backlog/history-date-formatting/spec.md`
+- `docs/tasks/done/history-date-formatting/spec.md`
 - `docs/tasks/done/ktor-logging-level/spec.md`
 - `docs/tasks/done/android-binder-calls-off-main/spec.md`
 - `docs/tasks/done/disk-access-on-io/spec.md`
