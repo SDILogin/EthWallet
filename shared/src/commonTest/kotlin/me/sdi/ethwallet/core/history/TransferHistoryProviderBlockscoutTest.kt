@@ -11,6 +11,7 @@ import io.ktor.http.headersOf
 import io.ktor.serialization.JsonConvertException
 import kotlinx.coroutines.test.runTest
 import me.sdi.ethwallet.core.EthAddress
+import me.sdi.ethwallet.core.HttpClientProvider
 import me.sdi.ethwallet.core.transfer.toWei
 import me.sdi.ethwallet.di.createHttpClient
 import kotlin.test.Test
@@ -246,7 +247,7 @@ class TransferHistoryProviderBlockscoutTest {
                 if (request.url.encodedPath.endsWith("/token-transfers")) respondJson(page(token())) else error("Fee lookup failed")
             },
         )
-        val provider = TransfersHistoryProviderBlockscout(client, "https://history.example.test")
+        val provider = TransfersHistoryProviderBlockscout(HttpClientProvider { client }, "https://history.example.test")
         assertFailsWith<IllegalStateException> {
             provider.getTransfers(wallet, TransfersPageRequest.Skip, TransfersPageRequest.First)
         }
@@ -290,20 +291,22 @@ class TransferHistoryProviderBlockscoutTest {
     }
 
     private fun statusProvider(status: HttpStatusCode) = TransfersHistoryProviderBlockscout(
-        createHttpClient(
-            MockEngine {
-                respond(
-                    """{"message":"${status.description}"}""",
-                    status,
-                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
-                )
-            },
-        ),
+        HttpClientProvider {
+            createHttpClient(
+                MockEngine {
+                    respond(
+                        """{"message":"${status.description}"}""",
+                        status,
+                        headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                    )
+                },
+            )
+        },
         "https://history.example.test",
     )
 
     private fun provider(response: (HttpRequestData) -> String) = TransfersHistoryProviderBlockscout(
-        createHttpClient(MockEngine { respondJson(response(it)) }),
+        HttpClientProvider { createHttpClient(MockEngine { respondJson(response(it)) }) },
         "https://history.example.test/",
     )
 

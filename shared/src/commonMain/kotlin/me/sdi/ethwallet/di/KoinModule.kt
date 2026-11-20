@@ -72,7 +72,7 @@ val commonModule = module {
     single<EthManager> { EthManagerKotlin(get()) }
     single<TransfersHistoryProvider> {
         TransfersHistoryProviderBlockscout(
-            httpClient = get(),
+            httpClientProvider = get(),
             baseUrl = get<ChainConfig>().transactionHistoryApiBaseUrl,
         )
     }
@@ -134,7 +134,7 @@ val commonModule = module {
     }
 
     factory<BalanceProvider> { EthBalanceProvider(get(), get()) }
-    factory<FiatRateProvider> { FiatRateProviderCoinbase(get(), get()) }
+    factory<FiatRateProvider> { FiatRateProviderCoinbase(httpClientProvider = get(), fiatRateDao = get()) }
 
     viewModel<TransactionDetailsViewModel> { params ->
         TransactionDetailsViewModel(

@@ -1,6 +1,5 @@
 package me.sdi.ethwallet.core
 
-import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import kotlinx.coroutines.CancellationException
@@ -20,7 +19,7 @@ import kotlin.time.Clock
 private const val TAG = "FiatRateProviderCoinbase"
 
 class FiatRateProviderCoinbase(
-    private val httpClient: HttpClient,
+    private val httpClientProvider: HttpClientProvider,
     private val fiatRateDao: FiatRateDao,
     private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) : FiatRateProvider {
@@ -29,10 +28,11 @@ class FiatRateProviderCoinbase(
 
     override suspend fun forceUpdate() {
         try {
+            val client = httpClientProvider.provide()
             val rows = coroutineScope {
                 addressesBySymbol.map { (symbol, addresses) ->
                     async {
-                        val quote = httpClient.get("https://api.coinbase.com/v2/prices/$symbol-USD/spot")
+                        val quote = client.get("https://api.coinbase.com/v2/prices/$symbol-USD/spot")
                             .body<SpotPriceResponse>().data
                         require(quote.currency == "USD") { "Expected a USD quote for $symbol" }
                         val rate = BigDecimal(quote.amount)

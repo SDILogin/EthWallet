@@ -3,10 +3,11 @@ package me.sdi.ethwallet.di
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import kotlinx.coroutines.Dispatchers
 import me.sdi.ethwallet.core.ChainConfig
+import me.sdi.ethwallet.core.HttpClientProvider
+import me.sdi.ethwallet.core.HttpClientProviderLazy
 import me.sdi.ethwallet.core.network.StatsTaggedSocketFactory
 import me.sdi.ethwallet.core.security.AndroidBiometricUnlock
 import me.sdi.ethwallet.core.security.AppLockMethod
@@ -63,8 +64,10 @@ actual fun platformModule(chainConfig: ChainConfig): Module = module {
 
     single { chainConfig }
 
-    single<HttpClient> {
-        createHttpClient(OkHttp.create { config { socketFactory(StatsTaggedSocketFactory()) } })
+    single<HttpClientProvider> {
+        HttpClientProviderLazy {
+            createHttpClient(OkHttp.create { config { socketFactory(StatsTaggedSocketFactory()) } })
+        }
     }
 
     single { AppLockMethod.Pin }

@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import me.sdi.ethwallet.core.ChainConfig
 import me.sdi.ethwallet.core.EthManager
+import me.sdi.ethwallet.core.HttpClientProvider
 import me.sdi.ethwallet.core.history.HistoryInitializationStore
 import me.sdi.ethwallet.core.history.TransferHistoryRepository
 import me.sdi.ethwallet.core.history.TransfersHistoryProvider
@@ -161,7 +162,7 @@ class KoinModuleTest {
                 commonModule,
                 module {
                     single { chainConfig }
-                    single { HttpClient(MockEngine { error("Unexpected network request") }) }
+                    single { HttpClientProvider { HttpClient(MockEngine { error("Unexpected network request") }) } }
                 },
             )
         }.koin
@@ -183,7 +184,7 @@ class KoinModuleTest {
                             transactionHistoryApiBaseUrl = "https://history.example.test",
                         )
                     }
-                    single { HttpClient(MockEngine { error("Unexpected network request") }) }
+                    single { HttpClientProvider { HttpClient(MockEngine { error("Unexpected network request") }) } }
                     single<WalletDao> { FakeWalletDao() }
                     single<EthManager> { FakeEthManager() }
                     single<PrivateKeyEncryptor> { FakePrivateKeyEncryptor() }
