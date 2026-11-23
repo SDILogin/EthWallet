@@ -1,0 +1,33 @@
+# Task
+
+#26 Run cargo audit in the pre-push hook
+
+## Background
+
+The `ethwallet-kotlin` Rust crate in `ethwallet-kotlin/rust` has third-party dependencies. Before this task, nothing
+checked them for known RustSec vulnerabilities.
+
+`master` failed the audit with RUSTSEC-2026-0387. It is in `crypto-bigint` 0.5.5. The path is `bip32` 0.5.3,
+`k256` 0.13.4, `elliptic-curve` 0.13.8.
+
+## Scope
+
+- `tools/pre-push` runs `cargo audit` on `ethwallet-kotlin/rust/Cargo.lock`. `tools/setup.sh` installs the hook.
+- A push fails when a Rust dependency has a known RustSec vulnerability.
+- If cargo-audit is not installed, the hook prints the install command and fails.
+- `CLAUDE.md` documents the check and the install command next to the other Rust commands.
+- Upgrade `bip32` to 0.6. This moves `crypto-bigint` to 0.7 and fixes RUSTSEC-2026-0387.
+
+Out of scope: CI, cargo deny, license rules, and build matrices.
+
+## Accepted risks
+
+- Each push fetches the RustSec advisory database. A push needs network access.
+- A new advisory blocks all pushes until it is fixed.
+
+## Definition of done
+
+- The pre-push hook fails when `cargo audit` fails.
+- The pre-push hook fails with the install command when cargo-audit is not installed.
+- `CLAUDE.md` lists `cargo audit` and `cargo install cargo-audit --locked`.
+- `cargo audit` passes on `ethwallet-kotlin/rust/Cargo.lock`.

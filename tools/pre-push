@@ -3,5 +3,14 @@
 echo "Running code formatting check..."
 ./gradlew spotlessCheck || exit 1
 
+echo "Running Rust dependency audit..."
+if cargo audit --version > /dev/null 2>&1; then
+  cargo audit --file ethwallet-kotlin/rust/Cargo.lock || exit 1
+else
+  echo "cargo-audit is not installed. Install it with:"
+  echo "  cargo install cargo-audit --locked"
+  exit 1
+fi
+
 echo "All checks passed!"
 exit 0
