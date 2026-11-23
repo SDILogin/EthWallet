@@ -1,5 +1,5 @@
 #!/bin/bash
-# Prints the PR state, then unseen comments from other users as JSON lines, and marks them as seen.
+# Prints the PR state and merge state, then unseen comments from other users as JSON lines, and marks them as seen.
 set -euo pipefail
 
 if [ $# -ne 1 ]; then
@@ -12,7 +12,7 @@ readonly seen_file="$(git rev-parse --absolute-git-dir)/pr-$pr-seen-comments"
 readonly me="$(gh api user --jq .login)"
 touch "$seen_file"
 
-gh pr view "$pr" --json state --jq .state
+gh pr view "$pr" --json state,mergeable --jq '"\(.state) \(.mergeable)"'
 
 {
   gh api --paginate "repos/{owner}/{repo}/issues/$pr/comments" \

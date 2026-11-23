@@ -17,6 +17,7 @@ enforce this.
 ```bash
 .claude/skills/docker-agent/scripts/start-agent.py start "<task-reference>" "<task-description>"
 .claude/skills/docker-agent/scripts/start-agent.py status
+.claude/skills/docker-agent/scripts/start-agent.py send <container> "<message>"
 ```
 
 - `task-reference`: where the task comes from, for example `#304 Prevent keyboard caching of the recovery phrase` or
@@ -27,8 +28,18 @@ To swarm, call `start` once per task, one call after another. Do not run calls i
 same idle container. `start` returns after the new coder starts to work. Report the attach command that the script
 prints.
 
-Do not claim an Agent Board task before starting the agent. The agent claims it, and completes it when the PR is
-merged.
+## Messages to a running coder
+
+To give a running coder a new instruction, for example "answer the comments on your PR", use only `send`. Do not
+type into the tmux session `agent` directly. Claude Code shows a long message as pasted text and needs a second
+Enter to send it. `send` presses Enter again while the message stays in the input field.
+
+`send` exits with code 0 only when the coder starts to work on the message, or queues it while it works. Report "the
+agent works on it" only after exit code 0. On exit code 5, the coder did not start. Tell the user, and give the attach
+command that the script prints.
+
+Do not claim an Agent Board task before starting the agent. The agent claims it, and completes it when it opens the
+PR.
 
 ## Container selection
 

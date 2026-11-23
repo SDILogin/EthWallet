@@ -5,10 +5,12 @@ Runs on the host.
 
     start-agent.py start "<task-reference>" "<task-description>"
     start-agent.py status
+    start-agent.py send <container> "<message>"
 
 The container manager agent in each running container reports whether the container is idle or busy. `start` uses
 the first idle running container, then a stopped container that is idle, then a new container, up to
-MAX_CONTAINERS containers in total.
+MAX_CONTAINERS containers in total. `send` types a message into the coder of a running container and checks that the
+coder got it.
 """
 
 import argparse
@@ -27,12 +29,18 @@ REQUIRED_ENV_KEYS = ("GH_TOKEN", "GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COM
 USAGE_EXIT_CODE = 2
 ENV_NOT_SET_EXIT_CODE = 3
 NO_FREE_CONTAINER_EXIT_CODE = 4
+SEND_FAILED_EXIT_CODE = 5
 STATUS_TIMEOUT_S = 180
 STATUS_POLL_INTERVAL_S = 3
+SEND_TIMEOUT_S = 60
+MAX_ENTER_PRESSES = 3
 KEY_DELAY_S = 1
 BUSY_MARK = "esc to interrupt"
 INPUT_MARK = "❯"
 REPLY_MARK = "●"
+PASTE_MARK = "[Pasted text"
+BOX_MARK = "─"
+MESSAGE_PREFIX_LENGTH = 20
 REPO_DIR = "/workspace/EthWallet"
 RESET_CHECKOUT = "git fetch origin && git reset --hard && git clean -fd && git switch -C master origin/master"
 
@@ -170,6 +178,77 @@ def wait_for_coder(container: Container, deadline: float) -> bool:
     return False
 
 
+def input_text(screen: str) -> str:
+    lines = screen.splitlines()
+    starts = [index for index, line in enumerate(lines) if line.startswith(INPUT_MARK)]
+    if len(starts) == 0:
+        return ""
+    text = []
+    for line in lines[starts[-1]:]:
+        if line.startswith(BOX_MARK):
+            break
+        text.append(line.removeprefix(INPUT_MARK).strip())
+    return " ".join(part for part in text if part != "")
+
+
+def message_is_in_input(screen: str, message: str) -> bool:
+    text = input_text(screen)
+    prefix = " ".join(message.split())[:MESSAGE_PREFIX_LENGTH]
+    return PASTE_MARK in text or (prefix != "" and prefix in text)
+
+
+def coder_screen(container: Container) -> str:
+    return run_checked(["docker", "exec", container.name, "tmux", "capture-pane", "-p", "-J", "-t", "agent"])
+
+
+def press_enter(container: Container) -> None:
+    run_checked(["docker", "exec", container.name, "tmux", "send-keys", "-t", "agent", "Enter"])
+
+
+def find_running_container(name: str) -> Container:
+    for container in list_containers():
+        if name in (container.project, container.name):
+            if not container.is_running:
+                sys.exit(f"{container.project} is stopped. Use start to give it a task.")
+            return container
+    sys.exit(f"No agent container {name}. Run status to list the containers.")
+
+
+def send(name: str, message: str) -> None:
+    container = find_running_container(name)
+    if run(["docker", "exec", container.name, "tmux", "has-session", "-t", "agent"]).returncode != 0:
+        sys.exit(f"{container.project} has no coder session. Use start to give it a task.")
+
+    was_busy = BUSY_MARK in coder_screen(container)
+    run_checked(["docker", "exec", container.name, "tmux", "send-keys", "-t", "agent", "-l", message])
+    time.sleep(KEY_DELAY_S)
+    press_enter(container)
+    enter_presses = 1
+
+    deadline = time.monotonic() + SEND_TIMEOUT_S
+    while time.monotonic() < deadline:
+        time.sleep(STATUS_POLL_INTERVAL_S)
+        screen = coder_screen(container)
+        if message_is_in_input(screen, message):
+            if enter_presses < MAX_ENTER_PRESSES:
+                press_enter(container)
+                enter_presses += 1
+            continue
+        if was_busy:
+            print(f"Queued the message for the coder in {container.project}. The coder reads it after its current step.")
+            return
+        if BUSY_MARK in screen:
+            print(f"The coder in {container.project} got the message and works.")
+            return
+
+    print(
+        f"The coder in {container.project} did not start to work on the message. Attach and check its screen.",
+        file=sys.stderr,
+    )
+    print(f"Attach: docker exec -it {container.name} tmux new-session -A -s agent", file=sys.stderr)
+    sys.exit(SEND_FAILED_EXIT_CODE)
+
+
 def ask_status(container: Container) -> Status:
     if run(["docker", "exec", container.name, "tmux", "has-session", "-t", "manager"]).returncode != 0:
         return Status(is_idle=False, reason="no container manager (old image)")
@@ -250,10 +329,15 @@ def main() -> None:
     start_parser.add_argument("task_reference")
     start_parser.add_argument("task_description")
     commands.add_parser("status", help="ask each running container manager for its status")
+    send_parser = commands.add_parser("send", help="send a message to the coder in a running container")
+    send_parser.add_argument("container", help="compose project or container name, for example ethwallet-agent-1")
+    send_parser.add_argument("message")
     arguments = parser.parse_args()
 
     if arguments.command == "start":
         start(arguments.task_reference, arguments.task_description)
+    elif arguments.command == "send":
+        send(arguments.container, arguments.message)
     else:
         status()
 
