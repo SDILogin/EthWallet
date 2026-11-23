@@ -18,3 +18,4 @@ The phone layout does not change.
 
 - `collectAsState()` in both screens.
 - Other screens.
+- Error texts under the Send and Receive fields appear only on error and move the content below.
