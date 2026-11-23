@@ -1,13 +1,6 @@
 import com.android.build.api.variant.KotlinMultiplatformAndroidComponentsExtension
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.tasks.Exec
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.Sync
-import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.testing.Test
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import java.io.File
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -26,7 +19,7 @@ val rustTargetDirectory = layout.buildDirectory.dir("rust/target")
 val generatedNativeDirectory = layout.buildDirectory.dir("generated/rust")
 
 val nativeLibraryName = "ethwallet_crypto"
-val androidNdkVersion = "30.0.14904198"
+val androidNdkVersion = "30.0.16248370"
 
 abstract class RustNativeLibrarySync : Sync() {
     @get:OutputDirectory

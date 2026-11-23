@@ -23,7 +23,7 @@ RUN mkdir -p "$ANDROID_HOME/cmdline-tools" \
     && rm /tmp/cmdline-tools.zip \
     && yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null \
     && "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-        "platform-tools" "platforms;android-37.0" "build-tools;36.0.0" "ndk;30.0.14904198" \
+        "platform-tools" "platforms;android-37.0" "build-tools;36.0.0" "ndk;30.0.16248370" \
     && chown -R ubuntu:ubuntu "$ANDROID_HOME"
 
 RUN mkdir -p /workspace /home/ubuntu/.claude /home/ubuntu/.gradle \
