@@ -168,6 +168,7 @@ private fun ReceiveScreenContent(
             QrCodeDisplay(
                 qrPayload = viewState.qrPayload,
                 walletAddress = viewState.walletAddress,
+                modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth(),
             )
         }
     }
