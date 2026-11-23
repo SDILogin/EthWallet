@@ -67,7 +67,11 @@ For Rust changes, run these commands from `ethwallet-kotlin/rust`:
 cargo fmt -- --check
 cargo test
 cargo clippy --all-targets -- -D warnings
+cargo audit
 ```
+
+The pre-push hook runs `cargo audit` on every push. It fails when a Rust dependency has a known RustSec
+vulnerability. Install cargo-audit with `cargo install cargo-audit --locked`.
 
 Tests should let unexpected exceptions fail normally. Do not catch or translate failures unless the behavior under test specifically requires it.
 

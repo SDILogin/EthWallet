@@ -4,8 +4,11 @@
 
 ## Background
 
-The `ethwallet-kotlin` Rust crate in `ethwallet-kotlin/rust` has third-party dependencies. Nothing checks them for
-known RustSec vulnerabilities.
+The `ethwallet-kotlin` Rust crate in `ethwallet-kotlin/rust` has third-party dependencies. Before this task, nothing
+checked them for known RustSec vulnerabilities.
+
+When this task was done, `master` failed the audit with RUSTSEC-2026-0387. It is in `crypto-bigint` 0.5.5. The
+path is `bip32` 0.5.3, `k256` 0.13.4, `elliptic-curve` 0.13.8. The owner decides the fix.
 
 ## Scope
 
